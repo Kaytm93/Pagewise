@@ -21,7 +21,7 @@ import {
   migrateDatabase,
   openDatabase,
 } from './client';
-import { profile, subjectGroups, subjects } from './schema';
+import { profile, providers, settings, subjectGroups, subjects } from './schema';
 
 describe('Datenbank', () => {
   let base: string;
@@ -52,7 +52,9 @@ describe('Datenbank', () => {
     expect(tables.map((t) => t.name).sort()).toEqual([
       'auth_credentials',
       'profile',
+      'providers',
       'sessions',
+      'settings',
       'subject_groups',
       'subjects',
     ]);
@@ -62,6 +64,11 @@ describe('Datenbank', () => {
     expect(handle.db.select().from(subjects).all()).toEqual([]);
     expect(handle.db.select().from(subjectGroups).all()).toEqual([]);
     expect(handle.db.select().from(profile).all()).toEqual([]);
+  });
+
+  it('startet ohne Anbieter und ohne Einstellungen', () => {
+    expect(handle.db.select().from(providers).all()).toEqual([]);
+    expect(handle.db.select().from(settings).all()).toEqual([]);
   });
 
   it('löscht Untergruppen mit ihrem Fach', () => {

@@ -26,3 +26,21 @@ export const iconField = z
 
 /** Wochenstunden eines Fachs: ganze Zahl von 1 bis 40, `null` für „nicht angegeben“. */
 export const hoursField = z.number().int().min(1).max(40).nullable();
+
+/** Längster Prompt (eine Schicht) in Zeichen. Reicht für mehrere Seiten und bleibt für das Modell handhabbar. */
+export const PROMPT_MAX_CHARACTERS = 20_000;
+
+/**
+ * Prompt-Text: Zeilenumbrüche und Tabs sind erlaubt, andere Steuerzeichen nicht. Windows-Zeilenenden
+ * werden vereinheitlicht, ein leerer Text bedeutet „nicht gesetzt“ (null).
+ */
+export const promptField = z
+  .string()
+  .max(PROMPT_MAX_CHARACTERS)
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: Steuerzeichen werden hier bewusst abgelehnt.
+  .refine((value) => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value))
+  .transform((value) => {
+    const unified = value.replace(/\r\n?/g, '\n');
+    return unified.trim() === '' ? null : unified;
+  })
+  .nullable();

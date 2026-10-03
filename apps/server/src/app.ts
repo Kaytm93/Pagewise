@@ -8,6 +8,7 @@ import { csrfGuard, loadSession, requireSession } from './auth/http';
 import type { AppEnv } from './http/types';
 import { authRoutes } from './routes/auth';
 import { profileRoutes } from './routes/profile';
+import { promptRoutes } from './routes/prompts';
 import { subjectRoutes } from './routes/subjects';
 import type { Services } from './services';
 
@@ -59,13 +60,20 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     app.route('/api', authRoutes({ auth: services.auth, sessions: services.sessions }));
 
     // Alles Weitere gibt es nur mit Anmeldung. Unbekannte API-Pfade bleiben 404.
-    for (const prefix of ['/api/profile', '/api/onboarding', '/api/subjects', '/api/groups']) {
+    for (const prefix of [
+      '/api/profile',
+      '/api/onboarding',
+      '/api/subjects',
+      '/api/groups',
+      '/api/prompts',
+    ]) {
       app.use(prefix, requireSession);
       app.use(`${prefix}/*`, requireSession);
     }
     const db = services.database.db;
     app.route('/api', profileRoutes(db));
     app.route('/api', subjectRoutes(db));
+    app.route('/api', promptRoutes(db));
   }
 
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));

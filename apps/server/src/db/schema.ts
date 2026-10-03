@@ -31,6 +31,8 @@ export const profile = sqliteTable(
     federalState: text('federal_state'),
     schoolType: text('school_type'),
     gradeLevel: text('grade_level'),
+    /** Allgemeiner Schul-Prompt (Schicht 1), vom Nutzer geschrieben. Nie vorbelegt. */
+    schoolPrompt: text('school_prompt'),
     onboardingCompletedAt: integer('onboarding_completed_at', { mode: 'timestamp_ms' }),
     ...timestamps,
   },
@@ -47,6 +49,8 @@ export const subjects = sqliteTable(
     hoursPerWeek: integer('hours_per_week'),
     /** Kennung eines Linien-Icons der Oberfläche, optional. Unbekannte Kennungen zeigen das Standard-Icon. */
     icon: text('icon'),
+    /** Fach-Prompt (Schicht 2), vom Nutzer geschrieben. Nie vorbelegt. */
+    systemPrompt: text('system_prompt'),
     position: integer('position').notNull().default(0),
     ...timestamps,
   },
@@ -64,6 +68,8 @@ export const subjectGroups = sqliteTable(
     name: text('name').notNull(),
     /** Art der Untergruppe in freien Worten (z. B. „Schulaufgabe“), optional. */
     kind: text('kind'),
+    /** Zusatz der Untergruppe (Schicht 3), optional. */
+    extraPrompt: text('extra_prompt'),
     position: integer('position').notNull().default(0),
     ...timestamps,
   },
@@ -71,6 +77,34 @@ export const subjectGroups = sqliteTable(
     uniqueIndex('subject_groups_name_nocase').on(table.subjectId, sql`lower(${table.name})`),
   ],
 );
+
+/**
+ * Modell-Anbieter. Der API-Schlüssel steht nicht hier, sondern im Secret-Speicher unter
+ * `provider.<id>.key`. `models` ist eine JSON-Liste, die der Nutzer pflegt (siehe providers/models.ts).
+ */
+export const providers = sqliteTable(
+  'providers',
+  {
+    id: id(),
+    name: text('name').notNull(),
+    /** Schnittstellenart. Bisher nur `openai-compatible`. */
+    type: text('type').notNull().default('openai-compatible'),
+    /** Voreinstellung, aus der der Eintrag entstand (nur zur Anzeige), oder `custom`. */
+    preset: text('preset').notNull().default('custom'),
+    baseUrl: text('base_url').notNull(),
+    models: text('models').notNull().default('[]'),
+    position: integer('position').notNull().default(0),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex('providers_name_nocase').on(sql`lower(${table.name})`)],
+);
+
+/** Einstellungen als Schlüssel und JSON-Wert (z. B. Standardmodell und Fallback-Kette). */
+export const settings = sqliteTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  ...timestamps,
+});
 
 /**
  * Zugangsdaten, genau eine Zeile (id = 1). Gespeichert wird nur der Hash des Passcodes,
@@ -105,3 +139,4 @@ export const sessions = sqliteTable(
 export type Profile = typeof profile.$inferSelect;
 export type Subject = typeof subjects.$inferSelect;
 export type SubjectGroup = typeof subjectGroups.$inferSelect;
+export type ProviderRow = typeof providers.$inferSelect;
