@@ -1,12 +1,18 @@
+import { Plus } from 'lucide-react';
+import { useState } from 'react';
 import { messages as m } from '../i18n';
+import { Button } from '../ui/Button';
 import { Link } from '../ui/Link';
 import { Sheet } from '../ui/Sheet';
 import { SubjectIcon } from '../ui/SubjectIcon';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
+import { SubjectDialog } from './SubjectDialog';
 import { groupCount, subjectMeta } from './subject-meta';
 
 export function HomePage() {
   const { subjects } = useWorkspace();
+  const [creating, setCreating] = useState(false);
+  const dialog = creating && <SubjectDialog onClose={() => setCreating(false)} />;
 
   if (subjects.length === 0) {
     return (
@@ -15,6 +21,10 @@ export function HomePage() {
           {m.home.emptyTitle}
         </h1>
         <p className="mt-3 max-w-prose text-ink-secondary">{m.home.emptyLead}</p>
+        <Button variant="primary" className="mt-6" onClick={() => setCreating(true)}>
+          {m.subjectDialog.createTitle}
+        </Button>
+        {dialog}
       </Sheet>
     );
   }
@@ -48,6 +58,11 @@ export function HomePage() {
           );
         })}
       </ul>
+      <Button variant="ghost" className="mt-4 -ml-3" onClick={() => setCreating(true)}>
+        <Plus aria-hidden="true" className="size-4" />
+        {m.shell.addSubject}
+      </Button>
+      {dialog}
     </Sheet>
   );
 }

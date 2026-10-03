@@ -1,12 +1,13 @@
-import { type FormEvent, type ReactNode, useId, useState } from 'react';
+import { type FormEvent, type ReactNode, useState } from 'react';
 import { ApiError } from '../api/client';
 import { messages as m } from '../i18n';
 import { useSession } from '../session/SessionProvider';
 import { Button } from '../ui/Button';
 import { PasscodeField } from '../ui/Field';
 import { FieldError } from '../ui/FieldError';
+import { Segmented } from '../ui/Segmented';
 import { Sheet } from '../ui/Sheet';
-import { applyTheme, readTheme, saveTheme, type ThemePreference } from '../ui/theme';
+import { readTheme, saveTheme, type ThemePreference } from '../ui/theme';
 import { commonErrorMessage, rateLimitMessage } from './auth-errors';
 
 function Section({ title, lead, children }: { title: string; lead?: string; children: ReactNode }) {
@@ -27,37 +28,19 @@ const THEMES: { value: ThemePreference; label: string }[] = [
 
 function ThemeChoice() {
   const [theme, setTheme] = useState<ThemePreference>(() => readTheme());
-  const name = useId();
 
   function choose(value: ThemePreference) {
     setTheme(value);
     saveTheme(value);
-    applyTheme(value);
   }
 
   return (
-    <fieldset className="inline-flex rounded-control border border-control-edge p-0.5">
-      <legend className="sr-only">{m.settings.appearance.title}</legend>
-      {THEMES.map(({ value, label }) => (
-        <div key={value} className="relative">
-          <input
-            type="radio"
-            name={name}
-            id={`${name}-${value}`}
-            value={value}
-            checked={theme === value}
-            onChange={() => choose(value)}
-            className="peer sr-only"
-          />
-          <label
-            htmlFor={`${name}-${value}`}
-            className="flex min-h-10 cursor-pointer items-center rounded-[4px] px-4 text-sm font-medium text-ink-secondary peer-checked:bg-primary peer-checked:text-on-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent"
-          >
-            {label}
-          </label>
-        </div>
-      ))}
-    </fieldset>
+    <Segmented
+      legend={m.settings.appearance.title}
+      options={THEMES}
+      value={theme}
+      onChange={choose}
+    />
   );
 }
 

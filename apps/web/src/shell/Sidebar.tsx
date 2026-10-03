@@ -1,7 +1,8 @@
-import { ChevronRight, Settings } from 'lucide-react';
+import { ChevronRight, Plus, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { messages as m } from '../i18n';
 import { type Route, useRoute } from '../router';
+import { SubjectDialog } from '../screens/SubjectDialog';
 import { Link } from '../ui/Link';
 import { SubjectIcon } from '../ui/SubjectIcon';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
@@ -19,6 +20,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { subjects } = useWorkspace();
   const route = useRoute();
   const activeSubjectId = route.name === 'subject' ? route.subjectId : null;
+  const [creating, setCreating] = useState(false);
   const [open, setOpen] = useState<Set<string>>(
     () => new Set(activeSubjectId ? [activeSubjectId] : []),
   );
@@ -117,6 +119,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             {m.sidebar.empty}
           </p>
         )}
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="mt-1 flex min-h-11 w-full items-center gap-2.5 rounded-control px-2.5 text-ink-muted hover:bg-paper hover:text-ink"
+        >
+          <Plus aria-hidden="true" strokeWidth={1.6} className="size-[18px] shrink-0" />
+          {m.shell.addSubject}
+        </button>
       </div>
 
       <div className="border-t border-line p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
@@ -130,6 +140,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           {m.shell.settings}
         </Link>
       </div>
+      {creating && <SubjectDialog onClose={() => setCreating(false)} />}
     </nav>
   );
 }

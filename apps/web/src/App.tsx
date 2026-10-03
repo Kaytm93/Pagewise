@@ -1,10 +1,17 @@
 import type { ApiClient } from './api/client';
 import { ConnectionScreen } from './screens/ConnectionScreen';
 import { LoginScreen } from './screens/LoginScreen';
+import { Onboarding } from './screens/Onboarding';
 import { SetupScreen } from './screens/SetupScreen';
 import { SessionProvider, useSession } from './session/SessionProvider';
 import { AppShell } from './shell/AppShell';
-import { WorkspaceProvider } from './workspace/WorkspaceProvider';
+import { useWorkspace, WorkspaceProvider } from './workspace/WorkspaceProvider';
+
+/** Beim ersten Start führt der Assistent durch die Einrichtung, danach öffnet die App. */
+function WorkspaceGate() {
+  const { profile } = useWorkspace();
+  return profile.onboardingCompleted ? <AppShell /> : <Onboarding />;
+}
 
 function Gate() {
   const { status, reload } = useSession();
@@ -21,7 +28,7 @@ function Gate() {
         <WorkspaceProvider
           fallback={(state, retry) => <ConnectionScreen state={state} onRetry={retry} />}
         >
-          <AppShell />
+          <WorkspaceGate />
         </WorkspaceProvider>
       );
   }
