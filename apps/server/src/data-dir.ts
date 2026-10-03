@@ -66,7 +66,8 @@ export function realpathLoose(path: string): string {
   return join(realpathSync(current), ...missing);
 }
 
-function isInside(child: string, parent: string): boolean {
+/** Prüft, ob `child` gleich `parent` ist oder darunter liegt (beide bereits aufgelöst). */
+export function isInside(child: string, parent: string): boolean {
   return child === parent || child.startsWith(parent.endsWith(sep) ? parent : parent + sep);
 }
 
