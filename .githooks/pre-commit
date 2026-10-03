@@ -1,0 +1,15 @@
+#!/bin/sh
+# Schulheft pre-commit: Secret-Scan und Privacy-Check auf den gestagten Dateien.
+# Wird mit "pnpm install" aktiviert (git config core.hooksPath .githooks).
+set -e
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: Node.js wurde nicht gefunden, der Scan ist nicht möglich. Commit abgebrochen." >&2
+  exit 1
+fi
+
+node scripts/secret-scan.mjs --staged
+node scripts/check-privacy.mjs --staged

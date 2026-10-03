@@ -1,0 +1,7 @@
+packages:
+  - apps/*
+  - packages/*
+
+# pnpm 10 führt Build-Skripte von Abhängigkeiten nur nach Freigabe aus.
+onlyBuiltDependencies:
+  - esbuild

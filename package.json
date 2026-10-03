@@ -1,0 +1,27 @@
+{
+  "name": "schulheft",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Selbst gehosteter Schul-Workspace (Arbeitstitel). Daten bleiben lokal.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter \"./apps/*\" dev",
+    "build": "pnpm -r build",
+    "start": "pnpm --filter @schulheft/web build && pnpm --filter @schulheft/server start",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test && vitest run",
+    "scan": "node scripts/secret-scan.mjs --all && node scripts/check-privacy.mjs --all",
+    "prepare": "node scripts/install-hooks.mjs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "vitest": "^5.0.3"
+  }
+}
