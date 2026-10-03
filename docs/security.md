@@ -24,6 +24,9 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | `.gitignore`, Secret-Scan-Hook, Privacy-Check, CI mit gitleaks | umgesetzt (Phase 0) |
 | Passcode (scrypt), Einrichtungscode, Sitzungen, CSRF, Rate-Limit | umgesetzt (Phase 1a), siehe D-020 und D-021 |
 | Secrets in Datei mit Rechten 600, nie in Antworten oder Logs | umgesetzt (Phase 1a), Keychain bewusst nicht, siehe D-018 |
+| Oberfläche ohne Inline-Styles und ohne externe Ressourcen (strenge CSP), CSRF-Token nur im Speicher | umgesetzt (Phase 1a), siehe D-023 |
+| Import von Fächern (JSON, CSV): Größen- und Mengengrenze, nur bekannte Felder, Fehlerantworten ohne Dateiinhalt | umgesetzt (Phase 1a) |
+| Bekannter Befund: `pnpm audit` meldet eine mittlere Lücke in `esbuild` über `drizzle-kit` (nur Entwicklung, läuft nie im Betrieb); die CI-Schwelle ist „high“ | beobachtet, wird mit dem nächsten `drizzle-kit`-Update behoben |
 | Datenbank, Sicherungen vor Migrationen und Unterordner nur für den Besitzer (600/700) | umgesetzt (Phase 1a), siehe D-017 und D-019 |
 | Bereinigung von Markdown, SVG, HTML | geplant (Phase 1b) |
 | EXIF-Entfernung, Upload-Prüfung | geplant (Phase 1c) |

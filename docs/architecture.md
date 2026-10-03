@@ -1,6 +1,6 @@
 # Architektur
 
-Stand: Phase 1a läuft (Datenbank, Migrationen, Storage und Secret-Speicher sind gebaut). Der Rest ab Phase 1a ist Plan und kann sich beim Bauen ändern, Abweichungen stehen in [decisions.md](decisions.md).
+Stand: Phase 1a läuft. Gebaut sind Datenbank, Migrationen, Storage, Secret-Speicher, Anmeldung, Profil, Fächer und Untergruppen (API und Oberfläche) sowie das Onboarding. Noch offen in 1a: Prompt-Schichten, Provider, Chat mit Streaming, PWA. Der Rest ab Phase 1a ist Plan und kann sich beim Bauen ändern, Abweichungen stehen in [decisions.md](decisions.md).
 
 ## Überblick
 
