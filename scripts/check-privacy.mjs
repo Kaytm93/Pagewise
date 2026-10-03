@@ -2,7 +2,7 @@
 // Privacy-Check: sucht in Dateinamen und Inhalten nach eigenen, privaten Begriffen.
 //
 // Die Begriffe stehen in einer LOKALEN, nicht eingecheckten Datei:
-//   config/privacy-blacklist.local.txt   (oder Pfad in SCHULHEFT_PRIVACY_BLACKLIST)
+//   config/privacy-blacklist.local.txt   (oder Pfad in PAGEWISE_PRIVACY_BLACKLIST)
 // Pro Zeile ein Begriff (ohne Beachtung der Groß-/Kleinschreibung) oder ein regulärer Ausdruck
 // mit Präfix "re:". Leere Zeilen und Zeilen mit "#" am Anfang werden ignoriert.
 //
@@ -66,7 +66,7 @@ function main() {
     return 2;
   }
 
-  const blacklistPath = process.env.SCHULHEFT_PRIVACY_BLACKLIST || DEFAULT_BLACKLIST;
+  const blacklistPath = process.env.PAGEWISE_PRIVACY_BLACKLIST || DEFAULT_BLACKLIST;
   if (!existsSync(blacklistPath)) {
     if (parsed.mode !== 'staged') {
       console.log(

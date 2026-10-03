@@ -40,9 +40,9 @@ describe('Auslieferung der Oberfläche', () => {
   let dist: string;
 
   beforeAll(() => {
-    dist = realpathSync(mkdtempSync(join(tmpdir(), 'schulheft-web-')));
+    dist = realpathSync(mkdtempSync(join(tmpdir(), 'pagewise-web-')));
     mkdirSync(join(dist, 'assets'));
-    writeFileSync(join(dist, 'index.html'), '<!doctype html><title>Schulheft</title>');
+    writeFileSync(join(dist, 'index.html'), '<!doctype html><title>Pagewise</title>');
     writeFileSync(join(dist, 'assets', 'app.js'), 'console.log(1)');
   });
 
@@ -61,7 +61,7 @@ describe('Auslieferung der Oberfläche', () => {
     const app = createApp({ version: '0', webDist: dist });
     const response = await app.request('/faecher/42');
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain('<title>Schulheft</title>');
+    expect(await response.text()).toContain('<title>Pagewise</title>');
   });
 
   it('liefert API-Pfade nie als index.html aus', async () => {

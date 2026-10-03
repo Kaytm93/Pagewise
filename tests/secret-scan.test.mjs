@@ -24,7 +24,7 @@ describe('scanText', () => {
   it('ignoriert Platzhalter und gewöhnlichen Code', () => {
     const text = [
       'API_KEY=your_key_here_please_replace_1',
-      'SCHULHEFT_PORT=3000',
+      'PAGEWISE_PORT=3000',
       'password: process.env.PASSWORD_VALUE_123',
       'const tokenizer = new Tokenizer(options);',
       'const secretKey = deriveKeyFromPasscode(passcode);',
@@ -43,7 +43,7 @@ describe('secret-scan CLI', () => {
   let dir;
 
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), 'schulheft-scan-'));
+    dir = mkdtempSync(join(tmpdir(), 'pagewise-scan-'));
   });
 
   afterAll(() => {

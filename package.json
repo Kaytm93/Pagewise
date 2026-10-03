@@ -1,8 +1,8 @@
 {
-  "name": "schulheft",
+  "name": "pagewise",
   "version": "0.0.0",
   "private": true,
-  "description": "Selbst gehosteter Schul-Workspace (Arbeitstitel). Daten bleiben lokal.",
+  "description": "Selbst gehosteter Schul-Workspace. Daten bleiben lokal.",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.28.0",
@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "pnpm -r --parallel --filter \"./apps/*\" dev",
     "build": "pnpm -r build",
-    "start": "pnpm --filter @schulheft/web build && pnpm --filter @schulheft/server start",
+    "start": "pnpm --filter @pagewise/web build && pnpm --filter @pagewise/server start",
     "lint": "biome check .",
     "format": "biome check --write .",
     "typecheck": "pnpm -r typecheck",

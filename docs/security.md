@@ -1,6 +1,6 @@
 # Sicherheit und Privatsphäre
 
-Schulheft verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Grundregel: **Alle Daten bleiben auf dem Rechner der Nutzerin oder des Nutzers.** Das Projekt sammelt nichts, es gibt keine Telemetrie, keine Analytics und keine Konten bei uns.
+Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Grundregel: **Alle Daten bleiben auf dem Rechner der Nutzerin oder des Nutzers.** Das Projekt sammelt nichts, es gibt keine Telemetrie, keine Analytics und keine Konten bei uns.
 
 ## Bedrohungsmodell (kurz)
 
@@ -32,7 +32,7 @@ Schulheft verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gr
 
 ## Datenverzeichnis
 
-Alles, was Nutzerdaten enthält, liegt im Datenverzeichnis: Datenbank, Uploads, Workspaces, Logs, Secrets, Backups. Standard unter macOS `~/Library/Application Support/Schulheft`, unter Linux `$XDG_DATA_HOME/schulheft`, überschreibbar mit `SCHULHEFT_DATA_DIR`. Der Start-Check lehnt Orte innerhalb eines Git-Arbeitsverzeichnisses ab (Details: [decisions.md](decisions.md), D-005).
+Alles, was Nutzerdaten enthält, liegt im Datenverzeichnis: Datenbank, Uploads, Workspaces, Logs, Secrets, Backups. Standard unter macOS `~/Library/Application Support/Pagewise`, unter Linux `$XDG_DATA_HOME/pagewise`, überschreibbar mit `PAGEWISE_DATA_DIR`. Der Start-Check lehnt Orte innerhalb eines Git-Arbeitsverzeichnisses ab (Details: [decisions.md](decisions.md), D-005).
 
 ## Repo-Hygiene
 

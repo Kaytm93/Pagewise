@@ -15,7 +15,7 @@ pnpm install
 pnpm start
 ```
 
-Der Server lauscht auf `127.0.0.1:3000`. Den Port änderst du mit `SCHULHEFT_PORT`, das Datenverzeichnis mit `SCHULHEFT_DATA_DIR`. Beim ersten Start wird das Datenverzeichnis mit Rechten `700` angelegt. Liegt es innerhalb eines Git-Arbeitsverzeichnisses, bricht der Start mit einer Erklärung ab.
+Der Server lauscht auf `127.0.0.1:3000`. Den Port änderst du mit `PAGEWISE_PORT`, das Datenverzeichnis mit `PAGEWISE_DATA_DIR`. Beim ersten Start wird das Datenverzeichnis mit Rechten `700` angelegt. Liegt es innerhalb eines Git-Arbeitsverzeichnisses, bricht der Start mit einer Erklärung ab.
 
 ## Zugriff von iPhone und iPad über Tailscale
 
@@ -31,7 +31,7 @@ Der Server lauscht auf `127.0.0.1:3000`. Den Port änderst du mit `SCHULHEFT_POR
 3. Öffne auf dem Gerät `https://<rechnername>.<tailnet-name>.ts.net` in Safari.
 4. Ab Phase 1a: Teilen → „Zum Home-Bildschirm“ installiert die Web-App.
 
-**Niemals `tailscale funnel` verwenden.** Funnel macht den Dienst öffentlich im Internet erreichbar. Schulheft ist nur für dein privates Tailnet gedacht.
+**Niemals `tailscale funnel` verwenden.** Funnel macht den Dienst öffentlich im Internet erreichbar. Pagewise ist nur für dein privates Tailnet gedacht.
 
 Quelle: <https://tailscale.com/docs/reference/tailscale-cli/serve>
 
@@ -41,4 +41,4 @@ Der Rechner muss laufen, solange du von anderen Geräten zugreifst. Auf dem Mac 
 
 ## Docker (optional)
 
-Wenn du den Server in einem Container betreibst, setze `SCHULHEFT_ALLOW_NON_LOOPBACK=1` im Container und veröffentliche den Port nur lokal (`127.0.0.1:3000:3000`). Das Datenverzeichnis kommt als Volume von außerhalb des Repos. Ein fertiges `docker compose`-Setup folgt mit Phase 1a.
+Wenn du den Server in einem Container betreibst, setze `PAGEWISE_ALLOW_NON_LOOPBACK=1` im Container und veröffentliche den Port nur lokal (`127.0.0.1:3000:3000`). Das Datenverzeichnis kommt als Volume von außerhalb des Repos. Ein fertiges `docker compose`-Setup folgt mit Phase 1a.

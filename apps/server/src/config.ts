@@ -11,9 +11,9 @@ export class ConfigError extends Error {
 export const LOOPBACK_HOSTS = new Set(['127.0.0.1', '::1', 'localhost']);
 
 const EnvSchema = z.object({
-  SCHULHEFT_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
-  SCHULHEFT_HOST: z.string().trim().min(1).default('127.0.0.1'),
-  SCHULHEFT_ALLOW_NON_LOOPBACK: z.enum(['1', 'true']).optional(),
+  PAGEWISE_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  PAGEWISE_HOST: z.string().trim().min(1).default('127.0.0.1'),
+  PAGEWISE_ALLOW_NON_LOOPBACK: z.enum(['1', 'true']).optional(),
 });
 
 export interface Config {
@@ -23,7 +23,7 @@ export interface Config {
 
 /**
  * Liest die Konfiguration aus der Umgebung. Der Server bindet nur an Loopback-Adressen.
- * Einzige Ausnahme: SCHULHEFT_ALLOW_NON_LOOPBACK=1 (Docker), dann muss der Port außerhalb
+ * Einzige Ausnahme: PAGEWISE_ALLOW_NON_LOOPBACK=1 (Docker), dann muss der Port außerhalb
  * des Containers ausschließlich an 127.0.0.1 des Hosts veröffentlicht werden.
  */
 export function loadConfig(env: NodeJS.ProcessEnv): Config {
@@ -36,16 +36,16 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
   }
 
   const {
-    SCHULHEFT_HOST: host,
-    SCHULHEFT_PORT: port,
-    SCHULHEFT_ALLOW_NON_LOOPBACK: allow,
+    PAGEWISE_HOST: host,
+    PAGEWISE_PORT: port,
+    PAGEWISE_ALLOW_NON_LOOPBACK: allow,
   } = parsed.data;
   if (!LOOPBACK_HOSTS.has(host) && !allow) {
     throw new ConfigError(
       [
-        `SCHULHEFT_HOST="${host}" ist keine Loopback-Adresse.`,
-        'Schulheft bindet nur an 127.0.0.1, ::1 oder localhost und wird über Tailscale Serve erreichbar gemacht.',
-        'Nur für Docker gibt es die Ausnahme SCHULHEFT_ALLOW_NON_LOOPBACK=1, siehe docs/self-hosting.md.',
+        `PAGEWISE_HOST="${host}" ist keine Loopback-Adresse.`,
+        'Pagewise bindet nur an 127.0.0.1, ::1 oder localhost und wird über Tailscale Serve erreichbar gemacht.',
+        'Nur für Docker gibt es die Ausnahme PAGEWISE_ALLOW_NON_LOOPBACK=1, siehe docs/self-hosting.md.',
       ].join('\n'),
     );
   }

@@ -27,7 +27,7 @@ describe('Pre-Commit-Hook', () => {
   };
 
   beforeAll(() => {
-    repo = mkdtempSync(join(tmpdir(), 'schulheft-hook-'));
+    repo = mkdtempSync(join(tmpdir(), 'pagewise-hook-'));
     blacklist = join(repo, '..', `${repo.split('/').pop()}-blacklist.txt`);
     git(['init', '-b', 'main']);
     cpSync(join(root, 'scripts'), join(repo, 'scripts'), { recursive: true });
@@ -62,7 +62,7 @@ describe('Pre-Commit-Hook', () => {
 
   it('blockiert Begriffe aus der lokalen Blacklist', () => {
     writeFileSync(blacklist, 'Zebrafisch-Testschule\n');
-    const env = { ...baseEnv, SCHULHEFT_PRIVACY_BLACKLIST: blacklist };
+    const env = { ...baseEnv, PAGEWISE_PRIVACY_BLACKLIST: blacklist };
     const result = commit('privat.md', 'Ich gehe auf die Zebrafisch-Testschule.\n', env);
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('privacy-check');

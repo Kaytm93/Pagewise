@@ -1,6 +1,6 @@
 # Sicherheitsmeldungen
 
-Schulheft verarbeitet Schul- und Personendaten, auch von Minderjährigen. Sicherheitslücken nehmen wir ernst.
+Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Sicherheitslücken nehmen wir ernst.
 
 ## So meldest du eine Lücke
 

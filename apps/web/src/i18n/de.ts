@@ -1,7 +1,7 @@
 // Deutsche Texte der Oberfläche. Weitere Sprachen erfüllen den Typ `Messages`.
 export const de = {
   app: {
-    name: 'Schulheft',
+    name: 'Pagewise',
   },
   sidebar: {
     subjects: 'Fächer',
@@ -9,7 +9,7 @@ export const de = {
     emptyHint: 'Sobald das Onboarding steht, legst du hier deine Fächer an.',
   },
   main: {
-    title: 'Dein Schulheft startet leer',
+    title: 'Pagewise startet leer',
     lead: 'Fächer, Prompts und Modelle richtest du selbst ein. Deine Daten bleiben auf deinem Rechner.',
   },
   health: {

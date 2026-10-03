@@ -41,7 +41,7 @@ jobs:
         run: pnpm test
 
       - name: Build der Oberfläche
-        run: pnpm --filter @schulheft/web build
+        run: pnpm --filter @pagewise/web build
 
       - name: Secret-Scan (eigenes Skript)
         run: node scripts/secret-scan.mjs --all

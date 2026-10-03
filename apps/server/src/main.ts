@@ -22,7 +22,7 @@ function main(): void {
     dataDir = prepareDataDir(process.env, { appRoot });
   } catch (error) {
     if (error instanceof ConfigError || error instanceof DataDirError) {
-      console.error(`Schulheft startet nicht.\n${error.message}`);
+      console.error(`Pagewise startet nicht.\n${error.message}`);
       process.exit(1);
     }
     throw error;
@@ -35,7 +35,7 @@ function main(): void {
 
   const server = serve({ fetch: app.fetch, hostname: config.host, port: config.port }, (info) => {
     const host = info.family === 'IPv6' ? `[${info.address}]` : info.address;
-    console.log(`Schulheft läuft auf http://${host}:${info.port}`);
+    console.log(`Pagewise läuft auf http://${host}:${info.port}`);
     console.log(`Datenverzeichnis: ${dataDir}`);
   });
 

@@ -23,19 +23,19 @@ export function defaultDataDir(
   platform: NodeJS.Platform = process.platform,
   home: string = homedir(),
 ): string {
-  if (platform === 'darwin') return join(home, 'Library', 'Application Support', 'Schulheft');
+  if (platform === 'darwin') return join(home, 'Library', 'Application Support', 'Pagewise');
   const xdg = env.XDG_DATA_HOME;
   const base = xdg && isAbsolute(xdg) ? xdg : join(home, '.local', 'share');
-  return join(base, 'schulheft');
+  return join(base, 'pagewise');
 }
 
-/** Löst das konfigurierte Datenverzeichnis auf (SCHULHEFT_DATA_DIR oder Standard). */
+/** Löst das konfigurierte Datenverzeichnis auf (PAGEWISE_DATA_DIR oder Standard). */
 export function resolveDataDir(
   env: NodeJS.ProcessEnv,
   options: Pick<DataDirOptions, 'platform' | 'home'> = {},
 ): string {
   const home = options.home ?? homedir();
-  const configured = env.SCHULHEFT_DATA_DIR?.trim();
+  const configured = env.PAGEWISE_DATA_DIR?.trim();
   if (!configured) return defaultDataDir(env, options.platform, home);
 
   const expanded =
@@ -44,7 +44,7 @@ export function resolveDataDir(
       : configured;
   if (!isAbsolute(expanded)) {
     throw new DataDirError(
-      `SCHULHEFT_DATA_DIR muss ein absoluter Pfad sein (aktuell: "${configured}").`,
+      `PAGEWISE_DATA_DIR muss ein absoluter Pfad sein (aktuell: "${configured}").`,
     );
   }
   return resolve(expanded);
@@ -92,9 +92,9 @@ export function assertDataDirOutsideRepo(dataDir: string, options: DataDirOption
         'Das Datenverzeichnis liegt innerhalb eines Git-Arbeitsverzeichnisses.',
         `  Datenverzeichnis: ${real}`,
         `  Git-Verzeichnis:  ${gitRoot}`,
-        'Aus Datenschutzgründen startet Schulheft so nicht, damit Schuldaten nie versehentlich',
-        'in ein Repository gelangen. Setze SCHULHEFT_DATA_DIR auf einen Ort außerhalb, zum Beispiel',
-        '"~/Library/Application Support/Schulheft" (macOS) oder "~/.local/share/schulheft" (Linux).',
+        'Aus Datenschutzgründen startet Pagewise so nicht, damit Schuldaten nie versehentlich',
+        'in ein Repository gelangen. Setze PAGEWISE_DATA_DIR auf einen Ort außerhalb, zum Beispiel',
+        '"~/Library/Application Support/Pagewise" (macOS) oder "~/.local/share/pagewise" (Linux).',
         'Ist dein Home-Ordner selbst ein Git-Repository, ist das genau der Fall, der hier greift.',
       ].join('\n'),
     );
@@ -107,7 +107,7 @@ export function assertDataDirOutsideRepo(dataDir: string, options: DataDirOption
         'Das Datenverzeichnis liegt innerhalb des Anwendungsordners.',
         `  Datenverzeichnis: ${real}`,
         `  Anwendungsordner: ${appRoot}`,
-        'Setze SCHULHEFT_DATA_DIR auf einen Ort außerhalb.',
+        'Setze PAGEWISE_DATA_DIR auf einen Ort außerhalb.',
       ].join('\n'),
     );
   }

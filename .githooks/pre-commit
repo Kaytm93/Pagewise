@@ -1,5 +1,5 @@
 #!/bin/sh
-# Schulheft pre-commit: Secret-Scan und Privacy-Check auf den gestagten Dateien.
+# Pagewise pre-commit: Secret-Scan und Privacy-Check auf den gestagten Dateien.
 # Wird mit "pnpm install" aktiviert (git config core.hooksPath .githooks).
 set -e
 

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Konventionen für die Arbeit an Schulheft (mit Claude Code oder von Hand).
+Konventionen für die Arbeit an Pagewise (mit Claude Code oder von Hand).
 
 ## Harte Regeln
 

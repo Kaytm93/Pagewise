@@ -13,7 +13,7 @@ describe('Privacy-Check', () => {
   let blacklist;
 
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), 'schulheft-privacy-'));
+    dir = mkdtempSync(join(tmpdir(), 'pagewise-privacy-'));
     blacklist = join(dir, 'blacklist.txt');
     writeFileSync(blacklist, `# Kommentar\n\n${TERM}\nre:lehrer(in)?\\s+quark\n`);
   });
@@ -48,7 +48,7 @@ describe('Privacy-Check', () => {
     const file = join(dir, 'notiz.md');
     writeFileSync(file, `Besuch bei ${TERM}\n`);
     const result = runNode('scripts/check-privacy.mjs', ['--files', file], {
-      env: { ...process.env, SCHULHEFT_PRIVACY_BLACKLIST: blacklist },
+      env: { ...process.env, PAGEWISE_PRIVACY_BLACKLIST: blacklist },
     });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('notiz.md:1');
@@ -59,7 +59,7 @@ describe('Privacy-Check', () => {
     const file = join(dir, 'egal.md');
     writeFileSync(file, 'Inhalt\n');
     const result = runNode('scripts/check-privacy.mjs', ['--files', file], {
-      env: { ...process.env, SCHULHEFT_PRIVACY_BLACKLIST: join(dir, 'gibt-es-nicht.txt') },
+      env: { ...process.env, PAGEWISE_PRIVACY_BLACKLIST: join(dir, 'gibt-es-nicht.txt') },
     });
     expect(result.status).toBe(0);
   });
@@ -70,7 +70,7 @@ describe('Privacy-Check', () => {
     const file = join(dir, 'egal2.md');
     writeFileSync(file, 'Inhalt\n');
     const result = runNode('scripts/check-privacy.mjs', ['--files', file], {
-      env: { ...process.env, SCHULHEFT_PRIVACY_BLACKLIST: broken },
+      env: { ...process.env, PAGEWISE_PRIVACY_BLACKLIST: broken },
     });
     expect(result.status).toBe(2);
   });

@@ -30,21 +30,21 @@ Begründung: Eine Blacklist mit echten Schul- oder Personennamen darf nicht selb
 
 Die App verweigert den Start, wenn das aufgelöste Datenverzeichnis (nach `realpath`, auch für noch nicht existierende Pfade über den nächsten vorhandenen Elternordner) innerhalb eines Git-Arbeitsverzeichnisses liegt oder innerhalb des Ordners dieser Anwendung. Erkannt wird ein Git-Arbeitsverzeichnis an einem `.git`-Eintrag (Ordner oder Datei) in einem Elternordner.
 
-Grenzfall: Ist dein Home-Ordner selbst ein Git-Repository (z. B. für Dotfiles), schlägt der Check mit dem Standardpfad an. Setze dann `SCHULHEFT_DATA_DIR` auf einen Ort außerhalb. Das ist gewollt, die Fehlermeldung erklärt es.
+Grenzfall: Ist dein Home-Ordner selbst ein Git-Repository (z. B. für Dotfiles), schlägt der Check mit dem Standardpfad an. Setze dann `PAGEWISE_DATA_DIR` auf einen Ort außerhalb. Das ist gewollt, die Fehlermeldung erklärt es.
 
 Das Datenverzeichnis wird mit Rechten `700` angelegt.
 
 ## D-006 Server bindet nur an Loopback
 
-`SCHULHEFT_HOST` akzeptiert nur `127.0.0.1`, `::1` und `localhost`. Für Docker gibt es die Ausnahme `SCHULHEFT_ALLOW_NON_LOOPBACK=1`, dann muss der Port ausschließlich an `127.0.0.1` des Hosts veröffentlicht werden.
+`PAGEWISE_HOST` akzeptiert nur `127.0.0.1`, `::1` und `localhost`. Für Docker gibt es die Ausnahme `PAGEWISE_ALLOW_NON_LOOPBACK=1`, dann muss der Port ausschließlich an `127.0.0.1` des Hosts veröffentlicht werden.
 
 Begründung: Erreichbarkeit soll nur über Tailscale Serve entstehen, nie über einen offenen Port. Tailscale Serve leitet laut Doku an einen lokalen Dienst auf `127.0.0.1` weiter.
 
-## D-007 Lizenz: MIT (vorläufig)
+## D-007 Lizenz: MIT
 
 Begründung: Kurz, bekannt, erlaubt Selbst-Hosting, Anpassung und Weitergabe ohne Hürden. Das passt zu einem Projekt, das jeder für die eigene Schule anpassen soll. Es gibt keinen Patentschutz-Zusatz wie bei Apache-2.0, für ein kleines Schulprojekt ist das vertretbar.
 
-**Offen:** Bestätigung durch den Maintainer. Bis dahin steht in der README „vorläufig“.
+**Bestätigt** vom Maintainer am 3. Oktober 2026.
 
 ## D-008 Designsystem: Kontrast bei Links und Hilfstexten
 
@@ -69,8 +69,8 @@ Inter und Instrument Sans kommen über `@fontsource` ins Bundle, es gibt keine A
 
 - Das Kontingent darf nur in offiziell unterstützten Tools genutzt werden, das Abo gehört allein dem Kontoinhaber. Quelle: <https://docs.z.ai/devpack/usage-policy>
 - Ausdrücklich ausgeschlossen ist die Nutzung für direkt aufgerufene Modell-APIs aus eigenen Anwendungen, Bots, Websites oder anderen Systemen, außer es gibt eine schriftliche Vereinbarung. Folgen reichen von Einschränkung bis Sperre ohne Rückerstattung. Quelle: <https://docs.z.ai/legal-agreement/subscription-terms>
-- Folge für Schulheft: Der Coding Plan wird **nur** über den Agent-CLI-Adapter genutzt (unveränderte `claude`-Binary mit `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic`). Es gibt kein Chat-Provider-Preset dafür. Enthält eine frei eingetragene Basis-URL `/api/coding/`, zeigt die UI einen Warnhinweis.
-- Laut Z.ai-Anleitung für Claude Code werden `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`, `API_TIMEOUT_MS` und das Modell-Mapping gesetzt (Haiku auf `glm-5.3-flash`, Sonnet und Opus auf `glm-5.3`). Schulheft nutzt als Standard `glm-5.3-flash` für alle drei Stufen, das Mapping bleibt änderbar. Quelle: <https://docs.z.ai/devpack/tool/claude>
+- Folge für Pagewise: Der Coding Plan wird **nur** über den Agent-CLI-Adapter genutzt (unveränderte `claude`-Binary mit `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic`). Es gibt kein Chat-Provider-Preset dafür. Enthält eine frei eingetragene Basis-URL `/api/coding/`, zeigt die UI einen Warnhinweis.
+- Laut Z.ai-Anleitung für Claude Code werden `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`, `API_TIMEOUT_MS` und das Modell-Mapping gesetzt (Haiku auf `glm-5.3-flash`, Sonnet und Opus auf `glm-5.3`). Pagewise nutzt als Standard `glm-5.3-flash` für alle drei Stufen, das Mapping bleibt änderbar. Quelle: <https://docs.z.ai/devpack/tool/claude>
 
 **Offene Frage vor Phase 1e:** Ob eine App, die die unveränderte `claude`-Binary startet, für Z.ai als „unterstütztes Tool“ gilt, steht in den Bedingungen nicht eindeutig. Nach dem Grundsatz „bei Unklarheit stoppen und fragen“ wird das Profil erst nach Klärung (z. B. Anfrage beim Z.ai-Support) aktiviert und trägt bis dahin einen deutlichen Warnhinweis.
 
@@ -97,3 +97,11 @@ Verwendete Actions und geprüfte Versionen: `actions/checkout` v7 (neueste v7.0.
 ## D-014 Versionen (Stand 3. Oktober 2026)
 
 Beim Anlegen des Projekts aktuell laut npm: Hono 4.13, Vite 8.3, React 19.3, Tailwind 4.3, Vitest 5, Biome 2.5, TypeScript 7.0, Zod 4.6. Die genauen Versionen stehen im Lockfile.
+
+## D-016 Projektname: Pagewise, Stand 3. Oktober 2026
+
+Der Arbeitstitel war „Schulheft“. Der Maintainer wollte einen nicht deutschen Namen und hat „Pagewise“ gewählt. Der Name passt zum Kern (Seiten im Heft), ist kurz und klingt nach Notizen mit KI.
+
+Geprüfte Kandidaten (Websuche, Stand 3. Oktober 2026, weder Marken noch Domains geprüft): Für „Pagewise“ gab es nur ein kleines GitHub-Repo mit gleichem Namen. Ausgeschieden sind „Kladde“ (selbst gehostete Notiz-PWA mit diesem Namen), „Scholia“, „Looseleaf“, „Jotter“, „Inkgrid“ und „Marginly“ wegen bestehender Projekte.
+
+Folgen der Umbenennung: Paket-Scope `@pagewise/*`, Umgebungsvariablen `PAGEWISE_*`, Standard-Datenverzeichnis `Pagewise` (macOS) beziehungsweise `pagewise` (Linux). Es gab noch keine Installation, daher ist keine Migration nötig.
