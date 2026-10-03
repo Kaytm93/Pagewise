@@ -1,88 +1,24 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import type { Hono } from 'hono';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createApp } from '../app';
-import { AttemptLimiter } from '../auth/attempt-limiter';
-import type { AppEnv } from '../http/types';
-import { createServices, type Services } from '../services';
+import type { Services } from '../services';
+import { createHarness, type Harness, TEST_PASSCODE } from '../test-harness';
 
-const passcode = 'ein erfundener Beispiel-Passcode';
-
-interface Reply {
-  status: number;
-  body: Record<string, unknown>;
-  text: string;
-  headers: Headers;
-  cookie: string | null;
-}
+const passcode = TEST_PASSCODE;
 
 describe('Auth-API', () => {
-  let base: string;
+  let harness: Harness;
   let services: Services;
-  let app: Hono<AppEnv>;
 
   beforeEach(() => {
-    base = mkdtempSync(join(tmpdir(), 'pagewise-test-'));
-    services = createServices(join(base, 'daten'), {
-      scryptParams: { N: 16, r: 8, p: 1 },
-      limiter: new AttemptLimiter({ maxFailures: 3 }),
-    });
-    app = createApp({ version: '1.2.3', services });
+    harness = createHarness();
+    services = harness.services;
   });
-  afterEach(() => {
-    services.close();
-    rmSync(base, { recursive: true, force: true });
-  });
+  afterEach(() => harness.close());
 
-  async function call(
-    method: string,
-    path: string,
-    options: {
-      body?: unknown;
-      rawBody?: string;
-      cookie?: string | null;
-      csrf?: string;
-      headers?: Record<string, string>;
-    } = {},
-  ): Promise<Reply> {
-    const headers: Record<string, string> = { ...options.headers };
-    if (options.cookie) headers.cookie = options.cookie;
-    if (options.csrf) headers['x-csrf-token'] = options.csrf;
-    let body: string | undefined = options.rawBody;
-    if (options.body !== undefined) {
-      body = JSON.stringify(options.body);
-      headers['content-type'] = 'application/json';
-    }
-    const response = await app.request(path, { method, headers, body });
-    const text = await response.text();
-    const setCookie = response.headers
-      .getSetCookie()
-      .find((c) => c.startsWith('pagewise_session='));
-    let parsed: Record<string, unknown> = {};
-    try {
-      parsed = text ? (JSON.parse(text) as Record<string, unknown>) : {};
-    } catch {
-      // Antworten ohne JSON (z. B. 204) haben keinen Körper.
-    }
-    return {
-      status: response.status,
-      body: parsed,
-      text,
-      headers: response.headers,
-      cookie: setCookie ?? null,
-    };
-  }
-
-  /** Aus „pagewise_session=abc; Path=/; HttpOnly“ wird „pagewise_session=abc“. */
-  const pair = (setCookie: string | null): string => setCookie?.split(';')[0] ?? '';
-
+  const call: Harness['call'] = (method, path, options) => harness.call(method, path, options);
+  const pair = (setCookie: string | null): string => harness.pair(setCookie);
   async function setUp(): Promise<{ cookie: string; csrf: string }> {
-    const code = services.auth.pendingSetupCode();
-    const reply = await call('POST', '/api/auth/setup', { body: { setupCode: code, passcode } });
-    expect(reply.status).toBe(201);
-    return { cookie: pair(reply.cookie), csrf: String(reply.body.csrfToken) };
+    const { cookie, csrf } = await harness.signIn();
+    return { cookie, csrf };
   }
 
   describe('GET /api/session', () => {
