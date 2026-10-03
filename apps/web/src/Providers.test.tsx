@@ -408,6 +408,64 @@ describe('Anbieter bearbeiten, testen und löschen', () => {
   });
 });
 
+describe('Daten an Anbieter', () => {
+  it('zeigt im Formular, was an den Anbieter geht', async () => {
+    await openSettings();
+    mount(new FakeServer('unlocked'));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Anbieter hinzufügen' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Anbieter hinzufügen' });
+    const sent = within(dialog).getByRole('region', { name: 'Was an diesen Anbieter geht' });
+    expect(sent.textContent).toContain('Verlauf');
+    expect(sent.textContent).toContain('Nie gesendet: dein Passcode');
+  });
+
+  it('sendet Bilder standardmäßig und lässt sich beim Anlegen ausschalten', async () => {
+    await openSettings();
+    const server = new FakeServer('unlocked');
+    mount(server);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Anbieter hinzufügen' }));
+    let dialog = await screen.findByRole('dialog', { name: 'Anbieter hinzufügen' });
+    const box = within(dialog).getByRole('checkbox', { name: /Bilder an diesen Anbieter senden/ });
+    expect((box as HTMLInputElement).checked).toBe(true);
+    await user.type(within(dialog).getByLabelText(/API-Schlüssel/), KEY);
+    await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(server.calls('POST', '/api/providers')[0]?.body).not.toHaveProperty('sendImages');
+
+    await user.click(await screen.findByRole('button', { name: 'Anbieter hinzufügen' }));
+    dialog = await screen.findByRole('dialog', { name: 'Anbieter hinzufügen' });
+    await user.click(within(dialog).getByRole('checkbox', { name: /Bilder an diesen Anbieter/ }));
+    await user.clear(within(dialog).getByLabelText('Name'));
+    await user.type(within(dialog).getByLabelText('Name'), 'Ohne Bilder');
+    await user.type(within(dialog).getByLabelText(/API-Schlüssel/), KEY);
+    await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(server.calls('POST', '/api/providers')[1]?.body).toMatchObject({ sendImages: false });
+    expect(server.providers.find((p) => p.name === 'Ohne Bilder')?.sendImages).toBe(false);
+  });
+
+  it('ändert den Schalter beim Bearbeiten und sendet sonst nichts', async () => {
+    await openSettings();
+    const server = new FakeServer('unlocked');
+    const provider = server.addProvider('Zweiter Anbieter', { sendImages: false });
+    mount(server);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '„Zweiter Anbieter“ bearbeiten' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Anbieter bearbeiten' });
+    const box = within(dialog).getByRole('checkbox', { name: /Bilder an diesen Anbieter/ });
+    expect((box as HTMLInputElement).checked).toBe(false);
+    await user.click(box);
+    await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const calls = server.calls('PATCH', `/api/providers/${provider.id}`);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.body).toEqual({ sendImages: true });
+  });
+});
+
 describe('Standardmodell und Ausweichmodelle', () => {
   function withModels() {
     const server = new FakeServer('unlocked');

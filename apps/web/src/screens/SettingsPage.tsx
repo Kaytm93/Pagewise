@@ -9,6 +9,7 @@ import { Segmented } from '../ui/Segmented';
 import { Sheet } from '../ui/Sheet';
 import { readTheme, saveTheme, type ThemePreference } from '../ui/theme';
 import { commonErrorMessage, rateLimitMessage } from './auth-errors';
+import { EraseDialog } from './EraseDialog';
 import { PromptRow } from './prompts/PromptRow';
 import { ProvidersSection } from './providers/ProvidersSection';
 
@@ -128,6 +129,20 @@ function ChangePasscode() {
   );
 }
 
+function EraseAll() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="max-w-xl">
+      <h3 className="font-medium">{m.settings.data.eraseTitle}</h3>
+      <p className="mt-1 text-sm text-ink-secondary">{m.settings.data.eraseLead}</p>
+      <Button variant="danger" className="mt-4" onClick={() => setOpen(true)}>
+        {m.settings.data.eraseOpen}
+      </Button>
+      {open && <EraseDialog onClose={() => setOpen(false)} />}
+    </div>
+  );
+}
+
 export function SettingsPage() {
   const { logout } = useSession();
   const [leaving, setLeaving] = useState(false);
@@ -147,6 +162,9 @@ export function SettingsPage() {
         <Section title={m.prompts.title} lead={m.prompts.lead}>
           <PromptRow scope={{ type: 'general' }} layer="general" />
           <p className="mt-4 text-sm text-ink-muted">{m.prompts.forSubjects}</p>
+        </Section>
+        <Section title={m.settings.data.title} lead={m.settings.data.lead}>
+          <EraseAll />
         </Section>
         <Section title={m.settings.access.title}>
           <ChangePasscode />

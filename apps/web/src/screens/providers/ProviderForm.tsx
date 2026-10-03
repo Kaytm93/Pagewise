@@ -8,7 +8,7 @@ import type {
 } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { Button } from '../../ui/Button';
-import { SecretField, SelectField, TextField } from '../../ui/Field';
+import { CheckField, SecretField, SelectField, TextField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { ModelListEditor } from './ModelListEditor';
@@ -71,6 +71,7 @@ export function ProviderForm({
   const [baseUrl, setBaseUrl] = useState(provider?.baseUrl ?? preset?.baseUrl ?? '');
   const [apiKey, setApiKey] = useState('');
   const [removeKey, setRemoveKey] = useState(false);
+  const [sendImages, setSendImages] = useState(provider?.sendImages ?? true);
   const [models, setModels] = useState<ModelEntry[]>(
     provider ? provider.models.map(toEntry) : (preset?.models ?? []),
   );
@@ -108,6 +109,7 @@ export function ProviderForm({
         if (JSON.stringify(models) !== JSON.stringify(provider.models.map(toEntry))) {
           patch.models = models;
         }
+        if (sendImages !== provider.sendImages) patch.sendImages = sendImages;
         if (apiKey.trim() !== '') patch.apiKey = apiKey.trim();
         else if (removeKey) patch.clearKey = true;
         if (Object.keys(patch).length === 0) {
@@ -123,6 +125,7 @@ export function ProviderForm({
             baseUrl: baseUrl.trim(),
             ...(apiKey.trim() !== '' ? { apiKey: apiKey.trim() } : {}),
             models,
+            ...(sendImages ? {} : { sendImages: false }),
           }),
         );
       }
@@ -221,6 +224,25 @@ export function ProviderForm({
         />
         {models.some((model) => isFreeModel(model.id)) && <Notice>{m.providers.freeNotice}</Notice>}
       </fieldset>
+
+      <section aria-labelledby="sent-title" className="rounded-box bg-paper p-4">
+        <h3 id="sent-title" className="text-sm font-medium text-ink">
+          {m.providers.form.sentTitle}
+        </h3>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-secondary">
+          <li>{m.providers.form.sentText}</li>
+          <li>{m.providers.form.sentImages}</li>
+          <li>{m.providers.form.sentNever}</li>
+        </ul>
+        <div className="mt-2">
+          <CheckField
+            label={m.providers.form.sendImages}
+            hint={m.providers.form.sendImagesHint}
+            checked={sendImages}
+            onChange={setSendImages}
+          />
+        </div>
+      </section>
 
       {errors.form && <FieldError>{errors.form}</FieldError>}
       <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-end">

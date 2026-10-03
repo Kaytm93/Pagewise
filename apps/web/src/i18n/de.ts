@@ -309,6 +309,16 @@ export const de = {
       models: 'Modelle',
       modelsLead:
         'Diese Modelle kannst du wählen. Die Fähigkeiten brauchen später Bildeingabe und Werkzeuge.',
+      sendImages: 'Bilder an diesen Anbieter senden',
+      sendImagesHint:
+        'Aus: Es verlässt nur Text deinen Rechner, Bilder gehen nicht an diesen Anbieter.',
+      sentTitle: 'Was an diesen Anbieter geht',
+      sentText:
+        'Deine Nachricht und der bisherige Verlauf dieses Chats, dazu die Prompts (Allgemein, Fach, Untergruppe) mit den Profilangaben, die du darin als Variable einsetzt.',
+      sentImages:
+        'Bilder und Dateien nur, wenn du sie selbst anhängst (Bilder nur bei eingeschaltetem Schalter).',
+      sentNever:
+        'Nie gesendet: dein Passcode, die Schlüssel anderer Anbieter und Chats, die du nicht gerade offen hast.',
       delete: 'Anbieter löschen',
       test: 'Verbindung testen',
       testing: 'Wird geprüft …',
@@ -514,6 +524,24 @@ export const de = {
       system: 'Wie das Gerät',
       light: 'Hell',
       dark: 'Dunkel',
+    },
+    data: {
+      title: 'Deine Daten',
+      lead: 'Alles, was Pagewise für dich speichert, liegt auf diesem Rechner. Hier kannst du es komplett entfernen.',
+      eraseTitle: 'Alles löschen',
+      eraseLead:
+        'Löscht alle Fächer, Untergruppen, Chats, Prompts, Profilangaben, Anbieter samt Schlüsseln, Dateien und Sicherungen. Dein Passcode bleibt. Das lässt sich nicht rückgängig machen.',
+      eraseOpen: 'Alles löschen …',
+      dialogTitle: 'Wirklich alles löschen?',
+      dialogLead:
+        'Das entfernt alle deine Inhalte von diesem Rechner, auch die Sicherungen. Es gibt kein Zurück. Gib zur Bestätigung deinen Passcode ein.',
+      passcode: 'Passcode',
+      confirm: 'Alles endgültig löschen',
+      errors: {
+        wrongPasscode: 'Der Passcode stimmt nicht.',
+        failed: 'Das Löschen hat nicht vollständig geklappt. Bitte versuch es noch einmal.',
+        rateLimited: 'Zu viele Versuche. Bitte warte {wait}.',
+      },
     },
     access: {
       title: 'Zugang',

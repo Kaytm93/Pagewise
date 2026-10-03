@@ -190,3 +190,34 @@ export function TextAreaField({
     </div>
   );
 }
+
+interface CheckFieldProps {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}
+
+/** Ein Kästchen mit Beschriftung und kurzer Erklärung. Die ganze Zeile ist antippbar. */
+export function CheckField({ label, hint, checked, onChange }: CheckFieldProps) {
+  const hintId = useId();
+  return (
+    <label className="flex min-h-11 cursor-pointer items-start gap-3 py-1.5">
+      <input
+        type="checkbox"
+        className="mt-0.5 size-5 shrink-0 accent-primary"
+        checked={checked}
+        aria-describedby={hint ? hintId : undefined}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span>
+        <span className="block text-sm font-medium text-ink">{label}</span>
+        {hint && (
+          <span id={hintId} className="mt-0.5 block text-sm text-ink-muted">
+            {hint}
+          </span>
+        )}
+      </span>
+    </label>
+  );
+}

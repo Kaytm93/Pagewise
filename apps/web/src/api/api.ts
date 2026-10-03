@@ -60,6 +60,10 @@ export function createApi(client: ApiClient) {
     changePasscode: (current: string, next: string) =>
       client.request<void>('POST', '/api/auth/passcode', { current, next }),
 
+    /** „Alles löschen“. Verlangt den Passcode, auch bei bestehender Sitzung. */
+    eraseAllData: (passcode: string) =>
+      client.request<void>('POST', '/api/data/erase', { passcode }),
+
     profile: () => client.request<Profile>('GET', '/api/profile'),
     updateProfile: (patch: ProfilePatch) => client.request<Profile>('PATCH', '/api/profile', patch),
     completeOnboarding: () => client.request<Profile>('POST', '/api/onboarding/complete'),

@@ -68,6 +68,8 @@ export interface Provider {
   preset: PresetId;
   baseUrl: string;
   models: ProviderModel[];
+  /** Bilder an diesen Anbieter senden? Aus: nur Text verlässt den Rechner. */
+  sendImages: boolean;
   hasKey: boolean;
   /** Letzte vier Zeichen, nur bei langen Schlüsseln. Der Schlüssel selbst kommt nie an. */
   keyHint: string | null;
@@ -87,12 +89,14 @@ export interface ProviderInput {
   baseUrl?: string;
   apiKey?: string;
   models?: ModelEntry[];
+  sendImages?: boolean;
 }
 
 export interface ProviderPatch {
   name?: string;
   baseUrl?: string;
   models?: ModelEntry[];
+  sendImages?: boolean;
   apiKey?: string;
   clearKey?: boolean;
 }

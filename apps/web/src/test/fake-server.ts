@@ -198,6 +198,8 @@ export class FakeServer {
   chats: Chat[] = [];
   chatMessages = new Map<string, ChatMessage[]>();
   generations = new Map<string, FakeGeneration>();
+  /** Wie oft „Alles löschen“ erfolgreich war. */
+  erased = 0;
   requests: RecordedRequest[] = [];
   private overrides: Override[] = [];
 
@@ -285,6 +287,26 @@ export class FakeServer {
       return json(204);
     }
 
+    if (method === 'POST' && path === '/api/data/erase') {
+      if (data.passcode !== TEST_PASSCODE) return json(403, { error: 'invalid_passcode' });
+      this.erased += 1;
+      for (const generation of this.generations.values()) generation.stop();
+      this.generations.clear();
+      this.subjects = [];
+      this.chats = [];
+      this.providers = [];
+      this.secrets.clear();
+      this.modelSettings = { default: null, fallback: [] };
+      this.profile = {
+        ...this.profile,
+        federalState: null,
+        schoolType: null,
+        gradeLevel: null,
+        onboardingCompleted: false,
+      };
+      return json(204);
+    }
+
     if (method === 'GET' && path === '/api/profile') return json(200, this.profile);
     if (method === 'PATCH' && path === '/api/profile') {
       this.profile = { ...this.profile, ...data };
@@ -326,6 +348,7 @@ export class FakeServer {
       preset: 'custom',
       baseUrl: 'https://anbieter.example.test/v1',
       models: [],
+      sendImages: true,
       hasKey: false,
       keyHint: null,
       warning: null,
@@ -399,6 +422,7 @@ export class FakeServer {
         preset: preset?.id ?? 'custom',
         baseUrl: baseUrl.trim().replace(/\/+$/, ''),
         models: this.withFree(models),
+        sendImages: data.sendImages !== false,
         warning: /\/api\/coding(\/|$)/.test(baseUrl) ? 'coding_plan' : null,
       });
       if (typeof data.apiKey === 'string') {
@@ -449,6 +473,7 @@ export class FakeServer {
         provider.warning = /\/api\/coding(\/|$)/.test(provider.baseUrl) ? 'coding_plan' : null;
       }
       if (Array.isArray(data.models)) provider.models = this.withFree(data.models as ModelEntry[]);
+      if (typeof data.sendImages === 'boolean') provider.sendImages = data.sendImages;
       if (typeof data.apiKey === 'string') {
         this.secrets.set(provider.id, data.apiKey);
         provider.hasKey = true;
