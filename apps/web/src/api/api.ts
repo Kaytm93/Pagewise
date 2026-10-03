@@ -1,6 +1,9 @@
 import type { ApiClient } from './client';
+import type { SseMessage } from './sse';
 import type {
   AvailableModel,
+  Chat,
+  ChatDetail,
   Group,
   ImportResult,
   ModelSettings,
@@ -12,6 +15,7 @@ import type {
   ProviderInput,
   ProviderPatch,
   ProviderPreset,
+  Selection,
   SessionInfo,
   Subject,
   SubjectInput,
@@ -117,6 +121,34 @@ export function createApi(client: ApiClient) {
       });
       return reply.text;
     },
+    async chats(subjectId: string, groupId: string | null): Promise<Chat[]> {
+      const query = `subjectId=${subjectId}${groupId ? `&groupId=${groupId}` : ''}`;
+      const reply = await client.request<{ chats: Chat[] }>('GET', `/api/chats?${query}`);
+      return reply.chats;
+    },
+    createChat: (subjectId: string, groupId: string | null) =>
+      client.request<Chat>('POST', '/api/chats', { subjectId, groupId }),
+    chat: (id: string) => client.request<ChatDetail>('GET', `/api/chats/${id}`),
+    updateChat: (id: string, patch: { title?: string; model?: Selection | null }) =>
+      client.request<Chat>('PATCH', `/api/chats/${id}`, patch),
+    deleteChat: (id: string) => client.request<void>('DELETE', `/api/chats/${id}`),
+    stopChat: (id: string) => client.request<void>('POST', `/api/chats/${id}/stop`),
+    setSubjectModel: (subjectId: string, model: Selection | null) =>
+      client.request<Subject>('PUT', `/api/subjects/${subjectId}/model`, { model }),
+    /** Sendet eine Nachricht und liest die Antwort als Strom mit. */
+    sendMessage: (
+      chatId: string,
+      content: string,
+      onMessage: (message: SseMessage) => void,
+      signal?: AbortSignal,
+    ) => client.stream('POST', `/api/chats/${chatId}/messages`, { content }, onMessage, signal),
+    /** Wiederholt die letzte Antwort, wenn sie fehlschlug, abgebrochen oder unterbrochen wurde. */
+    retryChat: (chatId: string, onMessage: (message: SseMessage) => void, signal?: AbortSignal) =>
+      client.stream('POST', `/api/chats/${chatId}/retry`, undefined, onMessage, signal),
+    /** Hängt sich an eine laufende Antwort an, z. B. nach dem Aufwecken des Geräts. */
+    attachChat: (chatId: string, onMessage: (message: SseMessage) => void, signal?: AbortSignal) =>
+      client.stream('GET', `/api/chats/${chatId}/generation`, undefined, onMessage, signal),
+
     promptPreview: (subjectId: string, groupId: string | null) =>
       client.request<PromptPreview>(
         'GET',

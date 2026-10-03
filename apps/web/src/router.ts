@@ -4,6 +4,7 @@ import { useSyncExternalStore } from 'react';
 export type Route =
   | { name: 'home' }
   | { name: 'subject'; subjectId: string; groupId: string | null }
+  | { name: 'chat'; subjectId: string; chatId: string }
   | { name: 'settings' }
   | { name: 'not-found' };
 
@@ -17,9 +18,10 @@ export function parseRoute(pathname: string): Route {
     const subjectId = parts[1];
     if (subjectId && ID.test(subjectId)) {
       if (parts.length === 2) return { name: 'subject', subjectId, groupId: null };
-      const groupId = parts[3];
-      if (parts.length === 4 && parts[2] === 'groups' && groupId && ID.test(groupId)) {
-        return { name: 'subject', subjectId, groupId };
+      const other = parts[3];
+      if (parts.length === 4 && other && ID.test(other)) {
+        if (parts[2] === 'groups') return { name: 'subject', subjectId, groupId: other };
+        if (parts[2] === 'chats') return { name: 'chat', subjectId, chatId: other };
       }
     }
   }
@@ -37,6 +39,8 @@ export function pathFor(route: Route): string {
       return route.groupId
         ? `/subjects/${route.subjectId}/groups/${route.groupId}`
         : `/subjects/${route.subjectId}`;
+    case 'chat':
+      return `/subjects/${route.subjectId}/chats/${route.chatId}`;
   }
 }
 

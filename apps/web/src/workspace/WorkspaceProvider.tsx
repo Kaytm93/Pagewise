@@ -17,6 +17,7 @@ import type {
   Provider,
   ProviderInput,
   ProviderPatch,
+  Selection,
   Subject,
   SubjectInput,
 } from '../api/types';
@@ -30,6 +31,7 @@ interface WorkspaceValue {
   addSubject: (input: SubjectInput) => Promise<Subject>;
   editSubject: (id: string, patch: Partial<SubjectInput>) => Promise<Subject>;
   removeSubject: (id: string) => Promise<void>;
+  setSubjectModel: (id: string, model: Selection | null) => Promise<void>;
   importSubjects: (format: 'json' | 'csv', content: string) => Promise<ImportResult>;
   addGroup: (subjectId: string, input: { name: string; kind?: string | null }) => Promise<Group>;
   editGroup: (id: string, patch: { name?: string; kind?: string | null }) => Promise<Group>;
@@ -132,6 +134,10 @@ function buildValue(
     },
     removeSubject: async (id) => {
       await api.deleteSubject(id);
+      await refreshSubjects();
+    },
+    setSubjectModel: async (id, model) => {
+      await api.setSubjectModel(id, model);
       await refreshSubjects();
     },
     importSubjects: async (format, content) => {

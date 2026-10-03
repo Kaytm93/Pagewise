@@ -1,0 +1,48 @@
+import { useState } from 'react';
+import type { Subject } from '../../api/types';
+import { format, messages as m } from '../../i18n';
+import { Button } from '../../ui/Button';
+import { useWorkspace } from '../../workspace/WorkspaceProvider';
+import { ModelDialog } from './ModelDialog';
+import { describeSelection } from './models';
+
+/** Zeile „Modell“ eines Fachs: zeigt, was gilt, und lässt es ändern. */
+export function SubjectModel({ subject }: { subject: Subject }) {
+  const { providers, modelSettings, setSubjectModel } = useWorkspace();
+  const [open, setOpen] = useState(false);
+  const own = describeSelection(providers, subject.model);
+  const standard = describeSelection(providers, modelSettings.default);
+
+  let summary: string;
+  if (own) summary = format(m.subject.modelOwn, { name: own });
+  else if (standard) summary = format(m.subject.modelDefault, { name: standard });
+  else summary = m.subject.modelNone;
+
+  return (
+    <section className="mt-8 border-t border-line pt-6" aria-labelledby="model-heading">
+      <h2 id="model-heading" className="text-meta font-medium text-ink-muted">
+        {m.subject.model}
+      </h2>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0">
+          <p className="break-words">{summary}</p>
+          <p className="mt-0.5 text-sm text-ink-muted">{m.subject.modelLead}</p>
+        </div>
+        <Button variant="secondary" onClick={() => setOpen(true)}>
+          {m.subject.modelChange}
+        </Button>
+      </div>
+      {open && (
+        <ModelDialog
+          title={m.chat.modelDialog.subjectTitle}
+          lead={m.chat.modelDialog.subjectLead}
+          value={subject.model}
+          inheritLabel={m.chat.modelDialog.inheritSubject}
+          inheritedName={standard}
+          onSave={(selection) => setSubjectModel(subject.id, selection)}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </section>
+  );
+}

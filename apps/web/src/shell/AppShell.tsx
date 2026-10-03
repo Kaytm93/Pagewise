@@ -1,5 +1,5 @@
 import { Menu } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { messages as m } from '../i18n';
 import { type Route, useRoute } from '../router';
 import { HomePage } from '../screens/HomePage';
@@ -10,6 +10,11 @@ import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { Drawer } from './Drawer';
 import { Sidebar } from './Sidebar';
 
+// Der Chat bringt die Markdown-Darstellung mit und wird erst beim Öffnen eines Chats geladen.
+const ChatPage = lazy(() =>
+  import('../screens/chat/ChatPage').then((module) => ({ default: module.ChatPage })),
+);
+
 function Page({ route }: { route: Route }) {
   switch (route.name) {
     case 'home':
@@ -18,6 +23,18 @@ function Page({ route }: { route: Route }) {
       return <SettingsPage />;
     case 'subject':
       return <SubjectPage subjectId={route.subjectId} groupId={route.groupId} />;
+    case 'chat':
+      return (
+        <Suspense
+          fallback={
+            <p role="status" className="mx-auto max-w-3xl px-4 py-8 text-ink-secondary">
+              {m.chat.loading}
+            </p>
+          }
+        >
+          <ChatPage key={route.chatId} subjectId={route.subjectId} chatId={route.chatId} />
+        </Suspense>
+      );
     case 'not-found':
       return <NotFoundPage />;
   }
@@ -27,6 +44,9 @@ function Page({ route }: { route: Route }) {
 function useTitle(route: Route): string {
   const { subjects } = useWorkspace();
   if (route.name === 'settings') return m.settings.title;
+  if (route.name === 'chat') {
+    return subjects.find((entry) => entry.id === route.subjectId)?.name ?? m.app.name;
+  }
   if (route.name === 'subject') {
     const subject = subjects.find((entry) => entry.id === route.subjectId);
     const group = subject?.groups.find((entry) => entry.id === route.groupId);
@@ -77,7 +97,11 @@ export function AppShell() {
         <main
           id="main"
           tabIndex={-1}
-          className="flex-1 bg-workspace px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] outline-none md:px-10 md:py-12"
+          className={`flex-1 bg-workspace outline-none ${
+            route.name === 'chat'
+              ? 'md:px-10 md:py-8'
+              : 'px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:px-10 md:py-12'
+          }`}
         >
           <Page route={route} />
         </main>

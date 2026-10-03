@@ -112,4 +112,96 @@ describe('ApiClient', () => {
     await client.request('POST', '/api/auth/login', {}).catch(() => undefined);
     expect(onSessionLost).not.toHaveBeenCalled();
   });
+
+  describe('stream', () => {
+    function eventStream(chunks: string[], fail = false): Response {
+      const encoder = new TextEncoder();
+      let index = 0;
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          const chunk = chunks[index];
+          index += 1;
+          if (chunk !== undefined) controller.enqueue(encoder.encode(chunk));
+          else if (fail) controller.error(new TypeError('network error'));
+          else controller.close();
+        },
+      });
+      return new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } });
+    }
+
+    it('liefert die Nachrichten und meldet das Ende', async () => {
+      const { client, fetchMock } = setup(() =>
+        eventStream(['event: delta\ndata: {"te', 'xt":"a"}\n\nevent: ping\ndata: {}\n\n']),
+      );
+      client.setCsrfToken('token-eins');
+      const seen: string[] = [];
+      const result = await client.stream('POST', '/api/test', { a: 1 }, (m) =>
+        seen.push(`${m.event}:${m.data}`),
+      );
+      expect(result).toBe('streamed');
+      expect(seen).toEqual(['delta:{"text":"a"}', 'ping:{}']);
+      expect(lastInit(fetchMock).headers).toMatchObject({
+        Accept: 'text/event-stream',
+        'X-CSRF-Token': 'token-eins',
+      });
+    });
+
+    it('meldet „empty“ bei 204', async () => {
+      const { client } = setup(() => jsonResponse(204));
+      expect(await client.stream('GET', '/api/test', undefined, () => {})).toBe('empty');
+    });
+
+    it('wirft einen ApiError mit dem Code des Servers', async () => {
+      const { client } = setup(() => jsonResponse(409, { error: 'busy' }));
+      await expect(client.stream('POST', '/api/test', {}, () => {})).rejects.toMatchObject({
+        code: 'busy',
+        status: 409,
+      });
+    });
+
+    it('meldet einen abgerissenen Strom als network', async () => {
+      const { client } = setup(() => eventStream(['event: a\ndata: 1\n\n'], true));
+      const seen: string[] = [];
+      await expect(
+        client.stream('GET', '/api/test', undefined, (m) => seen.push(m.event)),
+      ).rejects.toMatchObject({ code: 'network' });
+      expect(seen).toEqual(['a']);
+    });
+
+    it('meldet einen nicht erreichbaren Server als network', async () => {
+      const client = new ApiClient({
+        fetch: async () => {
+          throw new TypeError('Failed to fetch');
+        },
+      });
+      await expect(client.stream('GET', '/api/test', undefined, () => {})).rejects.toMatchObject({
+        code: 'network',
+      });
+    });
+
+    it('lässt einen gewollten Abbruch als AbortError durch', async () => {
+      const controller = new AbortController();
+      const { client } = setup(() => {
+        const body = new ReadableStream<Uint8Array>({
+          start(stream) {
+            controller.signal.addEventListener('abort', () =>
+              stream.error(new DOMException('aborted', 'AbortError')),
+            );
+          },
+        });
+        return new Response(body, { status: 200 });
+      });
+      const pending = client.stream('GET', '/api/test', undefined, () => {}, controller.signal);
+      controller.abort();
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    });
+
+    it('sendet bei einer verlorenen Sitzung das Signal an onSessionLost', async () => {
+      const { client, onSessionLost } = setup(() => jsonResponse(401, { error: 'unauthorized' }));
+      await expect(client.stream('GET', '/api/test', undefined, () => {})).rejects.toBeInstanceOf(
+        ApiError,
+      );
+      expect(onSessionLost).toHaveBeenCalledTimes(1);
+    });
+  });
 });

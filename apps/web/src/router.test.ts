@@ -9,6 +9,7 @@ describe('Router', () => {
     ['/subjects/abc-123', { name: 'subject', subjectId: 'abc-123', groupId: null }],
     ['/subjects/abc/groups/xyz', { name: 'subject', subjectId: 'abc', groupId: 'xyz' }],
     ['/subjects/abc/', { name: 'subject', subjectId: 'abc', groupId: null }],
+    ['/subjects/abc/chats/c-1', { name: 'chat', subjectId: 'abc', chatId: 'c-1' }],
   ])('liest %j', (path, route) => {
     expect(parseRoute(path)).toEqual(route);
   });
@@ -18,7 +19,10 @@ describe('Router', () => {
     '/settings/mehr',
     '/subjects',
     '/subjects/abc/groups',
-    '/subjects/abc/chats/1',
+    '/subjects/abc/chats',
+    '/subjects/abc/chats/<x>',
+    '/subjects/abc/chats/1/mehr',
+    '/subjects/abc/notizen/1',
     '/subjects/a%20b',
     '/subjects/<script>',
     `/subjects/${'x'.repeat(65)}`,
@@ -32,6 +36,7 @@ describe('Router', () => {
       { name: 'settings' },
       { name: 'subject', subjectId: 'f1', groupId: null },
       { name: 'subject', subjectId: 'f1', groupId: 'g1' },
+      { name: 'chat', subjectId: 'f1', chatId: 'c1' },
     ];
     for (const route of routes) expect(parseRoute(pathFor(route))).toEqual(route);
   });

@@ -19,7 +19,8 @@ function isActive(route: Route, subjectId: string, groupId: string | null): bool
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { subjects } = useWorkspace();
   const route = useRoute();
-  const activeSubjectId = route.name === 'subject' ? route.subjectId : null;
+  const activeSubjectId =
+    route.name === 'subject' || route.name === 'chat' ? route.subjectId : null;
   const [creating, setCreating] = useState(false);
   const [open, setOpen] = useState<Set<string>>(
     () => new Set(activeSubjectId ? [activeSubjectId] : []),
@@ -60,6 +61,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             const expanded = open.has(subject.id);
             const panelId = `groups-${subject.id}`;
             const active = isActive(route, subject.id, null);
+            const inChat = route.name === 'chat' && route.subjectId === subject.id;
             return (
               <li key={subject.id}>
                 <div className="flex items-center">
@@ -67,7 +69,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                     to={{ name: 'subject', subjectId: subject.id, groupId: null }}
                     onClick={onNavigate}
                     aria-current={active ? 'page' : undefined}
-                    className={`${rowBase} ${active ? rowActive : ''} no-underline`}
+                    className={`${rowBase} ${active || inChat ? rowActive : ''} no-underline`}
                   >
                     <SubjectIcon icon={subject.icon} className="size-[18px] shrink-0" />
                     <span className="truncate">{subject.name}</span>

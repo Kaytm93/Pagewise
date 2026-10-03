@@ -6,6 +6,8 @@ import { Button } from '../ui/Button';
 import { Link } from '../ui/Link';
 import { Sheet } from '../ui/Sheet';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
+import { ChatList } from './chat/ChatList';
+import { SubjectModel } from './chat/SubjectModel';
 import { GroupDialog } from './GroupDialog';
 import { NotFoundPage } from './NotFoundPage';
 import { PromptRow } from './prompts/PromptRow';
@@ -109,15 +111,13 @@ export function SubjectPage({ subjectId, groupId }: { subjectId: string; groupId
         </div>
       </section>
 
-      <section className="mt-8 border-t border-line pt-6" aria-labelledby="chats-heading">
-        <h2 id="chats-heading" className="text-meta font-medium text-ink-muted">
-          {m.subject.chats}
-        </h2>
-        <div className="mt-3 rounded-box bg-paper p-4">
-          <p className="font-medium">{m.subject.noChatsTitle}</p>
-          <p className="mt-1 text-sm text-ink-secondary">{m.subject.noChatsHint}</p>
-        </div>
-      </section>
+      {!group && <SubjectModel subject={subject} />}
+
+      <ChatList
+        key={`${subject.id}/${group?.id ?? ''}`}
+        subjectId={subject.id}
+        groupId={group?.id ?? null}
+      />
 
       {dialog?.type === 'subject' && <SubjectDialog subject={subject} onClose={close} />}
       {dialog?.type === 'group' && (
