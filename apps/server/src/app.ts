@@ -9,6 +9,7 @@ import type { AppEnv } from './http/types';
 import { authRoutes } from './routes/auth';
 import { profileRoutes } from './routes/profile';
 import { promptRoutes } from './routes/prompts';
+import { providerRoutes } from './routes/providers';
 import { subjectRoutes } from './routes/subjects';
 import type { Services } from './services';
 
@@ -66,6 +67,9 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
       '/api/subjects',
       '/api/groups',
       '/api/prompts',
+      '/api/providers',
+      '/api/provider-presets',
+      '/api/model-settings',
     ]) {
       app.use(prefix, requireSession);
       app.use(`${prefix}/*`, requireSession);
@@ -74,6 +78,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     app.route('/api', profileRoutes(db));
     app.route('/api', subjectRoutes(db));
     app.route('/api', promptRoutes(db));
+    app.route('/api', providerRoutes(services.providers));
   }
 
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));

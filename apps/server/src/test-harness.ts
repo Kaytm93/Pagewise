@@ -44,11 +44,14 @@ export interface Harness {
   close(): void;
 }
 
-export function createHarness(options: { maxFailures?: number } = {}): Harness {
+export function createHarness(
+  options: { maxFailures?: number; fetch?: typeof fetch } = {},
+): Harness {
   const base = mkdtempSync(join(tmpdir(), 'pagewise-test-'));
   const services = createServices(join(base, 'daten'), {
     scryptParams: { N: 16, r: 8, p: 1 },
     limiter: new AttemptLimiter({ maxFailures: options.maxFailures ?? 3 }),
+    fetch: options.fetch,
   });
   const app = createApp({ version: '1.2.3', services });
 

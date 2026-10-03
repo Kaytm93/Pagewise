@@ -4,6 +4,8 @@ import { AuthService } from './auth/auth-service';
 import type { ScryptParams } from './auth/passcode';
 import { SessionService } from './auth/sessions';
 import { type DatabaseHandle, migrateDatabase, openDatabase } from './db/client';
+import { ProviderClient } from './providers/client';
+import { ProviderService } from './providers/service';
 import { type DataPaths, ensureDataLayout } from './storage/data-paths';
 import { FileSecretStore, type SecretStore } from './storage/secret-store';
 import { LocalStorage, type Storage } from './storage/storage';
@@ -16,6 +18,7 @@ export interface Services {
   secrets: SecretStore;
   sessions: SessionService;
   auth: AuthService;
+  providers: ProviderService;
   close(): void;
 }
 
@@ -23,6 +26,8 @@ export interface ServicesOptions {
   /** Nur für Tests: schwächere (schnellere) Hash-Parameter. */
   scryptParams?: ScryptParams;
   limiter?: AttemptLimiter;
+  /** Nur für Tests: ersetzt `fetch` für Anfragen an Modell-Anbieter. */
+  fetch?: typeof fetch;
 }
 
 /**
@@ -46,13 +51,19 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     limiter: options.limiter ?? new AttemptLimiter(),
     scryptParams: options.scryptParams,
   });
+  const secrets = new FileSecretStore(join(paths.secrets, 'secrets.json'));
   return {
     paths,
     database,
     storage: new LocalStorage(paths.assets),
-    secrets: new FileSecretStore(join(paths.secrets, 'secrets.json')),
+    secrets,
     sessions,
     auth,
+    providers: new ProviderService(
+      database.db,
+      secrets,
+      new ProviderClient({ fetch: options.fetch }),
+    ),
     close: () => database.close(),
   };
 }
