@@ -49,7 +49,13 @@ describe('Datenbank', () => {
     const tables = handle.sqlite
       .prepare("select name from sqlite_master where type = 'table' and name not like '%drizzle%'")
       .all() as { name: string }[];
-    expect(tables.map((t) => t.name).sort()).toEqual(['profile', 'subject_groups', 'subjects']);
+    expect(tables.map((t) => t.name).sort()).toEqual([
+      'auth_credentials',
+      'profile',
+      'sessions',
+      'subject_groups',
+      'subjects',
+    ]);
   });
 
   it('startet leer: keine vorbelegten Fächer, kein Profil', () => {

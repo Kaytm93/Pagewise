@@ -1,4 +1,8 @@
 import { join } from 'node:path';
+import { AttemptLimiter } from './auth/attempt-limiter';
+import { AuthService } from './auth/auth-service';
+import type { ScryptParams } from './auth/passcode';
+import { SessionService } from './auth/sessions';
 import { type DatabaseHandle, migrateDatabase, openDatabase } from './db/client';
 import { type DataPaths, ensureDataLayout } from './storage/data-paths';
 import { FileSecretStore, type SecretStore } from './storage/secret-store';
@@ -10,14 +14,22 @@ export interface Services {
   database: DatabaseHandle;
   storage: Storage;
   secrets: SecretStore;
+  sessions: SessionService;
+  auth: AuthService;
   close(): void;
+}
+
+export interface ServicesOptions {
+  /** Nur für Tests: schwächere (schnellere) Hash-Parameter. */
+  scryptParams?: ScryptParams;
+  limiter?: AttemptLimiter;
 }
 
 /**
  * Baut die Dienste für ein bereits geprüftes Datenverzeichnis: legt Unterordner an, öffnet
  * die Datenbank und wendet ausstehende Migrationen an.
  */
-export function createServices(dataDir: string): Services {
+export function createServices(dataDir: string, options: ServicesOptions = {}): Services {
   const paths = ensureDataLayout(dataDir);
   const database = openDatabase(paths.database);
   try {
@@ -26,11 +38,21 @@ export function createServices(dataDir: string): Services {
     database.close();
     throw error;
   }
+  const sessions = new SessionService(database.db);
+  sessions.purgeExpired();
+  const auth = new AuthService({
+    db: database.db,
+    sessions,
+    limiter: options.limiter ?? new AttemptLimiter(),
+    scryptParams: options.scryptParams,
+  });
   return {
     paths,
     database,
     storage: new LocalStorage(paths.assets),
     secrets: new FileSecretStore(join(paths.secrets, 'secrets.json')),
+    sessions,
+    auth,
     close: () => database.close(),
   };
 }

@@ -4,15 +4,21 @@ import { join, relative } from 'node:path';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { secureHeaders } from 'hono/secure-headers';
+import { csrfGuard, loadSession } from './auth/http';
+import type { AppEnv } from './http/types';
+import { authRoutes } from './routes/auth';
+import type { Services } from './services';
 
 export interface AppOptions {
   version: string;
   /** Ordner mit der gebauten Oberfläche (apps/web/dist). Fehlt er, liefert der Server nur die API. */
   webDist?: string;
+  /** Ohne Dienste antwortet nur /api/health. Der Server übergibt sie immer. */
+  services?: Services;
 }
 
-export function createApp(options: AppOptions): Hono {
-  const app = new Hono();
+export function createApp(options: AppOptions): Hono<AppEnv> {
+  const app = new Hono<AppEnv>();
 
   // Strenge Content-Security-Policy: alles nur von der eigenen Herkunft.
   // Wird mit den Hefteintrag-Blöcken (Phase 1b) bei Bedarf gezielt erweitert.
@@ -43,6 +49,13 @@ export function createApp(options: AppOptions): Hono {
   });
 
   app.get('/api/health', (c) => c.json({ status: 'ok', version: options.version }));
+
+  const services = options.services;
+  if (services) {
+    app.use('/api/*', loadSession(services.sessions));
+    app.use('/api/*', csrfGuard);
+    app.route('/api', authRoutes({ auth: services.auth, sessions: services.sessions }));
+  }
 
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 

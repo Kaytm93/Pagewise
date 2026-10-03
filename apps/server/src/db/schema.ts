@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
-import { check, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // Alle Zeitstempel sind Millisekunden seit 1970 (UTC). Die Tabellen enthalten keine Vorbelegung:
 // Fächer, Untergruppen und Profilangaben legt der Nutzer selbst an.
@@ -63,6 +63,36 @@ export const subjectGroups = sqliteTable(
   (table) => [
     uniqueIndex('subject_groups_name_nocase').on(table.subjectId, sql`lower(${table.name})`),
   ],
+);
+
+/**
+ * Zugangsdaten, genau eine Zeile (id = 1). Gespeichert wird nur der Hash des Passcodes,
+ * nie der Passcode selbst. Gibt es keine Zeile, ist Pagewise noch nicht eingerichtet.
+ */
+export const authCredentials = sqliteTable(
+  'auth_credentials',
+  {
+    id: integer('id').primaryKey(),
+    passcodeHash: text('passcode_hash').notNull(),
+    ...timestamps,
+  },
+  (table) => [check('auth_credentials_singleton', sql`${table.id} = 1`)],
+);
+
+/**
+ * Angemeldete Sitzungen. Der Cookie enthält ein zufälliges Token, in der Datenbank steht nur
+ * dessen SHA-256-Hash. So hilft eine Kopie der Datenbank niemandem, eine Sitzung zu übernehmen.
+ */
+export const sessions = sqliteTable(
+  'sessions',
+  {
+    tokenHash: text('token_hash').primaryKey(),
+    csrfToken: text('csrf_token').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    lastSeenAt: integer('last_seen_at', { mode: 'timestamp_ms' }).notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [index('sessions_expires_at').on(table.expiresAt)],
 );
 
 export type Profile = typeof profile.$inferSelect;

@@ -8,7 +8,8 @@
     "start": "NODE_ENV=production tsx src/main.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "reset-passcode": "tsx src/cli/reset-passcode.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.3",
