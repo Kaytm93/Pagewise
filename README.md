@@ -2,7 +2,7 @@
 
 Ein selbst gehosteter Schul-Workspace für den Browser. Jede Person richtet ihre eigene Installation ein: eigene Fächer, eigene Prompts, eigene Modelle. Die Daten bleiben auf dem eigenen Rechner.
 
-> **Status:** Phase 0 (Fundament). Das Projekt ist noch nicht benutzbar.
+> **Status:** Phase 1a (Kern). Einrichtung, Fächer und Untergruppen, Prompt-Schichten, Anbieter, Chat mit Streaming und die installierbare Web-App laufen. Hefteinträge, Fotos, Export und Agent-CLI kommen in den nächsten Phasen. Der Stand der Abnahme steht in [docs/acceptance-1a.md](docs/acceptance-1a.md).
 
 ## Was Pagewise werden soll
 
