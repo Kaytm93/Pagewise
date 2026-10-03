@@ -50,7 +50,7 @@ function contrast(foreground: string, background: string): number {
 }
 
 const surfaces = ['--canvas', '--surface', '--paper', '--workspace'];
-const texts = ['--ink', '--ink-secondary', '--ink-muted', '--link'];
+const texts = ['--ink', '--ink-secondary', '--ink-muted', '--link', '--danger'];
 
 describe.each([
   ['hell', light],
@@ -70,10 +70,35 @@ describe.each([
     expect(contrast(color('--on-primary'), color('--primary'))).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('Eingabefeld-Rand hebt sich von allen Flächen mit mindestens 3 : 1 ab', () => {
+    for (const surface of surfaces) {
+      expect(contrast(color('--control-edge'), color(surface))).toBeGreaterThanOrEqual(3);
+    }
+  });
+
   it('Akzent und primäre Fläche heben sich als Bedienelemente mit mindestens 3 : 1 ab', () => {
     for (const surface of ['--canvas', '--workspace']) {
       expect(contrast(color('--accent'), color(surface))).toBeGreaterThanOrEqual(3);
       expect(contrast(color('--primary'), color(surface))).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
+
+describe('Token-Namen', () => {
+  it('kein Utility-Token in `@theme inline` heißt wie ein Palettenwert in `@theme`', () => {
+    // Doppelte Namen ergeben einen Zirkelbezug (--control-edge → --color-… → --control-edge),
+    // der Wert fällt dann still weg. Die Tests oben lösen var() über die Palette auf und sähen das nicht.
+    const utilities = block(css, '@theme inline {');
+    const clashes = Object.keys(utilities).filter((name) => name in palette);
+    expect(clashes).toEqual([]);
+  });
+
+  it('jedes Utility-Token zeigt auf ein semantisches Token, das es gibt', () => {
+    const utilities = block(css, '@theme inline {');
+    for (const value of Object.values(utilities)) {
+      const reference = /^var\((--[\w-]+)\)$/.exec(value);
+      expect(reference, value).not.toBeNull();
+      expect((reference?.[1] as string) in light, value).toBe(true);
     }
   });
 });

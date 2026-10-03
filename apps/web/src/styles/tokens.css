@@ -27,6 +27,10 @@
   --color-research-blue: #207dff;
   /* Dunkleres Blau für Text-Links im hellen Modus: #207dff erreicht als Text keine 4,5 : 1 */
   --color-link-text: #1560cc;
+  /* Fehlerfarbe: im Designsystem nicht vorgesehen, abgeleitet (siehe docs/decisions.md, D-022) */
+  --color-error-ink: #b42318;
+  /* Rand von Eingabefeldern: Linen Border ist für Bedienelemente zu schwach (unter 3 : 1) */
+  --color-edge-stone: #858490;
 
   /* Palette, dunkel (abgeleitet, warme Graphit-Töne statt reinem Schwarz) */
   --color-night-workspace: #151514;
@@ -38,6 +42,8 @@
   --color-night-ink-muted: #a3a09a;
   --color-night-ink-disabled: #6b6964;
   --color-night-link: #5a9eff;
+  --color-night-error: #ff9d92;
+  --color-night-edge: #85827c;
 
   /* Typografie */
   --font-heading: "Instrument Sans", "DM Sans", ui-sans-serif, system-ui, sans-serif;
@@ -82,6 +88,8 @@
 
   --accent: var(--color-research-blue);
   --link: var(--color-link-text);
+  --danger: var(--color-error-ink);
+  --control-edge: var(--color-edge-stone);
 }
 
 :root[data-theme="dark"] {
@@ -104,6 +112,8 @@
 
   --accent: var(--color-night-link);
   --link: var(--color-night-link);
+  --danger: var(--color-night-error);
+  --control-edge: var(--color-night-edge);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -127,6 +137,8 @@
 
     --accent: var(--color-night-link);
     --link: var(--color-night-link);
+    --danger: var(--color-night-error);
+    --control-edge: var(--color-night-edge);
   }
 }
 
@@ -145,4 +157,6 @@
   --color-on-primary: var(--on-primary);
   --color-accent: var(--accent);
   --color-link: var(--link);
+  --color-danger: var(--danger);
+  --color-control-edge: var(--control-edge);
 }

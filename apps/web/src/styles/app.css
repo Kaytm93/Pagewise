@@ -45,3 +45,9 @@
     }
   }
 }
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
