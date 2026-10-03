@@ -240,6 +240,13 @@ export const de = {
       auth_failed: 'Der Anbieter lehnt den Schlüssel ab. Prüfe ihn unter Einstellungen.',
       rate_limited: 'Der Anbieter meldet zu viele Anfragen. Versuch es gleich noch einmal.',
       insufficient_credits: 'Beim Anbieter ist kein Guthaben mehr vorhanden.',
+      no_package:
+        'Der Anbieter meldet: weder Guthaben noch ein passendes Paket. Bei Z.ai zählt auf dieser Adresse nur Guthaben, nicht der GLM Coding Plan.',
+      quota_exhausted:
+        'Das Kontingent beim Anbieter ist aufgebraucht. Es füllt sich später wieder auf.',
+      plan_expired: 'Das Abo beim Anbieter ist abgelaufen.',
+      model_not_allowed: 'Dieses Modell gehört nicht zum Tarif beim Anbieter.',
+      content_blocked: 'Der Anbieter hat den Inhalt aus Sicherheitsgründen abgelehnt.',
       model_not_found: 'Der Anbieter kennt dieses Modell nicht.',
       bad_request:
         'Der Anbieter hat die Anfrage abgelehnt. Vielleicht ist der Chat für dieses Modell zu lang.',
@@ -285,7 +292,7 @@ export const de = {
     },
     presetHints: {
       openrouter: 'Ein Zugang zu vielen Modellen. Gut für den Start.',
-      zai: 'Die allgemeine API von Z.ai, abgerechnet pro Token.',
+      zai: 'Die allgemeine API von Z.ai, abgerechnet pro Token. Ein GLM Coding Plan zählt hier nicht.',
       ollama: 'Läuft auf diesem Rechner, nichts verlässt ihn.',
       lmstudio: 'Läuft auf diesem Rechner, nichts verlässt ihn.',
       custom: 'Jeder Anbieter mit einer OpenAI-kompatiblen Schnittstelle.',
@@ -345,6 +352,8 @@ export const de = {
       'Kostenlose Modelle können Eingaben protokollieren oder auswerten. Gib dort keine persönlichen oder sensiblen Daten ein.',
     codingPlan:
       'Z.ai erlaubt das Coding-Plan-Kontingent nur in unterstützten Tools; direkte API-Nutzung aus eigenen Apps kann eingeschränkt werden. Die Entscheidung bleibt bei dir.',
+    zaiGeneral:
+      'Auf dieser Adresse zählt nur Guthaben (abgerechnet pro Token). Ein GLM Coding Plan gilt hier nicht, Z.ai meldet dann „kein Guthaben oder Paket“ (Code 1113). Den Plan nutzt Pagewise nur über die Agent-CLI.',
     test: {
       ok: 'Verbindung steht ({ms} ms).',
       okModels: 'Verbindung steht ({ms} ms), {count} Modelle verfügbar.',
@@ -355,6 +364,12 @@ export const de = {
         auth_failed: 'Der Anbieter lehnt den Schlüssel ab.',
         rate_limited: 'Der Anbieter meldet zu viele Anfragen. Versuch es gleich noch einmal.',
         insufficient_credits: 'Beim Anbieter ist kein Guthaben mehr vorhanden.',
+        no_package:
+          'Der Anbieter meldet: weder Guthaben noch ein passendes Paket. Bei Z.ai zählt auf dieser Adresse nur Guthaben, nicht der GLM Coding Plan.',
+        quota_exhausted: 'Das Kontingent beim Anbieter ist aufgebraucht.',
+        plan_expired: 'Das Abo beim Anbieter ist abgelaufen.',
+        model_not_allowed: 'Dieses Modell gehört nicht zum Tarif beim Anbieter.',
+        content_blocked: 'Der Anbieter hat die Prüfanfrage abgelehnt.',
         model_not_found: 'Der Anbieter kennt diese Adresse oder dieses Modell nicht.',
         bad_request: 'Der Anbieter hat die Anfrage abgelehnt.',
         upstream_error: 'Beim Anbieter ist ein Fehler aufgetreten.',

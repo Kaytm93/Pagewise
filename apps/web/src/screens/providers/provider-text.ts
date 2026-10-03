@@ -51,6 +51,11 @@ export function isCodingPlanUrl(baseUrl: string): boolean {
   return /\/api\/coding(\/|$)/i.test(baseUrl);
 }
 
+/** Die allgemeine Pay-per-Token-API von Z.ai: Das Kontingent eines Coding Plans gilt dort nicht. */
+export function isZaiGeneralUrl(baseUrl: string): boolean {
+  return /^https:\/\/api\.z\.ai\/api\/paas(\/|$)/i.test(baseUrl.trim());
+}
+
 /** Zeigt Adresse ohne Protokoll und Pfad: „openrouter.ai“. Ungültiges kommt unverändert zurück. */
 export function hostOf(baseUrl: string): string {
   try {

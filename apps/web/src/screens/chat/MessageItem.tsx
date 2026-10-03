@@ -8,7 +8,15 @@ import { Markdown } from './Markdown';
 import { useCopy } from './useCopy';
 
 /** Fehler, bei denen die Einstellungen weiterhelfen. */
-const NEEDS_SETTINGS = new Set(['auth_failed', 'no_key', 'no_model', 'model_not_found']);
+const NEEDS_SETTINGS = new Set([
+  'auth_failed',
+  'no_key',
+  'no_model',
+  'model_not_found',
+  'no_package',
+  'plan_expired',
+  'model_not_allowed',
+]);
 
 function errorText(code: string | null): string {
   const errors = m.chat.errors as Record<string, string>;

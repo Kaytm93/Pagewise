@@ -169,6 +169,20 @@ describe('Chat: Antworten', () => {
     expect(link.getAttribute('href')).toBe('/settings');
   });
 
+  it('erklärt bei „kein Guthaben oder Paket“ (Z.ai 1113) den Unterschied zum Coding Plan', async () => {
+    const { server, subject, chat } = setup();
+    open(server, chatPath(subject.id, chat.id));
+    const user = userEvent.setup();
+    await ask(user, 'Frage');
+    await waitFor(() => expect(server.generations.has(chat.id)).toBe(true));
+    act(() => server.generation(chat.id).fail('no_package'));
+    expect(await screen.findByText(/weder Guthaben noch ein passendes Paket/)).toBeTruthy();
+    expect(screen.getByText(/nicht der GLM Coding Plan/)).toBeTruthy();
+    // Nicht mit „zu viele Anfragen“ verwechseln.
+    expect(screen.queryByText(/zu viele Anfragen/)).toBeNull();
+    expect(screen.getByRole('link', { name: 'Zu den Einstellungen' })).toBeTruthy();
+  });
+
   it('hängt sich nach einem Verbindungsabbruch wieder an und übernimmt den Stand des Servers', async () => {
     const { server, subject, chat } = setup();
     open(server, chatPath(subject.id, chat.id));

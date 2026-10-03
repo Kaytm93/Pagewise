@@ -15,6 +15,7 @@ import { ModelListEditor } from './ModelListEditor';
 import {
   isCodingPlanUrl,
   isFreeModel,
+  isZaiGeneralUrl,
   mapProviderError,
   type ProviderErrors,
 } from './provider-text';
@@ -172,6 +173,7 @@ export function ProviderForm({
         spellCheck={false}
       />
       {isCodingPlanUrl(baseUrl) && <Notice>{m.providers.codingPlan}</Notice>}
+      {isZaiGeneralUrl(baseUrl) && <Notice>{m.providers.zaiGeneral}</Notice>}
 
       <div>
         <SecretField

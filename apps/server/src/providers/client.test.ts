@@ -208,6 +208,96 @@ describe('Fehler', () => {
     expect(String(error.stack)).not.toContain('geheimer');
   });
 
+  describe('Fehlernummern im Rumpf (Z.ai antwortet fast immer mit 429)', () => {
+    const body = (code: string | number, message = 'Text des Anbieters') =>
+      JSON.stringify({ error: { code, message } });
+
+    it.each([
+      [429, '1113', 'no_package'],
+      [429, 1113, 'no_package'],
+      [400, '1211', 'model_not_found'],
+      [400, '1301', 'content_blocked'],
+      [429, '1308', 'quota_exhausted'],
+      [429, '1309', 'plan_expired'],
+      [429, '1310', 'quota_exhausted'],
+      [429, '1311', 'model_not_allowed'],
+    ])('Status %i mit Nummer %s ergibt %s', async (status, code, expected) => {
+      const { fetch } = fakeFetch(() => new Response(body(code), { status }));
+      await expect(new ProviderClient({ fetch }).listModels(target)).rejects.toMatchObject({
+        code: expected,
+        status,
+      });
+    });
+
+    it('bleibt bei unbekannten Nummern, kaputtem JSON und fehlendem Rumpf beim Status', async () => {
+      for (const text of [body('9999'), body('1302'), '{kaputt', '[]', '"x"', '']) {
+        const { fetch } = fakeFetch(() => new Response(text, { status: 429 }));
+        await expect(new ProviderClient({ fetch }).listModels(target)).rejects.toMatchObject({
+          code: 'rate_limited',
+        });
+      }
+    });
+
+    it('gibt keinen Text des Anbieters weiter, auch nicht den Schlüssel', async () => {
+      const { fetch } = fakeFetch(
+        () => new Response(body('1113', `Schlüssel ${KEY} ist leer`), { status: 429 }),
+      );
+      const error = await failure(new ProviderClient({ fetch }).listModels(target));
+      expect(error.code).toBe('no_package');
+      expect(error.message).toBe('no_package');
+      expect(JSON.stringify(error)).not.toContain(KEY);
+      expect(String(error.stack)).not.toContain(KEY);
+    });
+
+    it('liest den Rumpf nur begrenzt', async () => {
+      let pulled = 0;
+      const { fetch } = fakeFetch(
+        () =>
+          new Response(
+            new ReadableStream<Uint8Array>({
+              pull(controller) {
+                pulled += 1;
+                controller.enqueue(encoder.encode('x'.repeat(1024)));
+              },
+            }),
+            { status: 429 },
+          ),
+      );
+      await expect(new ProviderClient({ fetch }).listModels(target)).rejects.toMatchObject({
+        code: 'rate_limited',
+      });
+      expect(pulled).toBeLessThan(20);
+    });
+
+    it('liest den Rumpf einer Weiterleitung nicht', async () => {
+      const { fetch } = fakeFetch(() => new Response(body('1113'), { status: 307 }));
+      await expect(new ProviderClient({ fetch }).listModels(target)).rejects.toMatchObject({
+        code: 'redirected',
+      });
+    });
+
+    it('erkennt die Nummer auch vor dem ersten Text eines Chats und mitten im Strom', async () => {
+      const refused = fakeFetch(() => new Response(body('1113'), { status: 429 }));
+      await expect(
+        drain(new ProviderClient({ fetch: refused.fetch }).streamChat(target, request)),
+      ).rejects.toMatchObject({ code: 'no_package', status: 429 });
+
+      const midStream = fakeFetch(() =>
+        sse([chunk({ content: 'a' }), `data: ${body('1310')}\n\n`]),
+      );
+      await expect(
+        drain(new ProviderClient({ fetch: midStream.fetch }).streamChat(target, request)),
+      ).rejects.toMatchObject({ code: 'quota_exhausted' });
+    });
+
+    it('kennzeichnet, wann ein anderes Modell helfen kann', () => {
+      for (const code of ['no_package', 'quota_exhausted', 'plan_expired', 'model_not_allowed']) {
+        expect(new ProviderError(code as ProviderError['code']).retryable).toBe(true);
+      }
+      expect(new ProviderError('content_blocked').retryable).toBe(false);
+    });
+  });
+
   it('folgt keiner Weiterleitung und meldet sie', async () => {
     const { fetch, calls } = fakeFetch(
       () =>

@@ -40,11 +40,13 @@ export const PRESETS: readonly Preset[] = [
   },
   {
     // Allgemeine Pay-per-Token-API. Der Coding Plan hat einen eigenen Endpunkt und ist hier bewusst
-    // kein Preset (D-011).
+    // kein Preset (D-011); sein Kontingent zählt auf dieser Adresse nicht (Fehler 1113, D-036).
+    // Modellkennungen laut https://docs.z.ai/devpack/tool/claude und .../guides/overview/overview,
+    // Stand 3. Oktober 2026. Fähigkeiten wie bei OpenRouter (D-024), änderbar.
     id: 'zai',
     baseUrl: 'https://api.z.ai/api/paas/v4',
     requiresKey: true,
-    models: [],
+    models: [model('glm-5.3-flash', true, true, true), model('glm-5.3', false, true, true)],
     defaultModel: null,
     fallbackModel: null,
   },

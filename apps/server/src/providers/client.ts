@@ -1,4 +1,4 @@
-import { codeForStatus, ProviderError } from './errors';
+import { codeForStatus, codeFromBody, ProviderError } from './errors';
 import { readSse } from './sse';
 
 /** Ziel einer Anfrage. Der Schlüssel kommt aus dem Secret-Speicher und wird nur hier verwendet. */
@@ -50,6 +50,7 @@ export interface ClientOptions {
 const MAX_JSON_BYTES = 8 * 1024 * 1024;
 const MAX_LISTED_MODELS = 2000;
 const MAX_REPLY_CHARACTERS = 200_000;
+const MAX_ERROR_BODY_BYTES = 4096;
 
 type Json = unknown;
 
@@ -127,11 +128,40 @@ export class ProviderClient {
       throw this.abortError(init.signal, timeout, watchdog) ?? new ProviderError('unreachable');
     }
     if (!response.ok) {
-      // Den Rumpf nicht lesen: er kann den Schlüssel oder die Eingabe wiederholen.
-      await response.body?.cancel().catch(() => {});
-      throw new ProviderError(codeForStatus(response.status), response.status);
+      throw new ProviderError(await this.errorCode(response), response.status);
     }
     return response;
+  }
+
+  /**
+   * Fehlercode zu einer Antwort außerhalb von 2xx. Der Rumpf wird nur bei 4xx und 5xx und nur bis
+   * 4 KiB gelesen, und davon zählt allein eine bekannte Fehlernummer (`codeFromBody`). Kein Text des
+   * Anbieters gelangt in den Fehler: er kann den Schlüssel oder die Eingabe wiederholen.
+   */
+  private async errorCode(response: Response): Promise<ProviderError['code']> {
+    const fallback = codeForStatus(response.status);
+    if (response.status < 400) {
+      await response.body?.cancel().catch(() => {});
+      return fallback;
+    }
+    const reader = response.body?.getReader();
+    if (!reader) return fallback;
+    const decoder = new TextDecoder();
+    let text = '';
+    let bytes = 0;
+    try {
+      while (bytes < MAX_ERROR_BODY_BYTES) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        bytes += value.byteLength;
+        text += decoder.decode(value, { stream: true });
+      }
+      return codeFromBody(JSON.parse(text)) ?? fallback;
+    } catch {
+      return fallback;
+    } finally {
+      reader.cancel().catch(() => {});
+    }
   }
 
   private abortError(
@@ -325,14 +355,16 @@ export class ProviderClient {
       throw new ProviderError('invalid_response');
     }
     if (!isRecord(json)) throw new ProviderError('invalid_response');
-    if (json.error !== undefined && json.error !== null) throw new ProviderError('upstream_error');
+    if (json.error !== undefined && json.error !== null) {
+      throw new ProviderError(codeFromBody(json) ?? 'upstream_error');
+    }
 
     const events: ChatEvent[] = [];
     const choice =
       Array.isArray(json.choices) && isRecord(json.choices[0]) ? json.choices[0] : null;
     if (choice) {
       if (choice.error !== undefined && choice.error !== null) {
-        throw new ProviderError('upstream_error');
+        throw new ProviderError(codeFromBody(choice) ?? 'upstream_error');
       }
       const delta = isRecord(choice.delta) ? choice.delta : null;
       const reasoning = str(delta?.reasoning_content) ?? str(delta?.reasoning);
@@ -355,7 +387,9 @@ export class ProviderClient {
 
   private *wholeReply(json: Json): Generator<ChatEvent> {
     if (!isRecord(json) || (json.error !== undefined && json.error !== null)) {
-      throw new ProviderError(isRecord(json) ? 'upstream_error' : 'invalid_response');
+      throw new ProviderError(
+        isRecord(json) ? (codeFromBody(json) ?? 'upstream_error') : 'invalid_response',
+      );
     }
     const choice =
       Array.isArray(json.choices) && isRecord(json.choices[0]) ? json.choices[0] : null;

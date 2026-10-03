@@ -177,6 +177,24 @@ describe('Anbieter in den Einstellungen', () => {
     ).toBeTruthy();
   });
 
+  it('erklärt bei der allgemeinen Z.ai-Adresse, dass ein Coding Plan dort nicht zählt', async () => {
+    await openSettings();
+    mount(new FakeServer('unlocked'));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Anbieter hinzufügen' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByText(/Ein GLM Coding Plan gilt hier nicht/)).toBeNull();
+    await user.selectOptions(await within(dialog).findByLabelText('Anbieter'), 'zai');
+    expect(within(dialog).getByText(/Ein GLM Coding Plan gilt hier nicht/)).toBeTruthy();
+    expect(within(dialog).getByText(/Code 1113/)).toBeTruthy();
+    // Die Coding-Plan-Adresse bekommt stattdessen die Warnung zu den unterstützten Tools.
+    const url = within(dialog).getByLabelText(/Adresse/);
+    await user.clear(url);
+    await user.type(url, 'https://api.z.ai/api/coding/paas/v4');
+    expect(within(dialog).queryByText(/Ein GLM Coding Plan gilt hier nicht/)).toBeNull();
+    expect(within(dialog).getByText(/nur in unterstützten Tools/)).toBeTruthy();
+  });
+
   it('warnt vor kostenlosen Modellen', async () => {
     await openSettings();
     mount(new FakeServer('unlocked'));

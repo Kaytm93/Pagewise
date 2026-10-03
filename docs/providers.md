@@ -28,7 +28,19 @@ Voreinstellungen sind nur Vorschläge für Adresse, Schlüsselpflicht und Modell
 
 ### Fehler
 
-Der Server gibt Fehler des Anbieters nur als **Code** weiter: `unreachable`, `timeout`, `aborted`, `auth_failed`, `rate_limited`, `insufficient_credits`, `model_not_found`, `bad_request`, `upstream_error`, `invalid_response`, `redirected`, `models_unavailable`, `no_key`. Texte des Anbieters werden nie durchgereicht, weil sie Teile des Schlüssels oder der Eingabe wiederholen können. Die Oberfläche übersetzt die Codes in deutsche Sätze.
+Der Server gibt Fehler des Anbieters nur als **Code** weiter: `unreachable`, `timeout`, `aborted`, `auth_failed`, `rate_limited`, `insufficient_credits`, `no_package`, `quota_exhausted`, `plan_expired`, `model_not_allowed`, `content_blocked`, `model_not_found`, `bad_request`, `upstream_error`, `invalid_response`, `redirected`, `models_unavailable`, `no_key`. Texte des Anbieters werden nie durchgereicht, weil sie Teile des Schlüssels oder der Eingabe wiederholen können. Die Oberfläche übersetzt die Codes in deutsche Sätze.
+
+Der HTTP-Status allein reicht nicht immer: Z.ai antwortet bei fast allen Fehlern mit 429 und trennt sie über die Nummer im Rumpf (`{"error":{"code":"1113",…}}`). Deshalb liest der Client bei Fehlern (nur 4xx und 5xx) höchstens 4 KiB des Rumpfes und beachtet **ausschließlich** eine Nummer aus einer festen Tabelle (`BUSINESS_CODES` in `apps/server/src/providers/errors.ts`, Quelle: <https://docs.z.ai/api-reference/api-code>, Stand 3. Oktober 2026). Alles andere im Rumpf, vor allem der Text, wird nie gelesen oder weitergegeben.
+
+| Z.ai-Nummer | Bedeutung laut Z.ai | Code in Pagewise |
+| --- | --- | --- |
+| 1113 | Kein Guthaben oder kein Ressourcenpaket | `no_package` |
+| 1211 | Unbekanntes Modell | `model_not_found` |
+| 1301 | Inhalt aus Sicherheitsgründen abgelehnt | `content_blocked` |
+| 1308, 1310 | Nutzungsgrenze erreicht (mit Zeitpunkt der Rückkehr) | `quota_exhausted` |
+| 1309 | Coding-Plan-Abo abgelaufen | `plan_expired` |
+| 1311 | Modell gehört nicht zum Tarif | `model_not_allowed` |
+| übrige 429 (z. B. 1302, 1305, 1313) | zu viele Anfragen, Überlast, Fair Use | `rate_limited` |
 
 ### Verbindung testen
 
@@ -62,6 +74,21 @@ Der Coding Plan darf laut Z.ai nicht für direkte Modell-API-Aufrufe aus eigenen
 - Enthält die eingetragene Basis-URL `/api/coding/`, zeigt die Oberfläche den Hinweis: „Z.ai erlaubt das Coding-Plan-Kontingent nur in unterstützten Tools; direkte API-Nutzung aus eigenen Apps kann eingeschränkt werden.“ Die Entscheidung bleibt bei dir. Der Server meldet dazu `warning: "coding_plan"`.
 - Für direkte API-Chats mit GLM gilt: OpenRouter oder die allgemeine pay-per-token-API von Z.ai.
 - Der Coding Plan wird nur über den Agent-CLI-Adapter genutzt, siehe [agent-cli.md](agent-cli.md).
+
+### Wenn „der Coding Plan nicht funktioniert“ (Diagnose, 3. Oktober 2026)
+
+Z.ai nutzt für Coding-Plan-Abos und die Pay-per-Token-API **denselben Schlüssel**. Welches Kontingent zählt, entscheidet allein die Adresse (Quelle: <https://docs.z.ai/devpack/faq>, <https://docs.z.ai/devpack/tool/others>): `https://api.z.ai/api/anthropic` für Claude Code und `https://api.z.ai/api/coding/paas/v4` für andere unterstützte Werkzeuge. Auf der allgemeinen Adresse `https://api.z.ai/api/paas/v4` (Preset „Z.ai (API)“) zählt nur Guthaben.
+
+| Was du siehst | Wahrscheinliche Ursache | Was hilft |
+| --- | --- | --- |
+| „weder Guthaben noch ein passendes Paket“ (`no_package`, Z.ai 1113) | Plan-Schlüssel am Preset „Z.ai (API)“: dort zählt der Plan nicht, und auf dem Konto ist kein Guthaben | Den Plan nur über die Agent-CLI nutzen (Phase 1e). Für direkte Chats Guthaben aufladen oder OpenRouter nehmen |
+| „Der Anbieter kennt dieses Modell nicht“ | Modellkennung mit Präfix wie bei OpenRouter (`z-ai/glm-5.3-flash`) | Bei Z.ai heißen die Modelle `glm-5.3-flash` und `glm-5.3` (Preset schlägt sie vor) |
+| „Kontingent aufgebraucht“ (`quota_exhausted`) | Das 5-Stunden-, Wochen- oder Monatslimit des Plans ist erreicht | Warten, das Limit füllt sich wieder auf |
+| „Abo abgelaufen“ (`plan_expired`) | Das Plan-Abo ist ausgelaufen | Beim Anbieter verlängern |
+| „Modell gehört nicht zum Tarif“ (`model_not_allowed`) | Der Tarif enthält das gewählte Modell nicht | Modell wechseln |
+| Es funktioniert technisch mit `/api/coding/paas/v4` als freiem Anbieter | Das ist ein direkter API-Aufruf aus einer eigenen App und laut Bedingungen für den Plan nicht vorgesehen (D-011) | Nicht nutzen, Agent-CLI verwenden. Die Oberfläche warnt dabei |
+
+Einen **richtigen** Weg für den Coding Plan gibt es nur über den Agent-CLI-Adapter (Phase 1e): die unveränderte `claude`-Binary mit `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic`. Die Reihenfolge der Arbeit wurde deshalb angepasst (D-036).
 
 ## Secrets
 
