@@ -5,9 +5,11 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { secureHeaders } from 'hono/secure-headers';
 import { csrfGuard, loadSession, requireSession } from './auth/http';
+import { originGuard } from './http/origin';
 import type { AppEnv } from './http/types';
 import { authRoutes } from './routes/auth';
 import { chatRoutes } from './routes/chats';
+import { dataRoutes } from './routes/data';
 import { profileRoutes } from './routes/profile';
 import { promptRoutes } from './routes/prompts';
 import { providerRoutes } from './routes/providers';
@@ -53,6 +55,9 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     c.header('Cache-Control', 'no-store');
   });
 
+  // Strenge CORS-Regel: nur die eigene Herkunft (siehe http/origin.ts).
+  app.use('/api/*', originGuard);
+
   app.get('/api/health', (c) => c.json({ status: 'ok', version: options.version }));
 
   const services = options.services;
@@ -72,6 +77,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
       '/api/providers',
       '/api/provider-presets',
       '/api/model-settings',
+      '/api/data',
     ]) {
       app.use(prefix, requireSession);
       app.use(`${prefix}/*`, requireSession);
@@ -82,6 +88,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     app.route('/api', chatRoutes(services.chats));
     app.route('/api', promptRoutes(db));
     app.route('/api', providerRoutes(services.providers));
+    app.route('/api', dataRoutes({ auth: services.auth, eraser: services.eraser }));
   }
 
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));

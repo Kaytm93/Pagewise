@@ -567,6 +567,45 @@ describe('Anbieter und Modellwahl', () => {
     });
   });
 
+  describe('Bilder an den Anbieter senden', () => {
+    it('ist standardmäßig an und lässt sich beim Anlegen und Ändern setzen', async () => {
+      const first = await addOpenRouter();
+      expect((first as unknown as { sendImages: boolean }).sendImages).toBe(true);
+      expect(harness.services.providers.allowsImages(first.id)).toBe(true);
+
+      const off = await session.call('POST', '/api/providers', {
+        name: 'Ohne Bilder',
+        baseUrl: SECOND_URL,
+        sendImages: false,
+        models: [{ id: 'zweit/modell' }],
+      });
+      expect(off.status).toBe(201);
+      expect(off.body.sendImages).toBe(false);
+      const id = off.body.id as string;
+      expect(harness.services.providers.allowsImages(id)).toBe(false);
+
+      const on = await session.call('PATCH', `/api/providers/${id}`, { sendImages: true });
+      expect(on.status).toBe(200);
+      expect(on.body.sendImages).toBe(true);
+      expect(harness.services.providers.allowsImages(id)).toBe(true);
+
+      const list = (await session.call('GET', '/api/providers')).body.providers as {
+        id: string;
+        sendImages: boolean;
+      }[];
+      expect(list.map((entry) => entry.sendImages)).toEqual([true, true]);
+    });
+
+    it('verlangt einen Wahrheitswert und schickt Bilder nie an unbekannte Anbieter', async () => {
+      const first = await addOpenRouter();
+      const bad = await session.call('PATCH', `/api/providers/${first.id}`, { sendImages: 'ja' });
+      expect(bad.status).toBe(400);
+      expect(harness.services.providers.allowsImages('5b0f7c2e-4a54-4c0a-9b6a-0d4c6b1d2e3f')).toBe(
+        false,
+      );
+    });
+  });
+
   describe('Modellwahl', () => {
     it('speichert Standardmodell und Fallback-Kette ohne Doppelte', async () => {
       const first = await addOpenRouter();

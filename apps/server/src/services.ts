@@ -8,6 +8,7 @@ import { type DatabaseHandle, migrateDatabase, openDatabase } from './db/client'
 import { ProviderClient } from './providers/client';
 import { ProviderService } from './providers/service';
 import { type DataPaths, ensureDataLayout } from './storage/data-paths';
+import { DataEraser } from './storage/eraser';
 import { FileSecretStore, type SecretStore } from './storage/secret-store';
 import { LocalStorage, type Storage } from './storage/storage';
 
@@ -21,6 +22,7 @@ export interface Services {
   auth: AuthService;
   providers: ProviderService;
   chats: ChatService;
+  eraser: DataEraser;
   close(): void;
 }
 
@@ -61,6 +63,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     secrets,
     new ProviderClient({ fetch: options.fetch }),
   );
+  const chats = new ChatService(database.db, providers, options.chats);
   return {
     paths,
     database,
@@ -69,7 +72,8 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     sessions,
     auth,
     providers,
-    chats: new ChatService(database.db, providers, options.chats),
+    chats,
+    eraser: new DataEraser({ database, paths, secrets, chats }),
     close: () => database.close(),
   };
 }

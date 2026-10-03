@@ -54,6 +54,8 @@ export const providers = sqliteTable(
     preset: text('preset').notNull().default('custom'),
     baseUrl: text('base_url').notNull(),
     models: text('models').notNull().default('[]'),
+    /** Dürfen Bilder an diesen Anbieter gehen? Aus: Der Chat sendet nur Text (Abschnitt „Daten an Dritte“). */
+    sendImages: integer('send_images', { mode: 'boolean' }).notNull().default(true),
     position: integer('position').notNull().default(0),
     ...timestamps,
   },

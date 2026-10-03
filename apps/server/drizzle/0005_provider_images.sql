@@ -1,0 +1,1 @@
+ALTER TABLE `providers` ADD `send_images` integer DEFAULT true NOT NULL;

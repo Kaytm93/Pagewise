@@ -29,6 +29,8 @@ export interface ProviderView {
   preset: string;
   baseUrl: string;
   models: ModelView[];
+  /** Bilder an diesen Anbieter senden? Aus bedeutet: nur Text verlässt den Rechner. */
+  sendImages: boolean;
   hasKey: boolean;
   /** Letzte vier Zeichen, nur bei langen Schlüsseln. Der Schlüssel selbst verlässt den Server nie. */
   keyHint: string | null;
@@ -70,12 +72,14 @@ export interface CreateProviderInput {
   baseUrl?: string;
   apiKey?: string;
   models?: ModelEntry[];
+  sendImages?: boolean;
 }
 
 export interface UpdateProviderInput {
   name?: string;
   baseUrl?: string;
   models?: ModelEntry[];
+  sendImages?: boolean;
   /** Neuer Schlüssel. Ein leerer Wert wird vorher abgelehnt. */
   apiKey?: string;
   clearKey?: boolean;
@@ -130,6 +134,7 @@ export class ProviderService {
         ...model,
         free: isFreeModel(model.id),
       })),
+      sendImages: row.sendImages,
       hasKey: hints.has(name),
       keyHint: hints.get(name) ?? null,
       warning: isCodingPlanUrl(row.baseUrl) ? 'coding_plan' : null,
@@ -178,6 +183,7 @@ export class ProviderService {
           preset: preset?.id ?? 'custom',
           baseUrl: url.url,
           models: JSON.stringify(models),
+          sendImages: input.sendImages ?? true,
           position: last?.value === null || last?.value === undefined ? 0 : last.value + 1,
         })
         .returning()
@@ -242,6 +248,7 @@ export class ProviderService {
       changes.baseUrl = url.url;
     }
     if (input.models !== undefined) changes.models = JSON.stringify(input.models);
+    if (input.sendImages !== undefined) changes.sendImages = input.sendImages;
 
     // Zuerst den Schlüssel prüfen und schreiben: schlägt das fehl, bleibt alles andere unverändert.
     if (input.apiKey !== undefined) {
@@ -273,6 +280,14 @@ export class ProviderService {
     await this.secrets.delete(secretName(id));
     this.prune();
     return { ok: true, value: null };
+  }
+
+  /**
+   * Dürfen Bilder an diesen Anbieter gehen? Der Chat fragt das vor dem Zusammenstellen einer Anfrage
+   * (Bilder kommen mit Phase 1c). Ein unbekannter Anbieter bekommt keine Bilder.
+   */
+  allowsImages(id: string): boolean {
+    return this.db.select().from(providers).where(eq(providers.id, id)).get()?.sendImages ?? false;
   }
 
   private async target(

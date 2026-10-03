@@ -236,6 +236,15 @@ export class ChatService {
     return this.active.get(chatId) ?? null;
   }
 
+  /** Bricht alle laufenden Antworten ab und wartet kurz, bis sie beendet sind (z. B. vor „Alles löschen“). */
+  async stopAll(timeoutMs = 3_000): Promise<void> {
+    for (const generation of this.active.values()) generation.abort.abort();
+    const deadline = Date.now() + timeoutMs;
+    while (this.active.size > 0 && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }
+
   stop(chatId: string): boolean {
     const generation = this.active.get(chatId);
     generation?.abort.abort();

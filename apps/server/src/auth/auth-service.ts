@@ -32,6 +32,11 @@ export type ChangePasscodeResult =
   | WeakPasscode
   | RateLimited;
 
+export type ConfirmPasscodeResult =
+  | { ok: true }
+  | { ok: false; reason: 'invalid_passcode' }
+  | RateLimited;
+
 export interface AuthServiceDeps {
   db: Db;
   sessions: SessionService;
@@ -121,6 +126,24 @@ export class AuthService {
     this.deps.limiter.reset();
     this.deps.sessions.purgeExpired();
     return { ok: true, session: this.deps.sessions.create() };
+  }
+
+  /** Prüft den Passcode einer angemeldeten Person vor einer gefährlichen Aktion. Zählt wie eine Anmeldung. */
+  async confirmPasscode(passcode: string): Promise<ConfirmPasscodeResult> {
+    const row = this.deps.db.select().from(authCredentials).where(eq(authCredentials.id, 1)).get();
+    if (!row) return { ok: false, reason: 'invalid_passcode' };
+
+    const decision = this.deps.limiter.check();
+    if (!decision.allowed) {
+      return { ok: false, reason: 'rate_limited', retryAfterSeconds: decision.retryAfterSeconds };
+    }
+    this.deps.limiter.recordFailure();
+
+    if (!(await verifyPasscode(passcode, row.passcodeHash))) {
+      return { ok: false, reason: 'invalid_passcode' };
+    }
+    this.deps.limiter.reset();
+    return { ok: true };
   }
 
   /** Ändert den Passcode und beendet alle anderen Sitzungen. */

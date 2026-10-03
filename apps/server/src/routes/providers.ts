@@ -16,6 +16,7 @@ const CreateBody = z.strictObject({
   baseUrl: z.string().max(200).optional(),
   apiKey: ApiKey.optional(),
   models: ModelListSchema.optional(),
+  sendImages: z.boolean().optional(),
 });
 
 const UpdateBody = z
@@ -23,6 +24,7 @@ const UpdateBody = z
     name: nameField.optional(),
     baseUrl: z.string().max(200).optional(),
     models: ModelListSchema.optional(),
+    sendImages: z.boolean().optional(),
     apiKey: ApiKey.optional(),
     clearKey: z.boolean().optional(),
   })
