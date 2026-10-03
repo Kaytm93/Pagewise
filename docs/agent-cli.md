@@ -18,7 +18,7 @@ Die App startet ein lokales Coding-Agent-Programm als Subprozess in einem eigene
 | GLM Coding Plan | Token aus der Secrets-Konfiguration | `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic`, `ANTHROPIC_AUTH_TOKEN`, `API_TIMEOUT_MS`, Modell-Mapping auf `glm-5.3-flash` |
 | Anthropic-API-Key | Key aus der Secrets-Konfiguration | `ANTHROPIC_API_KEY` |
 
-Das GLM-Profil bleibt deaktiviert, bis die offene Frage aus [decisions.md](decisions.md) (D-011) geklärt ist.
+Das GLM-Profil ist nach der Entscheidung des Kontoinhabers zulässig (D-011), mit Auflagen: nur Konto und Token des Instanz-Besitzers (nie teilen), nur die unveränderte Binary, Warnhinweis bleibt. Vor dem Bau werden die Bedingungen von Z.ai erneut geprüft.
 
 ## Aufruf (Entwurf)
 

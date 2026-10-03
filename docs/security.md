@@ -8,7 +8,7 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | --- | --- |
 | Versehentlich veröffentlichte Daten oder Schlüssel im Repo | Daten außerhalb des Repos, `.gitignore`, Secret-Scan im Pre-Commit-Hook und in der CI, Privacy-Check |
 | Zugriff aus dem Netz | Server bindet nur an Loopback, Erreichbarkeit nur über Tailscale Serve, kein Funnel |
-| Fremder Zugriff im eigenen Netz | Passcode (Hash), Sitzungs-Cookies, Rate-Limit, CSRF-Schutz, Security-Header |
+| Fremder Zugriff im eigenen Netz | Passcode (Hash), Sitzungs-Cookies, Rate-Limit, CSRF-Schutz, strenge CORS-Regel, Security-Header |
 | Schadcode aus Modell-Ausgaben | Markdown ohne rohes HTML, Bereinigung von SVG und HTML, kein `eval` |
 | Prompt-Injection über Bilder, Dateien, Antworten | Inhalte lösen nie selbstständig Aktionen aus, Agenten laufen mit Whitelist und im Workspace |
 | Abfluss von Schlüsseln | Secrets nur serverseitig, nie in Antworten, Logs, Jobs oder Exporten, nie als Prozess-Argument |
@@ -38,7 +38,11 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | EXIF-Entfernung, Upload-Prüfung | geplant (Phase 1c) |
 | PDF-Rendering ohne Netzwerk | geplant (Phase 1d) |
 | Agent-CLI mit Umgebungs-Allowlist und Workspace-Isolation | geplant (Phase 1e) |
-| Löschen entfernt Dateien, „Alles löschen“, verschlüsselte Backups | geplant |
+| Strenge CORS-Regel: fremde Herkunft wird abgelehnt, keine `Access-Control-*`-Header | umgesetzt (Phase 1a), siehe D-031 |
+| „Alles löschen“ mit Passcode, leert Datenbank (`VACUUM`), Dateien, Sicherungen und Schlüssel; Test: Text nicht mehr in Datenbankdatei oder WAL | umgesetzt (Phase 1a), siehe D-032 |
+| Je Anbieter: Übersicht, was gesendet wird, und Schalter „Bilder nicht senden“ | Übersicht und Schalter umgesetzt (Phase 1a), Durchsetzung ab Phase 1c, siehe D-033 |
+| Löschen von Fach, Chat oder Asset entfernt auch Dateien auf der Platte | Zeilen umgesetzt, Dateien mit Assets (ab 1b/1c) |
+| Verschlüsselte Backups und Export | geplant |
 
 ## Datenverzeichnis
 
@@ -59,6 +63,7 @@ Alles, was Nutzerdaten enthält, liegt im Datenverzeichnis: Datenbank, Uploads, 
 - Modell-Anbieter sehen, was du ihnen sendest. Free-Modelle können Prompts protokollieren. Pagewise prüft die Datenschutzregeln der Anbieter nicht, auch nicht die von OpenRouter und der Anbieter dahinter.
 - Ein eingetragener Anbieter bekommt deinen Schlüssel und alles, was du an ihn schickst. Trägst du eine fremde Adresse ein, geht der Schlüssel dorthin. Pagewise prüft nur, dass die Adresse `https` nutzt, nicht, wem sie gehört.
 - Die Sicherungen vor Migrationen im Ordner `backups` sind unverschlüsselt, wie der Rest des Datenverzeichnisses.
+- „Alles löschen“ erreicht nur Pagewise selbst. Kopien durch Time Machine, Snapshots des Dateisystems oder eine Cloud-Sicherung des Ordners bleiben bestehen, und auf SSDs gibt es kein garantiertes Überschreiben. Schließe das Datenverzeichnis aus solchen Sicherungen aus, wenn das wichtig ist.
 - Die Antworten im Chat sind Text des Modells. Pagewise zeigt sie bereinigt an, prüft aber nicht, ob sie stimmen. Ein Modell kann sich irren, erfundene Quellen nennen oder Anweisungen aus eingefügten Texten folgen. Prüfe Wichtiges nach.
 - Der Passcode-Schutz ist für ein privates Tailnet gedacht, nicht für das offene Internet.
 

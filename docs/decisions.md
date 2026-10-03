@@ -72,7 +72,12 @@ Inter und Instrument Sans kommen über `@fontsource` ins Bundle, es gibt keine A
 - Folge für Pagewise: Der Coding Plan wird **nur** über den Agent-CLI-Adapter genutzt (unveränderte `claude`-Binary mit `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic`). Es gibt kein Chat-Provider-Preset dafür. Enthält eine frei eingetragene Basis-URL `/api/coding/`, zeigt die UI einen Warnhinweis.
 - Laut Z.ai-Anleitung für Claude Code werden `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`, `API_TIMEOUT_MS` und das Modell-Mapping gesetzt (Haiku auf `glm-5.3-flash`, Sonnet und Opus auf `glm-5.3`). Pagewise nutzt als Standard `glm-5.3-flash` für alle drei Stufen, das Mapping bleibt änderbar. Quelle: <https://docs.z.ai/devpack/tool/claude>
 
-**Offene Frage vor Phase 1e:** Ob eine App, die die unveränderte `claude`-Binary startet, für Z.ai als „unterstütztes Tool“ gilt, steht in den Bedingungen nicht eindeutig. Nach dem Grundsatz „bei Unklarheit stoppen und fragen“ wird das Profil erst nach Klärung (z. B. Anfrage beim Z.ai-Support) aktiviert und trägt bis dahin einen deutlichen Warnhinweis.
+**Entscheidung des Kontoinhabers, 3. Oktober 2026.** Kay (Maintainer und Inhaber des Coding-Plan-Kontos) hat bestätigt, dass der Coding Plan auf diesem Weg genutzt werden soll. Geprüft gegen die aktuelle Z.ai-Dokumentation: Claude Code steht auf der Liste der offiziell unterstützten Tools (<https://docs.z.ai/devpack/tool/others>), die Einrichtung über `ANTHROPIC_BASE_URL` ist die offizielle Anleitung, und Pagewise ruft die Z.ai-Schnittstelle nie selbst auf, es startet nur das unveränderte Tool auf dem Rechner des Kontoinhabers. Nicht ausdrücklich beantwortet ist, ob ein von einem anderen Programm gestartetes Tool noch als „innerhalb der unterstützten Tools“ gilt. Z.ai hat das nicht schriftlich bestätigt; das Restrisiko (Einschränkung des Kontingents laut Bedingungen) trägt der Kontoinhaber. Eine schriftliche Bestätigung des Z.ai-Supports bleibt empfohlen.
+
+Auflagen für das GLM-Profil in Phase 1e:
+- Nur Konto und Token der Person, der diese Pagewise-Instanz gehört. Der Token wird nie an andere Nutzer weitergegeben oder geteilt, denn Z.ai verbietet ausdrücklich, das Kontingent anderen zugänglich zu machen. Wer Pagewise nutzt, richtet eine eigene Instanz mit eigenem Plan ein.
+- Nur die unveränderte `claude`-Binary, kein Chat-Provider-Preset für den Coding Plan, der Warnhinweis in der Oberfläche bleibt.
+- Vor dem Bau von 1e werden Liste der unterstützten Tools und Bedingungen erneut geprüft.
 
 ## D-012 Modelle und Preise, Stand 3. Oktober 2026
 
@@ -241,3 +246,24 @@ Geprüft am 3. Oktober 2026 gegen die Dokumentation der Anbieter, bevor Adressen
 - **Weitergegebene Header.** Laut Quelltext von Tailscale (`addProxyForwardedHeaders`, Hauptzweig) setzt Serve `X-Forwarded-Host`, `X-Forwarded-For` und, bei TLS, `X-Forwarded-Proto: https`; außerdem bleibt der `Host`-Header der Anfrage erhalten, und Identitäts-Header (`Tailscale-User-*`) kommen dazu. Pagewise nutzt nur `X-Forwarded-Proto` für das `Secure`-Flag des Cookies. Die CSRF-Prüfung hängt an `Sec-Fetch-Site` und dem Token, nicht an `Host` oder `Origin`, und ist deshalb hinter dem Proxy unverändert wirksam. Ob die auf deinem Rechner installierte Tailscale-Version den Header schon setzt, ist ungeprüft. Fehlt er, funktioniert alles, nur ohne `Secure`.
 - **Identität.** Die `Tailscale-User-*`-Header werden bewusst nicht ausgewertet. Der Zugang bleibt der Passcode, damit Pagewise nicht von einem Header abhängt, den ein anderer Proxy fälschen könnte.
 - **Offen.** Anmeldung über die `ts.net`-Adresse, Installation und Anmeldung in der Home-Bildschirm-App, Tastatur und Aufwachen testet Kay auf iPhone und iPad.
+
+## D-031 Strenge CORS-Regel: nur die eigene Herkunft
+
+- **Regel.** Pagewise setzt nie `Access-Control-*`-Header, es gibt keine Ausnahme für andere Herkunft. Zusätzlich lehnt `originGuard` (`apps/server/src/http/origin.ts`) jede `/api`-Anfrage mit fremdem, unlesbarem oder `null`-`Origin` mit 403 `cross_origin` ab, auch Vorabfragen (`OPTIONS`). Verglichen wird der Rechnername des `Origin` mit `X-Forwarded-Host` (hinter Tailscale Serve) oder `Host`. Anfragen ohne `Origin` (gleiche Herkunft per GET, Befehlszeile) laufen weiter, ändernde Methoden prüft zusätzlich der CSRF-Schutz (D-021).
+- **Warum doppelt.** Ohne CORS-Header liest ein Browser fremde Antworten ohnehin nicht, aber die Anfrage selbst würde den Server erreichen. Die Prüfung verhindert das und schützt auch vor Browsern, die `Sec-Fetch-Site` nicht senden.
+- **Entwicklung.** Der Vite-Proxy leitet `Host` unverändert weiter, `pnpm dev` funktioniert damit.
+- Tests: `http/origin.test.ts`.
+
+## D-032 „Alles löschen“
+
+- **Was.** Einstellungen → „Deine Daten“ → „Alles löschen“. Der Dialog verlangt den Passcode (auch bei gültiger Sitzung; die Versuche zählen im Rate-Limit der Anmeldung). Der Server beendet zuerst laufende Antworten und löscht dann in dieser Reihenfolge: alle Secrets, in einer Transaktion Nachrichten, Chats, Untergruppen, Fächer, Anbieter, Einstellungen und Profil, dann alle Dateien in `assets`, `workspaces`, `logs` und `backups`, zuletzt `wal_checkpoint(TRUNCATE)` und `VACUUM`.
+- **Was bleibt.** Passcode und Anmeldung, damit Pagewise sofort neu eingerichtet werden kann (das Onboarding startet wieder). Die Oberfläche lädt danach komplett neu, damit auch im Speicher der Seite nichts übrig bleibt.
+- **Sicherungen werden mitgelöscht**, weil sie die alten Inhalte enthalten. Das macht „Alles löschen“ unwiderruflich, der Dialog sagt es.
+- **Wirklich weg.** `secure_delete` ist an (D-017), dazu Checkpoint und `VACUUM`. Ein Test belegt, dass ein Text nach dem Löschen weder in der Datenbankdatei noch im WAL-Protokoll steht. Grenze: Kopien außerhalb von Pagewise (Time Machine, Snapshots des Dateisystems, Cloud-Sicherungen des Ordners) erreicht das nicht.
+- **Fehler.** Es gibt nur den Code `erase_failed`, nie Pfade oder Meldungen. Ein erneuter Versuch räumt den Rest auf.
+- **Löschen einzelner Dinge.** Fach, Untergruppe, Chat und Anbieter löschen ihre Zeilen (mit `secure_delete`). Dateien auf der Platte gibt es in 1a noch nicht; sobald Assets und Workspaces entstehen (ab 1b/1c), muss das Löschen sie ebenfalls entfernen, mit Test (siehe [acceptance-1a.md](acceptance-1a.md)).
+
+## D-033 Daten an Anbieter: Übersicht und Bilder-Schalter
+
+- **Übersicht.** Das Anbieter-Formular nennt, was an den Anbieter geht (Nachricht und Verlauf, Prompts mit eingesetzten Profilangaben, Bilder und Dateien nur, wenn man sie selbst anhängt) und was nie gesendet wird (Passcode, Schlüssel anderer Anbieter, nicht geöffnete Chats). Der Hinweis auf kostenlose Modelle (D-024) bleibt.
+- **Schalter „Bilder an diesen Anbieter senden“.** Gespeichert je Anbieter (`providers.send_images`, Standard an), in der API als `sendImages`. `ProviderService.allowsImages(id)` ist die Stelle, die der Chat ab Phase 1c vor dem Zusammenstellen einer Anfrage fragt; ein unbekannter Anbieter bekommt nie Bilder. Bilder gibt es in 1a noch nicht, die Durchsetzung samt Test kommt deshalb mit 1c und steht dort als Abnahmebedingung.
