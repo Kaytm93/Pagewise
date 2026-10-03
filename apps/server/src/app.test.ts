@@ -44,6 +44,8 @@ describe('Auslieferung der Oberfläche', () => {
     mkdirSync(join(dist, 'assets'));
     writeFileSync(join(dist, 'index.html'), '<!doctype html><title>Pagewise</title>');
     writeFileSync(join(dist, 'assets', 'app.js'), 'console.log(1)');
+    writeFileSync(join(dist, 'sw.js'), 'self.addEventListener("fetch", () => {})');
+    writeFileSync(join(dist, 'manifest.webmanifest'), '{"name":"Pagewise"}');
   });
 
   afterAll(() => {
@@ -55,6 +57,29 @@ describe('Auslieferung der Oberfläche', () => {
     const response = await app.request('/assets/app.js');
     expect(response.status).toBe(200);
     expect(await response.text()).toBe('console.log(1)');
+  });
+
+  it('lässt Dateien mit Hash lange zwischenspeichern, alles andere nur nach Prüfung', async () => {
+    const app = createApp({ version: '0', webDist: dist });
+    const header = async (path: string) => (await app.request(path)).headers.get('cache-control');
+    expect(await header('/assets/app.js')).toBe('public, max-age=31536000, immutable');
+    // Eine neue Version muss sofort ankommen: Seite, Service Worker und Manifest werden jedes Mal geprüft.
+    expect(await header('/')).toBe('no-cache');
+    expect(await header('/faecher/42')).toBe('no-cache');
+    expect(await header('/sw.js')).toBe('no-cache');
+    expect(await header('/manifest.webmanifest')).toBe('no-cache');
+    // API-Antworten bleiben ungespeichert.
+    expect(await header('/api/health')).toBe('no-store');
+  });
+
+  it('liefert Service Worker und Manifest mit passendem Typ', async () => {
+    const app = createApp({ version: '0', webDist: dist });
+    const worker = await app.request('/sw.js');
+    expect(worker.status).toBe(200);
+    expect(worker.headers.get('content-type')).toMatch(/javascript/);
+    const manifest = await app.request('/manifest.webmanifest');
+    expect(manifest.status).toBe(200);
+    expect(manifest.headers.get('content-type')).toMatch(/manifest\+json|application\/json/);
   });
 
   it('liefert für unbekannte Pfade index.html (Einseiten-App)', async () => {

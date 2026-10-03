@@ -1,13 +1,14 @@
 import { Menu } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { messages as m } from '../i18n';
-import { type Route, useRoute } from '../router';
+import { pathFor, type Route, useRoute } from '../router';
 import { HomePage } from '../screens/HomePage';
 import { NotFoundPage } from '../screens/NotFoundPage';
 import { SettingsPage } from '../screens/SettingsPage';
 import { SubjectPage } from '../screens/SubjectPage';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { Drawer } from './Drawer';
+import { ErrorBoundary } from './ErrorBoundary';
 import { Sidebar } from './Sidebar';
 
 // Der Chat bringt die Markdown-Darstellung mit und wird erst beim Öffnen eines Chats geladen.
@@ -103,7 +104,9 @@ export function AppShell() {
               : 'px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:px-10 md:py-12'
           }`}
         >
-          <Page route={route} />
+          <ErrorBoundary resetKey={pathFor(route)}>
+            <Page route={route} />
+          </ErrorBoundary>
         </main>
       </div>
 

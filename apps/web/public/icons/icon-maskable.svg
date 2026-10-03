@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Pagewise">
+  <rect width="512" height="512" fill="#2e2e2e"/>
+  <g transform="translate(256 256) scale(0.8) translate(-252 -254)">
+    <rect x="132" y="104" width="216" height="296" rx="24" fill="#454545"/>
+    <path d="M176 144h140l56 56v180a24 24 0 0 1-24 24H176a24 24 0 0 1-24-24V168a24 24 0 0 1 24-24z" fill="#fdfcfb"/>
+    <path d="M316 144v32a24 24 0 0 0 24 24h32z" fill="#e4ded3"/>
+    <rect x="192" y="248" width="136" height="16" rx="8" fill="#2e2e2e"/>
+    <rect x="192" y="288" width="136" height="16" rx="8" fill="#2e2e2e"/>
+    <rect x="192" y="328" width="88" height="16" rx="8" fill="#6a6972"/>
+  </g>
+</svg>

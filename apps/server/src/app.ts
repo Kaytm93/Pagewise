@@ -88,6 +88,18 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
 
   const webDist = options.webDist;
   if (webDist && existsSync(join(webDist, 'index.html'))) {
+    // Dateien unter /assets tragen einen Hash im Namen und ändern sich nie: lange zwischenspeichern.
+    // Alles andere (index.html, Service Worker, Manifest, Icons) wird vor jeder Nutzung geprüft,
+    // damit eine neue Version sofort ankommt.
+    app.use('*', async (c, next) => {
+      await next();
+      if (c.res.status !== 200 || c.req.path.startsWith('/api/')) return;
+      c.header(
+        'Cache-Control',
+        c.req.path.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache',
+      );
+    });
+
     // serveStatic erwartet einen Pfad relativ zum Arbeitsverzeichnis.
     const root = relative(process.cwd(), webDist) || '.';
     app.use('*', serveStatic({ root }));

@@ -41,7 +41,7 @@ export const de = {
   connection: {
     loading: 'Verbindung wird geprüft …',
     error: 'Der Server antwortet nicht.',
-    hint: 'Läuft er noch? Starte ihn mit „pnpm start“ und versuche es erneut.',
+    hint: 'Läuft er noch? Starte ihn mit „pnpm start“. Auf einem anderen Gerät prüfst du außerdem, ob Tailscale verbunden ist.',
   },
   setup: {
     title: 'Willkommen bei Pagewise',
@@ -81,6 +81,11 @@ export const de = {
     notFoundHint: 'Der Link stimmt nicht oder das Fach wurde gelöscht.',
     toHome: 'Zur Startseite',
     addSubject: 'Fach hinzufügen',
+    reload: 'Neu laden',
+    updatedTitle: 'Pagewise wurde aktualisiert',
+    updatedHint: 'Lade die Seite neu, um die neue Version zu verwenden.',
+    crashTitle: 'Hier ist etwas schiefgegangen',
+    crashHint: 'Lade die Seite neu. Hilft das nicht, starte Pagewise auf dem Rechner neu.',
   },
   sidebar: {
     groups: 'Untergruppen ein- oder ausklappen',

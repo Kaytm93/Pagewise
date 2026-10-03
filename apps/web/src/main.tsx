@@ -8,6 +8,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { ApiClient } from './api/client';
+import { registerServiceWorker } from './pwa/register';
 import { applyTheme, readTheme } from './ui/theme';
 
 applyTheme(readTheme());
@@ -20,3 +21,6 @@ createRoot(container).render(
     <App client={new ApiClient()} />
   </StrictMode>,
 );
+
+// Erst nach dem Laden anmelden, damit der Service Worker den Start nicht bremst.
+window.addEventListener('load', () => void registerServiceWorker());
