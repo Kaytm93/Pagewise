@@ -17,6 +17,12 @@ pnpm start
 
 Der Server lauscht auf `127.0.0.1:3000`. Den Port änderst du mit `PAGEWISE_PORT`, das Datenverzeichnis mit `PAGEWISE_DATA_DIR`. Beim ersten Start wird das Datenverzeichnis mit Rechten `700` angelegt. Liegt es innerhalb eines Git-Arbeitsverzeichnisses, bricht der Start mit einer Erklärung ab.
 
+## Erster Start und Passcode
+
+Beim ersten Start zeigt die Konsole einen **Einrichtungscode** (`XXXXX-XXXXX`). Öffne Pagewise am besten direkt am Rechner unter `http://localhost:3000`, gib den Code ein und lege deinen Passcode fest (mindestens 8 Zeichen, ein Satz ist besser als ein Wort). Danach meldest du dich auf iPhone und iPad nur noch mit dem Passcode an. Nach fünf Fehlversuchen innerhalb von 15 Minuten ist die Anmeldung kurz gesperrt.
+
+Passcode vergessen? Beende Pagewise und führe `pnpm --filter @pagewise/server reset-passcode` aus. Das entfernt nur Passcode und Anmeldungen, deine Fächer und Daten bleiben. Beim nächsten Start gibt es einen neuen Einrichtungscode.
+
 ## Was im Datenverzeichnis liegt
 
 `pagewise.db` (SQLite, dazu `-wal` und `-shm`), `assets`, `workspaces`, `logs`, `secrets` (API-Schlüssel, nur für dich lesbar) und `backups`. Alles hat Rechte 600 beziehungsweise 700. Vor einer Datenbank-Migration legt Pagewise automatisch eine Kopie in `backups` an (die letzten fünf bleiben). Ein richtiges Backup ersetzt das nicht: Sichere das ganze Datenverzeichnis selbst, am besten verschlüsselt.

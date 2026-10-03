@@ -22,7 +22,7 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | Server nur an Loopback | umgesetzt (Phase 0) |
 | Security-Header inkl. CSP | Grundstock umgesetzt (Phase 0) |
 | `.gitignore`, Secret-Scan-Hook, Privacy-Check, CI mit gitleaks | umgesetzt (Phase 0) |
-| Passcode (Argon2id oder scrypt), Sitzungen, CSRF, Rate-Limit | geplant (Phase 1a) |
+| Passcode (scrypt), Einrichtungscode, Sitzungen, CSRF, Rate-Limit | umgesetzt (Phase 1a), siehe D-020 und D-021 |
 | Secrets in Datei mit Rechten 600, nie in Antworten oder Logs | umgesetzt (Phase 1a), Keychain bewusst nicht, siehe D-018 |
 | Datenbank, Sicherungen vor Migrationen und Unterordner nur für den Besitzer (600/700) | umgesetzt (Phase 1a), siehe D-017 und D-019 |
 | Bereinigung von Markdown, SVG, HTML | geplant (Phase 1b) |

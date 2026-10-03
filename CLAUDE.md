@@ -23,6 +23,7 @@ pnpm typecheck    # TypeScript in allen Paketen
 pnpm test         # Tests aller Pakete plus Repo-Tests (Scan, Hook)
 pnpm scan         # Secret-Scan und Privacy-Check über alle getrackten Dateien
 pnpm --filter @pagewise/server db:generate   # neue Migration aus dem Schema erzeugen, danach lesen und einchecken
+pnpm --filter @pagewise/server reset-passcode   # Passcode vergessen: entfernt Passcode und Sitzungen, Daten bleiben
 ```
 
 ## Aufbau
