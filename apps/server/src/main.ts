@@ -5,6 +5,10 @@ import { serve } from '@hono/node-server';
 import { createApp } from './app';
 import { ConfigError, loadConfig } from './config';
 import { DataDirError, prepareDataDir } from './data-dir';
+import { DatabaseError } from './db/client';
+import { createServices, type Services } from './services';
+import { SecretStoreError } from './storage/secret-store';
+import { StorageError } from './storage/storage';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(here, '..', '..', '..');
@@ -17,11 +21,19 @@ function readVersion(): string {
 function main(): void {
   let config: ReturnType<typeof loadConfig>;
   let dataDir: string;
+  let services: Services;
   try {
     config = loadConfig(process.env);
     dataDir = prepareDataDir(process.env, { appRoot });
+    services = createServices(dataDir);
   } catch (error) {
-    if (error instanceof ConfigError || error instanceof DataDirError) {
+    if (
+      error instanceof ConfigError ||
+      error instanceof DataDirError ||
+      error instanceof DatabaseError ||
+      error instanceof SecretStoreError ||
+      error instanceof StorageError
+    ) {
       console.error(`Pagewise startet nicht.\n${error.message}`);
       process.exit(1);
     }
@@ -40,8 +52,14 @@ function main(): void {
   });
 
   const shutdown = (): void => {
-    server.close(() => process.exit(0));
-    setTimeout(() => process.exit(0), 3000).unref();
+    server.close(() => {
+      services.close();
+      process.exit(0);
+    });
+    setTimeout(() => {
+      services.close();
+      process.exit(0);
+    }, 3000).unref();
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
