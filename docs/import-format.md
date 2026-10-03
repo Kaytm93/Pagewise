@@ -28,8 +28,11 @@ Beispielfach B,Beispiel-Lehrkraft,3
 
 ## Regeln
 
-- Maximale Dateigröße und Anzahl der Einträge sind begrenzt, die App prüft beides.
-- Importierte Inhalte gelten als nicht vertrauenswürdig und werden bereinigt.
-- Der Import legt nur Fächer an. Prompts schreibst du selbst, siehe `prompts/`.
+- Höchstens 200 Einträge und 256 KiB pro Datei. Die App prüft beides.
+- `name`: 1 bis 80 Zeichen, ohne Zeilenumbrüche. `teacher`: höchstens 80 Zeichen. `hours_per_week`: ganze Zahl von 1 bis 40.
+- Einträge mit gleichem Namen (Groß- und Kleinschreibung egal) werden übersprungen, auch wenn es das Fach schon gibt. Ein erneuter Import ist deshalb harmlos und überschreibt nichts.
+- Ungültige Einträge werden gezählt und nicht übernommen. Die übrigen Einträge werden trotzdem angelegt.
+- Unbekannte Spalten und Schlüssel werden ignoriert. Der Import legt nur Fächer an, keine Prompts. Prompts schreibst du selbst, siehe `prompts/`.
+- Importierte Inhalte gelten als nicht vertrauenswürdig: Sie werden nur als Text gespeichert und nie als HTML oder Code ausgeführt.
 
 Eine neutrale Beispieldatei liegt unter `config/examples/subjects.example.json`.

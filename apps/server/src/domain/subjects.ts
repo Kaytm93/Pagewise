@@ -6,10 +6,17 @@ import { subjectGroups, subjects } from '../db/schema';
 export interface GroupView {
   id: string;
   name: string;
+  kind: string | null;
   position: number;
 }
 
-export interface SubjectView {
+export interface SubjectDetails {
+  teacher: string | null;
+  hoursPerWeek: number | null;
+  icon: string | null;
+}
+
+export interface SubjectView extends SubjectDetails {
   id: string;
   name: string;
   position: number;
@@ -19,13 +26,35 @@ export interface SubjectView {
 export type DomainFailure = { ok: false; error: 'name_taken' | 'not_found' };
 export type DomainResult<T> = { ok: true; value: T } | DomainFailure;
 
+/** Änderungen an einem Fach. Fehlt ein Feld, bleibt es unverändert; `null` leert es. */
+export interface SubjectPatch extends Partial<SubjectDetails> {
+  name?: string;
+}
+
+export interface GroupPatch {
+  name?: string;
+  kind?: string | null;
+}
+
 /** Gleichheit für Namen: ohne Beachtung von Groß- und Kleinschreibung, Umlaute eingeschlossen. */
 function key(name: string): string {
   return name.normalize('NFC').toLocaleLowerCase('de');
 }
 
 function toGroup(row: typeof subjectGroups.$inferSelect): GroupView {
-  return { id: row.id, name: row.name, position: row.position };
+  return { id: row.id, name: row.name, kind: row.kind, position: row.position };
+}
+
+function toSubject(row: typeof subjects.$inferSelect, groups: GroupView[]): SubjectView {
+  return {
+    id: row.id,
+    name: row.name,
+    teacher: row.teacher,
+    hoursPerWeek: row.hoursPerWeek,
+    icon: row.icon,
+    position: row.position,
+    groups,
+  };
 }
 
 export function listSubjects(db: Db): SubjectView[] {
@@ -39,12 +68,9 @@ export function listSubjects(db: Db): SubjectView[] {
     .from(subjectGroups)
     .orderBy(asc(subjectGroups.position), asc(subjectGroups.createdAt), asc(subjectGroups.name))
     .all();
-  return subjectRows.map((subject) => ({
-    id: subject.id,
-    name: subject.name,
-    position: subject.position,
-    groups: groupRows.filter((group) => group.subjectId === subject.id).map(toGroup),
-  }));
+  return subjectRows.map((subject) =>
+    toSubject(subject, groupRows.filter((group) => group.subjectId === subject.id).map(toGroup)),
+  );
 }
 
 function getSubject(db: Db, id: string): SubjectView | undefined {
@@ -55,7 +81,11 @@ function nextPosition(current: number | null): number {
   return current === null ? 0 : current + 1;
 }
 
-export function createSubject(db: Db, name: string): DomainResult<SubjectView> {
+export function createSubject(
+  db: Db,
+  name: string,
+  details: Partial<SubjectDetails> = {},
+): DomainResult<SubjectView> {
   const taken = db.select({ name: subjects.name }).from(subjects).all();
   if (taken.some((row) => key(row.name) === key(name))) return { ok: false, error: 'name_taken' };
 
@@ -66,29 +96,47 @@ export function createSubject(db: Db, name: string): DomainResult<SubjectView> {
   try {
     const row = db
       .insert(subjects)
-      .values({ name, position: nextPosition(last?.value ?? null) })
+      .values({
+        name,
+        teacher: details.teacher ?? null,
+        hoursPerWeek: details.hoursPerWeek ?? null,
+        icon: details.icon ?? null,
+        position: nextPosition(last?.value ?? null),
+      })
       .returning()
       .get();
-    return { ok: true, value: { id: row.id, name: row.name, position: row.position, groups: [] } };
+    return { ok: true, value: toSubject(row, []) };
   } catch (error) {
     if (isUniqueViolation(error)) return { ok: false, error: 'name_taken' };
     throw error;
   }
 }
 
-export function renameSubject(db: Db, id: string, name: string): DomainResult<SubjectView> {
+export function updateSubject(db: Db, id: string, patch: SubjectPatch): DomainResult<SubjectView> {
   const existing = db.select().from(subjects).where(eq(subjects.id, id)).get();
   if (!existing) return { ok: false, error: 'not_found' };
 
-  const others = db
-    .select()
-    .from(subjects)
-    .all()
-    .filter((row) => row.id !== id);
-  if (others.some((row) => key(row.name) === key(name))) return { ok: false, error: 'name_taken' };
+  const name = patch.name;
+  if (name !== undefined) {
+    const others = db
+      .select()
+      .from(subjects)
+      .all()
+      .filter((row) => row.id !== id);
+    if (others.some((row) => key(row.name) === key(name)))
+      return { ok: false, error: 'name_taken' };
+  }
+
+  const changes: Partial<typeof subjects.$inferInsert> = {};
+  if (name !== undefined) changes.name = name;
+  if (patch.teacher !== undefined) changes.teacher = patch.teacher;
+  if (patch.hoursPerWeek !== undefined) changes.hoursPerWeek = patch.hoursPerWeek;
+  if (patch.icon !== undefined) changes.icon = patch.icon;
 
   try {
-    db.update(subjects).set({ name }).where(eq(subjects.id, id)).run();
+    if (Object.keys(changes).length > 0) {
+      db.update(subjects).set(changes).where(eq(subjects.id, id)).run();
+    }
   } catch (error) {
     if (isUniqueViolation(error)) return { ok: false, error: 'name_taken' };
     throw error;
@@ -103,7 +151,38 @@ export function deleteSubject(db: Db, id: string): DomainResult<null> {
   return result.changes > 0 ? { ok: true, value: null } : { ok: false, error: 'not_found' };
 }
 
-export function createGroup(db: Db, subjectId: string, name: string): DomainResult<GroupView> {
+export interface ImportSummary {
+  created: number;
+  /** Fächer, die es schon gab (gleicher Name, Groß- und Kleinschreibung egal). */
+  skipped: number;
+}
+
+/**
+ * Legt mehrere Fächer an. Jedes Fach wird für sich gespeichert, ein erneuter Import ist deshalb
+ * harmlos: Vorhandenes wird übersprungen, nichts wird überschrieben.
+ */
+export function importSubjects(
+  db: Db,
+  entries: { name: string; teacher: string | null; hoursPerWeek: number | null }[],
+): ImportSummary {
+  const summary: ImportSummary = { created: 0, skipped: 0 };
+  for (const entry of entries) {
+    const result = createSubject(db, entry.name, {
+      teacher: entry.teacher,
+      hoursPerWeek: entry.hoursPerWeek,
+    });
+    if (result.ok) summary.created += 1;
+    else summary.skipped += 1;
+  }
+  return summary;
+}
+
+export function createGroup(
+  db: Db,
+  subjectId: string,
+  name: string,
+  kind: string | null = null,
+): DomainResult<GroupView> {
   const subject = db
     .select({ id: subjects.id })
     .from(subjects)
@@ -126,7 +205,7 @@ export function createGroup(db: Db, subjectId: string, name: string): DomainResu
   try {
     const row = db
       .insert(subjectGroups)
-      .values({ subjectId, name, position: nextPosition(last?.value ?? null) })
+      .values({ subjectId, name, kind, position: nextPosition(last?.value ?? null) })
       .returning()
       .get();
     return { ok: true, value: toGroup(row) };
@@ -136,21 +215,30 @@ export function createGroup(db: Db, subjectId: string, name: string): DomainResu
   }
 }
 
-export function renameGroup(db: Db, id: string, name: string): DomainResult<GroupView> {
+export function updateGroup(db: Db, id: string, patch: GroupPatch): DomainResult<GroupView> {
   const existing = db.select().from(subjectGroups).where(eq(subjectGroups.id, id)).get();
   if (!existing) return { ok: false, error: 'not_found' };
 
-  const siblings = db
-    .select()
-    .from(subjectGroups)
-    .where(eq(subjectGroups.subjectId, existing.subjectId))
-    .all()
-    .filter((row) => row.id !== id);
-  if (siblings.some((row) => key(row.name) === key(name)))
-    return { ok: false, error: 'name_taken' };
+  const name = patch.name;
+  if (name !== undefined) {
+    const siblings = db
+      .select()
+      .from(subjectGroups)
+      .where(eq(subjectGroups.subjectId, existing.subjectId))
+      .all()
+      .filter((row) => row.id !== id);
+    if (siblings.some((row) => key(row.name) === key(name)))
+      return { ok: false, error: 'name_taken' };
+  }
+
+  const changes: Partial<typeof subjectGroups.$inferInsert> = {};
+  if (name !== undefined) changes.name = name;
+  if (patch.kind !== undefined) changes.kind = patch.kind;
 
   try {
-    db.update(subjectGroups).set({ name }).where(eq(subjectGroups.id, id)).run();
+    if (Object.keys(changes).length > 0) {
+      db.update(subjectGroups).set(changes).where(eq(subjectGroups.id, id)).run();
+    }
   } catch (error) {
     if (isUniqueViolation(error)) return { ok: false, error: 'name_taken' };
     throw error;

@@ -42,6 +42,11 @@ export const subjects = sqliteTable(
   {
     id: id(),
     name: text('name').notNull(),
+    /** Lehrkraft (Name oder Kürzel), optional. */
+    teacher: text('teacher'),
+    hoursPerWeek: integer('hours_per_week'),
+    /** Kennung eines Linien-Icons der Oberfläche, optional. Unbekannte Kennungen zeigen das Standard-Icon. */
+    icon: text('icon'),
     position: integer('position').notNull().default(0),
     ...timestamps,
   },
@@ -57,6 +62,8 @@ export const subjectGroups = sqliteTable(
       .notNull()
       .references(() => subjects.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
+    /** Art der Untergruppe in freien Worten (z. B. „Schulaufgabe“), optional. */
+    kind: text('kind'),
     position: integer('position').notNull().default(0),
     ...timestamps,
   },

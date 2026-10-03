@@ -1,4 +1,5 @@
-import type { Context } from 'hono';
+import type { Context, MiddlewareHandler } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import type { z } from 'zod';
 
 export type ParsedBody<T> = { ok: true; data: T } | { ok: false; response: Response };
@@ -29,4 +30,9 @@ export async function readJson<S extends z.ZodType>(
     };
   }
   return { ok: true, data: parsed.data };
+}
+
+/** Begrenzt die Größe des Anfragekörpers. Zu große Körper werden mit 413 abgelehnt. */
+export function limitBody(maxSize: number): MiddlewareHandler {
+  return bodyLimit({ maxSize, onError: (c) => c.json({ error: 'payload_too_large' }, 413) });
 }

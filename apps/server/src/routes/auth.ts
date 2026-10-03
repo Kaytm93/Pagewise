@@ -1,10 +1,9 @@
 import { Hono } from 'hono';
-import { bodyLimit } from 'hono/body-limit';
 import { z } from 'zod';
 import type { AuthService } from '../auth/auth-service';
 import { clearSessionCookie, setSessionCookie } from '../auth/http';
 import type { SessionService } from '../auth/sessions';
-import { readJson } from '../http/json';
+import { limitBody, readJson } from '../http/json';
 import type { AppEnv } from '../http/types';
 
 const SetupBody = z.object({
@@ -25,10 +24,8 @@ export interface AuthRouteDeps {
 /** Routen für Einrichtung, Anmeldung und Sitzung. Jede Antwort enthält nur Codes, keine Pfade. */
 export function authRoutes({ auth, sessions }: AuthRouteDeps): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
-  app.use(
-    '*',
-    bodyLimit({ maxSize: 16 * 1024, onError: (c) => c.json({ error: 'payload_too_large' }, 413) }),
-  );
+  // Nur für die eigenen Pfade, damit die Grenze nicht auf andere Routen unter /api durchschlägt.
+  app.use('/auth/*', limitBody(16 * 1024));
 
   // Wo steht die Anmeldung? Das darf auch unangemeldet jeder erfahren.
   app.get('/session', (c) => {

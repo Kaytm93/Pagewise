@@ -4,11 +4,15 @@ import { createHarness, type Harness, type Session } from '../test-harness';
 interface Group {
   id: string;
   name: string;
+  kind: string | null;
   position: number;
 }
 interface Subject {
   id: string;
   name: string;
+  teacher: string | null;
+  hoursPerWeek: number | null;
+  icon: string | null;
   position: number;
   groups: Group[];
 }
@@ -215,6 +219,219 @@ describe('Fächer und Untergruppen', () => {
       expect((await session.call('PATCH', '/api/groups/kein-uuid', { name: 'X' })).status).toBe(
         404,
       );
+    });
+  });
+
+  describe('Angaben zum Fach', () => {
+    it('speichert Lehrkraft, Wochenstunden und Icon, alles optional', async () => {
+      const plain = await addSubject('Beispielfach A');
+      expect(plain).toMatchObject({ teacher: null, hoursPerWeek: null, icon: null });
+
+      const reply = await session.call('POST', '/api/subjects', {
+        name: 'Beispielfach B',
+        teacher: '  Beispiel-Lehrkraft ',
+        hoursPerWeek: 3,
+        icon: 'book',
+      });
+      expect(reply.status).toBe(201);
+      expect(reply.body).toMatchObject({
+        teacher: 'Beispiel-Lehrkraft',
+        hoursPerWeek: 3,
+        icon: 'book',
+      });
+    });
+
+    it('ändert einzelne Angaben und lässt den Rest unberührt', async () => {
+      const subject = await addSubject('Beispielfach');
+      const first = await session.call('PATCH', `/api/subjects/${subject.id}`, {
+        teacher: 'Beispiel-Lehrkraft',
+        hoursPerWeek: 4,
+      });
+      expect(first.body).toMatchObject({
+        name: 'Beispielfach',
+        teacher: 'Beispiel-Lehrkraft',
+        hoursPerWeek: 4,
+      });
+
+      const second = await session.call('PATCH', `/api/subjects/${subject.id}`, {
+        teacher: '',
+        hoursPerWeek: null,
+      });
+      expect(second.body).toMatchObject({
+        name: 'Beispielfach',
+        teacher: null,
+        hoursPerWeek: null,
+      });
+    });
+
+    it.each([
+      ['hoursPerWeek', 0],
+      ['hoursPerWeek', 41],
+      ['hoursPerWeek', 2.5],
+      ['hoursPerWeek', '3'],
+      ['icon', 'Book'],
+      ['icon', '<img>'],
+      ['teacher', 'x'.repeat(81)],
+    ])('lehnt %s = %j ab', async (field, value) => {
+      const reply = await session.call('POST', '/api/subjects', {
+        name: 'Beispielfach',
+        [field]: value,
+      });
+      expect(reply.status).toBe(400);
+      expect(reply.body).toEqual({ error: 'invalid_input', field });
+    });
+
+    it('lehnt eine leere Änderung ab', async () => {
+      const subject = await addSubject('Beispielfach');
+      const reply = await session.call('PATCH', `/api/subjects/${subject.id}`, {});
+      expect(reply.status).toBe(400);
+    });
+
+    it('speichert die Art einer Untergruppe', async () => {
+      const subject = await addSubject('Beispielfach');
+      const created = await session.call('POST', `/api/subjects/${subject.id}/groups`, {
+        name: 'Beispiel-Thema',
+        kind: 'Beispielart',
+      });
+      expect(created.body).toMatchObject({ name: 'Beispiel-Thema', kind: 'Beispielart' });
+
+      const cleared = await session.call('PATCH', `/api/groups/${created.body.id}`, { kind: '' });
+      expect(cleared.body).toMatchObject({ name: 'Beispiel-Thema', kind: null });
+    });
+  });
+
+  describe('Import', () => {
+    const json = (subjects: unknown[]) => JSON.stringify({ version: 1, subjects });
+    const upload = (format: 'json' | 'csv', content: string) =>
+      session.call('POST', '/api/subjects/import', { format, content });
+
+    it('legt Fächer aus JSON an, mit und ohne Lehrkraft und Stunden', async () => {
+      const reply = await upload(
+        'json',
+        json([
+          { name: 'Beispielfach A' },
+          { name: 'Beispielfach B', teacher: 'Beispiel-Lehrkraft', hours_per_week: 3 },
+        ]),
+      );
+      expect(reply.status).toBe(200);
+      expect(reply.body).toMatchObject({ created: 2, skipped: 0, invalid: 0 });
+      const subjects = await list();
+      expect(subjects.map((s) => [s.name, s.teacher, s.hoursPerWeek])).toEqual([
+        ['Beispielfach A', null, null],
+        ['Beispielfach B', 'Beispiel-Lehrkraft', 3],
+      ]);
+      expect((reply.body.subjects as Subject[]).map((s) => s.name)).toEqual([
+        'Beispielfach A',
+        'Beispielfach B',
+      ]);
+    });
+
+    it('liest CSV mit Anführungszeichen, Komma im Feld, Windows-Zeilenenden und BOM', async () => {
+      const csv = [
+        '﻿name,teacher,hours_per_week',
+        'Beispielfach A,,',
+        '"Beispielfach, B","Beispiel ""Lehrkraft""",3',
+        '',
+      ].join('\r\n');
+      const reply = await upload('csv', csv);
+      expect(reply.body).toMatchObject({ created: 2, skipped: 0, invalid: 0 });
+      const subjects = await list();
+      expect(subjects.map((s) => [s.name, s.teacher, s.hoursPerWeek])).toEqual([
+        ['Beispielfach A', null, null],
+        ['Beispielfach, B', 'Beispiel "Lehrkraft"', 3],
+      ]);
+    });
+
+    it('überspringt Vorhandenes und zählt Ungültiges, ohne abzubrechen', async () => {
+      await addSubject('Beispielfach A');
+      const reply = await upload(
+        'json',
+        json([
+          { name: 'beispielfach a' },
+          { name: 'Beispielfach B' },
+          { name: 'Beispielfach B' },
+          { name: '' },
+          { name: 'Beispielfach C', hours_per_week: 99 },
+          'kein Objekt',
+          null,
+        ]),
+      );
+      expect(reply.body).toMatchObject({ created: 1, skipped: 2, invalid: 4 });
+      expect((await list()).map((s) => s.name)).toEqual(['Beispielfach A', 'Beispielfach B']);
+    });
+
+    it('übernimmt nur bekannte Felder, nie fremde Schlüssel', async () => {
+      const reply = await upload(
+        'json',
+        json([{ name: 'Beispielfach', prompt: 'ein erfundener Prompt', icon: 'x', id: 'abc' }]),
+      );
+      expect(reply.body).toMatchObject({ created: 1 });
+      const [subject] = await list();
+      expect(subject).toMatchObject({ name: 'Beispielfach', icon: null });
+      expect(subject?.id).not.toBe('abc');
+    });
+
+    it('ist bei erneutem Import harmlos', async () => {
+      const content = json([{ name: 'Beispielfach A' }, { name: 'Beispielfach B' }]);
+      await upload('json', content);
+      const again = await upload('json', content);
+      expect(again.body).toMatchObject({ created: 0, skipped: 2 });
+      expect(await list()).toHaveLength(2);
+    });
+
+    it.each([
+      ['json', 'kein JSON', 'invalid_format'],
+      ['json', '[]', 'invalid_format'],
+      ['json', JSON.stringify({ version: 2, subjects: [{ name: 'X' }] }), 'invalid_format'],
+      ['json', JSON.stringify({ version: 1, subjects: [] }), 'empty'],
+      ['csv', 'teacher\nBeispiel', 'invalid_format'],
+      ['csv', 'name\n"offen', 'invalid_format'],
+      ['csv', 'name\n', 'empty'],
+    ] as const)('lehnt %s-Inhalt %j mit Grund %s ab', async (format, content, reason) => {
+      const reply = await upload(format, content);
+      expect(reply.status).toBe(400);
+      expect(reply.body).toEqual({ error: 'invalid_input', field: 'content', reason });
+      expect(await list()).toEqual([]);
+    });
+
+    it('lehnt mehr als 200 Einträge ab', async () => {
+      const many = Array.from({ length: 201 }, (_, i) => ({ name: `Beispielfach ${i}` }));
+      const reply = await upload('json', json(many));
+      expect(reply.body).toEqual({ error: 'invalid_input', field: 'content', reason: 'too_many' });
+      expect(await list()).toEqual([]);
+    });
+
+    it('nimmt Dateien über 16 KiB an, aber keine über der Grenze', async () => {
+      const medium = Array.from({ length: 200 }, (_, i) => ({
+        name: `Beispielfach ${i}`,
+        teacher: 'x'.repeat(40),
+      }));
+      const ok = await upload('json', json(medium));
+      expect(ok.status).toBe(200);
+      expect(ok.body).toMatchObject({ created: 200 });
+
+      const tooBig = await upload('json', 'x'.repeat(256 * 1024 + 1));
+      expect(tooBig.status).toBe(400);
+      const huge = await upload('json', 'x'.repeat(600 * 1024));
+      expect(huge.status).toBe(413);
+    });
+
+    it('lässt die kleine Grenze für andere Routen bestehen', async () => {
+      const reply = await session.call('POST', '/api/subjects', { name: 'x'.repeat(20 * 1024) });
+      expect(reply.status).toBe(413);
+    });
+
+    it('gibt den Inhalt in Fehlerantworten nie zurück', async () => {
+      const reply = await upload('json', '{"version":1,"subjects":[{"name":"geheimer Inhalt"');
+      expect(reply.status).toBe(400);
+      expect(reply.text).not.toContain('geheimer');
+    });
+
+    it('verlangt eine Anmeldung', async () => {
+      const reply = await harness.call('POST', '/api/subjects/import', {
+        body: { format: 'json', content: json([{ name: 'X' }]) },
+      });
+      expect(reply.status).toBe(401);
     });
   });
 
