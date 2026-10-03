@@ -1,6 +1,6 @@
 # Modell-Anbieter
 
-Stand: Phase 1a (c) umgesetzt. Anbieter und Modelle lassen sich in der Oberfläche eintragen, ohne Code zu ändern. Der Chat, der sie nutzt, folgt in 1a (d).
+Stand: Phase 1a (c) und (d) umgesetzt. Anbieter und Modelle lassen sich in der Oberfläche eintragen, ohne Code zu ändern, und der Chat nutzt sie.
 
 ## Provider-Registry
 
@@ -43,12 +43,12 @@ Der Schlüssel steht nie in der Datenbank und nie in einer Antwort. Die Oberflä
 ## Standardmodell und Ausweichmodelle
 
 - Das **Standardmodell** gilt, wenn weder Fach noch Chat ein anderes wählen.
-- **Ausweichmodelle** (höchstens fünf) sind für den Fall gedacht, dass das gewählte Modell mit einem Fehler antwortet, bei dem ein anderes Modell oder ein späterer Versuch helfen kann (`rate_limited`, `upstream_error`, `unreachable`, `timeout`, `insufficient_credits`, `model_not_found`; im Code `ProviderError.retryable`). Ein falscher Schlüssel (`auth_failed`) oder eine fehlerhafte Anfrage (`bad_request`) löst keinen Wechsel aus. Der Server liefert dafür schon die Reihenfolge (`ProviderService.chain()`), das eigentliche Weiterschalten baut der Chat in 1a (d).
-- Die Reihenfolge eines Versuchs ist: gewähltes Modell (sonst Standardmodell), dann die Ausweichmodelle, ohne Doppelte.
+- **Ausweichmodelle** (höchstens fünf) sind für den Fall gedacht, dass das gewählte Modell mit einem Fehler antwortet, bei dem ein anderes Modell oder ein späterer Versuch helfen kann (`rate_limited`, `upstream_error`, `unreachable`, `timeout`, `insufficient_credits`, `model_not_found`; im Code `ProviderError.retryable`). Ein falscher Schlüssel (`auth_failed`) oder eine fehlerhafte Anfrage (`bad_request`) löst keinen Wechsel aus. Der Server liefert die Reihenfolge (`ProviderService.chain()`), der Chat schaltet weiter, solange noch kein Text der Antwort da ist (D-027).
+- Die Reihenfolge eines Versuchs ist: gewähltes Modell, dann die Ausweichmodelle, ohne Doppelte. Gewählt ist das Modell des Chats, sonst das des Fachs, sonst das Standardmodell.
 - Legst du den ersten OpenRouter-Anbieter an und hast noch nichts gewählt, setzt Pagewise `z-ai/glm-5.3-flash` als Standard und als erstes Ausweichmodell. Für ein Fach oder einen Chat mit anderem Modell fängt es so Fehler ab. Gewählt wird nur, wo du noch nichts festgelegt hast.
 - Entfällt ein Anbieter oder Modell, räumt der Server die Auswahl selbst auf.
 
-Die Auswahl pro Fach und pro Chat kommt mit dem Chat (1a (d)).
+Die Auswahl pro Fach steht auf der Seite des Fachs („Modell ändern“), die pro Chat oben im Chat (Knopf mit dem Modellnamen). „Keine Wahl“ lässt die übergeordnete Einstellung gelten. Ohne ein einziges gültiges Modell zeigt der Chat einen Hinweis mit Link zu den Einstellungen und sperrt das Eingabefeld.
 
 ## Kostenlose Modelle
 

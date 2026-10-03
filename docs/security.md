@@ -31,7 +31,9 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | Anbieter-Schlüssel nur im Secret-Speicher, in Antworten nur `hasKey` und letzte vier Zeichen, Test belegt: kein Schlüssel in Antworten oder Fehlern | umgesetzt (Phase 1a), siehe D-026 |
 | Anfragen an Anbieter: `https` Pflicht (`http` nur für Loopback), keine Weiterleitungen, Fehler nur als Codes, Größen- und Mengengrenzen | umgesetzt (Phase 1a), siehe D-026 |
 | Hinweis bei kostenlosen Modellen („können Eingaben protokollieren“) im Formular und im Onboarding | umgesetzt (Phase 1a), siehe D-024 |
-| Bereinigung von Markdown, SVG, HTML | geplant (Phase 1b) |
+| Modell-Antworten im Chat: Markdown ohne rohes HTML, Links nur `http`, `https`, `mailto` mit `noopener noreferrer nofollow`, Bilder werden nie geladen; Test belegt: kein `script`, `img`, `onerror`, `javascript:` | umgesetzt (Phase 1a), siehe D-028 |
+| Chat-Antworten und Fehler: Texte der Anbieter und der Nachrichten erscheinen nie in Fehlern oder Logs, nur Codes | umgesetzt (Phase 1a), siehe D-026 und D-027 |
+| Bereinigung von SVG, HTML und Formeln in Hefteinträgen | geplant (Phase 1b) |
 | EXIF-Entfernung, Upload-Prüfung | geplant (Phase 1c) |
 | PDF-Rendering ohne Netzwerk | geplant (Phase 1d) |
 | Agent-CLI mit Umgebungs-Allowlist und Workspace-Isolation | geplant (Phase 1e) |
@@ -56,6 +58,7 @@ Alles, was Nutzerdaten enthält, liegt im Datenverzeichnis: Datenbank, Uploads, 
 - Modell-Anbieter sehen, was du ihnen sendest. Free-Modelle können Prompts protokollieren. Pagewise prüft die Datenschutzregeln der Anbieter nicht, auch nicht die von OpenRouter und der Anbieter dahinter.
 - Ein eingetragener Anbieter bekommt deinen Schlüssel und alles, was du an ihn schickst. Trägst du eine fremde Adresse ein, geht der Schlüssel dorthin. Pagewise prüft nur, dass die Adresse `https` nutzt, nicht, wem sie gehört.
 - Die Sicherungen vor Migrationen im Ordner `backups` sind unverschlüsselt, wie der Rest des Datenverzeichnisses.
+- Die Antworten im Chat sind Text des Modells. Pagewise zeigt sie bereinigt an, prüft aber nicht, ob sie stimmen. Ein Modell kann sich irren, erfundene Quellen nennen oder Anweisungen aus eingefügten Texten folgen. Prüfe Wichtiges nach.
 - Der Passcode-Schutz ist für ein privates Tailnet gedacht, nicht für das offene Internet.
 
 Meldeweg für Sicherheitslücken: [SECURITY.md](../SECURITY.md).
