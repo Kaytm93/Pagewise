@@ -7,12 +7,16 @@ import './styles/app.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { ApiClient } from './api/client';
+import { applyTheme, readTheme } from './ui/theme';
+
+applyTheme(readTheme());
 
 const container = document.getElementById('root');
 if (!container) throw new Error('Wurzelelement #root fehlt');
 
 createRoot(container).render(
   <StrictMode>
-    <App />
+    <App client={new ApiClient()} />
   </StrictMode>,
 );
