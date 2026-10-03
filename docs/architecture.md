@@ -1,6 +1,6 @@
 # Architektur
 
-Stand: Phase 1a läuft. Gebaut sind Datenbank, Migrationen, Storage, Secret-Speicher, Anmeldung, Profil, Fächer und Untergruppen, Prompt-Schichten und die Provider-Registry (jeweils API und Oberfläche) sowie das Onboarding. Der Chat mit Streaming ist gebaut (Server und Oberfläche). Noch offen in 1a: PWA. Der Rest ab Phase 1a ist Plan und kann sich beim Bauen ändern, Abweichungen stehen in [decisions.md](decisions.md).
+Stand: Phase 1a läuft. Gebaut sind Datenbank, Migrationen, Storage, Secret-Speicher, Anmeldung, Profil, Fächer und Untergruppen, Prompt-Schichten und die Provider-Registry (jeweils API und Oberfläche) sowie das Onboarding. Der Chat mit Streaming und die PWA (Manifest, Service Worker, Icons) sind gebaut. Noch offen in 1a: Anleitung für Tailscale Serve und die Abnahme. Der Rest ab Phase 1a ist Plan und kann sich beim Bauen ändern, Abweichungen stehen in [decisions.md](decisions.md).
 
 ## Überblick
 

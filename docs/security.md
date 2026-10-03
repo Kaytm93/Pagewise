@@ -33,6 +33,7 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | Hinweis bei kostenlosen Modellen („können Eingaben protokollieren“) im Formular und im Onboarding | umgesetzt (Phase 1a), siehe D-024 |
 | Modell-Antworten im Chat: Markdown ohne rohes HTML, Links nur `http`, `https`, `mailto` mit `noopener noreferrer nofollow`, Bilder werden nie geladen; Test belegt: kein `script`, `img`, `onerror`, `javascript:` | umgesetzt (Phase 1a), siehe D-028 |
 | Chat-Antworten und Fehler: Texte der Anbieter und der Nachrichten erscheinen nie in Fehlern oder Logs, nur Codes | umgesetzt (Phase 1a), siehe D-026 und D-027 |
+| Service Worker speichert nur Startseite, `/assets` und `/icons`, nie `/api` oder den Antwort-Strom; Test liest den echten Quelltext | umgesetzt (Phase 1a), siehe D-029 |
 | Bereinigung von SVG, HTML und Formeln in Hefteinträgen | geplant (Phase 1b) |
 | EXIF-Entfernung, Upload-Prüfung | geplant (Phase 1c) |
 | PDF-Rendering ohne Netzwerk | geplant (Phase 1d) |
