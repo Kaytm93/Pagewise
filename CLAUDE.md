@@ -9,7 +9,7 @@ Konventionen für die Arbeit an Pagewise (mit Claude Code oder von Hand).
 3. **Beispiele und Tests nutzen ausschließlich erfundene Daten**, die offensichtlich erfunden sind (z. B. „Beispiel-Lehrkraft“). Fake-Schlüssel in Tests werden zur Laufzeit zusammengesetzt, damit der Secret-Scan den Quelltext nicht trifft.
 4. **Nutzerdaten liegen im Datenverzeichnis außerhalb des Repos.** Nie `data/`, `uploads/`, `workspaces/` o. Ä. im Repo anlegen.
 5. **Nie Flags verwenden, die alle Berechtigungsabfragen überspringen** (z. B. `--dangerously-skip-permissions`), weder im Code noch in Skripten.
-6. Fach-Prompts werden nicht erfunden oder vorbelegt. Vorlagen enthalten nur Platzhalter.
+6. Prompts von Nutzern (Fach-Prompts, allgemeiner Schul-Prompt) gehören nie ins Repo, Vorlagen dafür enthalten nur Platzhalter. Ausnahme seit D-034: neutrale **Standard-Prompts je Fach**, die für alle Nutzer gleich sind, standardmäßig gelten und in der App bearbeitet werden können. Sie enthalten keine personenbezogenen Daten, Schulnamen, Lehrkräfte, Bundesland- oder Lehrplanangaben.
 
 ## Befehle
 
