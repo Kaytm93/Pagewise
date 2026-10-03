@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # gitleaks prüft auch den Verlauf
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6 # Version aus "packageManager" in package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Tests
+        run: pnpm test
+
+      - name: Build der Oberfläche
+        run: pnpm --filter @schulheft/web build
+
+      - name: Secret-Scan (eigenes Skript)
+        run: node scripts/secret-scan.mjs --all
+
+      # gitleaks-action braucht für Repositories in einer Organisation einen kostenlosen
+      # Lizenzschlüssel (Secret GITLEAKS_LICENSE). Für persönliche Konten ist keiner nötig.
+      # Forks in Organisationen setzen das Secret oder entfernen diesen Schritt.
+      - name: Secret-Scan (gitleaks, Verlauf)
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      - name: Abhängigkeiten prüfen
+        run: pnpm audit --audit-level high
