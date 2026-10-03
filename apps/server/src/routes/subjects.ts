@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import type { Context, MiddlewareHandler } from 'hono';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -7,6 +8,7 @@ import {
   type ImportParse,
   parseSubjectImport,
 } from '../domain/subject-import';
+import { loadSubjectTemplates } from '../domain/subject-templates';
 import {
   createGroup,
   createSubject,
@@ -21,6 +23,7 @@ import {
 import { hoursField, iconField, idField, nameField, optionalTextField } from '../http/fields';
 import { limitBody, readJson } from '../http/json';
 import type { AppEnv } from '../http/types';
+import { APP_ROOT } from '../paths';
 
 const SubjectDetailsBody = {
   teacher: optionalTextField.optional(),
@@ -61,7 +64,9 @@ function importFailure(c: Context, parsed: Extract<ImportParse, { ok: false }>):
 const IMPORT_PATH = /\/subjects\/import$/;
 
 /** Fächer und Untergruppen. Navigation: Fach → Untergruppe, jede Antwort enthält nur eigene Daten. */
-export function subjectRoutes(db: Db): Hono<AppEnv> {
+export function subjectRoutes(db: Db, options: { templatesFile?: string } = {}): Hono<AppEnv> {
+  const templatesFile =
+    options.templatesFile ?? join(APP_ROOT, 'config', 'examples', 'subjects.example.json');
   const app = new Hono<AppEnv>();
 
   // Nur für die eigenen Pfade; der Import darf größer sein als alles andere.
@@ -74,6 +79,9 @@ export function subjectRoutes(db: Db): Hono<AppEnv> {
   app.use('/subjects/import', limitBody(2 * IMPORT_MAX_CHARACTERS));
 
   app.get('/subjects', (c) => c.json({ subjects: listSubjects(db) }));
+
+  // Neutrale Namensvorschläge fürs Onboarding. Es wird nichts angelegt.
+  app.get('/subjects/templates', (c) => c.json({ subjects: loadSubjectTemplates(templatesFile) }));
 
   app.post('/subjects', async (c) => {
     const body = await readJson(c, CreateSubjectBody);

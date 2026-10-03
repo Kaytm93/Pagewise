@@ -300,6 +300,21 @@ describe('Fächer und Untergruppen', () => {
     });
   });
 
+  describe('Vorlagen', () => {
+    it('liefert die neutralen Namen aus der Beispieldatei und legt nichts an', async () => {
+      const reply = await session.call('GET', '/api/subjects/templates');
+      expect(reply.status).toBe(200);
+      const names = (reply.body.subjects as { name: string }[]).map((t) => t.name);
+      expect(names).toEqual(['Mathematik', 'Deutsch', 'Englisch']);
+      expect(await list()).toEqual([]);
+    });
+
+    it('verlangt eine Anmeldung', async () => {
+      const reply = await harness.call('GET', '/api/subjects/templates');
+      expect(reply.status).toBe(401);
+    });
+  });
+
   describe('Import', () => {
     const json = (subjects: unknown[]) => JSON.stringify({ version: 1, subjects });
     const upload = (format: 'json' | 'csv', content: string) =>
