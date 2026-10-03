@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import type { Hono } from 'hono';
 import { createApp } from './app';
 import { AttemptLimiter } from './auth/attempt-limiter';
+import type { ChatServiceOptions } from './chats/service';
 import type { AppEnv } from './http/types';
 import { createServices, type Services } from './services';
 
@@ -45,13 +46,14 @@ export interface Harness {
 }
 
 export function createHarness(
-  options: { maxFailures?: number; fetch?: typeof fetch } = {},
+  options: { maxFailures?: number; fetch?: typeof fetch; chats?: ChatServiceOptions } = {},
 ): Harness {
   const base = mkdtempSync(join(tmpdir(), 'pagewise-test-'));
   const services = createServices(join(base, 'daten'), {
     scryptParams: { N: 16, r: 8, p: 1 },
     limiter: new AttemptLimiter({ maxFailures: options.maxFailures ?? 3 }),
     fetch: options.fetch,
+    chats: options.chats,
   });
   const app = createApp({ version: '1.2.3', services });
 

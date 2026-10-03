@@ -3,6 +3,7 @@ import { AttemptLimiter } from './auth/attempt-limiter';
 import { AuthService } from './auth/auth-service';
 import type { ScryptParams } from './auth/passcode';
 import { SessionService } from './auth/sessions';
+import { ChatService, type ChatServiceOptions } from './chats/service';
 import { type DatabaseHandle, migrateDatabase, openDatabase } from './db/client';
 import { ProviderClient } from './providers/client';
 import { ProviderService } from './providers/service';
@@ -19,6 +20,7 @@ export interface Services {
   sessions: SessionService;
   auth: AuthService;
   providers: ProviderService;
+  chats: ChatService;
   close(): void;
 }
 
@@ -28,6 +30,8 @@ export interface ServicesOptions {
   limiter?: AttemptLimiter;
   /** Nur für Tests: ersetzt `fetch` für Anfragen an Modell-Anbieter. */
   fetch?: typeof fetch;
+  /** Nur für Tests: Grenzen und Takt des Chat-Dienstes. */
+  chats?: ChatServiceOptions;
 }
 
 /**
@@ -52,6 +56,11 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     scryptParams: options.scryptParams,
   });
   const secrets = new FileSecretStore(join(paths.secrets, 'secrets.json'));
+  const providers = new ProviderService(
+    database.db,
+    secrets,
+    new ProviderClient({ fetch: options.fetch }),
+  );
   return {
     paths,
     database,
@@ -59,11 +68,8 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     secrets,
     sessions,
     auth,
-    providers: new ProviderService(
-      database.db,
-      secrets,
-      new ProviderClient({ fetch: options.fetch }),
-    ),
+    providers,
+    chats: new ChatService(database.db, providers, options.chats),
     close: () => database.close(),
   };
 }

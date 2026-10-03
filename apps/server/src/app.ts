@@ -7,6 +7,7 @@ import { secureHeaders } from 'hono/secure-headers';
 import { csrfGuard, loadSession, requireSession } from './auth/http';
 import type { AppEnv } from './http/types';
 import { authRoutes } from './routes/auth';
+import { chatRoutes } from './routes/chats';
 import { profileRoutes } from './routes/profile';
 import { promptRoutes } from './routes/prompts';
 import { providerRoutes } from './routes/providers';
@@ -65,6 +66,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
       '/api/profile',
       '/api/onboarding',
       '/api/subjects',
+      '/api/chats',
       '/api/groups',
       '/api/prompts',
       '/api/providers',
@@ -77,6 +79,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     const db = services.database.db;
     app.route('/api', profileRoutes(db));
     app.route('/api', subjectRoutes(db));
+    app.route('/api', chatRoutes(services.chats));
     app.route('/api', promptRoutes(db));
     app.route('/api', providerRoutes(services.providers));
   }

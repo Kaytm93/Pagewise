@@ -44,3 +44,20 @@ export const promptField = z
     return unified.trim() === '' ? null : unified;
   })
   .nullable();
+
+/** Titel eines Chats: 1 bis 120 Zeichen, umgebende Leerzeichen entfallen. */
+export const titleField = z.string().trim().min(1).max(120).regex(NO_CONTROL_CHARACTERS);
+
+/** Längste Nachricht des Nutzers in Zeichen (siehe chats/history.ts). */
+export const MESSAGE_MAX_CHARACTERS = 50_000;
+
+/**
+ * Nachricht des Nutzers: nicht leer, höchstens {@link MESSAGE_MAX_CHARACTERS} Zeichen. Zeilenumbrüche
+ * und Tabs sind erlaubt, andere Steuerzeichen nicht.
+ */
+export const messageField = z
+  .string()
+  .max(MESSAGE_MAX_CHARACTERS)
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: Steuerzeichen werden hier bewusst abgelehnt.
+  .refine((value) => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value))
+  .refine((value) => value.trim() !== '');

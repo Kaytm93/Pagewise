@@ -2,6 +2,7 @@ import { asc, eq, max } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { isUniqueViolation } from '../db/errors';
 import { subjectGroups, subjects } from '../db/schema';
+import type { Selection } from '../providers/models';
 
 export interface GroupView {
   id: string;
@@ -20,6 +21,8 @@ export interface SubjectView extends SubjectDetails {
   id: string;
   name: string;
   position: number;
+  /** Gewähltes Modell für dieses Fach, `null`: es gilt das Standardmodell. */
+  model: Selection | null;
   groups: GroupView[];
 }
 
@@ -53,6 +56,10 @@ function toSubject(row: typeof subjects.$inferSelect, groups: GroupView[]): Subj
     hoursPerWeek: row.hoursPerWeek,
     icon: row.icon,
     position: row.position,
+    model:
+      row.modelProviderId && row.modelId
+        ? { providerId: row.modelProviderId, model: row.modelId }
+        : null,
     groups,
   };
 }
@@ -73,7 +80,7 @@ export function listSubjects(db: Db): SubjectView[] {
   );
 }
 
-function getSubject(db: Db, id: string): SubjectView | undefined {
+export function getSubject(db: Db, id: string): SubjectView | undefined {
   return listSubjects(db).find((subject) => subject.id === id);
 }
 

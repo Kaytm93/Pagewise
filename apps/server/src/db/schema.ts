@@ -39,6 +39,34 @@ export const profile = sqliteTable(
   (table) => [check('profile_singleton', sql`${table.id} = 1`)],
 );
 
+/**
+ * Modell-Anbieter. Der API-Schlüssel steht nicht hier, sondern im Secret-Speicher unter
+ * `provider.<id>.key`. `models` ist eine JSON-Liste, die der Nutzer pflegt (siehe providers/models.ts).
+ */
+export const providers = sqliteTable(
+  'providers',
+  {
+    id: id(),
+    name: text('name').notNull(),
+    /** Schnittstellenart. Bisher nur `openai-compatible`. */
+    type: text('type').notNull().default('openai-compatible'),
+    /** Voreinstellung, aus der der Eintrag entstand (nur zur Anzeige), oder `custom`. */
+    preset: text('preset').notNull().default('custom'),
+    baseUrl: text('base_url').notNull(),
+    models: text('models').notNull().default('[]'),
+    position: integer('position').notNull().default(0),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex('providers_name_nocase').on(sql`lower(${table.name})`)],
+);
+
+/** Einstellungen als Schlüssel und JSON-Wert (z. B. Standardmodell und Fallback-Kette). */
+export const settings = sqliteTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  ...timestamps,
+});
+
 export const subjects = sqliteTable(
   'subjects',
   {
@@ -51,6 +79,11 @@ export const subjects = sqliteTable(
     icon: text('icon'),
     /** Fach-Prompt (Schicht 2), vom Nutzer geschrieben. Nie vorbelegt. */
     systemPrompt: text('system_prompt'),
+    /** Gewähltes Modell für dieses Fach (Anbieter und Modell zusammen), sonst gilt das Standardmodell. */
+    modelProviderId: text('model_provider_id').references(() => providers.id, {
+      onDelete: 'set null',
+    }),
+    modelId: text('model_id'),
     position: integer('position').notNull().default(0),
     ...timestamps,
   },
@@ -79,32 +112,67 @@ export const subjectGroups = sqliteTable(
 );
 
 /**
- * Modell-Anbieter. Der API-Schlüssel steht nicht hier, sondern im Secret-Speicher unter
- * `provider.<id>.key`. `models` ist eine JSON-Liste, die der Nutzer pflegt (siehe providers/models.ts).
+ * Ein Gespräch. Es gehört zu genau einem Fach und optional zu einer Untergruppe dieses Fachs; wird die
+ * Untergruppe gelöscht, bleibt der Chat im Fach. Ohne eigene Modellwahl gilt die des Fachs, dann der Standard.
  */
-export const providers = sqliteTable(
-  'providers',
+export const chats = sqliteTable(
+  'chats',
   {
     id: id(),
-    name: text('name').notNull(),
-    /** Schnittstellenart. Bisher nur `openai-compatible`. */
-    type: text('type').notNull().default('openai-compatible'),
-    /** Voreinstellung, aus der der Eintrag entstand (nur zur Anzeige), oder `custom`. */
-    preset: text('preset').notNull().default('custom'),
-    baseUrl: text('base_url').notNull(),
-    models: text('models').notNull().default('[]'),
-    position: integer('position').notNull().default(0),
+    subjectId: text('subject_id')
+      .notNull()
+      .references(() => subjects.id, { onDelete: 'cascade' }),
+    groupId: text('group_id').references(() => subjectGroups.id, { onDelete: 'set null' }),
+    /** Leer, bis die erste Nachricht gesendet ist; die Oberfläche zeigt dann „Neuer Chat“. */
+    title: text('title').notNull().default(''),
+    modelProviderId: text('model_provider_id').references(() => providers.id, {
+      onDelete: 'set null',
+    }),
+    modelId: text('model_id'),
     ...timestamps,
   },
-  (table) => [uniqueIndex('providers_name_nocase').on(sql`lower(${table.name})`)],
+  (table) => [
+    index('chats_subject_updated').on(table.subjectId, table.updatedAt),
+    index('chats_group').on(table.groupId),
+  ],
 );
 
-/** Einstellungen als Schlüssel und JSON-Wert (z. B. Standardmodell und Fallback-Kette). */
-export const settings = sqliteTable('settings', {
-  key: text('key').primaryKey(),
-  value: text('value').notNull(),
-  ...timestamps,
-});
+/**
+ * Nachrichten eines Chats in der Reihenfolge `seq`. Antworten des Modells werden unverändert als Text
+ * gespeichert und erst beim Anzeigen bereinigt. Ein Fehler steht nur als Code, nie als Text des Anbieters.
+ */
+export const messages = sqliteTable(
+  'messages',
+  {
+    id: id(),
+    chatId: text('chat_id')
+      .notNull()
+      .references(() => chats.id, { onDelete: 'cascade' }),
+    seq: integer('seq').notNull(),
+    role: text('role', { enum: ['user', 'assistant'] }).notNull(),
+    content: text('content').notNull().default(''),
+    status: text('status', {
+      enum: ['complete', 'streaming', 'stopped', 'error', 'interrupted'],
+    })
+      .notNull()
+      .default('complete'),
+    /** Was geantwortet hat (nur Anzeige, bewusst ohne Fremdschlüssel: der Verlauf bleibt, wenn der Anbieter geht). */
+    providerId: text('provider_id'),
+    model: text('model'),
+    errorCode: text('error_code'),
+    promptTokens: integer('prompt_tokens'),
+    completionTokens: integer('completion_tokens'),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('messages_chat_seq').on(table.chatId, table.seq),
+    check('messages_role', sql`${table.role} in ('user', 'assistant')`),
+    check(
+      'messages_status',
+      sql`${table.status} in ('complete', 'streaming', 'stopped', 'error', 'interrupted')`,
+    ),
+  ],
+);
 
 /**
  * Zugangsdaten, genau eine Zeile (id = 1). Gespeichert wird nur der Hash des Passcodes,
@@ -140,3 +208,5 @@ export type Profile = typeof profile.$inferSelect;
 export type Subject = typeof subjects.$inferSelect;
 export type SubjectGroup = typeof subjectGroups.$inferSelect;
 export type ProviderRow = typeof providers.$inferSelect;
+export type ChatRow = typeof chats.$inferSelect;
+export type MessageRow = typeof messages.$inferSelect;

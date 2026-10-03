@@ -29,6 +29,13 @@
       "when": 1791035837197,
       "tag": "0003_prompts_providers",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791037614841,
+      "tag": "0004_chats",
+      "breakpoints": true
     }
   ]
 }

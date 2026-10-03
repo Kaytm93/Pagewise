@@ -336,6 +336,11 @@ export class ProviderService {
       .run();
   }
 
+  /** Gibt es diesen Anbieter noch und führt er dieses Modell? */
+  hasModel(selection: Selection): boolean {
+    return this.valid(selection);
+  }
+
   private valid(selection: Selection): boolean {
     const row = this.db
       .select({ models: providers.models })

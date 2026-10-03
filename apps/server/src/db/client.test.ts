@@ -21,7 +21,7 @@ import {
   migrateDatabase,
   openDatabase,
 } from './client';
-import { profile, providers, settings, subjectGroups, subjects } from './schema';
+import { chats, messages, profile, providers, settings, subjectGroups, subjects } from './schema';
 
 describe('Datenbank', () => {
   let base: string;
@@ -51,6 +51,8 @@ describe('Datenbank', () => {
       .all() as { name: string }[];
     expect(tables.map((t) => t.name).sort()).toEqual([
       'auth_credentials',
+      'chats',
+      'messages',
       'profile',
       'providers',
       'sessions',
@@ -69,6 +71,95 @@ describe('Datenbank', () => {
   it('startet ohne Anbieter und ohne Einstellungen', () => {
     expect(handle.db.select().from(providers).all()).toEqual([]);
     expect(handle.db.select().from(settings).all()).toEqual([]);
+  });
+
+  it('startet ohne Chats und Nachrichten', () => {
+    expect(handle.db.select().from(chats).all()).toEqual([]);
+    expect(handle.db.select().from(messages).all()).toEqual([]);
+  });
+
+  describe('Chats und Nachrichten', () => {
+    const subject = () =>
+      handle.db.insert(subjects).values({ name: 'Beispielfach' }).returning().get();
+    const provider = () =>
+      handle.db
+        .insert(providers)
+        .values({ name: 'Beispiel-Anbieter', baseUrl: 'https://anbieter.example.test/v1' })
+        .returning()
+        .get();
+
+    it('löscht Chats und Nachrichten mit dem Fach', () => {
+      const fach = subject();
+      const chat = handle.db.insert(chats).values({ subjectId: fach.id }).returning().get();
+      handle.db
+        .insert(messages)
+        .values([
+          { chatId: chat.id, seq: 1, role: 'user', content: 'Frage' },
+          { chatId: chat.id, seq: 2, role: 'assistant', content: 'Antwort' },
+        ])
+        .run();
+      handle.db.delete(subjects).where(eq(subjects.id, fach.id)).run();
+      expect(handle.db.select().from(chats).all()).toEqual([]);
+      expect(handle.db.select().from(messages).all()).toEqual([]);
+    });
+
+    it('lässt den Chat im Fach, wenn seine Untergruppe gelöscht wird', () => {
+      const fach = subject();
+      const group = handle.db
+        .insert(subjectGroups)
+        .values({ subjectId: fach.id, name: 'Beispiel-Thema' })
+        .returning()
+        .get();
+      const chat = handle.db
+        .insert(chats)
+        .values({ subjectId: fach.id, groupId: group.id })
+        .returning()
+        .get();
+      handle.db.delete(subjectGroups).where(eq(subjectGroups.id, group.id)).run();
+      const after = handle.db.select().from(chats).where(eq(chats.id, chat.id)).get();
+      expect(after?.groupId).toBeNull();
+      expect(after?.subjectId).toBe(fach.id);
+    });
+
+    it('löst die Modellwahl von Fach und Chat auf, wenn der Anbieter gelöscht wird', () => {
+      const anbieter = provider();
+      const fach = handle.db
+        .insert(subjects)
+        .values({ name: 'Beispielfach', modelProviderId: anbieter.id, modelId: 'modell-a' })
+        .returning()
+        .get();
+      const chat = handle.db
+        .insert(chats)
+        .values({ subjectId: fach.id, modelProviderId: anbieter.id, modelId: 'modell-a' })
+        .returning()
+        .get();
+      handle.db.delete(providers).where(eq(providers.id, anbieter.id)).run();
+      expect(
+        handle.db.select().from(subjects).where(eq(subjects.id, fach.id)).get()?.modelProviderId,
+      ).toBeNull();
+      expect(
+        handle.db.select().from(chats).where(eq(chats.id, chat.id)).get()?.modelProviderId,
+      ).toBeNull();
+    });
+
+    it('verweigert unbekannte Rollen und Zustände sowie doppelte Positionen', () => {
+      const chat = handle.db.insert(chats).values({ subjectId: subject().id }).returning().get();
+      const add = (values: Partial<typeof messages.$inferInsert>) => () =>
+        handle.db
+          .insert(messages)
+          .values({ chatId: chat.id, seq: 1, role: 'user', content: 'x', ...values })
+          .run();
+      expect(add({ role: 'system' as 'user' })).toThrow();
+      expect(add({ status: 'kaputt' as 'complete' })).toThrow();
+      expect(add({})).not.toThrow();
+      expect(add({})).toThrow();
+    });
+
+    it('verweigert Chats ohne existierendes Fach', () => {
+      expect(() =>
+        handle.db.insert(chats).values({ subjectId: '5b0f7c2e-4a54-4c0a-9b6a-0d4c6b1d2e3f' }).run(),
+      ).toThrow();
+    });
   });
 
   it('löscht Untergruppen mit ihrem Fach', () => {
