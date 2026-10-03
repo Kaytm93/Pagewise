@@ -1,0 +1,35 @@
+# Abhängigkeiten und Build-Ausgaben
+node_modules/
+dist/
+.vite/
+coverage/
+*.tsbuildinfo
+
+# Nutzerdaten gehören NIE ins Repo (siehe docs/security.md)
+/data/
+uploads/
+workspaces/
+exports/
+backups/
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.db
+*.db-*
+*.log
+
+# Secrets und lokale Konfiguration
+.env
+.env.*
+!.env.example
+secrets*
+*.local.*
+config/*.local.*
+*.pem
+*.key
+*.age
+
+# Betriebssystem und Editor
+.DS_Store
+.idea/
+.vscode/
