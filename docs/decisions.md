@@ -105,3 +105,24 @@ Der Arbeitstitel war „Schulheft“. Der Maintainer wollte einen nicht deutsche
 Geprüfte Kandidaten (Websuche, Stand 3. Oktober 2026, weder Marken noch Domains geprüft): Für „Pagewise“ gab es nur ein kleines GitHub-Repo mit gleichem Namen. Ausgeschieden sind „Kladde“ (selbst gehostete Notiz-PWA mit diesem Namen), „Scholia“, „Looseleaf“, „Jotter“, „Inkgrid“ und „Marginly“ wegen bestehender Projekte.
 
 Folgen der Umbenennung: Paket-Scope `@pagewise/*`, Umgebungsvariablen `PAGEWISE_*`, Standard-Datenverzeichnis `Pagewise` (macOS) beziehungsweise `pagewise` (Linux). Es gab noch keine Installation, daher ist keine Migration nötig.
+
+## D-017 Datenbank: SQLite mit better-sqlite3 und Drizzle, Stand 3. Oktober 2026
+
+- Treiber `better-sqlite3` 13.0.3 (Node ab 22), ORM `drizzle-orm` 0.45.3, dazu `drizzle-kit` 0.31.11 als Entwicklungsabhängigkeit, nur zum Erzeugen der SQL-Dateien. Die Drizzle-Versionen 1.0 sind noch Beta und werden nicht genutzt. Quelle: npm-Registry (`pnpm view`, 3. Oktober 2026).
+- Verworfen: das in Node eingebaute `node:sqlite`. Es gibt in Node 22.22.0 beim Laden noch eine Experimental-Warnung aus, und Drizzle 0.45.3 hat dafür keinen Treiber. Beides wurde beim Ausprobieren beobachtet.
+- `better-sqlite3` bringt fertige Binärdateien für macOS (arm64, x64), Linux und Windows im Paket mit und lädt sie direkt. Der Build-Schritt von pnpm bleibt deshalb aus (`ignoredBuiltDependencies`), auf dem Mac werden keine Entwicklerwerkzeuge gebraucht. Geprüft mit einer frischen Installation ohne `build/`-Ordner.
+- Einstellungen beim Öffnen: WAL, Fremdschlüssel an, `busy_timeout` 5 Sekunden, `synchronous = NORMAL`, `secure_delete = ON` (gelöschte Inhalte werden überschrieben, damit Löschen auch wirklich löscht). Datenbank- und WAL-Dateien haben Rechte 600.
+- Schema der ersten Migration: `profile` (genau eine Zeile), `subjects`, `subject_groups`. Die Tabelle heißt nicht `groups`, weil das in SQL ein Schlüsselwort ist. Namen sind je Fach beziehungsweise je Untergruppe ohne Beachtung der Groß- und Kleinschreibung eindeutig (Index über `lower(name)`). Spalten heißen englisch (`federal_state`, `school_type`, `grade_level`), die Prompt-Variablen (`{{bundesland}}` usw.) werden erst in der Prompt-Schicht zugeordnet. Weitere Tabellen kommen mit den Inkrementen, die sie brauchen.
+
+## D-018 Secrets als Datei mit Rechten 600, keine Keychain
+
+- Secrets liegen in `<Datenverzeichnis>/secrets/secrets.json` (Rechte 600, atomares Schreiben, zu lockere Rechte werden beim Lesen korrigiert). Der Server hält keine Werte im Speicher, sondern liest bei Bedarf. Die Oberfläche bekommt nie einen Wert, nur den Namen und bei Werten ab 16 Zeichen die letzten vier Zeichen. Werte mit Zeilenumbruch oder Steuerzeichen werden abgelehnt (Schutz vor Header-Injection), umgebende Leerzeichen werden entfernt.
+- Die macOS-Keychain wird vorerst nicht genutzt. Nach meinem Kenntnisstand nimmt das Werkzeug `security` das Passwort bei nicht interaktiven Aufrufen als Kommandozeilenargument (`-w`), das verbietet die Regel „Secrets nie als Kommandozeilenargument“. Das konnte ich hier nicht prüfen, die Sitzung läuft auf Linux. Vor einer späteren Keychain-Anbindung bitte mit `man security` auf dem Mac gegenprüfen.
+- `SecretStore` ist asynchron, ein anderer Speicher lässt sich später einhängen. Die Datei ist nicht verschlüsselt, Schutz bieten die Rechte und die Festplattenverschlüsselung des Systems (siehe security.md).
+
+## D-019 Migrationen und Sicherung vor Migrationen
+
+- Die SQL-Migrationen liegen in `apps/server/drizzle/`. Erzeugt werden sie mit `pnpm --filter @pagewise/server db:generate`, danach von Hand gelesen und eingecheckt. Der Server wendet ausstehende Migrationen beim Start an. Die generierten Metadateien in `drizzle/meta` sind vom Biome-Lauf ausgenommen.
+- Enthält die Datenbank schon Daten und steht eine Migration aus, entsteht vorher eine Kopie per `VACUUM INTO` in `<Datenverzeichnis>/backups/` (Rechte 600, die letzten fünf bleiben). Das schützt nur vor einer fehlgeschlagenen Migration und ist kein Backup-Konzept (Phase 2). Die Kopien sind unverschlüsselt, wie der Rest des Datenverzeichnisses.
+- Eine Datenbank, die neuer ist als die App (unbekannte Migrationen), wird nicht angefasst. Der Start bricht mit einer Erklärung ab.
+- Stolperfalle: `.gitignore` ignoriert `secrets*`, `backups/`, `workspaces/`, `uploads/`, `exports/`, `*.db` und `*.log`. Quelltext mit solchen Namen würde stillschweigend nicht eingecheckt. Deshalb heißt die Datei `secret-store.ts` und es gibt keine Quell-Ordner mit diesen Namen.

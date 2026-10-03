@@ -17,6 +17,10 @@ pnpm start
 
 Der Server lauscht auf `127.0.0.1:3000`. Den Port änderst du mit `PAGEWISE_PORT`, das Datenverzeichnis mit `PAGEWISE_DATA_DIR`. Beim ersten Start wird das Datenverzeichnis mit Rechten `700` angelegt. Liegt es innerhalb eines Git-Arbeitsverzeichnisses, bricht der Start mit einer Erklärung ab.
 
+## Was im Datenverzeichnis liegt
+
+`pagewise.db` (SQLite, dazu `-wal` und `-shm`), `assets`, `workspaces`, `logs`, `secrets` (API-Schlüssel, nur für dich lesbar) und `backups`. Alles hat Rechte 600 beziehungsweise 700. Vor einer Datenbank-Migration legt Pagewise automatisch eine Kopie in `backups` an (die letzten fünf bleiben). Ein richtiges Backup ersetzt das nicht: Sichere das ganze Datenverzeichnis selbst, am besten verschlüsselt.
+
 ## Zugriff von iPhone und iPad über Tailscale
 
 1. Aktiviere im Admin-Bereich deines Tailnets MagicDNS und HTTPS-Zertifikate (Abschnitt „HTTPS certificates“ in der Tailscale-Doku).

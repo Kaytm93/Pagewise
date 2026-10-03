@@ -1,6 +1,6 @@
 # Architektur
 
-Stand: Phase 0. Alles ab Phase 1a ist Plan und kann sich beim Bauen ändern, Abweichungen stehen in [decisions.md](decisions.md).
+Stand: Phase 1a läuft (Datenbank, Migrationen, Storage und Secret-Speicher sind gebaut). Der Rest ab Phase 1a ist Plan und kann sich beim Bauen ändern, Abweichungen stehen in [decisions.md](decisions.md).
 
 ## Überblick
 
@@ -25,7 +25,7 @@ In Phase 1 laufen Server und Worker als ein Prozess. Der Worker holt Aufträge t
 
 ## Datenmodell (Vorschlag)
 
-`Profile`, `Subject`, `Group` (Untergruppe), `Chat`, `Message`, `Note` (Hefteintrag), `Asset`, `Job`, `ProviderConfig`, `EngineProfile`. Navigation: Fach → Untergruppe → Chats oder Hefteinträge, zusätzlich je Fach eine Ansicht „Allgemein“ ohne Untergruppe. Chats bleiben in ihrem Fach, es gibt keine fachübergreifende Chatliste. Secrets liegen nie im Klartext in der Datenbank.
+`Profile`, `Subject`, `Group` (Untergruppe), `Chat`, `Message`, `Note` (Hefteintrag), `Asset`, `Job`, `ProviderConfig`, `EngineProfile`. Umgesetzt sind bisher `profile`, `subjects` und `subject_groups` (D-017), der Rest kommt mit den Inkrementen, die ihn brauchen. Navigation: Fach → Untergruppe → Chats oder Hefteinträge, zusätzlich je Fach eine Ansicht „Allgemein“ ohne Untergruppe. Chats bleiben in ihrem Fach, es gibt keine fachübergreifende Chatliste. Secrets liegen nie im Klartext in der Datenbank.
 
 ## Prompt-Schichten
 
@@ -42,7 +42,8 @@ Variablen wie `{{bundesland}}`, `{{schulform}}`, `{{jahrgangsstufe}}`, `{{fach}}
 
 | Pfad | Inhalt |
 | --- | --- |
-| `apps/server` | Server, Konfiguration, Start-Check des Datenverzeichnisses |
+| `apps/server` | Server, Konfiguration, Start-Check des Datenverzeichnisses, Datenbank (`src/db`), Storage und Secret-Speicher (`src/storage`) |
+| `apps/server/drizzle` | SQL-Migrationen der Datenbank |
 | `apps/web` | Oberfläche, Design-Tokens, i18n |
 | `scripts` | Secret-Scan, Privacy-Check, Hook-Installation |
 | `tests` | Repo-weite Tests |

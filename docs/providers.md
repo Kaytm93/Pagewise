@@ -34,4 +34,4 @@ Der Coding Plan darf laut Z.ai nicht für direkte Modell-API-Aufrufe aus eigenen
 
 ## Secrets
 
-API-Keys liegen in der macOS-Keychain oder in einer Secrets-Datei mit Rechten `600` im Datenverzeichnis, nie im Repo und nie im Browser. Die Oberfläche zeigt nur die letzten vier Zeichen und erlaubt nur das Überschreiben. Details: [security.md](security.md).
+API-Keys liegen in einer Secrets-Datei mit Rechten `600` im Datenverzeichnis, nie im Repo und nie im Browser. Die macOS-Keychain wird vorerst nicht genutzt (D-018). Die Oberfläche zeigt nur den Namen und bei langen Schlüsseln die letzten vier Zeichen und erlaubt nur das Überschreiben oder Löschen. Details: [security.md](security.md).

@@ -23,7 +23,8 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | Security-Header inkl. CSP | Grundstock umgesetzt (Phase 0) |
 | `.gitignore`, Secret-Scan-Hook, Privacy-Check, CI mit gitleaks | umgesetzt (Phase 0) |
 | Passcode (Argon2id oder scrypt), Sitzungen, CSRF, Rate-Limit | geplant (Phase 1a) |
-| Secrets in Keychain bzw. Datei mit Rechten 600 | geplant (Phase 1a) |
+| Secrets in Datei mit Rechten 600, nie in Antworten oder Logs | umgesetzt (Phase 1a), Keychain bewusst nicht, siehe D-018 |
+| Datenbank, Sicherungen vor Migrationen und Unterordner nur für den Besitzer (600/700) | umgesetzt (Phase 1a), siehe D-017 und D-019 |
 | Bereinigung von Markdown, SVG, HTML | geplant (Phase 1b) |
 | EXIF-Entfernung, Upload-Prüfung | geplant (Phase 1c) |
 | PDF-Rendering ohne Netzwerk | geplant (Phase 1d) |
@@ -47,6 +48,7 @@ Alles, was Nutzerdaten enthält, liegt im Datenverzeichnis: Datenbank, Uploads, 
 - Ein lokales Skript kann keine Garantie geben. Der Scan erkennt bekannte Muster, nicht jedes Geheimnis. Prüfe Commits vor dem Veröffentlichen selbst.
 - Wer Zugriff auf den Rechner hat, hat Zugriff auf die Daten. Das Datenverzeichnis ist nicht verschlüsselt, nutze die Festplattenverschlüsselung deines Systems.
 - Modell-Anbieter sehen, was du ihnen sendest. Free-Modelle können Prompts protokollieren.
+- Die Sicherungen vor Migrationen im Ordner `backups` sind unverschlüsselt, wie der Rest des Datenverzeichnisses.
 - Der Passcode-Schutz ist für ein privates Tailnet gedacht, nicht für das offene Internet.
 
 Meldeweg für Sicherheitslücken: [SECURITY.md](../SECURITY.md).

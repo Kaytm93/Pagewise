@@ -22,6 +22,7 @@ pnpm format       # Biome, schreibt Korrekturen
 pnpm typecheck    # TypeScript in allen Paketen
 pnpm test         # Tests aller Pakete plus Repo-Tests (Scan, Hook)
 pnpm scan         # Secret-Scan und Privacy-Check über alle getrackten Dateien
+pnpm --filter @pagewise/server db:generate   # neue Migration aus dem Schema erzeugen, danach lesen und einchecken
 ```
 
 ## Aufbau
@@ -42,6 +43,7 @@ pnpm scan         # Secret-Scan und Privacy-Check über alle getrackten Dateien
 - Die UI ist deutsch. Strings gehören in die i18n-Dateien, nicht in Komponenten. Code, Commits und Dateinamen dürfen englisch sein.
 - Modell-Ausgaben und importierte Dateien sind nicht vertrauenswürdig: bereinigen, nie `eval`.
 - Secrets nie in Logs, Fehlermeldungen, Job-Daten oder Prozess-Argumenten.
+- `.gitignore` ignoriert Namen wie `secrets*`, `backups/`, `workspaces/`, `uploads/`, `exports/`, `*.db`, `*.log`. Quelltext darf nicht so heißen, sonst wird er still nicht eingecheckt (D-019).
 
 ## Vor jedem Commit
 
