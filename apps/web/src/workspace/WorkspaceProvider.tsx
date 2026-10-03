@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import type { Api } from '../api/api';
+import { ApiError } from '../api/client';
 import type {
   Group,
   ImportResult,
@@ -20,15 +21,31 @@ import type {
   Selection,
   Subject,
   SubjectInput,
+  SubjectTemplate,
 } from '../api/types';
 import { useSession } from '../session/SessionProvider';
 
+/** Ergebnis von „Fächer aus Vorlagen anlegen“. */
+export interface TemplateResult {
+  /** Die neu angelegten Fächer in der Reihenfolge der Auswahl. */
+  created: Subject[];
+  /** Fächer, die es schon gab (gleicher Name). */
+  skipped: number;
+}
+
 interface WorkspaceValue {
   profile: Profile;
+  /** Die Fächer des Nutzers, ohne das eingebaute Fach „Standard“. */
   subjects: Subject[];
+  /** Das eingebaute Fach „Standard“ für den fachunabhängigen Chat. Immer vorhanden. */
+  defaultSubject: Subject;
+  /** Ein Fach nach ID, auch das eingebaute. */
+  findSubject: (id: string) => Subject | undefined;
   saveProfile: (patch: ProfilePatch) => Promise<void>;
   completeOnboarding: () => Promise<void>;
   addSubject: (input: SubjectInput) => Promise<Subject>;
+  /** Legt mehrere Fächer aus Katalogvorlagen an (mit Schlüssel für den Standard-Prompt). */
+  addTemplateSubjects: (templates: SubjectTemplate[]) => Promise<TemplateResult>;
   editSubject: (id: string, patch: Partial<SubjectInput>) => Promise<Subject>;
   removeSubject: (id: string) => Promise<void>;
   setSubjectModel: (id: string, model: Selection | null) => Promise<void>;
@@ -55,6 +72,7 @@ export function useWorkspace(): WorkspaceValue {
 type Loaded = {
   profile: Profile;
   subjects: Subject[];
+  defaultSubject: Subject;
   providers: Provider[];
   modelSettings: ModelSettings;
 };
@@ -78,8 +96,17 @@ export function WorkspaceProvider({
     let cancelled = false;
     setState({ status: 'loading' });
     Promise.all([api.profile(), api.subjects(), api.providers(), api.modelSettings()])
-      .then(([profile, subjects, providers, modelSettings]) => {
-        if (!cancelled) setState({ status: 'ready', profile, subjects, providers, modelSettings });
+      .then(([profile, list, providers, modelSettings]) => {
+        if (!cancelled) {
+          setState({
+            status: 'ready',
+            profile,
+            subjects: list.subjects,
+            defaultSubject: list.defaultSubject,
+            providers,
+            modelSettings,
+          });
+        }
       })
       .catch(() => {
         if (!cancelled) setState({ status: 'error' });
@@ -108,7 +135,10 @@ function buildValue(
   update: (patch: Partial<Loaded>) => void,
 ): WorkspaceValue {
   /** Nach jeder Änderung die Liste neu holen: Reihenfolge und Untergruppen kommen vom Server. */
-  const refreshSubjects = async () => update({ subjects: await api.subjects() });
+  const refreshSubjects = async () => {
+    const list = await api.subjects();
+    update({ subjects: list.subjects, defaultSubject: list.defaultSubject });
+  };
   /** Anbieter und Modellwahl hängen zusammen (Löschen räumt die Wahl auf), deshalb zusammen holen. */
   const refreshProviders = async () => {
     const [providers, modelSettings] = await Promise.all([api.providers(), api.modelSettings()]);
@@ -118,6 +148,11 @@ function buildValue(
   return {
     profile: state.profile,
     subjects: state.subjects,
+    defaultSubject: state.defaultSubject,
+    findSubject: (id) =>
+      state.defaultSubject.id === id
+        ? state.defaultSubject
+        : state.subjects.find((entry) => entry.id === id),
     providers: state.providers,
     modelSettings: state.modelSettings,
     saveProfile: async (patch) => update({ profile: await api.updateProfile(patch) }),
@@ -126,6 +161,30 @@ function buildValue(
       const subject = await api.createSubject(input);
       await refreshSubjects();
       return subject;
+    },
+    addTemplateSubjects: async (templates) => {
+      const result: TemplateResult = { created: [], skipped: 0 };
+      try {
+        // Nacheinander, in der Reihenfolge des Katalogs.
+        for (const template of templates) {
+          try {
+            result.created.push(
+              await api.createSubject({
+                name: template.name,
+                icon: template.icon,
+                ...(template.key ? { templateKey: template.key } : {}),
+              }),
+            );
+          } catch (caught) {
+            if (caught instanceof ApiError && caught.code === 'name_taken') result.skipped += 1;
+            else throw caught;
+          }
+        }
+      } finally {
+        // Auch nach einem Fehler: Was schon angelegt ist, soll in der Liste stehen.
+        await refreshSubjects();
+      }
+      return result;
     },
     editSubject: async (id, patch) => {
       const subject = await api.updateSubject(id, patch);

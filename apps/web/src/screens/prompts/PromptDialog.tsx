@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
-import type { PromptPreview, PromptScope } from '../../api/types';
+import type { PromptPreview, PromptScope, PromptState } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { useSession } from '../../session/SessionProvider';
 import { Button } from '../../ui/Button';
+import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { TextAreaField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
 import { Modal } from '../../ui/modal';
@@ -68,6 +69,7 @@ function Preview({ target }: { target: PreviewTarget }) {
           <section key={layer.layer} className="py-3">
             <h3 className="text-meta font-medium text-ink-muted">
               {m.prompts.previewLayers[layer.layer]}
+              {layer.origin === 'default' && ` (${m.prompts.originDefault})`}
             </h3>
             <p className="mt-1 text-sm whitespace-pre-wrap break-words">{layer.text}</p>
           </section>
@@ -81,6 +83,10 @@ function Preview({ target }: { target: PreviewTarget }) {
 /**
  * Prompt einer Ebene bearbeiten. Mit `preview` zeigt ein zweiter Reiter, wie das Modell den
  * zusammengesetzten System-Prompt sieht (gespeicherter Stand).
+ *
+ * Der Fach-Prompt hat einen mitgelieferten Standardtext (D-034, `initial.defaultText`). Solange der Nutzer
+ * nichts eigenes einträgt, gilt er: Der Dialog zeigt ihn lesbar, „Bearbeiten“ kopiert ihn ins Eingabefeld,
+ * und „Auf Standard zurücksetzen“ verwirft den eigenen Text wieder.
  */
 export function PromptDialog({
   scope,
@@ -92,34 +98,47 @@ export function PromptDialog({
 }: {
   scope: PromptScope;
   layer: PromptLayerName;
-  initial: string | null;
+  initial: PromptState;
   preview?: PreviewTarget;
-  onSaved: (text: string | null) => void;
+  onSaved: (state: PromptState) => void;
   onClose: () => void;
 }) {
   const { api } = useSession();
-  const [text, setText] = useState(initial ?? '');
-  const [savedText, setSavedText] = useState(initial ?? '');
+  const [state, setState] = useState<PromptState>(initial);
+  const defaultText = state.defaultText;
+  // Gilt der Standard, zeigt der Dialog ihn zunächst nur an; erst „Bearbeiten“ öffnet das Eingabefeld.
+  const [editing, setEditing] = useState(initial.source !== 'default');
+  const effective = state.text ?? defaultText ?? '';
+  const [text, setText] = useState(effective);
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
   const [version, setVersion] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [justSaved, setJustSaved] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
-  const dirty = text !== savedText;
+  const dirty = text !== effective;
   const tooLong = [...text].length > PROMPT_MAX;
+  const hasDefault = defaultText !== null;
+  const customActive = state.text !== null;
+
+  function adopt(next: PromptState) {
+    setState(next);
+    setText(next.text ?? next.defaultText ?? '');
+    setEditing(next.source !== 'default');
+    setVersion((value) => value + 1);
+    onSaved(next);
+  }
 
   async function save() {
     setBusy(true);
     setError(null);
     try {
-      const stored = await api.savePrompt(scope, text.trim() === '' ? null : text);
-      const normalized = stored ?? '';
-      setText(normalized);
-      setSavedText(normalized);
+      // Ein unverändert übernommener Standardtext bleibt „Standard“ und wird nicht als eigener Text kopiert:
+      // So bekommt man spätere Verbesserungen des Standards weiterhin automatisch.
+      const keepDefault = hasDefault && text === defaultText;
+      adopt(await api.savePrompt(scope, keepDefault || text.trim() === '' ? null : text));
       setJustSaved(true);
-      setVersion((value) => value + 1);
-      onSaved(stored);
     } catch (caught) {
       setError(saveError(caught));
     } finally {
@@ -127,99 +146,167 @@ export function PromptDialog({
     }
   }
 
+  async function resetToDefault() {
+    setBusy(true);
+    setError(null);
+    try {
+      adopt(await api.savePrompt(scope, null));
+      setJustSaved(true);
+    } catch (caught) {
+      setError(saveError(caught));
+    } finally {
+      setBusy(false);
+      setConfirmReset(false);
+    }
+  }
+
+  const showEditor = tab === 'edit' || !preview;
   return (
-    <Modal
-      wide
-      title={m.prompts.layers[layer]}
-      description={m.prompts.layerLead[layer]}
-      onClose={onClose}
-    >
-      {preview && (
-        <div className="mb-4">
-          <Segmented
-            legend={m.prompts.tabs}
-            value={tab}
-            onChange={setTab}
-            options={[
-              { value: 'edit', label: m.prompts.tabEdit },
-              { value: 'preview', label: m.prompts.tabPreview },
-            ]}
-          />
-        </div>
-      )}
-
-      {tab === 'edit' || !preview ? (
-        <div>
-          <TextAreaField
-            label={m.prompts.editorLabel}
-            value={text}
-            onChange={(event) => {
-              setText(event.target.value);
-              setJustSaved(false);
-            }}
-            error={tooLong ? format(m.prompts.errors.tooLong, { max: PROMPT_MAX }) : null}
-            spellCheck
-            data-autofocus
-          />
-          <div className="mt-1.5 flex items-center justify-between gap-4 text-meta text-ink-muted">
-            <span>{format(m.prompts.counter, { count: [...text].length, max: PROMPT_MAX })}</span>
-            {dirty && <span>{m.prompts.dirtyHint}</span>}
+    <>
+      <Modal
+        wide
+        title={m.prompts.layers[layer]}
+        description={m.prompts.layerLead[layer]}
+        onClose={onClose}
+      >
+        {preview && (
+          <div className="mb-4">
+            <Segmented
+              legend={m.prompts.tabs}
+              value={tab}
+              onChange={setTab}
+              options={[
+                { value: 'edit', label: m.prompts.tabEdit },
+                { value: 'preview', label: m.prompts.tabPreview },
+              ]}
+            />
           </div>
-          <details className="mt-4">
-            <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">
-              {m.prompts.variablesTitle}
-            </summary>
-            <p className="text-sm text-ink-secondary">{m.prompts.variablesLead}</p>
-            <dl className="mt-2 space-y-1 text-sm">
-              {(Object.keys(m.prompts.variables) as (keyof typeof m.prompts.variables)[]).map(
-                (name) => (
-                  <div key={name} className="flex flex-wrap gap-x-3">
-                    <dt className="font-mono text-ink">{`{{${name}}}`}</dt>
-                    <dd className="text-ink-secondary">{m.prompts.variables[name]}</dd>
-                  </div>
-                ),
-              )}
-            </dl>
-          </details>
-        </div>
-      ) : (
-        <Preview key={version} target={preview} />
-      )}
+        )}
 
-      {error && <FieldError>{error}</FieldError>}
-      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
-        {tab === 'edit' && (
-          <Button
-            variant="ghost"
-            className="sm:mr-auto"
-            disabled={busy || text === ''}
-            onClick={() => {
-              setText('');
-              setJustSaved(false);
-            }}
-          >
-            {m.prompts.clear}
+        {showEditor && hasDefault && (
+          <div role="note" className="mb-4 rounded-box bg-paper p-3 text-sm text-ink-secondary">
+            <p className="font-medium text-ink">
+              {customActive ? m.prompts.sourceCustom : m.prompts.sourceDefault}
+            </p>
+            <p className="mt-1">{m.prompts.defaultNote}</p>
+          </div>
+        )}
+
+        {showEditor ? (
+          editing ? (
+            <div>
+              <TextAreaField
+                label={m.prompts.editorLabel}
+                value={text}
+                onChange={(event) => {
+                  setText(event.target.value);
+                  setJustSaved(false);
+                }}
+                error={tooLong ? format(m.prompts.errors.tooLong, { max: PROMPT_MAX }) : null}
+                spellCheck
+                data-autofocus
+              />
+              <div className="mt-1.5 flex items-center justify-between gap-4 text-meta text-ink-muted">
+                <span>
+                  {format(m.prompts.counter, { count: [...text].length, max: PROMPT_MAX })}
+                </span>
+                {dirty && <span>{m.prompts.dirtyHint}</span>}
+              </div>
+              <details className="mt-4">
+                <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">
+                  {m.prompts.variablesTitle}
+                </summary>
+                <p className="text-sm text-ink-secondary">{m.prompts.variablesLead}</p>
+                <dl className="mt-2 space-y-1 text-sm">
+                  {(Object.keys(m.prompts.variables) as (keyof typeof m.prompts.variables)[]).map(
+                    (name) => (
+                      <div key={name} className="flex flex-wrap gap-x-3">
+                        <dt className="font-mono text-ink">{`{{${name}}}`}</dt>
+                        <dd className="text-ink-secondary">{m.prompts.variables[name]}</dd>
+                      </div>
+                    ),
+                  )}
+                </dl>
+              </details>
+            </div>
+          ) : (
+            <div>
+              <p className="text-meta font-medium text-ink-muted">{m.prompts.defaultTextLabel}</p>
+              <p className="mt-1 rounded-box border border-line p-3 text-sm whitespace-pre-wrap break-words">
+                {defaultText}
+              </p>
+            </div>
+          )
+        ) : (
+          <Preview key={version} target={preview as PreviewTarget} />
+        )}
+
+        {error && <FieldError>{error}</FieldError>}
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
+          {showEditor && !hasDefault && (
+            <Button
+              variant="ghost"
+              className="sm:mr-auto"
+              disabled={busy || text === ''}
+              onClick={() => {
+                setText('');
+                setJustSaved(false);
+              }}
+            >
+              {m.prompts.clear}
+            </Button>
+          )}
+          {showEditor && hasDefault && customActive && (
+            <Button
+              variant="ghost"
+              className="sm:mr-auto"
+              disabled={busy}
+              onClick={() => setConfirmReset(true)}
+            >
+              {m.prompts.resetToDefault}
+            </Button>
+          )}
+          {justSaved && !dirty && (
+            <p role="status" className="text-sm text-ink-secondary">
+              {m.prompts.saved}
+            </p>
+          )}
+          <Button variant="secondary" onClick={onClose}>
+            {m.common.close}
           </Button>
-        )}
-        {justSaved && !dirty && (
-          <p role="status" className="text-sm text-ink-secondary">
-            {m.prompts.saved}
-          </p>
-        )}
-        <Button variant="secondary" onClick={onClose}>
-          {m.common.close}
-        </Button>
-        {tab === 'edit' && (
-          <Button
-            variant="primary"
-            busy={busy}
-            disabled={tooLong || !dirty}
-            onClick={() => void save()}
-          >
-            {m.common.save}
-          </Button>
-        )}
-      </div>
-    </Modal>
+          {showEditor && !editing && (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setText(effective);
+                setEditing(true);
+              }}
+            >
+              {m.prompts.edit}
+            </Button>
+          )}
+          {showEditor && editing && (
+            <Button
+              variant="primary"
+              busy={busy}
+              disabled={tooLong || !dirty}
+              onClick={() => void save()}
+            >
+              {m.common.save}
+            </Button>
+          )}
+        </div>
+      </Modal>
+      {confirmReset && (
+        <ConfirmDialog
+          title={m.prompts.resetTitle}
+          description={m.prompts.resetBody}
+          confirmLabel={m.prompts.resetConfirm}
+          busy={busy}
+          onConfirm={() => void resetToDefault()}
+          onCancel={() => setConfirmReset(false)}
+        />
+      )}
+    </>
   );
 }

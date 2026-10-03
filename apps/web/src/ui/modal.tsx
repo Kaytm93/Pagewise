@@ -56,6 +56,8 @@ export function useInitialFocus(ref: React.RefObject<HTMLElement | null>, active
     if (!active) return;
     const panel = ref.current;
     if (!panel) return;
+    // Hat ein Element im Dialog den Fokus schon (z. B. ein nachgeladenes Suchfeld), bleibt er dort.
+    if (document.activeElement !== panel && panel.contains(document.activeElement)) return;
     const target = panel.querySelector<HTMLElement>('[data-autofocus]') ?? panel;
     target.focus();
   }, [ref, active]);

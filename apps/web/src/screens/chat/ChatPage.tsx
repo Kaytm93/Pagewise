@@ -101,7 +101,7 @@ function RenameDialog({
 
 export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: string }) {
   const { api } = useSession();
-  const { subjects, providers, modelSettings } = useWorkspace();
+  const { findSubject, providers, modelSettings } = useWorkspace();
   const chat = useChat(api, chatId);
   const { state } = chat;
   const [dialog, setDialog] = useState<Dialog>(null);
@@ -151,7 +151,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
     previousLive.current = state.liveId;
   }, [state.liveId, state.messages]);
 
-  const subject = subjects.find((entry) => entry.id === subjectId);
+  const subject = findSubject(subjectId);
   if (state.phase === 'not-found') return <NotFoundPage />;
   if (!subject) return <NotFoundPage />;
 

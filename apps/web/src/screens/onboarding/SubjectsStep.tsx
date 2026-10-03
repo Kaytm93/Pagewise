@@ -1,8 +1,7 @@
 import { X } from 'lucide-react';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, lazy, Suspense, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { format, messages as m } from '../../i18n';
-import { useSession } from '../../session/SessionProvider';
 import { Button } from '../../ui/Button';
 import { TextField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
@@ -12,10 +11,14 @@ import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { commonErrorMessage } from '../auth-errors';
 import { StepFrame } from './StepFrame';
 
+// Die Auswahl wird erst gebraucht, wenn man Fächer anlegt, und hält so das Hauptpaket klein.
+const TemplatePicker = lazy(() =>
+  import('../subjects/TemplatePicker').then((module) => ({ default: module.TemplatePicker })),
+);
+
 type Mode = 'template' | 'manual' | 'import';
 
 const MAX_IMPORT_BYTES = 256 * 1024;
-const lower = (name: string) => name.trim().toLocaleLowerCase('de');
 
 function importErrorMessage(error: unknown): string {
   const e = m.onboarding.subjects.errors;
@@ -30,108 +33,9 @@ function importErrorMessage(error: unknown): string {
   return commonErrorMessage(error);
 }
 
-function TemplateTab() {
-  const { api } = useSession();
-  const { subjects, importSubjects } = useWorkspace();
-  const [templates, setTemplates] = useState<{ name: string }[] | null>(null);
-  const [chosen, setChosen] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .subjectTemplates()
-      .then((reply) => {
-        if (!cancelled) setTemplates(reply.subjects);
-      })
-      .catch((caught: unknown) => {
-        if (cancelled) return;
-        setTemplates([]);
-        setError(commonErrorMessage(caught));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [api]);
-
-  const existing = new Set(subjects.map((subject) => lower(subject.name)));
-
-  async function submit() {
-    setBusy(true);
-    setError(null);
-    try {
-      const entries = [...chosen].map((name) => ({ name }));
-      await importSubjects('json', JSON.stringify({ version: 1, subjects: entries }));
-      setChosen(new Set());
-    } catch (caught) {
-      setError(importErrorMessage(caught));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (templates === null) return null;
-  return (
-    <div>
-      <p className="text-sm text-ink-secondary">{m.onboarding.subjects.templateLead}</p>
-      {templates.length === 0 ? (
-        <p className="mt-3 text-ink-muted">{m.onboarding.subjects.templateNone}</p>
-      ) : (
-        <ul className="mt-3 divide-y divide-line border-y border-line">
-          {templates.map((template) => {
-            const taken = existing.has(lower(template.name));
-            const id = `template-${template.name}`;
-            return (
-              <li key={template.name}>
-                <label
-                  htmlFor={id}
-                  className="flex min-h-12 cursor-pointer items-center gap-3 py-2 has-[:disabled]:cursor-default has-[:disabled]:text-ink-muted"
-                >
-                  <input
-                    id={id}
-                    type="checkbox"
-                    className="size-5 accent-primary"
-                    disabled={taken}
-                    checked={taken || chosen.has(template.name)}
-                    onChange={(event) =>
-                      setChosen((current) => {
-                        const next = new Set(current);
-                        if (event.target.checked) next.add(template.name);
-                        else next.delete(template.name);
-                        return next;
-                      })
-                    }
-                  />
-                  <span className="flex-1">{template.name}</span>
-                  {taken && (
-                    <span className="text-meta text-ink-muted">
-                      {m.onboarding.subjects.templateExists}
-                    </span>
-                  )}
-                </label>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      {error && <FieldError>{error}</FieldError>}
-      <Button
-        variant="secondary"
-        className="mt-4"
-        busy={busy}
-        disabled={chosen.size === 0}
-        onClick={() => void submit()}
-      >
-        {m.onboarding.subjects.templateSubmit}
-      </Button>
-    </div>
-  );
-}
-
-function ManualTab() {
+function ManualTab({ initialName = '' }: { initialName?: string }) {
   const { addSubject } = useWorkspace();
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -146,6 +50,8 @@ function ManualTab() {
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === 'name_taken') {
         setError(m.onboarding.subjects.errors.nameTaken);
+      } else if (caught instanceof ApiError && caught.code === 'name_reserved') {
+        setError(m.subjectDialog.errors.nameReserved);
       } else if (caught instanceof ApiError && caught.code === 'invalid_input') {
         setError(m.errors.invalidName);
       } else {
@@ -245,6 +151,8 @@ export function SubjectsStep({
 }) {
   const { subjects, removeSubject } = useWorkspace();
   const [mode, setMode] = useState<Mode>('template');
+  // Das Gesuchte steht nicht im Katalog: von dort geht es mit dem Namen weiter zum eigenen Fach.
+  const [customName, setCustomName] = useState('');
   const [removeError, setRemoveError] = useState<string | null>(null);
   const s = m.onboarding.subjects;
 
@@ -270,8 +178,26 @@ export function SubjectsStep({
         ]}
       />
       <div className="mt-5">
-        {mode === 'template' && <TemplateTab />}
-        {mode === 'manual' && <ManualTab />}
+        {mode === 'template' && (
+          <>
+            <p className="mb-3 text-sm text-ink-secondary">{s.templateLead}</p>
+            <Suspense
+              fallback={
+                <p role="status" className="text-ink-muted">
+                  {m.templatePicker.loading}
+                </p>
+              }
+            >
+              <TemplatePicker
+                onCustom={(name) => {
+                  setCustomName(name);
+                  setMode('manual');
+                }}
+              />
+            </Suspense>
+          </>
+        )}
+        {mode === 'manual' && <ManualTab initialName={customName} />}
         {mode === 'import' && <ImportTab />}
       </div>
 

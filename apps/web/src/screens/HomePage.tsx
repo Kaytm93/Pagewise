@@ -1,6 +1,7 @@
-import { Plus } from 'lucide-react';
+import { MessageCircle, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { messages as m } from '../i18n';
+import { navigate } from '../router';
 import { Button } from '../ui/Button';
 import { Link } from '../ui/Link';
 import { Sheet } from '../ui/Sheet';
@@ -21,9 +22,14 @@ export function HomePage() {
           {m.home.emptyTitle}
         </h1>
         <p className="mt-3 max-w-prose text-ink-secondary">{m.home.emptyLead}</p>
-        <Button variant="primary" className="mt-6" onClick={() => setCreating(true)}>
-          {m.subjectDialog.createTitle}
-        </Button>
+        <div className="mt-6 flex flex-wrap gap-2">
+          <Button variant="primary" onClick={() => setCreating(true)}>
+            {m.subjectDialog.createTitle}
+          </Button>
+          <Button variant="secondary" onClick={() => navigate({ name: 'default-chat' })}>
+            {m.home.startChat}
+          </Button>
+        </div>
         {dialog}
       </Sheet>
     );
@@ -35,6 +41,24 @@ export function HomePage() {
         {m.home.title}
       </h1>
       <ul className="mt-6 divide-y divide-line border-y border-line">
+        <li>
+          <Link
+            to={{ name: 'default-chat' }}
+            className="-mx-3 flex min-h-14 items-center gap-3 rounded-box px-3 py-3 text-ink no-underline hover:bg-paper"
+          >
+            <MessageCircle
+              aria-hidden="true"
+              strokeWidth={1.6}
+              className="size-5 shrink-0 text-ink-secondary"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-medium">{m.defaultSubject.homeTitle}</span>
+              <span className="block truncate text-meta text-ink-muted">
+                {m.defaultSubject.homeHint}
+              </span>
+            </span>
+          </Link>
+        </li>
         {subjects.map((subject) => {
           const meta = subjectMeta(subject);
           return (

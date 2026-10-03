@@ -6,6 +6,8 @@ describe('Router', () => {
     ['/', { name: 'home' }],
     ['', { name: 'home' }],
     ['/settings', { name: 'settings' }],
+    ['/chat', { name: 'default-chat' }],
+    ['/chat/', { name: 'default-chat' }],
     ['/subjects/abc-123', { name: 'subject', subjectId: 'abc-123', groupId: null }],
     ['/subjects/abc/groups/xyz', { name: 'subject', subjectId: 'abc', groupId: 'xyz' }],
     ['/subjects/abc/', { name: 'subject', subjectId: 'abc', groupId: null }],
@@ -17,6 +19,7 @@ describe('Router', () => {
   it.each([
     '/unbekannt',
     '/settings/mehr',
+    '/chat/abc',
     '/subjects',
     '/subjects/abc/groups',
     '/subjects/abc/chats',
@@ -34,6 +37,7 @@ describe('Router', () => {
     const routes: Route[] = [
       { name: 'home' },
       { name: 'settings' },
+      { name: 'default-chat' },
       { name: 'subject', subjectId: 'f1', groupId: null },
       { name: 'subject', subjectId: 'f1', groupId: 'g1' },
       { name: 'chat', subjectId: 'f1', chatId: 'c1' },

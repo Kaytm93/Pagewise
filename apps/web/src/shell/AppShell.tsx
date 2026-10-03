@@ -2,6 +2,7 @@ import { Menu } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { messages as m } from '../i18n';
 import { pathFor, type Route, useRoute } from '../router';
+import { DefaultChatPage } from '../screens/chat/DefaultChatPage';
 import { HomePage } from '../screens/HomePage';
 import { NotFoundPage } from '../screens/NotFoundPage';
 import { SettingsPage } from '../screens/SettingsPage';
@@ -22,6 +23,8 @@ function Page({ route }: { route: Route }) {
       return <HomePage />;
     case 'settings':
       return <SettingsPage />;
+    case 'default-chat':
+      return <DefaultChatPage />;
     case 'subject':
       return <SubjectPage subjectId={route.subjectId} groupId={route.groupId} />;
     case 'chat':
@@ -43,13 +46,13 @@ function Page({ route }: { route: Route }) {
 
 /** Titel der aktuellen Ansicht, für die Kopfzeile auf dem Handy und den Tab-Titel. */
 function useTitle(route: Route): string {
-  const { subjects } = useWorkspace();
+  const { findSubject } = useWorkspace();
   if (route.name === 'settings') return m.settings.title;
   if (route.name === 'chat') {
-    return subjects.find((entry) => entry.id === route.subjectId)?.name ?? m.app.name;
+    return findSubject(route.subjectId)?.name ?? m.app.name;
   }
   if (route.name === 'subject') {
-    const subject = subjects.find((entry) => entry.id === route.subjectId);
+    const subject = findSubject(route.subjectId);
     const group = subject?.groups.find((entry) => entry.id === route.groupId);
     return group?.name ?? subject?.name ?? m.app.name;
   }

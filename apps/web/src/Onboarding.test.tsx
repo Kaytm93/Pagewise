@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
 import { ApiClient } from './api/client';
 import { FakeServer, json } from './test/fake-server';
@@ -20,6 +20,12 @@ async function toSubjectsStep(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('button', { name: 'Überspringen' }));
   await screen.findByRole('heading', { name: 'Deine Fächer' });
 }
+
+// Nachgeladene Teile (Auswahl der Vorlagen, Prompt-Dialog) einmal vorab laden, damit langsame Rechner
+// die Wartezeit einzelner Tests nicht überschreiten.
+beforeAll(async () => {
+  await import('./screens/subjects/TemplatePicker');
+}, 30_000);
 
 beforeEach(() => {
   window.history.replaceState(null, '', '/');
@@ -68,22 +74,21 @@ describe('Onboarding', () => {
 
     const existing = await screen.findByLabelText(/Beispielfach A/, { selector: 'input' });
     expect((existing as HTMLInputElement).disabled).toBe(true);
-    expect(screen.getByText('schon angelegt')).toBeTruthy();
+    expect(screen.getByText('Schon angelegt')).toBeTruthy();
 
-    const submit = screen.getByRole('button', { name: 'Ausgewählte anlegen' }) as HTMLButtonElement;
+    const submit = screen.getByRole('button', { name: 'Fächer anlegen' }) as HTMLButtonElement;
     expect(submit.disabled).toBe(true);
-    await user.click(screen.getByLabelText('Beispielfach B'));
-    await user.click(submit);
+    await user.click(screen.getByLabelText(/Beispielfach B/));
+    await user.click(screen.getByRole('button', { name: '1 Fach anlegen' }));
 
     const created = screen.getByRole('region', { name: 'Angelegt' });
     expect(await within(created).findByText('Beispielfach B')).toBeTruthy();
     expect(server.subjects.map((s) => s.name)).toEqual(['Beispielfach A', 'Beispielfach B']);
-    const sent = server.calls('POST', '/api/subjects/import')[0]?.body as
-      | { content: string }
-      | undefined;
-    expect(JSON.parse(sent?.content ?? 'null')).toEqual({
-      version: 1,
-      subjects: [{ name: 'Beispielfach B' }],
+    // Aus der Vorlage entstanden: Der Schlüssel verknüpft den Standard-Prompt.
+    expect(server.calls('POST', '/api/subjects')[0]?.body).toEqual({
+      name: 'Beispielfach B',
+      icon: 'flask',
+      templateKey: 'beispiel-b',
     });
   });
 
@@ -92,7 +97,7 @@ describe('Onboarding', () => {
     mount(server);
     const user = userEvent.setup();
     await toSubjectsStep(user);
-    await user.click(screen.getByLabelText('Manuell'));
+    await user.click(screen.getByLabelText('Eigenes Fach'));
 
     await user.type(screen.getByLabelText('Name des Fachs'), 'Beispielfach C{Enter}');
     const created = screen.getByRole('region', { name: 'Angelegt' });

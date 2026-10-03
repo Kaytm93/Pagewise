@@ -11,6 +11,7 @@ import type {
   ProfilePatch,
   PromptPreview,
   PromptScope,
+  PromptState,
   Provider,
   ProviderInput,
   ProviderPatch,
@@ -18,13 +19,30 @@ import type {
   Selection,
   SessionInfo,
   Subject,
+  SubjectCatalog,
   SubjectInput,
+  SubjectList,
   TestOutcome,
 } from './types';
 
 function promptPath(scope: PromptScope): string {
   if (scope.type === 'general') return '/api/prompts/general';
   return `/api/prompts/${scope.type === 'subject' ? 'subjects' : 'groups'}/${scope.id}`;
+}
+
+interface PromptReply {
+  text: string | null;
+  defaultText?: string | null;
+  source?: 'custom' | 'default' | 'none';
+}
+
+/** Allgemeiner Prompt und Untergruppen-Zusatz haben keinen Standardtext und liefern nur `text`. */
+function toPromptState(reply: PromptReply): PromptState {
+  return {
+    text: reply.text,
+    defaultText: reply.defaultText ?? null,
+    source: reply.source ?? (reply.text === null ? 'none' : 'custom'),
+  };
 }
 
 /** Alle Aufrufe der Oberfläche an den Server, an einer Stelle. */
@@ -68,18 +86,14 @@ export function createApi(client: ApiClient) {
     updateProfile: (patch: ProfilePatch) => client.request<Profile>('PATCH', '/api/profile', patch),
     completeOnboarding: () => client.request<Profile>('POST', '/api/onboarding/complete'),
 
-    async subjects(): Promise<Subject[]> {
-      const reply = await client.request<{ subjects: Subject[] }>('GET', '/api/subjects');
-      return reply.subjects;
-    },
+    subjects: () => client.request<SubjectList>('GET', '/api/subjects'),
     createSubject: (input: SubjectInput) => client.request<Subject>('POST', '/api/subjects', input),
     updateSubject: (id: string, patch: Partial<SubjectInput>) =>
       client.request<Subject>('PATCH', `/api/subjects/${id}`, patch),
     deleteSubject: (id: string) => client.request<void>('DELETE', `/api/subjects/${id}`),
     importSubjects: (format: 'json' | 'csv', content: string) =>
       client.request<ImportResult>('POST', '/api/subjects/import', { format, content }),
-    subjectTemplates: () =>
-      client.request<{ subjects: { name: string }[] }>('GET', '/api/subjects/templates'),
+    subjectTemplates: () => client.request<SubjectCatalog>('GET', '/api/subjects/templates'),
 
     createGroup: (subjectId: string, input: { name: string; kind?: string | null }) =>
       client.request<Group>('POST', `/api/subjects/${subjectId}/groups`, input),
@@ -115,15 +129,13 @@ export function createApi(client: ApiClient) {
     saveModelSettings: (settings: ModelSettings) =>
       client.request<ModelSettings>('PUT', '/api/model-settings', settings),
 
-    async prompt(scope: PromptScope): Promise<string | null> {
-      const reply = await client.request<{ text: string | null }>('GET', promptPath(scope));
-      return reply.text;
+    /** Stand einer Prompt-Ebene. Nur der Fach-Prompt hat einen Standardtext (`defaultText`). */
+    async prompt(scope: PromptScope): Promise<PromptState> {
+      return toPromptState(await client.request<PromptReply>('GET', promptPath(scope)));
     },
-    async savePrompt(scope: PromptScope, text: string | null): Promise<string | null> {
-      const reply = await client.request<{ text: string | null }>('PUT', promptPath(scope), {
-        text,
-      });
-      return reply.text;
+    /** Speichert den eigenen Text. `null` oder leer setzt den Fach-Prompt auf den Standard zurück. */
+    async savePrompt(scope: PromptScope, text: string | null): Promise<PromptState> {
+      return toPromptState(await client.request<PromptReply>('PUT', promptPath(scope), { text }));
     },
     async chats(subjectId: string, groupId: string | null): Promise<Chat[]> {
       const query = `subjectId=${subjectId}${groupId ? `&groupId=${groupId}` : ''}`;

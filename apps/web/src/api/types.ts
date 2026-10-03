@@ -13,6 +13,10 @@ export interface Group {
 export interface Subject {
   id: string;
   name: string;
+  /** `default` ist das eingebaute Fach „Standard“ für den fachunabhängigen Chat (nicht änderbar, nicht löschbar). */
+  kind: 'subject' | 'default';
+  /** Schlüssel der Katalogvorlage, aus der das Fach entstand (verknüpft den Standard-Prompt), sonst `null`. */
+  templateKey: string | null;
   teacher: string | null;
   hoursPerWeek: number | null;
   icon: string | null;
@@ -36,6 +40,34 @@ export interface SubjectInput {
   teacher?: string | null;
   hoursPerWeek?: number | null;
   icon?: string | null;
+  /** Schlüssel der Katalogvorlage, aus der das Fach angelegt wird. */
+  templateKey?: string;
+}
+
+/** Die Fächer des Nutzers und das eingebaute Fach „Standard“ (immer vorhanden). */
+export interface SubjectList {
+  subjects: Subject[];
+  defaultSubject: Subject;
+}
+
+export interface TemplateCategory {
+  id: string;
+  name: string;
+}
+
+/** Eine Fachvorlage des Katalogs: nur Name, Kategorie, Symbol und Suchbegriffe, nichts Persönliches. */
+export interface SubjectTemplate {
+  /** `null` bei Katalogen im alten Format: solche Vorlagen haben keinen Standard-Prompt. */
+  key: string | null;
+  name: string;
+  category: string | null;
+  icon: string | null;
+  aliases: string[];
+}
+
+export interface SubjectCatalog {
+  categories: TemplateCategory[];
+  subjects: SubjectTemplate[];
 }
 
 export interface ImportResult {
@@ -129,9 +161,19 @@ export type PromptScope =
   | { type: 'subject'; id: string }
   | { type: 'group'; id: string };
 
+/**
+ * Stand einer Prompt-Ebene. `text` ist der eigene Text (`null`: keiner), `defaultText` der mitgelieferte
+ * Standardtext des Fachs (nur beim Fach-Prompt, sonst `null`). `source` sagt, was im Chat gilt.
+ */
+export interface PromptState {
+  text: string | null;
+  defaultText: string | null;
+  source: 'custom' | 'default' | 'none';
+}
+
 export interface PromptPreview {
   system: string;
-  layers: { layer: 0 | 1 | 2 | 3; text: string }[];
+  layers: { layer: 0 | 1 | 2 | 3; text: string; origin: 'code' | 'default' | 'custom' }[];
   /** Platzhalter, für die im Profil oder im Namen nichts hinterlegt ist. */
   missing: string[];
 }

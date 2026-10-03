@@ -3,6 +3,8 @@ import { useSyncExternalStore } from 'react';
 /** Die Ansichten der Oberfläche. Die Adresse im Browser spiegelt sie, damit Neuladen und Zurück funktionieren. */
 export type Route =
   | { name: 'home' }
+  /** Der fachunabhängige Standard-Chat (Klick auf „Pagewise“): öffnet einen Chat im eingebauten Fach „Standard“. */
+  | { name: 'default-chat' }
   | { name: 'subject'; subjectId: string; groupId: string | null }
   | { name: 'chat'; subjectId: string; chatId: string }
   | { name: 'settings' }
@@ -14,6 +16,7 @@ export function parseRoute(pathname: string): Route {
   const parts = pathname.split('/').filter(Boolean);
   if (parts.length === 0) return { name: 'home' };
   if (parts[0] === 'settings' && parts.length === 1) return { name: 'settings' };
+  if (parts[0] === 'chat' && parts.length === 1) return { name: 'default-chat' };
   if (parts[0] === 'subjects') {
     const subjectId = parts[1];
     if (subjectId && ID.test(subjectId)) {
@@ -35,6 +38,8 @@ export function pathFor(route: Route): string {
       return '/';
     case 'settings':
       return '/settings';
+    case 'default-chat':
+      return '/chat';
     case 'subject':
       return route.groupId
         ? `/subjects/${route.subjectId}/groups/${route.groupId}`

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
 import { ApiClient } from './api/client';
 import { FakeServer } from './test/fake-server';
@@ -11,6 +11,12 @@ function mount(server: FakeServer) {
 }
 
 const nav = () => screen.getByRole('navigation', { name: 'Navigation' });
+
+// Die Auswahl der Vorlagen und der Prompt-Dialog werden erst beim Öffnen geladen. Auf einem langsamen
+// Rechner dauert das länger als die Wartezeit eines einzelnen Tests, deshalb einmal vorab laden.
+beforeAll(async () => {
+  await import('./screens/subjects/TemplatePicker');
+}, 30_000);
 
 beforeEach(() => {
   window.history.replaceState(null, '', '/');
@@ -24,7 +30,10 @@ describe('Fächer anlegen', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Fach anlegen' }));
     const dialog = await screen.findByRole('dialog', { name: 'Fach anlegen' });
-    expect(document.activeElement).toBe(within(dialog).getByLabelText('Name'));
+    // Der Katalog ist der Standardweg, die Suche hat den Fokus.
+    const search = await within(dialog).findByLabelText('Fach suchen');
+    await waitFor(() => expect(document.activeElement).toBe(search));
+    await user.click(within(dialog).getByLabelText('Eigenes Fach'));
 
     await user.type(within(dialog).getByLabelText('Name'), '  Beispielfach A ');
     await user.type(within(dialog).getByLabelText(/Lehrkraft/), 'Beispiel-Lehrkraft');
@@ -63,6 +72,7 @@ describe('Fächer anlegen', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Fach anlegen' }));
     const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByLabelText('Eigenes Fach'));
 
     await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
     expect(within(dialog).getByText(/Namen mit 1 bis 80 Zeichen/)).toBeTruthy();
@@ -85,6 +95,7 @@ describe('Fächer anlegen', () => {
       }),
     );
     const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByLabelText('Eigenes Fach'));
     await user.type(within(dialog).getByLabelText('Name'), 'BEISPIELFACH A');
     await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
 
@@ -96,6 +107,132 @@ describe('Fächer anlegen', () => {
     expect((within(dialog).getByLabelText('Name') as HTMLInputElement).value).toBe(
       'BEISPIELFACH A',
     );
+  });
+});
+
+describe('Fächer aus dem Katalog anlegen', () => {
+  async function openDialog(server: FakeServer) {
+    mount(server);
+    const user = userEvent.setup();
+    // Ohne Fächer heißt der Knopf „Fach anlegen“, sonst „Fach hinzufügen“.
+    const [open] = await screen.findAllByRole('button', { name: /^Fach (anlegen|hinzufügen)$/ });
+    await user.click(open as HTMLElement);
+    const dialog = await screen.findByRole('dialog', { name: 'Fach anlegen' });
+    await within(dialog).findByLabelText('Fach suchen');
+    return { user, dialog };
+  }
+
+  it('zeigt Kategorien, öffnet die erste und lässt andere aufklappen', async () => {
+    const { user, dialog } = await openDialog(new FakeServer('unlocked'));
+    expect(
+      within(dialog)
+        .getByRole('button', { name: /^Beispiele/ })
+        .getAttribute('aria-expanded'),
+    ).toBe('true');
+    expect(within(dialog).getByLabelText(/Beispielfach A/)).toBeTruthy();
+    const other = within(dialog).getByRole('button', { name: /^Weitere Beispiele/ });
+    expect(other.getAttribute('aria-expanded')).toBe('false');
+    expect(within(dialog).queryByLabelText(/Übungsfach C/)).toBeNull();
+    await user.click(other);
+    expect(within(dialog).getByLabelText(/Übungsfach C/)).toBeTruthy();
+    await user.click(within(dialog).getByRole('button', { name: /^Beispiele/ }));
+    expect(within(dialog).queryByLabelText(/Beispielfach A/)).toBeNull();
+  });
+
+  it('legt mehrere gewählte Fächer mit Schlüssel der Vorlage an, die Auswahl bleibt über die Suche erhalten', async () => {
+    const server = new FakeServer('unlocked');
+    const { user, dialog } = await openDialog(server);
+    const submit = within(dialog).getByRole('button', {
+      name: 'Fächer anlegen',
+    }) as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+
+    await user.click(within(dialog).getByLabelText(/Beispielfach A/));
+    // Gefunden über den anderen Namen, und die Auswahl von eben bleibt.
+    await user.type(within(dialog).getByLabelText('Fach suchen'), 'erdfach');
+    expect(within(dialog).getByText('auch: Erdfach')).toBeTruthy();
+    expect(within(dialog).queryByLabelText(/Beispielfach A/)).toBeNull();
+    await user.click(within(dialog).getByLabelText(/Übungsfach C/));
+    expect(within(dialog).getByText('2 ausgewählt')).toBeTruthy();
+    await user.click(within(dialog).getByRole('button', { name: '2 Fächer anlegen' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const posts = server.calls('POST', '/api/subjects').map((call) => call.body);
+    expect(posts).toEqual([
+      { name: 'Beispielfach A', icon: 'book', templateKey: 'beispiel-a' },
+      { name: 'Übungsfach C', icon: null, templateKey: 'beispiel-c' },
+    ]);
+    expect(server.subjects.map((subject) => subject.templateKey)).toEqual([
+      'beispiel-a',
+      'beispiel-c',
+    ]);
+    // Nur Namen: keine Lehrkraft, keine Stunden, kein Prompt.
+    expect(server.calls('PUT', `/api/prompts/subjects/${server.subjects[0]?.id}`)).toHaveLength(0);
+    expect(within(nav()).getByRole('link', { name: 'Beispielfach A' })).toBeTruthy();
+    expect(within(nav()).getByRole('link', { name: 'Übungsfach C' })).toBeTruthy();
+    // Mehrere neue Fächer: die Ansicht bleibt, bei genau einem öffnet sich das Fach.
+    expect(window.location.pathname).toBe('/');
+  });
+
+  it('öffnet bei genau einem neuen Fach dessen Seite', async () => {
+    const server = new FakeServer('unlocked');
+    const { user, dialog } = await openDialog(server);
+    await user.click(within(dialog).getByLabelText(/Beispielfach B/));
+    await user.click(within(dialog).getByRole('button', { name: '1 Fach anlegen' }));
+    expect(await screen.findByRole('heading', { name: 'Beispielfach B' })).toBeTruthy();
+    expect(window.location.pathname).toBe(`/subjects/${server.subjects[0]?.id}`);
+  });
+
+  it('markiert vorhandene Fächer als „Schon angelegt“, auch wenn sie umbenannt wurden', async () => {
+    const server = new FakeServer('unlocked');
+    server.addSubject('Beispielfach A');
+    server.addSubject('Mein Name für B', { templateKey: 'beispiel-b' });
+    const { dialog } = await openDialog(server);
+    for (const name of [/Beispielfach A/, /Beispielfach B/]) {
+      const box = within(dialog).getByLabelText(name, { selector: 'input' }) as HTMLInputElement;
+      expect(box.disabled).toBe(true);
+      expect(box.checked).toBe(true);
+    }
+    expect(within(dialog).getAllByText('Schon angelegt')).toHaveLength(2);
+  });
+
+  it('findet Fächer ohne Beachtung von Groß- und Kleinschreibung und Umlauten', async () => {
+    const { user, dialog } = await openDialog(new FakeServer('unlocked'));
+    await user.type(within(dialog).getByLabelText('Fach suchen'), 'UEBUNGSFACH');
+    expect(within(dialog).getByLabelText(/Übungsfach C/)).toBeTruthy();
+  });
+
+  it('bietet bei einer erfolglosen Suche ein eigenes Fach mit dem getippten Namen an', async () => {
+    const server = new FakeServer('unlocked');
+    const { user, dialog } = await openDialog(server);
+    await user.type(within(dialog).getByLabelText('Fach suchen'), 'Gibt es nicht');
+    expect(within(dialog).getByText('Dazu gibt es keine Vorlage.')).toBeTruthy();
+    await user.click(
+      within(dialog).getByRole('button', { name: '„Gibt es nicht“ als eigenes Fach anlegen' }),
+    );
+    expect((within(dialog).getByLabelText('Name') as HTMLInputElement).value).toBe('Gibt es nicht');
+    expect(server.calls('POST', '/api/subjects')).toHaveLength(0);
+  });
+
+  it('lässt den reservierten Namen „Standard“ bei einem eigenen Fach nicht zu', async () => {
+    const server = new FakeServer('unlocked');
+    const { user, dialog } = await openDialog(server);
+    await user.click(within(dialog).getByLabelText('Eigenes Fach'));
+    await user.type(within(dialog).getByLabelText('Name'), 'standard');
+    await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+    expect(
+      await within(dialog).findByText(/Der Name „Standard“ gehört dem eingebauten Standard-Fach/),
+    ).toBeTruthy();
+    expect(server.subjects).toHaveLength(0);
+  });
+
+  it('zeigt ohne Katalog einen Hinweis, aber der Weg zum eigenen Fach bleibt', async () => {
+    const server = new FakeServer('unlocked');
+    server.catalog = { categories: [], subjects: [] };
+    const { user, dialog } = await openDialog(server);
+    expect(await within(dialog).findByText('Es gibt keine Vorlagen.')).toBeTruthy();
+    await user.click(within(dialog).getByLabelText('Eigenes Fach'));
+    expect(within(dialog).getByLabelText('Name')).toBeTruthy();
   });
 });
 

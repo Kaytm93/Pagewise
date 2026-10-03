@@ -10,6 +10,7 @@ import type {
   ProviderPreset,
   Selection,
   Subject,
+  SubjectCatalog,
   TestOutcome,
 } from '../api/types';
 
@@ -171,7 +172,44 @@ export class FakeServer {
     onboardingCompleted: true,
   };
   subjects: Subject[] = [];
-  templates = [{ name: 'Beispielfach A' }, { name: 'Beispielfach B' }];
+  /** Das eingebaute Fach „Standard“, wie es der echte Server immer mitliefert. */
+  defaultSubject: Subject = this.freshDefaultSubject();
+  /** Katalog der Fachvorlagen (erfundene Namen). */
+  catalog: SubjectCatalog = {
+    categories: [
+      { id: 'beispiele', name: 'Beispiele' },
+      { id: 'weitere', name: 'Weitere Beispiele' },
+    ],
+    subjects: [
+      {
+        key: 'beispiel-a',
+        name: 'Beispielfach A',
+        category: 'beispiele',
+        icon: 'book',
+        aliases: ['Fach A'],
+      },
+      {
+        key: 'beispiel-b',
+        name: 'Beispielfach B',
+        category: 'beispiele',
+        icon: 'flask',
+        aliases: [],
+      },
+      {
+        key: 'beispiel-c',
+        name: 'Übungsfach C',
+        category: 'weitere',
+        icon: null,
+        aliases: ['Erdfach'],
+      },
+    ],
+  };
+  /** Mitgelieferte Standardtexte je Schlüssel der Vorlage (`standard`: Fach „Standard“, `_generic`: Rückfall). */
+  defaultPrompts: Record<string, string> = {
+    standard: 'Standardtext fachlos',
+    'beispiel-a': 'Standardtext A für {{fach}}',
+    _generic: 'Allgemeiner Standardtext für {{fach}}',
+  };
   providers: Provider[] = [];
   /** Schlüssel liegen nur hier und werden in keiner Antwort herausgegeben, wie beim echten Server. */
   secrets = new Map<string, string>();
@@ -217,10 +255,32 @@ export class FakeServer {
     });
   }
 
+  private freshDefaultSubject(): Subject {
+    return {
+      id: nextId(),
+      name: 'Standard',
+      kind: 'default',
+      templateKey: 'standard',
+      teacher: null,
+      hoursPerWeek: null,
+      icon: null,
+      position: -1,
+      groups: [],
+      model: null,
+    };
+  }
+
+  /** Alle Fächer einschließlich des eingebauten. */
+  private allSubjects(): Subject[] {
+    return [this.defaultSubject, ...this.subjects];
+  }
+
   addSubject(name: string, extra: Partial<Subject> = {}): Subject {
     const subject: Subject = {
       id: nextId(),
       name,
+      kind: 'subject',
+      templateKey: null,
       teacher: null,
       hoursPerWeek: null,
       icon: null,
@@ -293,6 +353,8 @@ export class FakeServer {
       for (const generation of this.generations.values()) generation.stop();
       this.generations.clear();
       this.subjects = [];
+      this.defaultSubject = this.freshDefaultSubject();
+      this.prompts.clear();
       this.chats = [];
       this.providers = [];
       this.secrets.clear();
@@ -317,10 +379,10 @@ export class FakeServer {
       return json(200, this.profile);
     }
 
-    if (method === 'GET' && path === '/api/subjects') return json(200, { subjects: this.subjects });
-    if (method === 'GET' && path === '/api/subjects/templates') {
-      return json(200, { subjects: this.templates });
+    if (method === 'GET' && path === '/api/subjects') {
+      return json(200, { subjects: this.subjects, defaultSubject: this.defaultSubject });
     }
+    if (method === 'GET' && path === '/api/subjects/templates') return json(200, this.catalog);
     if (method === 'POST' && path === '/api/subjects') return this.createSubject(data);
     if (method === 'POST' && path === '/api/subjects/import') return this.importSubjects(data);
 
@@ -565,7 +627,7 @@ export class FakeServer {
   }
 
   private hasModel(chat: Chat): boolean {
-    const subject = this.subjects.find((entry) => entry.id === chat.subjectId);
+    const subject = this.allSubjects().find((entry) => entry.id === chat.subjectId);
     return Boolean(chat.model ?? subject?.model ?? this.modelSettings.default);
   }
 
@@ -595,7 +657,7 @@ export class FakeServer {
       return json(200, { chats: list });
     }
     if (method === 'POST' && route === '/api/chats') {
-      const subject = this.subjects.find((entry) => entry.id === data.subjectId);
+      const subject = this.allSubjects().find((entry) => entry.id === data.subjectId);
       if (!subject) return json(404, { error: 'not_found' });
       const groupId = (data.groupId as string | null | undefined) ?? null;
       if (groupId && !subject.groups.some((group) => group.id === groupId)) {
@@ -606,7 +668,7 @@ export class FakeServer {
 
     const subjectModel = /^\/api\/subjects\/([^/]+)\/model$/.exec(route);
     if (subjectModel && method === 'PUT') {
-      const subject = this.subjects.find((entry) => entry.id === subjectModel[1]);
+      const subject = this.allSubjects().find((entry) => entry.id === subjectModel[1]);
       if (!subject) return json(404, { error: 'not_found' });
       subject.model = (data.model as Selection | null) ?? null;
       return json(200, subject);
@@ -670,16 +732,21 @@ export class FakeServer {
   ): Response | undefined {
     if (method === 'GET' && path.startsWith('/api/prompts/preview')) {
       const query = new URLSearchParams(path.split('?')[1] ?? '');
-      const subject = this.subjects.find((s) => s.id === query.get('subjectId'));
+      const subject = this.allSubjects().find((s) => s.id === query.get('subjectId'));
       if (!subject) return json(404, { error: 'not_found' });
       const groupId = query.get('groupId');
-      const texts: [0 | 1 | 2 | 3, string | null | undefined][] = [
-        [0, 'Antworte in Markdown.'],
-        [1, this.prompts.get('general')],
-        [2, this.prompts.get(`subject:${subject.id}`)],
-        [3, groupId ? this.prompts.get(`group:${groupId}`) : null],
+      const own = this.prompts.get(`subject:${subject.id}`);
+      const standard = this.defaultFor(subject);
+      const fill = (text: string) => text.replaceAll('{{fach}}', subject.name);
+      const texts: [0 | 1 | 2 | 3, string | null | undefined, 'code' | 'default' | 'custom'][] = [
+        [0, 'Antworte in Markdown.', 'code'],
+        [1, this.prompts.get('general'), 'custom'],
+        [2, own ? fill(own) : standard ? fill(standard) : null, own ? 'custom' : 'default'],
+        [3, groupId ? this.prompts.get(`group:${groupId}`) : null, 'custom'],
       ];
-      const layers = texts.flatMap(([layer, text]) => (text ? [{ layer, text }] : []));
+      const layers = texts.flatMap(([layer, text, origin]) =>
+        text ? [{ layer, text, origin }] : [],
+      );
       const preview: PromptPreview = {
         system: layers.map((l) => l.text).join('\n\n'),
         layers,
@@ -692,15 +759,30 @@ export class FakeServer {
     if (!match) return undefined;
     const key =
       match[1] === 'general' ? 'general' : match[2] ? `subject:${match[2]}` : `group:${match[3]}`;
-    if (match[2] && !this.subjects.some((s) => s.id === match[2]))
-      return json(404, { error: 'not_found' });
-    if (method === 'GET') return json(200, { text: this.prompts.get(key) ?? null });
+    const subject = match[2] ? this.allSubjects().find((s) => s.id === match[2]) : undefined;
+    if (match[2] && !subject) return json(404, { error: 'not_found' });
+    const view = (text: string | null) => {
+      if (!subject) return { text };
+      const defaultText = this.defaultFor(subject);
+      return {
+        text,
+        defaultText,
+        source: text !== null ? 'custom' : defaultText !== null ? 'default' : 'none',
+      };
+    };
+    if (method === 'GET') return json(200, view(this.prompts.get(key) ?? null));
     if (method === 'PUT') {
       const text = typeof data.text === 'string' && data.text.trim() !== '' ? data.text : null;
       this.prompts.set(key, text);
-      return json(200, { text });
+      return json(200, view(text));
     }
     return undefined;
+  }
+
+  /** Standardtext zu einem Fach: nach Schlüssel der Vorlage, sonst allgemein (wie der echte Server). */
+  private defaultFor(subject: Subject): string | null {
+    const key = subject.kind === 'default' ? 'standard' : (subject.templateKey ?? '');
+    return this.defaultPrompts[key] ?? this.defaultPrompts._generic ?? null;
   }
 
   private taken(name: string, ignoreId?: string): boolean {
@@ -712,11 +794,17 @@ export class FakeServer {
   private createSubject(data: Record<string, unknown>): Response {
     const name = String(data.name ?? '').trim();
     if (!name) return json(400, { error: 'invalid_input', field: 'name' });
+    if (name.toLowerCase() === 'standard') return json(409, { error: 'name_reserved' });
     if (this.taken(name)) return json(409, { error: 'name_taken' });
+    const templateKey = data.templateKey as string | undefined;
+    if (templateKey !== undefined && !this.catalog.subjects.some((e) => e.key === templateKey)) {
+      return json(400, { error: 'invalid_input', field: 'templateKey' });
+    }
     const subject = this.addSubject(name, {
       teacher: (data.teacher as string | null | undefined) || null,
       hoursPerWeek: (data.hoursPerWeek as number | null | undefined) ?? null,
       icon: (data.icon as string | null | undefined) ?? null,
+      templateKey: templateKey ?? null,
     });
     return json(201, subject);
   }
@@ -747,8 +835,11 @@ export class FakeServer {
   }
 
   private subject(method: string, id: string, data: Record<string, unknown>): Response {
-    const subject = this.subjects.find((s) => s.id === id);
+    const subject = this.allSubjects().find((s) => s.id === id);
     if (!subject) return json(404, { error: 'not_found' });
+    if (subject.kind === 'default' && (method === 'DELETE' || method === 'PATCH')) {
+      return json(409, { error: 'builtin' });
+    }
     if (method === 'DELETE') {
       this.subjects = this.subjects.filter((s) => s.id !== id);
       return json(204);
@@ -756,6 +847,9 @@ export class FakeServer {
     if (method === 'PATCH') {
       if (typeof data.name === 'string') {
         if (!data.name.trim()) return json(400, { error: 'invalid_input', field: 'name' });
+        if (data.name.trim().toLowerCase() === 'standard') {
+          return json(409, { error: 'name_reserved' });
+        }
         if (this.taken(data.name, id)) return json(409, { error: 'name_taken' });
         subject.name = data.name.trim();
       }
@@ -768,7 +862,7 @@ export class FakeServer {
   }
 
   private createGroup(subjectId: string, data: Record<string, unknown>): Response {
-    const subject = this.subjects.find((s) => s.id === subjectId);
+    const subject = this.allSubjects().find((s) => s.id === subjectId);
     if (!subject) return json(404, { error: 'not_found' });
     const name = String(data.name ?? '').trim();
     if (!name) return json(400, { error: 'invalid_input', field: 'name' });
@@ -786,7 +880,7 @@ export class FakeServer {
   }
 
   private group(method: string, id: string, data: Record<string, unknown>): Response {
-    for (const subject of this.subjects) {
+    for (const subject of this.allSubjects()) {
       const group = subject.groups.find((g) => g.id === id);
       if (!group) continue;
       if (method === 'DELETE') {

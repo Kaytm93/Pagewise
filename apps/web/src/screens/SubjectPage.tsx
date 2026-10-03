@@ -17,13 +17,15 @@ import { subjectMeta } from './subject-meta';
 type Dialog = { type: 'subject' } | { type: 'group'; group?: Group } | null;
 
 export function SubjectPage({ subjectId, groupId }: { subjectId: string; groupId: string | null }) {
-  const { subjects } = useWorkspace();
+  const { findSubject } = useWorkspace();
   const [dialog, setDialog] = useState<Dialog>(null);
-  const subject = subjects.find((entry) => entry.id === subjectId);
+  const subject = findSubject(subjectId);
   const group = groupId ? subject?.groups.find((entry) => entry.id === groupId) : undefined;
   if (!subject || (groupId && !group)) return <NotFoundPage />;
 
-  const meta = group ? (group.kind ?? '') : subjectMeta(subject);
+  // Das eingebaute Fach „Standard“ lässt sich weder umbenennen noch löschen: kein „Bearbeiten“, dafür ein Hinweis.
+  const builtin = subject.kind === 'default';
+  const meta = group ? (group.kind ?? '') : builtin ? m.defaultSubject.lead : subjectMeta(subject);
   const close = () => setDialog(null);
 
   return (
@@ -44,14 +46,16 @@ export function SubjectPage({ subjectId, groupId }: { subjectId: string; groupId
           </h1>
           {meta && <p className="mt-1 text-meta text-ink-muted">{meta}</p>}
         </div>
-        <Button
-          variant="secondary"
-          className="shrink-0"
-          onClick={() => setDialog(group ? { type: 'group', group } : { type: 'subject' })}
-        >
-          <Pencil aria-hidden="true" className="size-4" />
-          {m.common.edit}
-        </Button>
+        {(group || !builtin) && (
+          <Button
+            variant="secondary"
+            className="shrink-0"
+            onClick={() => setDialog(group ? { type: 'group', group } : { type: 'subject' })}
+          >
+            <Pencil aria-hidden="true" className="size-4" />
+            {m.common.edit}
+          </Button>
+        )}
       </div>
 
       {!group && (
@@ -119,7 +123,9 @@ export function SubjectPage({ subjectId, groupId }: { subjectId: string; groupId
         groupId={group?.id ?? null}
       />
 
-      {dialog?.type === 'subject' && <SubjectDialog subject={subject} onClose={close} />}
+      {dialog?.type === 'subject' && !builtin && (
+        <SubjectDialog subject={subject} onClose={close} />
+      )}
       {dialog?.type === 'group' && (
         <GroupDialog subject={subject} group={dialog.group} onClose={close} />
       )}
