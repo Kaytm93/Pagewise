@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { ApiClient } from './api/client';
 import { FakeServer, json } from './test/fake-server';
@@ -44,6 +44,12 @@ async function ask(user: ReturnType<typeof userEvent.setup>, text: string) {
   await user.paste(text);
   await user.click(screen.getByRole('button', { name: 'Senden' }));
 }
+
+// Die Chatansicht wird beim ersten Öffnen nachgeladen. Auf einem langsamen Rechner (z. B. in der CI)
+// dauert das länger als die Wartezeit eines einzelnen Tests, deshalb einmal vorab laden.
+beforeAll(async () => {
+  await import('./screens/chat/ChatPage');
+}, 30_000);
 
 beforeEach(() => {
   window.history.replaceState(null, '', '/');
