@@ -11,8 +11,12 @@ import type { Api } from '../api/api';
 import type {
   Group,
   ImportResult,
+  ModelSettings,
   Profile,
   ProfilePatch,
+  Provider,
+  ProviderInput,
+  ProviderPatch,
   Subject,
   SubjectInput,
 } from '../api/types';
@@ -30,6 +34,12 @@ interface WorkspaceValue {
   addGroup: (subjectId: string, input: { name: string; kind?: string | null }) => Promise<Group>;
   editGroup: (id: string, patch: { name?: string; kind?: string | null }) => Promise<Group>;
   removeGroup: (id: string) => Promise<void>;
+  providers: Provider[];
+  modelSettings: ModelSettings;
+  addProvider: (input: ProviderInput) => Promise<Provider>;
+  editProvider: (id: string, patch: ProviderPatch) => Promise<Provider>;
+  removeProvider: (id: string) => Promise<void>;
+  saveModelSettings: (settings: ModelSettings) => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceValue | null>(null);
@@ -40,7 +50,12 @@ export function useWorkspace(): WorkspaceValue {
   return value;
 }
 
-type Loaded = { profile: Profile; subjects: Subject[] };
+type Loaded = {
+  profile: Profile;
+  subjects: Subject[];
+  providers: Provider[];
+  modelSettings: ModelSettings;
+};
 type LoadState = { status: 'loading' } | { status: 'error' } | ({ status: 'ready' } & Loaded);
 
 /** Lädt Profil und Fächer, sobald die Anmeldung steht, und hält sie aktuell. */
@@ -60,9 +75,9 @@ export function WorkspaceProvider({
   useEffect(() => {
     let cancelled = false;
     setState({ status: 'loading' });
-    Promise.all([api.profile(), api.subjects()])
-      .then(([profile, subjects]) => {
-        if (!cancelled) setState({ status: 'ready', profile, subjects });
+    Promise.all([api.profile(), api.subjects(), api.providers(), api.modelSettings()])
+      .then(([profile, subjects, providers, modelSettings]) => {
+        if (!cancelled) setState({ status: 'ready', profile, subjects, providers, modelSettings });
       })
       .catch(() => {
         if (!cancelled) setState({ status: 'error' });
@@ -92,10 +107,17 @@ function buildValue(
 ): WorkspaceValue {
   /** Nach jeder Änderung die Liste neu holen: Reihenfolge und Untergruppen kommen vom Server. */
   const refreshSubjects = async () => update({ subjects: await api.subjects() });
+  /** Anbieter und Modellwahl hängen zusammen (Löschen räumt die Wahl auf), deshalb zusammen holen. */
+  const refreshProviders = async () => {
+    const [providers, modelSettings] = await Promise.all([api.providers(), api.modelSettings()]);
+    update({ providers, modelSettings });
+  };
 
   return {
     profile: state.profile,
     subjects: state.subjects,
+    providers: state.providers,
+    modelSettings: state.modelSettings,
     saveProfile: async (patch) => update({ profile: await api.updateProfile(patch) }),
     completeOnboarding: async () => update({ profile: await api.completeOnboarding() }),
     addSubject: async (input) => {
@@ -130,6 +152,23 @@ function buildValue(
     removeGroup: async (id) => {
       await api.deleteGroup(id);
       await refreshSubjects();
+    },
+    addProvider: async (input) => {
+      const provider = await api.createProvider(input);
+      await refreshProviders();
+      return provider;
+    },
+    editProvider: async (id, patch) => {
+      const provider = await api.updateProvider(id, patch);
+      await refreshProviders();
+      return provider;
+    },
+    removeProvider: async (id) => {
+      await api.deleteProvider(id);
+      await refreshProviders();
+    },
+    saveModelSettings: async (settings) => {
+      update({ modelSettings: await api.saveModelSettings(settings) });
     },
   };
 }

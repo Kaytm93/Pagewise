@@ -9,6 +9,8 @@ import { Segmented } from '../ui/Segmented';
 import { Sheet } from '../ui/Sheet';
 import { readTheme, saveTheme, type ThemePreference } from '../ui/theme';
 import { commonErrorMessage, rateLimitMessage } from './auth-errors';
+import { PromptRow } from './prompts/PromptRow';
+import { ProvidersSection } from './providers/ProvidersSection';
 
 function Section({ title, lead, children }: { title: string; lead?: string; children: ReactNode }) {
   return (
@@ -138,6 +140,13 @@ export function SettingsPage() {
       <div className="mt-8">
         <Section title={m.settings.appearance.title} lead={m.settings.appearance.lead}>
           <ThemeChoice />
+        </Section>
+        <Section title={m.providers.title} lead={m.providers.lead}>
+          <ProvidersSection />
+        </Section>
+        <Section title={m.prompts.title} lead={m.prompts.lead}>
+          <PromptRow scope={{ type: 'general' }} layer="general" />
+          <p className="mt-4 text-sm text-ink-muted">{m.prompts.forSubjects}</p>
         </Section>
         <Section title={m.settings.access.title}>
           <ChangePasscode />

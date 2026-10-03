@@ -1,4 +1,14 @@
-import type { Profile, Subject } from '../api/types';
+import type {
+  AvailableModel,
+  ModelEntry,
+  ModelSettings,
+  Profile,
+  PromptPreview,
+  Provider,
+  ProviderPreset,
+  Subject,
+  TestOutcome,
+} from '../api/types';
 
 export interface RecordedRequest {
   method: string;
@@ -35,6 +45,29 @@ export class FakeServer {
   };
   subjects: Subject[] = [];
   templates = [{ name: 'Beispielfach A' }, { name: 'Beispielfach B' }];
+  providers: Provider[] = [];
+  /** Schlüssel liegen nur hier und werden in keiner Antwort herausgegeben, wie beim echten Server. */
+  secrets = new Map<string, string>();
+  modelSettings: ModelSettings = { default: null, fallback: [] };
+  presets: ProviderPreset[] = [
+    {
+      id: 'openrouter',
+      baseUrl: 'https://openrouter.ai/api/v1',
+      requiresKey: true,
+      models: [
+        { id: 'z-ai/glm-5.3-flash', vision: true, tools: true, reasoning: true, streaming: true },
+        { id: 'openrouter/free', vision: true, tools: true, reasoning: true, streaming: true },
+      ],
+    },
+    { id: 'zai', baseUrl: 'https://api.z.ai/api/paas/v4', requiresKey: true, models: [] },
+    { id: 'ollama', baseUrl: 'http://localhost:11434/v1', requiresKey: false, models: [] },
+    { id: 'lmstudio', baseUrl: 'http://localhost:1234/v1', requiresKey: false, models: [] },
+    { id: 'custom', baseUrl: '', requiresKey: false, models: [] },
+  ];
+  /** Antwort auf den nächsten „Verbindung testen“-Aufruf. */
+  testOutcome: TestOutcome = { ok: true, latencyMs: 42, modelCount: null };
+  available: AvailableModel[] = [];
+  prompts = new Map<string, string | null>();
   requests: RecordedRequest[] = [];
   private overrides: Override[] = [];
 
@@ -145,7 +178,198 @@ export class FakeServer {
     const groupMatch = /^\/api\/groups\/([^/]+)$/.exec(path);
     if (groupMatch) return this.group(method, groupMatch[1] as string, data);
 
+    const extra =
+      this.handleProviders(method, path, data) ?? this.handlePrompts(method, path, data);
+    if (extra) return extra;
+
     return json(404, { error: 'not_found' });
+  }
+
+  addProvider(name: string, extra: Partial<Provider> = {}): Provider {
+    const provider: Provider = {
+      id: nextId(),
+      name,
+      type: 'openai-compatible',
+      preset: 'custom',
+      baseUrl: 'https://anbieter.example.test/v1',
+      models: [],
+      hasKey: false,
+      keyHint: null,
+      warning: null,
+      ...extra,
+    };
+    this.providers.push(provider);
+    return provider;
+  }
+
+  private withFree(models: ModelEntry[]): Provider['models'] {
+    return models.map((model) => ({
+      ...model,
+      free: model.id === 'openrouter/free' || model.id.endsWith(':free'),
+    }));
+  }
+
+  private validBaseUrl(raw: string): 'invalid' | 'insecure' | null {
+    let url: URL;
+    try {
+      url = new URL(raw.trim());
+    } catch {
+      return 'invalid';
+    }
+    if (url.protocol === 'http:' && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(url.hostname)) {
+      return 'insecure';
+    }
+    return url.protocol === 'https:' || url.protocol === 'http:' ? null : 'invalid';
+  }
+
+  private pruneSettings(): void {
+    const valid = (s: { providerId: string; model: string }) =>
+      this.providers.some((p) => p.id === s.providerId && p.models.some((m) => m.id === s.model));
+    this.modelSettings = {
+      default:
+        this.modelSettings.default && valid(this.modelSettings.default)
+          ? this.modelSettings.default
+          : null,
+      fallback: this.modelSettings.fallback.filter(valid),
+    };
+  }
+
+  private handleProviders(
+    method: string,
+    path: string,
+    data: Record<string, unknown>,
+  ): Response | undefined {
+    if (method === 'GET' && path === '/api/provider-presets') {
+      return json(200, { presets: this.presets });
+    }
+    if (method === 'GET' && path === '/api/providers')
+      return json(200, { providers: this.providers });
+    if (method === 'GET' && path === '/api/model-settings') return json(200, this.modelSettings);
+    if (method === 'PUT' && path === '/api/model-settings') {
+      this.modelSettings = data as unknown as ModelSettings;
+      this.pruneSettings();
+      return json(200, this.modelSettings);
+    }
+
+    if (method === 'POST' && path === '/api/providers') {
+      const name = String(data.name ?? '').trim();
+      if (!name) return json(400, { error: 'invalid_input', field: 'name' });
+      const preset = this.presets.find((p) => p.id === data.preset) ?? this.presets[4];
+      const baseUrl = String(data.baseUrl ?? preset?.baseUrl ?? '');
+      const problem = this.validBaseUrl(baseUrl);
+      if (problem) return json(400, { error: 'invalid_input', field: 'baseUrl', reason: problem });
+      if (this.providers.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
+        return json(409, { error: 'name_taken' });
+      }
+      const models = (data.models as ModelEntry[] | undefined) ?? preset?.models ?? [];
+      const provider = this.addProvider(name, {
+        preset: preset?.id ?? 'custom',
+        baseUrl: baseUrl.trim().replace(/\/+$/, ''),
+        models: this.withFree(models),
+        warning: /\/api\/coding(\/|$)/.test(baseUrl) ? 'coding_plan' : null,
+      });
+      if (typeof data.apiKey === 'string') {
+        this.secrets.set(provider.id, data.apiKey);
+        provider.hasKey = true;
+        provider.keyHint = data.apiKey.length >= 16 ? data.apiKey.slice(-4) : null;
+      }
+      if (!this.modelSettings.default && preset?.id === 'openrouter') {
+        const flash = { providerId: provider.id, model: 'z-ai/glm-5.3-flash' };
+        this.modelSettings = { default: flash, fallback: [flash] };
+      }
+      return json(201, provider);
+    }
+
+    const match = /^\/api\/providers\/([^/]+)(\/test|\/available-models)?$/.exec(path);
+    if (!match) return undefined;
+    const provider = this.providers.find((p) => p.id === match[1]);
+    if (!provider) return json(404, { error: 'not_found' });
+
+    if (match[2] === '/test' && method === 'POST') return json(200, this.testOutcome);
+    if (match[2] === '/available-models' && method === 'GET') {
+      return json(200, { models: this.available });
+    }
+    if (method === 'DELETE') {
+      this.providers = this.providers.filter((p) => p.id !== provider.id);
+      this.secrets.delete(provider.id);
+      this.pruneSettings();
+      return json(204);
+    }
+    if (method === 'PATCH') {
+      if (typeof data.name === 'string') {
+        const name = data.name.trim();
+        if (!name) return json(400, { error: 'invalid_input', field: 'name' });
+        if (
+          this.providers.some(
+            (p) => p.id !== provider.id && p.name.toLowerCase() === name.toLowerCase(),
+          )
+        ) {
+          return json(409, { error: 'name_taken' });
+        }
+        provider.name = name;
+      }
+      if (typeof data.baseUrl === 'string') {
+        const problem = this.validBaseUrl(data.baseUrl);
+        if (problem)
+          return json(400, { error: 'invalid_input', field: 'baseUrl', reason: problem });
+        provider.baseUrl = data.baseUrl.trim().replace(/\/+$/, '');
+        provider.warning = /\/api\/coding(\/|$)/.test(provider.baseUrl) ? 'coding_plan' : null;
+      }
+      if (Array.isArray(data.models)) provider.models = this.withFree(data.models as ModelEntry[]);
+      if (typeof data.apiKey === 'string') {
+        this.secrets.set(provider.id, data.apiKey);
+        provider.hasKey = true;
+        provider.keyHint = data.apiKey.length >= 16 ? data.apiKey.slice(-4) : null;
+      }
+      if (data.clearKey) {
+        this.secrets.delete(provider.id);
+        provider.hasKey = false;
+        provider.keyHint = null;
+      }
+      this.pruneSettings();
+      return json(200, provider);
+    }
+    return undefined;
+  }
+
+  private handlePrompts(
+    method: string,
+    path: string,
+    data: Record<string, unknown>,
+  ): Response | undefined {
+    if (method === 'GET' && path.startsWith('/api/prompts/preview')) {
+      const query = new URLSearchParams(path.split('?')[1] ?? '');
+      const subject = this.subjects.find((s) => s.id === query.get('subjectId'));
+      if (!subject) return json(404, { error: 'not_found' });
+      const groupId = query.get('groupId');
+      const texts: [0 | 1 | 2 | 3, string | null | undefined][] = [
+        [0, 'Antworte in Markdown.'],
+        [1, this.prompts.get('general')],
+        [2, this.prompts.get(`subject:${subject.id}`)],
+        [3, groupId ? this.prompts.get(`group:${groupId}`) : null],
+      ];
+      const layers = texts.flatMap(([layer, text]) => (text ? [{ layer, text }] : []));
+      const preview: PromptPreview = {
+        system: layers.map((l) => l.text).join('\n\n'),
+        layers,
+        missing: this.profile.federalState ? [] : ['bundesland'],
+      };
+      return json(200, preview);
+    }
+
+    const match = /^\/api\/prompts\/(general|subjects\/([^/]+)|groups\/([^/]+))$/.exec(path);
+    if (!match) return undefined;
+    const key =
+      match[1] === 'general' ? 'general' : match[2] ? `subject:${match[2]}` : `group:${match[3]}`;
+    if (match[2] && !this.subjects.some((s) => s.id === match[2]))
+      return json(404, { error: 'not_found' });
+    if (method === 'GET') return json(200, { text: this.prompts.get(key) ?? null });
+    if (method === 'PUT') {
+      const text = typeof data.text === 'string' && data.text.trim() !== '' ? data.text : null;
+      this.prompts.set(key, text);
+      return json(200, { text });
+    }
+    return undefined;
   }
 
   private taken(name: string, ignoreId?: string): boolean {

@@ -1,5 +1,12 @@
 import { Eye, EyeOff } from 'lucide-react';
-import { type InputHTMLAttributes, type ReactNode, useId, useState } from 'react';
+import {
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+  useId,
+  useState,
+} from 'react';
 import { messages as m } from '../i18n';
 import { FieldError } from './FieldError';
 
@@ -56,11 +63,17 @@ export function TextField({
   );
 }
 
-/** Eingabefeld für Passcodes mit Anzeigen/Verbergen. Der Passcode landet nie in einem Attribut oder Log. */
-export function PasscodeField(props: Omit<TextFieldProps, 'type' | 'trailing'>) {
+interface SecretFieldProps extends Omit<TextFieldProps, 'type' | 'trailing'> {
+  showLabel: string;
+  hideLabel: string;
+}
+
+/** Eingabefeld für Geheimnisse mit Anzeigen/Verbergen. Der Wert landet nie in einem Attribut oder Log. */
+export function SecretField({ showLabel, hideLabel, ...props }: SecretFieldProps) {
   const [visible, setVisible] = useState(false);
   return (
     <TextField
+      autoComplete="off"
       {...props}
       type={visible ? 'text' : 'password'}
       autoCapitalize="none"
@@ -71,7 +84,7 @@ export function PasscodeField(props: Omit<TextFieldProps, 'type' | 'trailing'>) 
           type="button"
           onClick={() => setVisible((value) => !value)}
           aria-pressed={visible}
-          aria-label={visible ? m.common.hidePasscode : m.common.showPasscode}
+          aria-label={visible ? hideLabel : showLabel}
           className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:text-ink"
         >
           {visible ? (
@@ -82,5 +95,98 @@ export function PasscodeField(props: Omit<TextFieldProps, 'type' | 'trailing'>) 
         </button>
       }
     />
+  );
+}
+
+/** Eingabefeld für Passcodes. */
+export function PasscodeField(props: Omit<TextFieldProps, 'type' | 'trailing'>) {
+  return (
+    <SecretField showLabel={m.common.showPasscode} hideLabel={m.common.hidePasscode} {...props} />
+  );
+}
+
+interface SelectFieldProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'id'> {
+  label: string;
+  hint?: string;
+  error?: string | null;
+  /** Blendet die Beschriftung aus, sie bleibt für Screenreader erhalten. */
+  hideLabel?: boolean;
+}
+
+/** Auswahlliste mit dem Aussehen der Eingabefelder. Auf dem Handy öffnet sie die Auswahl des Systems. */
+export function SelectField({
+  label,
+  hint,
+  error,
+  hideLabel,
+  className = '',
+  children,
+  ...select
+}: SelectFieldProps) {
+  const id = useId();
+  const hintId = `${id}-hint`;
+  const errorId = `${id}-error`;
+  const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ');
+  return (
+    <div className={className}>
+      <label htmlFor={id} className={hideLabel ? 'sr-only' : 'block text-sm font-medium text-ink'}>
+        {label}
+      </label>
+      <select
+        id={id}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy || undefined}
+        className={`${inputClass} ${hideLabel ? '' : 'mt-1.5'}`}
+        {...select}
+      >
+        {children}
+      </select>
+      {hint && (
+        <p id={hintId} className="mt-1.5 text-sm text-ink-muted">
+          {hint}
+        </p>
+      )}
+      {error && <FieldError id={errorId}>{error}</FieldError>}
+    </div>
+  );
+}
+
+interface TextAreaFieldProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'> {
+  label: string;
+  hint?: string;
+  error?: string | null;
+}
+
+/** Mehrzeiliges Textfeld (z. B. für Prompts). Die Höhe lässt sich ziehen. */
+export function TextAreaField({
+  label,
+  hint,
+  error,
+  className = '',
+  ...textarea
+}: TextAreaFieldProps) {
+  const id = useId();
+  const hintId = `${id}-hint`;
+  const errorId = `${id}-error`;
+  const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ');
+  return (
+    <div className={className}>
+      <label htmlFor={id} className="block text-sm font-medium text-ink">
+        {label}
+      </label>
+      <textarea
+        id={id}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy || undefined}
+        className="mt-1.5 min-h-60 w-full resize-y rounded-control border border-control-edge bg-canvas px-3 py-2.5 text-base leading-relaxed text-ink disabled:opacity-60"
+        {...textarea}
+      />
+      {hint && (
+        <p id={hintId} className="mt-1.5 text-sm text-ink-muted">
+          {hint}
+        </p>
+      )}
+      {error && <FieldError id={errorId}>{error}</FieldError>}
+    </div>
   );
 }

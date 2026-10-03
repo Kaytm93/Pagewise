@@ -65,11 +65,13 @@ interface ModalProps {
   title: string;
   description?: string;
   onClose: () => void;
+  /** Breiterer Dialog für Formulare mit Tabellen oder viel Text. */
+  wide?: boolean;
   children: ReactNode;
 }
 
 /** Dialog: auf dem Handy ein Blatt am unteren Rand, sonst mittig. Schatten gibt es nur für Overlays. */
-export function Modal({ title, description, onClose, children }: ModalProps) {
+export function Modal({ title, description, onClose, wide = false, children }: ModalProps) {
   const titleId = useId();
   const descriptionId = useId();
   const container = useModalLayer(onClose);
@@ -92,7 +94,7 @@ export function Modal({ title, description, onClose, children }: ModalProps) {
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className="max-h-[92dvh] w-full overflow-y-auto rounded-t-card border border-line bg-canvas p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl outline-none sm:max-w-md sm:rounded-card sm:p-6"
+        className={`max-h-[92dvh] w-full overflow-y-auto rounded-t-card border border-line bg-canvas p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl outline-none sm:rounded-card sm:p-6 ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'}`}
       >
         <div className="flex items-start justify-between gap-4">
           <h2 id={titleId} className="font-heading text-xl">

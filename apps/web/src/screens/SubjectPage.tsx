@@ -8,6 +8,7 @@ import { Sheet } from '../ui/Sheet';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { GroupDialog } from './GroupDialog';
 import { NotFoundPage } from './NotFoundPage';
+import { PromptRow } from './prompts/PromptRow';
 import { SubjectDialog } from './SubjectDialog';
 import { subjectMeta } from './subject-meta';
 
@@ -94,6 +95,19 @@ export function SubjectPage({ subjectId, groupId }: { subjectId: string; groupId
           )}
         </section>
       )}
+
+      <section className="mt-8 border-t border-line pt-6" aria-labelledby="prompt-heading">
+        <h2 id="prompt-heading" className="text-meta font-medium text-ink-muted">
+          {m.prompts.title}
+        </h2>
+        <div className="mt-3">
+          <PromptRow
+            scope={group ? { type: 'group', id: group.id } : { type: 'subject', id: subject.id }}
+            layer={group ? 'group' : 'subject'}
+            preview={{ subjectId: subject.id, groupId: group?.id ?? null }}
+          />
+        </div>
+      </section>
 
       <section className="mt-8 border-t border-line pt-6" aria-labelledby="chats-heading">
         <h2 id="chats-heading" className="text-meta font-medium text-ink-muted">

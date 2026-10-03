@@ -42,3 +42,90 @@ export interface ImportResult {
   invalid: number;
   subjects: Subject[];
 }
+
+export type PresetId = 'openrouter' | 'zai' | 'ollama' | 'lmstudio' | 'custom';
+
+/** Ein Modell eines Anbieters mit den Fähigkeiten, die Pagewise kennen muss. */
+export interface ModelEntry {
+  id: string;
+  vision: boolean;
+  tools: boolean;
+  reasoning: boolean;
+  streaming: boolean;
+}
+
+export interface ProviderModel extends ModelEntry {
+  /** Kostenloses Modell: der Anbieter kann Eingaben protokollieren. */
+  free: boolean;
+}
+
+export interface Provider {
+  id: string;
+  name: string;
+  type: 'openai-compatible';
+  preset: PresetId;
+  baseUrl: string;
+  models: ProviderModel[];
+  hasKey: boolean;
+  /** Letzte vier Zeichen, nur bei langen Schlüsseln. Der Schlüssel selbst kommt nie an. */
+  keyHint: string | null;
+  warning: 'coding_plan' | null;
+}
+
+export interface ProviderPreset {
+  id: PresetId;
+  baseUrl: string;
+  requiresKey: boolean;
+  models: ModelEntry[];
+}
+
+export interface ProviderInput {
+  name: string;
+  preset: PresetId;
+  baseUrl?: string;
+  apiKey?: string;
+  models?: ModelEntry[];
+}
+
+export interface ProviderPatch {
+  name?: string;
+  baseUrl?: string;
+  models?: ModelEntry[];
+  apiKey?: string;
+  clearKey?: boolean;
+}
+
+export interface Selection {
+  providerId: string;
+  model: string;
+}
+
+export interface ModelSettings {
+  default: Selection | null;
+  fallback: Selection[];
+}
+
+export type TestOutcome =
+  | { ok: true; latencyMs: number; modelCount: number | null }
+  | { ok: false; code: string };
+
+export interface AvailableModel {
+  id: string;
+  name: string | null;
+  vision: boolean | null;
+  tools: boolean | null;
+  reasoning: boolean | null;
+  free: boolean;
+}
+
+export type PromptScope =
+  | { type: 'general' }
+  | { type: 'subject'; id: string }
+  | { type: 'group'; id: string };
+
+export interface PromptPreview {
+  system: string;
+  layers: { layer: 0 | 1 | 2 | 3; text: string }[];
+  /** Platzhalter, für die im Profil oder im Namen nichts hinterlegt ist. */
+  missing: string[];
+}

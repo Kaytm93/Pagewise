@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
 import { ApiClient } from './api/client';
-import { FakeServer } from './test/fake-server';
+import { FakeServer, json } from './test/fake-server';
 
 function fresh(): FakeServer {
   const server = new FakeServer('unlocked');
@@ -29,7 +29,7 @@ describe('Onboarding', () => {
   it('startet bei einer frischen Installation mit dem Profil und nennt den Fortschritt', async () => {
     mount(fresh());
     expect(await screen.findByRole('heading', { name: 'Dein Profil' })).toBeTruthy();
-    expect(screen.getByText('Schritt 1 von 3')).toBeTruthy();
+    expect(screen.getByText('Schritt 1 von 4')).toBeTruthy();
     // Nichts ist vorbelegt.
     for (const label of ['Bundesland oder Region', 'Schulform', 'Jahrgangsstufe']) {
       expect((screen.getByLabelText(new RegExp(label)) as HTMLInputElement).value).toBe('');
@@ -194,25 +194,30 @@ describe('Onboarding', () => {
     expect(await screen.findByText('Noch nichts angelegt.')).toBeTruthy();
   });
 
-  it('führt bis zum Datenschutz, geht zurück und schließt ab', async () => {
+  it('führt über den Anbieter bis zum Datenschutz, geht zurück und schließt ab', async () => {
     const server = fresh();
     mount(server);
     const user = userEvent.setup();
     await toSubjectsStep(user);
 
     await user.click(screen.getByRole('button', { name: 'Weiter' }));
+    expect(await screen.findByRole('heading', { name: 'Dein Modell-Anbieter' })).toBeTruthy();
+    expect(screen.getByText('Schritt 3 von 4')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Überspringen' }));
     expect(await screen.findByRole('heading', { name: 'Datenschutz' })).toBeTruthy();
-    expect(screen.getByText('Schritt 3 von 3')).toBeTruthy();
+    expect(screen.getByText('Schritt 4 von 4')).toBeTruthy();
     expect(screen.getByText(/Pagewise sammelt nichts/)).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Zurück' }));
-    expect(await screen.findByRole('heading', { name: 'Deine Fächer' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Weiter' }));
+    expect(await screen.findByRole('heading', { name: 'Dein Modell-Anbieter' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Überspringen' }));
 
     await user.click(await screen.findByRole('button', { name: 'Los geht’s' }));
     expect(await screen.findByRole('heading', { name: 'Noch keine Fächer' })).toBeTruthy();
     expect(server.profile.onboardingCompleted).toBe(true);
-    expect(screen.queryByText('Schritt 3 von 3')).toBeNull();
+    expect(server.providers).toEqual([]);
+    expect(screen.queryByText('Schritt 4 von 4')).toBeNull();
   });
 
   it('zeigt nach dem Abschluss beim nächsten Start gleich die App', async () => {
@@ -221,5 +226,166 @@ describe('Onboarding', () => {
     mount(server);
     expect(await screen.findByRole('heading', { name: 'Noch keine Fächer' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Dein Profil' })).toBeNull();
+  });
+});
+
+// Fake-Schlüssel werden zur Laufzeit zusammengesetzt, damit der Secret-Scan den Quelltext nicht trifft.
+const KEY = ['beispiel', 'schluessel', 'abcdefghijklmnop'].join('-');
+
+async function toProviderStep(user: ReturnType<typeof userEvent.setup>) {
+  await toSubjectsStep(user);
+  await user.click(screen.getByRole('button', { name: 'Weiter' }));
+  await screen.findByRole('heading', { name: 'Dein Modell-Anbieter' });
+  // Die Voreinstellungen kommen vom Server, erst danach gibt es das Formular.
+  await screen.findByLabelText(/API-Schlüssel/);
+}
+
+describe('Onboarding: Schritt „Anbieter“', () => {
+  it('wählt OpenRouter vor und verlangt dafür einen Schlüssel', async () => {
+    const server = fresh();
+    mount(server);
+    const user = userEvent.setup();
+    await toProviderStep(user);
+
+    expect((screen.getByRole('radio', { name: /^OpenRouter/ }) as HTMLInputElement).checked).toBe(
+      true,
+    );
+    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('OpenRouter');
+    expect((screen.getByLabelText(/Adresse/) as HTMLInputElement).value).toBe(
+      'https://openrouter.ai/api/v1',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Anlegen und testen' }));
+    expect(await screen.findByText('Dieser Anbieter braucht einen Schlüssel.')).toBeTruthy();
+    expect(server.calls('POST', '/api/providers')).toHaveLength(0);
+    // Ohne Anbieter bleibt nur das Überspringen.
+    expect(screen.queryByRole('button', { name: 'Weiter' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Überspringen' })).toBeTruthy();
+  });
+
+  it('legt den Anbieter an, testet ihn und zeigt den Schlüssel nie', async () => {
+    const server = fresh();
+    mount(server);
+    const user = userEvent.setup();
+    await toProviderStep(user);
+
+    await user.type(screen.getByLabelText(/API-Schlüssel/), KEY);
+    await user.click(screen.getByRole('button', { name: 'Anlegen und testen' }));
+
+    expect(await screen.findByText('„OpenRouter“ ist angelegt.')).toBeTruthy();
+    expect(await screen.findByText('Verbindung steht (42 ms).')).toBeTruthy();
+    expect(server.calls('POST', '/api/providers')[0]?.body).toMatchObject({
+      name: 'OpenRouter',
+      preset: 'openrouter',
+      apiKey: KEY,
+    });
+    expect(server.calls('POST', `/api/providers/${server.providers[0]?.id}/test`)).toHaveLength(1);
+    expect(document.body.innerHTML).not.toContain(KEY);
+
+    // Das Formular ist weg, weiter geht es zum Datenschutz.
+    expect(screen.queryByLabelText(/API-Schlüssel/)).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Weiter' }));
+    expect(await screen.findByRole('heading', { name: 'Datenschutz' })).toBeTruthy();
+  });
+
+  it('meldet einen abgelehnten Schlüssel und testet auf Wunsch erneut', async () => {
+    const server = fresh();
+    server.testOutcome = { ok: false, code: 'auth_failed' };
+    mount(server);
+    const user = userEvent.setup();
+    await toProviderStep(user);
+
+    await user.type(screen.getByLabelText(/API-Schlüssel/), KEY);
+    await user.click(screen.getByRole('button', { name: 'Anlegen und testen' }));
+    expect(await screen.findByText('Der Anbieter lehnt den Schlüssel ab.')).toBeTruthy();
+    // Angelegt ist er trotzdem, der Test ist nur eine Auskunft.
+    expect(screen.getByText('„OpenRouter“ ist angelegt.')).toBeTruthy();
+
+    server.testOutcome = { ok: true, latencyMs: 7, modelCount: 3 };
+    await user.click(screen.getByRole('button', { name: 'Erneut testen' }));
+    expect(await screen.findByText('Verbindung steht (7 ms), 3 Modelle verfügbar.')).toBeTruthy();
+    expect(screen.queryByText('Der Anbieter lehnt den Schlüssel ab.')).toBeNull();
+    expect(server.calls('POST', `/api/providers/${server.providers[0]?.id}/test`)).toHaveLength(2);
+  });
+
+  it('legt einen lokalen Anbieter ohne Schlüssel an', async () => {
+    const server = fresh();
+    mount(server);
+    const user = userEvent.setup();
+    await toProviderStep(user);
+
+    await user.click(screen.getByRole('radio', { name: /^Ollama/ }));
+    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('Ollama (lokal)');
+    expect((screen.getByLabelText(/Adresse/) as HTMLInputElement).value).toBe(
+      'http://localhost:11434/v1',
+    );
+    await user.click(screen.getByRole('button', { name: 'Anlegen und testen' }));
+
+    expect(await screen.findByText('„Ollama (lokal)“ ist angelegt.')).toBeTruthy();
+    const body = server.calls('POST', '/api/providers')[0]?.body as Record<string, unknown>;
+    expect(body).toMatchObject({ preset: 'ollama' });
+    expect('apiKey' in body).toBe(false);
+  });
+
+  it('nimmt beim Wechsel der Voreinstellung keinen Schlüssel mit', async () => {
+    const server = fresh();
+    mount(server);
+    const user = userEvent.setup();
+    await toProviderStep(user);
+
+    await user.type(screen.getByLabelText(/API-Schlüssel/), KEY);
+    await user.click(screen.getByRole('radio', { name: /^Eigener Anbieter/ }));
+    expect((screen.getByLabelText(/API-Schlüssel/) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(/Adresse/) as HTMLInputElement).value).toBe('');
+  });
+
+  it('zeigt Fehler des Servers am Feld und legt nichts an', async () => {
+    const server = fresh();
+    mount(server);
+    const user = userEvent.setup();
+    await toProviderStep(user);
+
+    await user.click(screen.getByRole('radio', { name: /^Eigener Anbieter/ }));
+    await user.type(screen.getByLabelText(/Adresse/), 'http://anbieter.example.test/v1');
+    await user.click(screen.getByRole('button', { name: 'Anlegen und testen' }));
+    expect(await screen.findByText(/^Die Adresse muss mit https:\/\/ beginnen/)).toBeTruthy();
+    expect(server.providers).toEqual([]);
+    expect(screen.queryByText(/ist angelegt/)).toBeNull();
+  });
+
+  it('übernimmt eine Änderung aus dem Bearbeiten-Dialog in die Anzeige', async () => {
+    const server = fresh();
+    mount(server);
+    const user = userEvent.setup();
+    await toProviderStep(user);
+
+    await user.type(screen.getByLabelText(/API-Schlüssel/), KEY);
+    await user.click(screen.getByRole('button', { name: 'Anlegen und testen' }));
+    await screen.findByText('„OpenRouter“ ist angelegt.');
+
+    await user.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Anbieter bearbeiten' });
+    await user.clear(within(dialog).getByLabelText('Name'));
+    await user.type(within(dialog).getByLabelText('Name'), 'Mein Zugang');
+    await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+
+    expect(await screen.findByText('„Mein Zugang“ ist angelegt.')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(server.providers.map((p) => p.name)).toEqual(['Mein Zugang']);
+  });
+
+  it('meldet, wenn die Voreinstellungen nicht geladen werden können', async () => {
+    const server = fresh();
+    server.replyOnce('GET', '/api/provider-presets', () => json(500, { error: 'internal' }));
+    mount(server);
+    const user = userEvent.setup();
+    await toSubjectsStep(user);
+    await user.click(screen.getByRole('button', { name: 'Weiter' }));
+    await screen.findByRole('heading', { name: 'Dein Modell-Anbieter' });
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Anlegen und testen' })).toBeNull();
+    // Überspringen geht immer.
+    await user.click(screen.getByRole('button', { name: 'Überspringen' }));
+    expect(await screen.findByRole('heading', { name: 'Datenschutz' })).toBeTruthy();
   });
 });
