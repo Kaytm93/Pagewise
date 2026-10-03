@@ -28,6 +28,9 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | Import von Fächern (JSON, CSV): Größen- und Mengengrenze, nur bekannte Felder, Fehlerantworten ohne Dateiinhalt | umgesetzt (Phase 1a) |
 | Bekannter Befund: `pnpm audit` meldet eine mittlere Lücke in `esbuild` über `drizzle-kit` (nur Entwicklung, läuft nie im Betrieb); die CI-Schwelle ist „high“ | beobachtet, wird mit dem nächsten `drizzle-kit`-Update behoben |
 | Datenbank, Sicherungen vor Migrationen und Unterordner nur für den Besitzer (600/700) | umgesetzt (Phase 1a), siehe D-017 und D-019 |
+| Anbieter-Schlüssel nur im Secret-Speicher, in Antworten nur `hasKey` und letzte vier Zeichen, Test belegt: kein Schlüssel in Antworten oder Fehlern | umgesetzt (Phase 1a), siehe D-026 |
+| Anfragen an Anbieter: `https` Pflicht (`http` nur für Loopback), keine Weiterleitungen, Fehler nur als Codes, Größen- und Mengengrenzen | umgesetzt (Phase 1a), siehe D-026 |
+| Hinweis bei kostenlosen Modellen („können Eingaben protokollieren“) im Formular und im Onboarding | umgesetzt (Phase 1a), siehe D-024 |
 | Bereinigung von Markdown, SVG, HTML | geplant (Phase 1b) |
 | EXIF-Entfernung, Upload-Prüfung | geplant (Phase 1c) |
 | PDF-Rendering ohne Netzwerk | geplant (Phase 1d) |
@@ -50,7 +53,8 @@ Alles, was Nutzerdaten enthält, liegt im Datenverzeichnis: Datenbank, Uploads, 
 
 - Ein lokales Skript kann keine Garantie geben. Der Scan erkennt bekannte Muster, nicht jedes Geheimnis. Prüfe Commits vor dem Veröffentlichen selbst.
 - Wer Zugriff auf den Rechner hat, hat Zugriff auf die Daten. Das Datenverzeichnis ist nicht verschlüsselt, nutze die Festplattenverschlüsselung deines Systems.
-- Modell-Anbieter sehen, was du ihnen sendest. Free-Modelle können Prompts protokollieren.
+- Modell-Anbieter sehen, was du ihnen sendest. Free-Modelle können Prompts protokollieren. Pagewise prüft die Datenschutzregeln der Anbieter nicht, auch nicht die von OpenRouter und der Anbieter dahinter.
+- Ein eingetragener Anbieter bekommt deinen Schlüssel und alles, was du an ihn schickst. Trägst du eine fremde Adresse ein, geht der Schlüssel dorthin. Pagewise prüft nur, dass die Adresse `https` nutzt, nicht, wem sie gehört.
 - Die Sicherungen vor Migrationen im Ordner `backups` sind unverschlüsselt, wie der Rest des Datenverzeichnisses.
 - Der Passcode-Schutz ist für ein privates Tailnet gedacht, nicht für das offene Internet.
 
