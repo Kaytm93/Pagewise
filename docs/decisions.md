@@ -89,9 +89,9 @@ Zugriff per `tailscale serve --bg <port>` (HTTPS im Tailnet, läuft nach Neustar
 
 Die Pipeline (`.github/workflows/ci.yml`) führt Lint, Typecheck, Tests, den Build der Oberfläche, den eigenen Secret-Scan, gitleaks über den Verlauf und `pnpm audit` aus. Dependabot aktualisiert npm-Pakete und die Actions wöchentlich.
 
-Verwendete Actions und geprüfte Versionen: `actions/checkout` v7 (neueste v7.0.1, 20. Juli 2026), `actions/setup-node` v7 (v7.0.0, 14. Juli 2026), `pnpm/action-setup` v6 (v6.1.0, 5. September 2026), `gitleaks/gitleaks-action` v3. Quellen: die jeweiligen Release-Seiten auf GitHub.
+Verwendete Actions und geprüfte Versionen: `actions/checkout` v7 (neueste v7.0.1, 20. Juli 2026), `actions/setup-node` v7 (v7.0.0, 14. Juli 2026), `pnpm/action-setup` v6 (v6.1.0, 5. September 2026), `gitleaks/gitleaks-action` v3 (siehe unten, ersetzt). Quellen: die jeweiligen Release-Seiten auf GitHub.
 
-- **gitleaks-Action und Lizenz:** Für Repositories in persönlichen Konten ist kein Lizenzschlüssel nötig, für Organisationen schon (kostenlos, Secret `GITLEAKS_LICENSE`). Wer das Projekt in eine Organisation forkt, setzt das Secret oder entfernt den Schritt. Der eigene Scan läuft in jedem Fall.
+- **gitleaks (geändert am 3. Oktober 2026):** Der erste CI-Lauf scheiterte im Schritt mit der gitleaks-Action (`unknown revision`), weil die Action beim ersten Push den Bereich ab dem Vorgänger des ersten Commits bildet und der Root-Commit keinen hat. Statt der Action läuft jetzt gitleaks v8.30.1 als Programm (`gitleaks git`, gesamter Verlauf) mit festem SHA-256. Version und Hash stammen von der Release-Seite des Projekts (Stand 3. Oktober 2026); passt der Hash nicht, bricht der Schritt ab. Vorteil: Auch in Organisationen ist kein Lizenzschlüssel nötig. Updates der Version macht der Maintainer von Hand (Version und Hash zusammen ändern), Dependabot sieht das Programm nicht.
 - **Offen:** Die Actions sind über Versions-Tags eingebunden, nicht über Commit-Hashes. Das Festnageln auf Hashes ist die stärkere Variante und steht aus, weil sich die Hashes hier nicht prüfen ließen. Dependabot hält die Tags aktuell.
 
 ## D-014 Versionen (Stand 3. Oktober 2026)

@@ -46,14 +46,21 @@ jobs:
       - name: Secret-Scan (eigenes Skript)
         run: node scripts/secret-scan.mjs --all
 
-      # gitleaks-action braucht für Repositories in einer Organisation einen kostenlosen
-      # Lizenzschlüssel (Secret GITLEAKS_LICENSE). Für persönliche Konten ist keiner nötig.
-      # Forks in Organisationen setzen das Secret oder entfernen diesen Schritt.
-      - name: Secret-Scan (gitleaks, Verlauf)
-        uses: gitleaks/gitleaks-action@v3
+      # gitleaks als Programm mit festem Hash statt gitleaks-Action: Die Action berechnet beim
+      # ersten Push den Bereich "Vorgänger des ersten Commits bis HEAD", und der fehlt beim
+      # Root-Commit (Lauf schlug mit "unknown revision" fehl). So wird der gesamte Verlauf geprüft
+      # und es ist auch in Organisationen kein Lizenzschlüssel nötig.
+      - name: Secret-Scan (gitleaks, gesamter Verlauf)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/gitleaks.tar.gz"
+          curl -sSfL -o "$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  ${archive}" | sha256sum -c -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" git --redact --no-banner --verbose .
 
       - name: Abhängigkeiten prüfen
         run: pnpm audit --audit-level high
