@@ -5,3 +5,9 @@ packages:
 # pnpm 10 führt Build-Skripte von Abhängigkeiten nur nach Freigabe aus.
 onlyBuiltDependencies:
   - esbuild
+
+# better-sqlite3 liefert fertige Binärdateien für macOS, Linux und Windows mit und lädt sie
+# direkt. Ein Kompilierschritt (node-gyp) ist unnötig und würde auf Rechnern ohne
+# Entwicklerwerkzeuge scheitern, deshalb bleibt er aus.
+ignoredBuiltDependencies:
+  - better-sqlite3
