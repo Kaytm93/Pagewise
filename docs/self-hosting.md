@@ -1,6 +1,6 @@
 # Selbst hosten
 
-Stand: Phase 0. Der Server läuft und beantwortet `GET /api/health`, die Oberfläche ist noch ein Gerüst. Die Tailscale-Schritte unten sind aus der Doku abgeleitet und werden in Phase 1a praktisch auf iPhone und iPad geprüft.
+Stand: Phase 1a. Der Server läuft, die Oberfläche ist als installierbare Web-App gebaut (Onboarding, Fächer, Chat). Die Tailscale-Schritte unten sind aus der Doku abgeleitet und noch nicht auf iPhone und iPad geprüft.
 
 ## Voraussetzungen
 
@@ -29,21 +29,39 @@ Passcode vergessen? Beende Pagewise und führe `pnpm --filter @pagewise/server r
 
 ## Zugriff von iPhone und iPad über Tailscale
 
-1. Aktiviere im Admin-Bereich deines Tailnets MagicDNS und HTTPS-Zertifikate (Abschnitt „HTTPS certificates“ in der Tailscale-Doku).
-2. Stelle den lokalen Server im Tailnet bereit:
+Pagewise lauscht nur auf dem eigenen Rechner (Loopback). Von iPhone und iPad aus erreichst du es über **Tailscale Serve**: Tailscale nimmt die Anfragen im privaten Tailnet per HTTPS an und reicht sie an den lokalen Server weiter.
+
+**Vorher beachten:** Wenn du HTTPS-Zertifikate im Tailnet einschaltest, werden die **Namen deiner Geräte in einem öffentlichen Zertifikatsverzeichnis (Certificate Transparency) veröffentlicht**. Tailscale schreibt dazu: „Do not enable the HTTPS feature if any of your machine names contain sensitive information.“ Gib dem Rechner, auf dem Pagewise läuft, deshalb einen neutralen Namen (ohne Namen von Personen, Schule oder Ähnlichem), bevor du HTTPS einschaltest.
+
+1. **MagicDNS und HTTPS einschalten.** Im Admin-Bereich von Tailscale unter „DNS“ MagicDNS aktivieren und „Enable HTTPS“ wählen. Fehlt HTTPS noch, fragt der Befehl in Schritt 2 selbst danach und öffnet eine Seite, auf der du es erlaubst.
+2. **Server bereitstellen** (auf dem Rechner, auf dem Pagewise läuft):
 
    ```bash
    tailscale serve --bg 3000
    tailscale serve status
    ```
 
-   `--bg` lässt die Freigabe im Hintergrund laufen, auch nach einem Neustart. Beenden: `tailscale serve reset`.
-3. Öffne auf dem Gerät `https://<rechnername>.<tailnet-name>.ts.net` in Safari.
-4. Ab Phase 1a: Teilen → „Zum Home-Bildschirm“ installiert die Web-App.
+   `3000` steht für `http://127.0.0.1:3000`, passe es an, wenn du `PAGEWISE_PORT` geändert hast. `--bg` lässt die Freigabe im Hintergrund laufen. Beenden: `tailscale serve reset`. Prüfe nach einem Neustart des Rechners mit `tailscale serve status`, ob die Freigabe noch da ist (ob sie einen Neustart übersteht, ist hier nicht geprüft). Wie die Befehlszeile auf dem Mac aufgerufen wird, hängt von der Tailscale-Variante ab, siehe die Quelle unten.
+3. **Auf dem Gerät öffnen.** Auf iPhone oder iPad muss Tailscale verbunden sein. Öffne in Safari die Adresse, die `tailscale serve status` anzeigt (`https://<rechnername>.<tailnet-name>.ts.net`). Beim ersten Mal legst du den Passcode fest (Einrichtungscode aus der Konsole).
+4. **Als App installieren.** Safari: Teilen → „Zum Home-Bildschirm“. Die App öffnet sich dann ohne Adressleiste. Auf iOS hat sie eigene Cookies, du meldest dich dort einmal neu mit dem Passcode an.
 
-**Niemals `tailscale funnel` verwenden.** Funnel macht den Dienst öffentlich im Internet erreichbar. Pagewise ist nur für dein privates Tailnet gedacht.
+**Niemals `tailscale funnel` verwenden.** Funnel macht den Dienst öffentlich im Internet erreichbar. Pagewise ist nur für dein privates Tailnet gedacht. Hast du es versehentlich benutzt, setze die Konfiguration mit `tailscale serve reset` zurück und prüfe danach mit `tailscale serve status`.
 
-Quelle: <https://tailscale.com/docs/reference/tailscale-cli/serve>
+### Was Serve an Pagewise weitergibt
+
+- Tailscale hängt die Header `X-Forwarded-Proto: https`, `X-Forwarded-Host` und `X-Forwarded-For` an. Pagewise nutzt `X-Forwarded-Proto`, um das Sitzungs-Cookie mit `Secure` zu setzen. Fehlt der Header, funktioniert die Anmeldung trotzdem (das Cookie ist dann ohne `Secure`, bleibt aber `HttpOnly` und `SameSite=Strict`).
+- Dazu kommen die Header `Tailscale-User-Login`, `Tailscale-User-Name` und `Tailscale-User-Profile-Pic` mit dem Konto, das die Anfrage stellt. Pagewise liest sie nicht. Der Zugang hängt allein am Passcode: Jedes Gerät in deinem Tailnet kann die Seite erreichen, aber nur mit Passcode hinein.
+
+### Noch nicht auf einem echten Gerät geprüft
+
+Alle Schritte stammen aus der Dokumentation und dem Quelltext von Tailscale und wurden hier **nicht** auf iPhone oder iPad ausprobiert. Zu prüfen sind: Anmeldung über die `ts.net`-Adresse (inklusive `Secure`-Cookie, wenn der Header ankommt), Installation auf dem Home-Bildschirm, Anmeldung in der installierten App, Eingabezeile mit eingeblendeter Tastatur (D-028) und ob eine laufende Antwort nach dem Aufwecken des Geräts weiterläuft (D-027).
+
+Quellen (abgerufen am 3. Oktober 2026):
+
+- Befehle und Optionen: <https://tailscale.com/docs/reference/tailscale-cli/serve>
+- Funktionsweise, Hinweis zu HTTPS und Identitäts-Headern: <https://tailscale.com/docs/features/tailscale-serve>
+- HTTPS-Zertifikate und Veröffentlichung der Gerätenamen: <https://tailscale.com/kb/1153/enabling-https>
+- Weitergegebene Header (`addProxyForwardedHeaders` in `ipn/ipnlocal/serve.go`): <https://github.com/tailscale/tailscale/blob/main/ipn/ipnlocal/serve.go>
 
 ## Rechner wach halten
 

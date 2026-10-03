@@ -83,7 +83,7 @@ Inter und Instrument Sans kommen über `@fontsource` ins Bundle, es gibt keine A
 
 ## D-013 Tailscale Serve
 
-Zugriff per `tailscale serve --bg <port>` (HTTPS im Tailnet, läuft nach Neustart weiter). Kein `tailscale funnel`. Laut Doku werden als Proxy-Ziel nur lokale HTTP-Dienste unterstützt. Quelle: <https://tailscale.com/docs/reference/tailscale-cli/serve>. HTTPS-Zertifikate und MagicDNS müssen im Tailnet aktiviert sein, das wird in Phase 1a praktisch geprüft.
+Zugriff per `tailscale serve --bg <port>` (HTTPS im Tailnet; ob die Freigabe einen Neustart übersteht, ist ungeprüft, siehe D-030). Kein `tailscale funnel`. Laut Doku werden als Proxy-Ziel nur lokale HTTP-Dienste unterstützt. Quelle: <https://tailscale.com/docs/reference/tailscale-cli/serve>. HTTPS-Zertifikate und MagicDNS müssen im Tailnet aktiviert sein, das wird in Phase 1a praktisch geprüft.
 
 ## D-015 CI (GitHub Actions), Stand 3. Oktober 2026
 
@@ -232,3 +232,12 @@ Geprüft am 3. Oktober 2026 gegen die Dokumentation der Anbieter, bevor Adressen
 - **Registrierung nur sicher.** Der Worker wird nur im Produktionsbau und nur in einem sicheren Kontext (HTTPS oder `localhost`) nach dem Laden der Seite registriert. In `pnpm dev` gibt es keinen Worker, damit Entwickeln nicht am Cache hängt.
 - **Zwischenspeicher des Servers.** `/assets/*` mit `Cache-Control: public, max-age=31536000, immutable`, alles andere Statische mit `no-cache` (immer nachfragen), `/api/*` weiter `no-store`.
 - **Offen bis zum Test auf iPhone und iPad.** Eine auf den Home-Bildschirm gelegte App hat auf iOS eigene Cookies und Speicher: man meldet sich dort einmal neu an. Ob die Eingabezeile mit Tastatur sichtbar bleibt (siehe D-028) und ob die Antwort nach dem Aufwecken weiterläuft, prüft Kay auf den Geräten. Geprüft hier: Registrierung, Aktivierung, Speicherinhalt und Offline-Seite in Chromium über `localhost`.
+
+## D-030 Tailscale Serve: was geprüft ist und was nicht
+
+- **Quellen geprüft (3. Oktober 2026).** Befehle: `tailscale serve [flags] <target>`, Flags `--bg`, `--https`, `--http`, `--set-path`, Unterbefehle `status` und `reset`; `tailscale serve 3000` reicht an `http://127.0.0.1:3000` weiter und nutzt standardmäßig HTTPS. Fehlt HTTPS im Tailnet, bietet der Befehl an, es zu aktivieren. Quellen stehen in [self-hosting.md](self-hosting.md).
+- **Korrektur.** D-013 behauptete, die Freigabe laufe nach einem Neustart weiter. Das steht in keiner geprüften Quelle und ist gestrichen. Die Anleitung bittet stattdessen, nach einem Neustart `tailscale serve status` zu prüfen.
+- **Gerätenamen werden öffentlich.** Mit HTTPS-Zertifikaten erscheinen die Gerätenamen im öffentlichen Certificate-Transparency-Verzeichnis (laut Tailscale). Weil Gerätenamen leicht Personen- oder Schulbezug haben, steht die Warnung vor dem Einschalten ganz oben in der Anleitung. Das passt zur Regel, dass nichts Persönliches nach außen gelangt.
+- **Weitergegebene Header.** Laut Quelltext von Tailscale (`addProxyForwardedHeaders`, Hauptzweig) setzt Serve `X-Forwarded-Host`, `X-Forwarded-For` und, bei TLS, `X-Forwarded-Proto: https`; außerdem bleibt der `Host`-Header der Anfrage erhalten, und Identitäts-Header (`Tailscale-User-*`) kommen dazu. Pagewise nutzt nur `X-Forwarded-Proto` für das `Secure`-Flag des Cookies. Die CSRF-Prüfung hängt an `Sec-Fetch-Site` und dem Token, nicht an `Host` oder `Origin`, und ist deshalb hinter dem Proxy unverändert wirksam. Ob die auf deinem Rechner installierte Tailscale-Version den Header schon setzt, ist ungeprüft. Fehlt er, funktioniert alles, nur ohne `Secure`.
+- **Identität.** Die `Tailscale-User-*`-Header werden bewusst nicht ausgewertet. Der Zugang bleibt der Passcode, damit Pagewise nicht von einem Header abhängt, den ein anderer Proxy fälschen könnte.
+- **Offen.** Anmeldung über die `ts.net`-Adresse, Installation und Anmeldung in der Home-Bildschirm-App, Tastatur und Aufwachen testet Kay auf iPhone und iPad.
