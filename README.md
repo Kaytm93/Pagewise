@@ -6,7 +6,9 @@ Ein selbst gehosteter Schul-Workspace für den Browser. Jede Person richtet ihre
 
 ## Was Pagewise werden soll
 
-- **Fächer und Untergruppen**, die du selbst anlegst (z. B. „Referat“ oder „Schulaufgabe“). Chats gehören fest zu einem Fach.
+- **Fächer und Untergruppen**: aus einem Katalog von über 60 neutralen Vorlagen (Sprachen, Naturwissenschaften, Gesellschaft, Kunst, Sport …) mit Suche oder frei angelegt, dazu Untergruppen (z. B. „Referat“ oder „Schulaufgabe“). Chats gehören fest zu einem Fach.
+- **Standard-Chat** für Fragen ohne Fach: ein Klick auf „Pagewise“. Er liegt im eingebauten Fach „Standard“.
+- **Standard-Prompt je Fach**: ein neutraler, für alle gleicher Text, der gilt, solange du nichts Eigenes einträgst. Du kannst ihn ändern und jederzeit zurücksetzen.
 - **Hefteinträge** mit Formeln, Funktionsgraphen, chemischen Strukturen und Noten, einzeln angelegt oder aus einem Chat oder Foto erzeugt.
 - **Export als PDF und PPTX.**
 - **Fotos von Heft und Tafel** als Eingabe für ein Vision-Modell.
@@ -14,7 +16,7 @@ Ein selbst gehosteter Schul-Workspace für den Browser. Jede Person richtet ihre
 - **Agent-CLI-Anbindung** für lokale Coding-Agenten (zuerst Claude Code), die in einem eigenen Workspace-Ordner Dateien erzeugen.
 - **Erreichbar im eigenen Tailscale-Netz** vom iPhone, iPad und Mac, als installierbare Web-App.
 
-Die Anwendung startet vollständig leer. Dieses Repository enthält weder Fächerlisten noch Lehrkräfte, Stundenpläne oder fertige Prompts, nur Code, neutrale Vorlagen und erfundene Beispiele.
+Die Anwendung startet vollständig leer. Dieses Repository enthält keine Fächerlisten einzelner Personen und keine Lehrkräfte, Stundenpläne oder persönlichen Prompts, nur Code, neutrale Vorlagen (Fachnamen, neutrale Standardtexte) und erfundene Beispiele.
 
 ## Schnellstart (Entwicklung)
 

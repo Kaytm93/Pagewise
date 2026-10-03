@@ -34,7 +34,7 @@ pnpm --filter @pagewise/server reset-passcode   # Passcode vergessen: entfernt P
 - `scripts/`: Repo-Werkzeuge (Secret-Scan, Privacy-Check, Hook-Installation)
 - `tests/`: Repo-weite Tests (Hook, Scanner)
 - `docs/`: Architektur, Entscheidungen, Sicherheit, Self-Hosting
-- `config/examples/` und `prompts/`: neutrale Vorlagen
+- `config/` (`subject-catalog.json`: Katalog der Fachvorlagen, `examples/`: Beispieldatei) und `prompts/` (`defaults/`: Standard-Prompts je Fach, Platzhalter): neutrale Vorlagen
 
 ## Arbeitsweise
 

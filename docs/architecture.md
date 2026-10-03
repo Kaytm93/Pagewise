@@ -25,7 +25,7 @@ In Phase 1 laufen Server und Worker als ein Prozess. Der Worker holt Aufträge t
 
 ## Datenmodell (Vorschlag)
 
-`Profile`, `Subject`, `Group` (Untergruppe), `Chat`, `Message`, `Note` (Hefteintrag), `Asset`, `Job`, `ProviderConfig`, `EngineProfile`. Umgesetzt sind bisher `profile`, `subjects` und `subject_groups` (D-017), `providers` und `settings` (D-026) sowie `chats` und `messages` (D-027), der Rest kommt mit den Inkrementen, die ihn brauchen. Navigation: Fach → Untergruppe → Chats oder Hefteinträge, zusätzlich je Fach eine Ansicht „Allgemein“ ohne Untergruppe. Chats bleiben in ihrem Fach, es gibt keine fachübergreifende Chatliste. Secrets liegen nie im Klartext in der Datenbank.
+`Profile`, `Subject`, `Group` (Untergruppe), `Chat`, `Message`, `Note` (Hefteintrag), `Asset`, `Job`, `ProviderConfig`, `EngineProfile`. Umgesetzt sind bisher `profile`, `subjects` (mit `kind` und `template_key`, D-038) und `subject_groups` (D-017), `providers` und `settings` (D-026) sowie `chats` und `messages` (D-027), der Rest kommt mit den Inkrementen, die ihn brauchen. Navigation: Fach → Untergruppe → Chats oder Hefteinträge, zusätzlich je Fach eine Ansicht „Allgemein“ ohne Untergruppe. Chats bleiben in ihrem Fach, es gibt keine fachübergreifende Chatliste. Secrets liegen nie im Klartext in der Datenbank.
 
 ## Chat
 
@@ -44,10 +44,14 @@ In dieser Reihenfolge zusammengesetzt:
 
 0. Technische Ebene (im Code, immer aktiv): erklärt dem Modell die Block-Syntax der Hefteinträge
 1. Allgemeiner Schul-Prompt (vom Nutzer)
-2. Fach-Prompt (vom Nutzer)
+2. Fach-Prompt: eigener Text des Nutzers, sonst der mitgelieferte **Standardtext** des Fachs (D-034)
 3. Untergruppen-Zusatz (optional, vom Nutzer)
 
-Variablen wie `{{bundesland}}`, `{{schulform}}`, `{{jahrgangsstufe}}`, `{{fach}}` und `{{untergruppe}}` kommen aus dem lokalen Profil. Nichts ist vorbelegt. Umgesetzt (Phase 1a, c): `apps/server/src/prompts`, Details und Grenzen in [decisions.md](decisions.md), D-025.
+Variablen wie `{{bundesland}}`, `{{schulform}}`, `{{jahrgangsstufe}}`, `{{fach}}` und `{{untergruppe}}` kommen aus dem lokalen Profil. Schicht 1 und 3 sind nie vorbelegt. Die Standardtexte liegen als neutrale Markdown-Dateien in `prompts/defaults/` und gelten für alle Nutzer gleich, solange nichts Eigenes eingetragen ist. Umgesetzt: `apps/server/src/prompts`, Details und Grenzen in [decisions.md](decisions.md), D-025 und D-034.
+
+## Fächer, Katalog und das Fach „Standard“
+
+Fächer entstehen aus einem Katalog neutraler Vorlagen (`config/subject-catalog.json`, D-037) oder von Hand. Daneben gibt es genau ein eingebautes Fach „Standard“ für den fachunabhängigen Chat, erreichbar über den Namen „Pagewise“ (D-038). Es ist nicht löschbar, hat Untergruppen, Modell und Prompt wie jedes Fach und wird nach „Alles löschen“ neu angelegt.
 
 ## Verzeichnisse im Repo
 
@@ -58,7 +62,8 @@ Variablen wie `{{bundesland}}`, `{{schulform}}`, `{{jahrgangsstufe}}`, `{{fach}}
 | `apps/web` | Oberfläche (Chat unter `src/screens/chat`), Design-Tokens, i18n |
 | `scripts` | Secret-Scan, Privacy-Check, Hook-Installation |
 | `tests` | Repo-weite Tests |
-| `config/examples`, `prompts` | neutrale Vorlagen |
+| `config` | `subject-catalog.json` (Katalog der Fachvorlagen), `examples/` (Beispieldatei für den Import) |
+| `prompts` | `defaults/` (Standard-Prompts je Fach), Platzhalter für eigene Prompts |
 | `docs` | Dokumentation |
 
 ## Phasen

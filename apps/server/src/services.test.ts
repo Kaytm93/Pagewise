@@ -25,7 +25,14 @@ describe('createServices', () => {
     expect(readdirSync(dataDir).sort()).toEqual(
       expect.arrayContaining(['assets', 'backups', 'logs', 'pagewise.db', 'secrets', 'workspaces']),
     );
-    expect(services.database.db.select().from(subjects).all()).toEqual([]);
+    // Frisch ist nur das eingebaute Fach „Standard“ da, nichts vom Nutzer.
+    expect(
+      services.database.db
+        .select()
+        .from(subjects)
+        .all()
+        .map((row) => [row.name, row.kind]),
+    ).toEqual([['Standard', 'default']]);
 
     await services.storage.put('beispiel.txt', 'x');
     expect(await services.storage.exists('beispiel.txt')).toBe(true);
@@ -41,6 +48,14 @@ describe('createServices', () => {
     services.close();
 
     services = createServices(dataDir);
-    expect(services.database.db.select().from(subjects).all()).toHaveLength(1);
+    // Das eingebaute Fach entsteht nicht doppelt, das eigene bleibt.
+    expect(
+      services.database.db
+        .select()
+        .from(subjects)
+        .all()
+        .map((row) => row.name)
+        .sort(),
+    ).toEqual(['Beispielfach', 'Standard']);
   });
 });

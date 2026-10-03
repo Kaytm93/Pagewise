@@ -71,7 +71,7 @@ describe('composePrompt', () => {
   it('besteht ohne Nutzertext nur aus der technischen Schicht', () => {
     const result = composePrompt(empty, values);
     expect(result.system).toBe(TECHNICAL_LAYER);
-    expect(result.layers).toEqual([{ layer: 0, text: TECHNICAL_LAYER }]);
+    expect(result.layers).toEqual([{ layer: 0, text: TECHNICAL_LAYER, origin: 'code' }]);
   });
 
   it('enthält keine Schulinhalte und keine Variablen in der technischen Schicht', () => {

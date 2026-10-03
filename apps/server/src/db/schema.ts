@@ -79,8 +79,17 @@ export const subjects = sqliteTable(
     hoursPerWeek: integer('hours_per_week'),
     /** Kennung eines Linien-Icons der Oberfläche, optional. Unbekannte Kennungen zeigen das Standard-Icon. */
     icon: text('icon'),
-    /** Fach-Prompt (Schicht 2), vom Nutzer geschrieben. Nie vorbelegt. */
+    /**
+     * Eigener Fach-Prompt (Schicht 2), vom Nutzer geschrieben. `NULL` heißt „Standard aktiv“: Es gilt der
+     * mitgelieferte Standardtext des Fachs (D-034). Ein eigener Text verdrängt ihn.
+     */
     systemPrompt: text('system_prompt'),
+    /** Schlüssel der Katalogvorlage, aus der das Fach entstand (verknüpft den Standard-Prompt), sonst `NULL`. */
+    templateKey: text('template_key'),
+    /** `default` ist das eingebaute Fach „Standard“ für den fachunabhängigen Chat (nicht löschbar, genau eines). */
+    kind: text('kind', { enum: ['subject', 'default'] })
+      .notNull()
+      .default('subject'),
     /** Gewähltes Modell für dieses Fach (Anbieter und Modell zusammen), sonst gilt das Standardmodell. */
     modelProviderId: text('model_provider_id').references(() => providers.id, {
       onDelete: 'set null',
@@ -89,7 +98,10 @@ export const subjects = sqliteTable(
     position: integer('position').notNull().default(0),
     ...timestamps,
   },
-  (table) => [uniqueIndex('subjects_name_nocase').on(sql`lower(${table.name})`)],
+  (table) => [
+    uniqueIndex('subjects_name_nocase').on(sql`lower(${table.name})`),
+    uniqueIndex('subjects_single_default').on(table.kind).where(sql`${table.kind} = 'default'`),
+  ],
 );
 
 /** Untergruppe eines Fachs (z. B. ein Themenblock). Wird mit dem Fach gelöscht. */

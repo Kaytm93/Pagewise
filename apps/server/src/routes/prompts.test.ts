@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { PROMPT_MAX_CHARACTERS } from '../http/fields';
 import { TECHNICAL_LAYER } from '../prompts/compose';
@@ -36,8 +39,11 @@ describe('Prompt-Schichten', () => {
     const subject = await addSubject();
     const group = await addGroup(subject.id);
     expect((await session.call('GET', '/api/prompts/general')).body).toEqual({ text: null });
+    // Ohne mitgelieferten Standardtext gibt es auch für das Fach nichts (hier hat das Testsystem keine).
     expect((await session.call('GET', `/api/prompts/subjects/${subject.id}`)).body).toEqual({
       text: null,
+      defaultText: null,
+      source: 'none',
     });
     expect((await session.call('GET', `/api/prompts/groups/${group.id}`)).body).toEqual({
       text: null,
@@ -73,6 +79,8 @@ describe('Prompt-Schichten', () => {
     await session.call('PUT', `/api/prompts/groups/${group.id}`, { text: 'Gruppen-Text' });
     expect((await session.call('GET', `/api/prompts/subjects/${subject.id}`)).body).toEqual({
       text: 'Fach-Text',
+      defaultText: null,
+      source: 'custom',
     });
     expect((await session.call('GET', `/api/prompts/groups/${group.id}`)).body).toEqual({
       text: 'Gruppen-Text',
@@ -129,7 +137,7 @@ describe('Prompt-Schichten', () => {
       expect(reply.status).toBe(200);
       expect(reply.body).toEqual({
         system: TECHNICAL_LAYER,
-        layers: [{ layer: 0, text: TECHNICAL_LAYER }],
+        layers: [{ layer: 0, text: TECHNICAL_LAYER, origin: 'code' }],
         missing: [],
       });
     });
@@ -163,10 +171,10 @@ describe('Prompt-Schichten', () => {
           'Thema: Beispiel-Thema in Beispielfach A',
         ].join('\n\n'),
         layers: [
-          { layer: 0, text: TECHNICAL_LAYER },
-          { layer: 1, text: 'Allgemein: Beispielland, Beispielschule, Stufe 11' },
-          { layer: 2, text: 'Fach: Beispielfach A' },
-          { layer: 3, text: 'Thema: Beispiel-Thema in Beispielfach A' },
+          { layer: 0, text: TECHNICAL_LAYER, origin: 'code' },
+          { layer: 1, text: 'Allgemein: Beispielland, Beispielschule, Stufe 11', origin: 'custom' },
+          { layer: 2, text: 'Fach: Beispielfach A', origin: 'custom' },
+          { layer: 3, text: 'Thema: Beispiel-Thema in Beispielfach A', origin: 'custom' },
         ],
         missing: [],
       });
@@ -214,6 +222,135 @@ describe('Prompt-Schichten', () => {
       expect((await session.call('GET', `/api/prompts/preview?subjectId=${unknown}`)).status).toBe(
         404,
       );
+    });
+  });
+
+  describe('Standard-Prompts je Fach (D-034)', () => {
+    let defaultsHarness: Harness;
+    let defaultsSession: Session;
+    let dir: string;
+
+    beforeEach(async () => {
+      dir = mkdtempSync(join(tmpdir(), 'pagewise-defaults-'));
+      const catalog = join(dir, 'katalog.json');
+      writeFileSync(
+        catalog,
+        JSON.stringify({
+          version: 2,
+          categories: [{ id: 'beispiele', name: 'Beispiele' }],
+          subjects: [
+            {
+              key: 'beispiel-a',
+              name: 'Beispielfach A',
+              category: 'beispiele',
+              aliases: ['Fach A'],
+            },
+            { key: 'beispiel-b', name: 'Beispielfach B', category: 'beispiele' },
+          ],
+        }),
+      );
+      const defaults = join(dir, 'standards');
+      mkdirSync(defaults);
+      writeFileSync(join(defaults, 'beispiel-a.md'), 'Standard A für {{fach}}.\n');
+      writeFileSync(join(defaults, '_generic.md'), 'Allgemeiner Standard für {{fach}}.\n');
+      writeFileSync(join(defaults, 'standard.md'), 'Standard für den fachlosen Chat.\n');
+      defaultsHarness = createHarness({ catalogFile: catalog, defaultsDir: defaults });
+      defaultsSession = await defaultsHarness.signIn();
+    });
+    afterEach(() => {
+      defaultsHarness.close();
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    const add = async (name: string, templateKey?: string) =>
+      (await defaultsSession.call('POST', '/api/subjects', { name, templateKey }))
+        .body as unknown as { id: string };
+    const read = async (id: string) =>
+      (await defaultsSession.call('GET', `/api/prompts/subjects/${id}`)).body;
+    const preview = async (id: string) =>
+      (await defaultsSession.call('GET', `/api/prompts/preview?subjectId=${id}`)).body as {
+        system: string;
+        layers: { layer: number; text: string; origin: string }[];
+      };
+
+    it('gilt ohne eigenen Text und kommt aus der Vorlage des Fachs', async () => {
+      const subject = await add('Eigener Name', 'beispiel-a');
+      expect(await read(subject.id)).toEqual({
+        text: null,
+        defaultText: 'Standard A für {{fach}}.',
+        source: 'default',
+      });
+      const result = await preview(subject.id);
+      expect(result.layers.at(-1)).toEqual({
+        layer: 2,
+        text: 'Standard A für Eigener Name.',
+        origin: 'default',
+      });
+      expect(result.system).toContain('Standard A für Eigener Name.');
+    });
+
+    it('greift auch bei einem von Hand getippten Namen oder Suchbegriff', async () => {
+      for (const name of ['beispielfach a', 'Fach A']) {
+        const subject = await add(name);
+        expect((await read(subject.id)) as { source: string }).toMatchObject({
+          source: 'default',
+          defaultText: 'Standard A für {{fach}}.',
+        });
+      }
+    });
+
+    it('fällt für Fächer ohne eigenen Standardtext auf den allgemeinen Text zurück', async () => {
+      const unknown = await add('Ganz Eigenes Fach');
+      const known = await add('Beispielfach B', 'beispiel-b');
+      for (const subject of [unknown, known]) {
+        expect(await read(subject.id)).toMatchObject({
+          source: 'default',
+          defaultText: 'Allgemeiner Standard für {{fach}}.',
+        });
+      }
+    });
+
+    it('bekommt für das eingebaute Fach „Standard“ den Text `standard`', async () => {
+      const list = (await defaultsSession.call('GET', '/api/subjects')).body as {
+        defaultSubject: { id: string };
+      };
+      expect(await read(list.defaultSubject.id)).toMatchObject({
+        source: 'default',
+        defaultText: 'Standard für den fachlosen Chat.',
+      });
+    });
+
+    it('wird von einem eigenen Text verdrängt und lässt sich zurücksetzen', async () => {
+      const subject = await add('Beispielfach A');
+      const saved = await defaultsSession.call('PUT', `/api/prompts/subjects/${subject.id}`, {
+        text: 'Mein Text für {{fach}}',
+      });
+      expect(saved.body).toEqual({
+        text: 'Mein Text für {{fach}}',
+        defaultText: 'Standard A für {{fach}}.',
+        source: 'custom',
+      });
+      const custom = await preview(subject.id);
+      expect(custom.layers.at(-1)).toEqual({
+        layer: 2,
+        text: 'Mein Text für Beispielfach A',
+        origin: 'custom',
+      });
+      expect(custom.system).not.toContain('Standard A');
+
+      // Ein leerer Text stellt den Standard wieder her.
+      const reset = await defaultsSession.call('PUT', `/api/prompts/subjects/${subject.id}`, {
+        text: '',
+      });
+      expect(reset.body).toMatchObject({ text: null, source: 'default' });
+      expect((await preview(subject.id)).system).toContain('Standard A für Beispielfach A.');
+    });
+
+    it('wirkt auch im Chat: der Anbieter bekommt den Standardtext als System-Prompt', async () => {
+      // Der Zusammenbau ist derselbe wie bei der Vorschau (eine Funktion für beide).
+      const subject = await add('Beispielfach A');
+      const result = await preview(subject.id);
+      expect(result.system.split('\n\n')).toContain('Standard A für Beispielfach A.');
     });
   });
 });

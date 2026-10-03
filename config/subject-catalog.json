@@ -1,0 +1,454 @@
+{
+  "version": 2,
+  "categories": [
+    {
+      "id": "sprachen",
+      "name": "Sprachen"
+    },
+    {
+      "id": "mint",
+      "name": "Mathematik und Naturwissenschaften"
+    },
+    {
+      "id": "gesellschaft",
+      "name": "Gesellschaft, Religion, Philosophie"
+    },
+    {
+      "id": "kunst",
+      "name": "Kunst, Musik, Medien"
+    },
+    {
+      "id": "sport",
+      "name": "Sport"
+    },
+    {
+      "id": "beruf",
+      "name": "Beruf, Haushalt, Wirtschaft"
+    },
+    {
+      "id": "sonstiges",
+      "name": "Sonstiges"
+    }
+  ],
+  "subjects": [
+    {
+      "key": "deutsch",
+      "name": "Deutsch",
+      "category": "sprachen",
+      "icon": "book",
+      "aliases": ["Muttersprache"]
+    },
+    {
+      "key": "englisch",
+      "name": "Englisch",
+      "category": "sprachen",
+      "icon": "languages",
+      "aliases": ["English"]
+    },
+    {
+      "key": "franzoesisch",
+      "name": "Französisch",
+      "category": "sprachen",
+      "icon": "languages",
+      "aliases": ["Franz"]
+    },
+    {
+      "key": "latein",
+      "name": "Latein",
+      "category": "sprachen",
+      "icon": "languages",
+      "aliases": ["Latinum"]
+    },
+    {
+      "key": "griechisch",
+      "name": "Griechisch",
+      "category": "sprachen",
+      "icon": "languages",
+      "aliases": ["Altgriechisch", "Neugriechisch"]
+    },
+    {
+      "key": "spanisch",
+      "name": "Spanisch",
+      "category": "sprachen",
+      "icon": "languages"
+    },
+    {
+      "key": "italienisch",
+      "name": "Italienisch",
+      "category": "sprachen",
+      "icon": "languages"
+    },
+    {
+      "key": "russisch",
+      "name": "Russisch",
+      "category": "sprachen",
+      "icon": "languages"
+    },
+    {
+      "key": "tuerkisch",
+      "name": "Türkisch",
+      "category": "sprachen",
+      "icon": "languages"
+    },
+    {
+      "key": "chinesisch",
+      "name": "Chinesisch",
+      "category": "sprachen",
+      "icon": "languages",
+      "aliases": ["Mandarin"]
+    },
+    {
+      "key": "japanisch",
+      "name": "Japanisch",
+      "category": "sprachen",
+      "icon": "languages"
+    },
+    {
+      "key": "polnisch",
+      "name": "Polnisch",
+      "category": "sprachen",
+      "icon": "languages"
+    },
+    {
+      "key": "niederlaendisch",
+      "name": "Niederländisch",
+      "category": "sprachen",
+      "icon": "languages"
+    },
+    {
+      "key": "portugiesisch",
+      "name": "Portugiesisch",
+      "category": "sprachen",
+      "icon": "languages"
+    },
+    {
+      "key": "arabisch",
+      "name": "Arabisch",
+      "category": "sprachen",
+      "icon": "languages"
+    },
+    {
+      "key": "hebraeisch",
+      "name": "Hebräisch",
+      "category": "sprachen",
+      "icon": "languages"
+    },
+    {
+      "key": "daz",
+      "name": "Deutsch als Zweitsprache",
+      "category": "sprachen",
+      "icon": "book",
+      "aliases": ["DaZ"]
+    },
+    {
+      "key": "literatur",
+      "name": "Literatur",
+      "category": "sprachen",
+      "icon": "pen",
+      "aliases": ["Literaturkurs"]
+    },
+    {
+      "key": "mathematik",
+      "name": "Mathematik",
+      "category": "mint",
+      "icon": "calculator",
+      "aliases": ["Mathe"]
+    },
+    {
+      "key": "physik",
+      "name": "Physik",
+      "category": "mint",
+      "icon": "atom"
+    },
+    {
+      "key": "chemie",
+      "name": "Chemie",
+      "category": "mint",
+      "icon": "flask"
+    },
+    {
+      "key": "biologie",
+      "name": "Biologie",
+      "category": "mint",
+      "icon": "microscope",
+      "aliases": ["Bio"]
+    },
+    {
+      "key": "naturwissenschaften",
+      "name": "Naturwissenschaften",
+      "category": "mint",
+      "icon": "flask",
+      "aliases": ["NaWi", "NwT", "Natur und Technik"]
+    },
+    {
+      "key": "informatik",
+      "name": "Informatik",
+      "category": "mint",
+      "icon": "code",
+      "aliases": ["Info"]
+    },
+    {
+      "key": "astronomie",
+      "name": "Astronomie",
+      "category": "mint",
+      "icon": "atom"
+    },
+    {
+      "key": "technik",
+      "name": "Technik",
+      "category": "mint",
+      "icon": "atom",
+      "aliases": ["Werken und Technik"]
+    },
+    {
+      "key": "geschichte",
+      "name": "Geschichte",
+      "category": "gesellschaft",
+      "icon": "landmark"
+    },
+    {
+      "key": "geographie",
+      "name": "Geographie",
+      "category": "gesellschaft",
+      "icon": "globe",
+      "aliases": ["Erdkunde", "Geografie"]
+    },
+    {
+      "key": "politik",
+      "name": "Politik",
+      "category": "gesellschaft",
+      "icon": "scale",
+      "aliases": ["Sozialkunde", "Gemeinschaftskunde", "PoWi", "Politik und Wirtschaft"]
+    },
+    {
+      "key": "wirtschaft",
+      "name": "Wirtschaft",
+      "category": "gesellschaft",
+      "icon": "landmark",
+      "aliases": ["WiSo", "Wirtschaftslehre"]
+    },
+    {
+      "key": "recht",
+      "name": "Recht",
+      "category": "gesellschaft",
+      "icon": "scale",
+      "aliases": ["Wirtschaft und Recht"]
+    },
+    {
+      "key": "sozialwissenschaften",
+      "name": "Sozialwissenschaften",
+      "category": "gesellschaft",
+      "icon": "globe",
+      "aliases": ["Gesellschaftslehre"]
+    },
+    {
+      "key": "paedagogik",
+      "name": "Pädagogik",
+      "category": "gesellschaft",
+      "icon": "book"
+    },
+    {
+      "key": "psychologie",
+      "name": "Psychologie",
+      "category": "gesellschaft",
+      "icon": "book"
+    },
+    {
+      "key": "philosophie",
+      "name": "Philosophie",
+      "category": "gesellschaft",
+      "icon": "book"
+    },
+    {
+      "key": "ethik",
+      "name": "Ethik",
+      "category": "gesellschaft",
+      "icon": "scale",
+      "aliases": ["Werte und Normen", "LER"]
+    },
+    {
+      "key": "religion",
+      "name": "Religion",
+      "category": "gesellschaft",
+      "icon": "book",
+      "aliases": ["Religionslehre"]
+    },
+    {
+      "key": "religion-evangelisch",
+      "name": "Evangelische Religion",
+      "category": "gesellschaft",
+      "icon": "book",
+      "aliases": ["Ev. Reli"]
+    },
+    {
+      "key": "religion-katholisch",
+      "name": "Katholische Religion",
+      "category": "gesellschaft",
+      "icon": "book",
+      "aliases": ["Kath. Reli"]
+    },
+    {
+      "key": "religion-islamisch",
+      "name": "Islamischer Religionsunterricht",
+      "category": "gesellschaft",
+      "icon": "book",
+      "aliases": ["Islam"]
+    },
+    {
+      "key": "religion-juedisch",
+      "name": "Jüdische Religion",
+      "category": "gesellschaft",
+      "icon": "book"
+    },
+    {
+      "key": "religion-orthodox",
+      "name": "Orthodoxe Religion",
+      "category": "gesellschaft",
+      "icon": "book"
+    },
+    {
+      "key": "sachunterricht",
+      "name": "Sachunterricht",
+      "category": "gesellschaft",
+      "icon": "leaf",
+      "aliases": ["Heimat- und Sachunterricht", "HSU"]
+    },
+    {
+      "key": "kunst",
+      "name": "Kunst",
+      "category": "kunst",
+      "icon": "palette",
+      "aliases": ["Bildende Kunst"]
+    },
+    {
+      "key": "musik",
+      "name": "Musik",
+      "category": "kunst",
+      "icon": "music"
+    },
+    {
+      "key": "darstellendes-spiel",
+      "name": "Darstellendes Spiel",
+      "category": "kunst",
+      "icon": "pen",
+      "aliases": ["Theater", "DS"]
+    },
+    {
+      "key": "werken",
+      "name": "Werken",
+      "category": "kunst",
+      "icon": "palette",
+      "aliases": ["Gestalten"]
+    },
+    {
+      "key": "textiles-gestalten",
+      "name": "Textiles Gestalten",
+      "category": "kunst",
+      "icon": "palette",
+      "aliases": ["Textilarbeit", "Handarbeit"]
+    },
+    {
+      "key": "medienbildung",
+      "name": "Medienbildung",
+      "category": "kunst",
+      "icon": "code",
+      "aliases": ["Medien"]
+    },
+    {
+      "key": "sport",
+      "name": "Sport",
+      "category": "sport",
+      "icon": "sport",
+      "aliases": ["Leibesübungen"]
+    },
+    {
+      "key": "sporttheorie",
+      "name": "Sporttheorie",
+      "category": "sport",
+      "icon": "sport"
+    },
+    {
+      "key": "haushalt-ernaehrung",
+      "name": "Haushalt und Ernährung",
+      "category": "beruf",
+      "icon": "leaf",
+      "aliases": ["Hauswirtschaft", "Ernährung und Konsum"]
+    },
+    {
+      "key": "berufsorientierung",
+      "name": "Berufsorientierung",
+      "category": "beruf",
+      "icon": "landmark",
+      "aliases": ["Studien- und Berufsorientierung", "StuBO"]
+    },
+    {
+      "key": "betriebswirtschaft",
+      "name": "Betriebswirtschaft",
+      "category": "beruf",
+      "icon": "landmark",
+      "aliases": ["BWL"]
+    },
+    {
+      "key": "rechnungswesen",
+      "name": "Rechnungswesen",
+      "category": "beruf",
+      "icon": "calculator"
+    },
+    {
+      "key": "seminar",
+      "name": "Seminar",
+      "category": "sonstiges",
+      "icon": "pen",
+      "aliases": ["P-Seminar", "W-Seminar"]
+    },
+    {
+      "key": "projektkurs",
+      "name": "Projektkurs",
+      "category": "sonstiges",
+      "icon": "pen",
+      "aliases": ["Projekt"]
+    },
+    {
+      "key": "facharbeit",
+      "name": "Facharbeit",
+      "category": "sonstiges",
+      "icon": "pen",
+      "aliases": ["Seminararbeit"]
+    },
+    {
+      "key": "wahlfach",
+      "name": "Wahlfach",
+      "category": "sonstiges",
+      "icon": "book",
+      "aliases": ["Wahlunterricht"]
+    },
+    {
+      "key": "arbeitsgemeinschaft",
+      "name": "Arbeitsgemeinschaft",
+      "category": "sonstiges",
+      "icon": "book",
+      "aliases": ["AG"]
+    },
+    {
+      "key": "foerderunterricht",
+      "name": "Förderunterricht",
+      "category": "sonstiges",
+      "icon": "book",
+      "aliases": ["Nachhilfe", "Förderkurs"]
+    },
+    {
+      "key": "methodentraining",
+      "name": "Methodentraining",
+      "category": "sonstiges",
+      "icon": "book",
+      "aliases": ["Lernen lernen"]
+    },
+    {
+      "key": "klassenlehrerstunde",
+      "name": "Klassenlehrerstunde",
+      "category": "sonstiges",
+      "icon": "book",
+      "aliases": ["Klassenrat"]
+    }
+  ]
+}

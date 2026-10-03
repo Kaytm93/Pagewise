@@ -103,7 +103,9 @@ describe('Alles löschen', () => {
     const reply = await erase();
     expect(reply.status).toBe(204);
 
-    expect((await session.call('GET', '/api/subjects')).body.subjects).toEqual([]);
+    const subjectsAfter = (await session.call('GET', '/api/subjects')).body;
+    expect(subjectsAfter.subjects).toEqual([]);
+    expect(subjectsAfter.defaultSubject).toMatchObject({ name: 'Standard', kind: 'default' });
     expect((await session.call('GET', '/api/providers')).body.providers).toEqual([]);
     expect((await session.call('GET', `/api/chats/${chat}`)).status).toBe(404);
     expect((await session.call('GET', '/api/model-settings')).body).toEqual({
@@ -121,6 +123,57 @@ describe('Alles löschen', () => {
       body: { passcode: TEST_PASSCODE },
     });
     expect(login.status).toBe(200);
+  });
+
+  it('stellt das eingebaute Fach „Standard“ leer wieder her (ohne Chats, Untergruppen und eigenen Prompt)', async () => {
+    const before = (await session.call('GET', '/api/subjects')).body.defaultSubject as {
+      id: string;
+    };
+    const chat = (await session.call('POST', '/api/chats', { subjectId: before.id })).body
+      .id as string;
+    await session.call('POST', `/api/subjects/${before.id}/groups`, { name: 'Beispiel-Gruppe' });
+    await session.call('PUT', `/api/prompts/subjects/${before.id}`, { text: `Eigener ${MARKER}` });
+
+    expect((await erase()).status).toBe(204);
+
+    const after = (await session.call('GET', '/api/subjects')).body.defaultSubject as {
+      id: string;
+      name: string;
+      kind: string;
+      groups: unknown[];
+    };
+    expect(after).toMatchObject({ name: 'Standard', kind: 'default', groups: [] });
+    expect((await session.call('GET', `/api/chats/${chat}`)).status).toBe(404);
+    const prompt = await session.call('GET', `/api/prompts/subjects/${after.id}`);
+    expect(prompt.body).toMatchObject({ text: null });
+    // Und es ist wirklich leer: nur diese eine Zeile in `subjects`, keine Reste vom Nutzer.
+    const rows = harness.services.database.sqlite
+      .prepare('select name, kind, system_prompt from subjects')
+      .all();
+    expect(rows).toEqual([{ name: 'Standard', kind: 'default', system_prompt: null }]);
+  });
+
+  it('leert jede Tabelle außer Anmeldung, Sitzungen und Migrationsprotokoll (auch künftige)', async () => {
+    await fillWithData();
+    // Eine Tabelle, die es später geben könnte (Stundenplan, Tests …): „Alles löschen“ muss sie mitnehmen.
+    const { sqlite } = harness.services.database;
+    sqlite.exec('create table spaetere_tabelle (inhalt text)');
+    sqlite.prepare('insert into spaetere_tabelle (inhalt) values (?)').run(MARKER);
+
+    expect((await erase()).status).toBe(204);
+
+    const tables = sqlite
+      .prepare("select name from sqlite_master where type = 'table' and name not like 'sqlite_%'")
+      .all() as { name: string }[];
+    const kept = new Set(['auth_credentials', 'sessions', '__drizzle_migrations']);
+    for (const { name } of tables) {
+      const count = (sqlite.prepare(`select count(*) as n from "${name}"`).get() as { n: number })
+        .n;
+      if (kept.has(name)) continue;
+      // Nur das eingebaute Fach darf nach dem Löschen wieder da sein.
+      expect(count, `Tabelle ${name}`).toBe(name === 'subjects' ? 1 : 0);
+    }
+    expect(kept.has('spaetere_tabelle')).toBe(false);
   });
 
   it('entfernt alle Dateien in Dateiablage, Arbeitsordnern, Logs und Sicherungen', async () => {

@@ -10,6 +10,7 @@ import {
 } from '../db/schema';
 import { buildSystemPrompt } from '../domain/prompts';
 import { getSubject, type SubjectView } from '../domain/subjects';
+import { DefaultPrompts } from '../prompts/defaults';
 import type { ChatMessage } from '../providers/client';
 import { ProviderError } from '../providers/errors';
 import type { Selection } from '../providers/models';
@@ -54,6 +55,8 @@ export interface ChatServiceOptions {
   historyMaxCharacters?: number;
   /** Wie oft ein Zwischenstand der laufenden Antwort in die Datenbank geschrieben wird. */
   flushIntervalMs?: number;
+  /** Mitgelieferte Standard-Prompts je Fach (D-034). Ohne Angabe gibt es keine. */
+  defaults?: DefaultPrompts;
 }
 
 const TITLE_MAX = 120;
@@ -86,6 +89,7 @@ export class ChatService {
   private readonly maxActive: number;
   private readonly historyMax: number;
   private readonly flushIntervalMs: number;
+  private readonly defaults: DefaultPrompts;
 
   constructor(
     private readonly db: Db,
@@ -95,6 +99,7 @@ export class ChatService {
     this.maxActive = options.maxActive ?? 4;
     this.historyMax = options.historyMaxCharacters ?? HISTORY_MAX_CHARACTERS;
     this.flushIntervalMs = options.flushIntervalMs ?? 2_000;
+    this.defaults = options.defaults ?? DefaultPrompts.empty();
     // Antworten, die beim letzten Beenden des Servers liefen, sind unterbrochen. Was schon da war, bleibt.
     this.db
       .update(messages)
@@ -282,7 +287,7 @@ export class ChatService {
     if (this.active.size >= this.maxActive) return { ok: false, error: 'too_busy' };
     const chain = this.chainFor(chat);
     if (chain.length === 0) return { ok: false, error: 'no_model' };
-    const prompt = buildSystemPrompt(this.db, chat.subjectId, chat.groupId);
+    const prompt = buildSystemPrompt(this.db, this.defaults, chat.subjectId, chat.groupId);
     if (!prompt.ok) return { ok: false, error: 'not_found' };
 
     const created = this.db.transaction((tx) => {

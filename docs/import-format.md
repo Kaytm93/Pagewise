@@ -35,4 +35,4 @@ Beispielfach B,Beispiel-Lehrkraft,3
 - Unbekannte Spalten und Schlüssel werden ignoriert. Der Import legt nur Fächer an, keine Prompts. Prompts schreibst du selbst, siehe `prompts/`.
 - Importierte Inhalte gelten als nicht vertrauenswürdig: Sie werden nur als Text gespeichert und nie als HTML oder Code ausgeführt.
 
-Eine neutrale Beispieldatei liegt unter `config/examples/subjects.example.json`.
+Eine neutrale Beispieldatei liegt unter `config/examples/subjects.example.json`. Der Katalog der Fachvorlagen für das Onboarding und den Dialog „Fach anlegen“ ist eine andere Datei (`config/subject-catalog.json`, D-037). Ein Import legt nur Fächer an und nie Prompts. Hat ein importiertes Fach denselben Namen wie eine Vorlage (z. B. „Chemie“ oder „Erdkunde“), gilt trotzdem der Standard-Prompt dieser Vorlage, bis du einen eigenen einträgst.

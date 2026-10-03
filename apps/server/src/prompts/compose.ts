@@ -6,7 +6,8 @@
  * 2. Fach-Prompt (vom Nutzer)
  * 3. Untergruppen-Zusatz (vom Nutzer, optional)
  *
- * Schicht 1 bis 3 schreibt der Nutzer selbst. Dieser Code belegt sie nie vor.
+ * Schicht 1 und 3 schreibt der Nutzer selbst, dieser Code belegt sie nie vor. Schicht 2 (Fach) ist der eigene
+ * Text des Nutzers oder, solange er nichts eingetragen hat, der mitgelieferte Standardtext (D-034).
  */
 
 /** Variablen, die in den Schichten 1 bis 3 vorkommen dürfen. Alles andere bleibt unverändert stehen. */
@@ -66,34 +67,40 @@ export function fillPlaceholders(text: string, values: PlaceholderValues): Fille
 
 export interface PromptSources {
   general: string | null;
+  /** Wirksamer Fach-Prompt: eigener Text oder Standardtext. */
   subject: string | null;
   group: string | null;
+  /** Woher `subject` stammt. Ohne Angabe gilt es als eigener Text. */
+  subjectSource?: 'custom' | 'default';
 }
 
 export type LayerNumber = 0 | 1 | 2 | 3;
 
+/** `code`: fest im Programm, `default`: mitgelieferter Standardtext, `custom`: vom Nutzer geschrieben. */
+export type LayerOrigin = 'code' | 'default' | 'custom';
+
 export interface ComposedPrompt {
   /** Der fertige System-Prompt. Leer nur, wenn keine Schicht Text hat (Schicht 0 ist immer da). */
   system: string;
-  layers: { layer: LayerNumber; text: string }[];
+  layers: { layer: LayerNumber; text: string; origin: LayerOrigin }[];
   missing: PlaceholderName[];
 }
 
 /** Setzt die Schichten in fester Reihenfolge zusammen. Leere Schichten entfallen. */
 export function composePrompt(sources: PromptSources, values: PlaceholderValues): ComposedPrompt {
   const missing = new Set<PlaceholderName>();
-  const layers: ComposedPrompt['layers'] = [{ layer: 0, text: TECHNICAL_LAYER }];
+  const layers: ComposedPrompt['layers'] = [{ layer: 0, text: TECHNICAL_LAYER, origin: 'code' }];
 
-  const user: [LayerNumber, string | null][] = [
-    [1, sources.general],
-    [2, sources.subject],
-    [3, sources.group],
+  const user: [LayerNumber, string | null, LayerOrigin][] = [
+    [1, sources.general, 'custom'],
+    [2, sources.subject, sources.subjectSource ?? 'custom'],
+    [3, sources.group, 'custom'],
   ];
-  for (const [layer, raw] of user) {
+  for (const [layer, raw, origin] of user) {
     if (raw === null || raw.trim() === '') continue;
     const filled = fillPlaceholders(raw, values);
     for (const name of filled.missing) missing.add(name);
-    layers.push({ layer, text: filled.text.trim() });
+    layers.push({ layer, text: filled.text.trim(), origin });
   }
 
   return {

@@ -5,6 +5,10 @@ import type { ScryptParams } from './auth/passcode';
 import { SessionService } from './auth/sessions';
 import { ChatService, type ChatServiceOptions } from './chats/service';
 import { type DatabaseHandle, migrateDatabase, openDatabase } from './db/client';
+import { loadSubjectCatalog, type SubjectCatalog } from './domain/subject-templates';
+import { ensureDefaultSubject } from './domain/subjects';
+import { APP_ROOT } from './paths';
+import { DefaultPrompts } from './prompts/defaults';
 import { ProviderClient } from './providers/client';
 import { ProviderService } from './providers/service';
 import { type DataPaths, ensureDataLayout } from './storage/data-paths';
@@ -21,6 +25,10 @@ export interface Services {
   sessions: SessionService;
   auth: AuthService;
   providers: ProviderService;
+  /** Vorlagen für Fächer (Katalog), aus `config/subject-catalog.json`. */
+  catalog: SubjectCatalog;
+  /** Mitgelieferte Standard-Prompts je Fach (D-034), aus `prompts/defaults`. */
+  defaults: DefaultPrompts;
   chats: ChatService;
   eraser: DataEraser;
   close(): void;
@@ -34,6 +42,9 @@ export interface ServicesOptions {
   fetch?: typeof fetch;
   /** Nur für Tests: Grenzen und Takt des Chat-Dienstes. */
   chats?: ChatServiceOptions;
+  /** Nur für Tests: andere Katalogdatei und anderer Ordner für die Standard-Prompts. */
+  catalogFile?: string;
+  defaultsDir?: string;
 }
 
 /**
@@ -63,7 +74,16 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     secrets,
     new ProviderClient({ fetch: options.fetch }),
   );
-  const chats = new ChatService(database.db, providers, options.chats);
+  const catalog = loadSubjectCatalog(
+    options.catalogFile ?? join(APP_ROOT, 'config', 'subject-catalog.json'),
+  );
+  const defaults = DefaultPrompts.load(
+    options.defaultsDir ?? join(APP_ROOT, 'prompts', 'defaults'),
+    catalog,
+  );
+  const chats = new ChatService(database.db, providers, { ...options.chats, defaults });
+  // Das eingebaute Fach „Standard“ (fachunabhängiger Chat) gehört immer dazu.
+  ensureDefaultSubject(database.db);
   return {
     paths,
     database,
@@ -72,6 +92,8 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     sessions,
     auth,
     providers,
+    catalog,
+    defaults,
     chats,
     eraser: new DataEraser({ database, paths, secrets, chats }),
     close: () => database.close(),

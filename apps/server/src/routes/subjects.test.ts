@@ -1,4 +1,8 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { APP_ROOT } from '../paths';
 import { createHarness, type Harness, type Session } from '../test-harness';
 
 interface Group {
@@ -301,12 +305,66 @@ describe('Fächer und Untergruppen', () => {
   });
 
   describe('Vorlagen', () => {
-    it('liefert die neutralen Namen aus der Beispieldatei und legt nichts an', async () => {
+    it('liefert ohne Katalogdatei eine leere Liste', async () => {
       const reply = await session.call('GET', '/api/subjects/templates');
       expect(reply.status).toBe(200);
-      const names = (reply.body.subjects as { name: string }[]).map((t) => t.name);
-      expect(names).toEqual(['Mathematik', 'Deutsch', 'Englisch']);
-      expect(await list()).toEqual([]);
+      expect(reply.body).toEqual({ categories: [], subjects: [] });
+    });
+
+    it('liefert den mitgelieferten Katalog mit Kategorien und Schlüsseln und legt nichts an', async () => {
+      const catalogHarness = createHarness({
+        catalogFile: join(APP_ROOT, 'config', 'subject-catalog.json'),
+      });
+      try {
+        const catalogSession = await catalogHarness.signIn();
+        const reply = await catalogSession.call('GET', '/api/subjects/templates');
+        expect(reply.status).toBe(200);
+        const subjects = reply.body.subjects as { key: string; name: string; category: string }[];
+        const categories = reply.body.categories as { id: string; name: string }[];
+        expect(subjects.length).toBeGreaterThanOrEqual(60);
+        for (const name of ['Chemie', 'Biologie', 'Latein', 'Französisch', 'Griechisch']) {
+          expect(subjects.map((s) => s.name)).toContain(name);
+        }
+        expect(categories.map((c) => c.id)).toContain(subjects[0]?.category);
+        const listed = (await catalogSession.call('GET', '/api/subjects')).body;
+        expect(listed.subjects).toEqual([]);
+      } finally {
+        catalogHarness.close();
+      }
+    });
+
+    it('legt ein Fach mit Schlüssel der Vorlage an und lehnt unbekannte Schlüssel ab', async () => {
+      const dir = mkdtempSync(join(tmpdir(), 'pagewise-katalog-'));
+      const file = join(dir, 'katalog.json');
+      writeFileSync(
+        file,
+        JSON.stringify({
+          version: 2,
+          categories: [{ id: 'beispiele', name: 'Beispiele' }],
+          subjects: [{ key: 'beispiel-a', name: 'Beispielfach A', category: 'beispiele' }],
+        }),
+      );
+      const catalogHarness = createHarness({ catalogFile: file });
+      try {
+        const catalogSession = await catalogHarness.signIn();
+        const created = await catalogSession.call('POST', '/api/subjects', {
+          name: 'Beispielfach A',
+          templateKey: 'beispiel-a',
+        });
+        expect(created.status).toBe(201);
+        expect(created.body).toMatchObject({ templateKey: 'beispiel-a', kind: 'subject' });
+        for (const templateKey of ['unbekannt', 'Ungültig!', 'standard']) {
+          const rejected = await catalogSession.call('POST', '/api/subjects', {
+            name: 'Anderes Fach',
+            templateKey,
+          });
+          expect(rejected.status).toBe(400);
+          expect(rejected.body).toEqual({ error: 'invalid_input', field: 'templateKey' });
+        }
+      } finally {
+        catalogHarness.close();
+        rmSync(dir, { recursive: true, force: true });
+      }
     });
 
     it('verlangt eine Anmeldung', async () => {
@@ -456,5 +514,90 @@ describe('Fächer und Untergruppen', () => {
     expect(reply.status).toBe(400);
     expect(reply.text).not.toContain('geheimer');
     expect(reply.text).not.toContain('Fachname');
+  });
+
+  describe('eingebautes Fach „Standard“ (fachunabhängiger Chat)', () => {
+    interface DefaultSubject extends Subject {
+      kind: 'default' | 'subject';
+      templateKey: string | null;
+    }
+    async function defaultSubject(): Promise<DefaultSubject> {
+      return (await session.call('GET', '/api/subjects')).body.defaultSubject as DefaultSubject;
+    }
+
+    it('ist von Anfang an da, gehört nicht zur Liste der Fächer und wird nicht doppelt angelegt', async () => {
+      const first = await defaultSubject();
+      expect(first).toMatchObject({ name: 'Standard', kind: 'default', templateKey: 'standard' });
+      expect(await list()).toEqual([]);
+      expect((await defaultSubject()).id).toBe(first.id);
+      const rows = harness.services.database.sqlite
+        .prepare("select count(*) as n from subjects where kind = 'default'")
+        .get() as { n: number };
+      expect(rows.n).toBe(1);
+    });
+
+    it('lässt sich weder löschen noch ändern', async () => {
+      const subject = await defaultSubject();
+      const removed = await session.call('DELETE', `/api/subjects/${subject.id}`);
+      expect(removed.status).toBe(409);
+      expect(removed.body).toEqual({ error: 'builtin' });
+      for (const patch of [
+        { name: 'Anders' },
+        { icon: 'book' },
+        { teacher: 'Beispiel-Lehrkraft' },
+      ]) {
+        const changed = await session.call('PATCH', `/api/subjects/${subject.id}`, patch);
+        expect(changed.status).toBe(409);
+        expect(changed.body).toEqual({ error: 'builtin' });
+      }
+      expect((await defaultSubject()).name).toBe('Standard');
+    });
+
+    it('hat einen reservierten Namen: kein Fach darf so heißen oder so umbenannt werden', async () => {
+      for (const name of ['Standard', 'standard', 'STANDARD', '  Standard  ']) {
+        const created = await session.call('POST', '/api/subjects', { name });
+        expect(created.status).toBe(409);
+        expect(created.body).toEqual({ error: 'name_reserved' });
+      }
+      const other = await addSubject('Beispielfach');
+      const renamed = await session.call('PATCH', `/api/subjects/${other.id}`, {
+        name: 'Standard',
+      });
+      expect(renamed.status).toBe(409);
+      expect(renamed.body).toEqual({ error: 'name_reserved' });
+      expect(await list()).toHaveLength(1);
+    });
+
+    it('wird beim Import und aus Vorlagen nie als normales Fach angelegt', async () => {
+      const imported = await session.call('POST', '/api/subjects/import', {
+        format: 'csv',
+        content: 'name\nStandard\nBeispielfach\n',
+      });
+      expect(imported.status).toBe(200);
+      expect(imported.body).toMatchObject({ created: 1, skipped: 1 });
+    });
+
+    it('trägt Untergruppen und Chats wie jedes Fach', async () => {
+      const subject = await defaultSubject();
+      const group = await addGroup(subject.id, 'Beispiel-Thema');
+      expect(group.name).toBe('Beispiel-Thema');
+      const chat = await session.call('POST', '/api/chats', { subjectId: subject.id });
+      expect(chat.status).toBe(201);
+      expect((await defaultSubject()).groups).toHaveLength(1);
+    });
+
+    it('macht Platz, wenn ein Fach des Nutzers schon „Standard“ heißt (Daten aus früheren Versionen)', async () => {
+      const { sqlite } = harness.services.database;
+      sqlite.prepare("delete from subjects where kind = 'default'").run();
+      sqlite
+        .prepare(
+          "insert into subjects (id, name, created_at, updated_at) values (?, 'Standard', 0, 0)",
+        )
+        .run('11111111-1111-4111-8111-111111111111');
+      const restored = await defaultSubject();
+      expect(restored).toMatchObject({ name: 'Standard', kind: 'default' });
+      const names = (await list()).map((s) => s.name);
+      expect(names).toEqual(['Standard (eigenes Fach)']);
+    });
   });
 });

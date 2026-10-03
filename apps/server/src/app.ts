@@ -84,9 +84,9 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     }
     const db = services.database.db;
     app.route('/api', profileRoutes(db));
-    app.route('/api', subjectRoutes(db));
+    app.route('/api', subjectRoutes(db, { catalog: services.catalog }));
     app.route('/api', chatRoutes(services.chats));
-    app.route('/api', promptRoutes(db));
+    app.route('/api', promptRoutes(db, services.defaults));
     app.route('/api', providerRoutes(services.providers));
     app.route('/api', dataRoutes({ auth: services.auth, eraser: services.eraser }));
   }

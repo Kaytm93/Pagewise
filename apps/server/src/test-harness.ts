@@ -46,7 +46,14 @@ export interface Harness {
 }
 
 export function createHarness(
-  options: { maxFailures?: number; fetch?: typeof fetch; chats?: ChatServiceOptions } = {},
+  options: {
+    maxFailures?: number;
+    fetch?: typeof fetch;
+    chats?: ChatServiceOptions;
+    /** Katalogdatei und Ordner der Standard-Prompts. Ohne Angabe gibt es keine (leerer Katalog, keine Standardtexte). */
+    catalogFile?: string;
+    defaultsDir?: string;
+  } = {},
 ): Harness {
   const base = mkdtempSync(join(tmpdir(), 'pagewise-test-'));
   const services = createServices(join(base, 'daten'), {
@@ -54,6 +61,8 @@ export function createHarness(
     limiter: new AttemptLimiter({ maxFailures: options.maxFailures ?? 3 }),
     fetch: options.fetch,
     chats: options.chats,
+    catalogFile: options.catalogFile ?? join(base, 'kein-katalog.json'),
+    defaultsDir: options.defaultsDir ?? join(base, 'keine-standards'),
   });
   const app = createApp({ version: '1.2.3', services });
 

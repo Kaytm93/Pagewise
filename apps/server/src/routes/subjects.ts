@@ -1,4 +1,3 @@
-import { join } from 'node:path';
 import type { Context, MiddlewareHandler } from 'hono';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -8,13 +7,14 @@ import {
   type ImportParse,
   parseSubjectImport,
 } from '../domain/subject-import';
-import { loadSubjectTemplates } from '../domain/subject-templates';
+import { KEY_PATTERN, type SubjectCatalog } from '../domain/subject-templates';
 import {
   createGroup,
   createSubject,
   type DomainFailure,
   deleteGroup,
   deleteSubject,
+  ensureDefaultSubject,
   importSubjects,
   listSubjects,
   updateGroup,
@@ -23,14 +23,18 @@ import {
 import { hoursField, iconField, idField, nameField, optionalTextField } from '../http/fields';
 import { limitBody, readJson } from '../http/json';
 import type { AppEnv } from '../http/types';
-import { APP_ROOT } from '../paths';
 
 const SubjectDetailsBody = {
   teacher: optionalTextField.optional(),
   hoursPerWeek: hoursField.optional(),
   icon: iconField.optional(),
 };
-const CreateSubjectBody = z.strictObject({ name: nameField, ...SubjectDetailsBody });
+const CreateSubjectBody = z.strictObject({
+  name: nameField,
+  ...SubjectDetailsBody,
+  /** Schlüssel der Katalogvorlage, aus der das Fach angelegt wird (verknüpft den Standard-Prompt). */
+  templateKey: z.string().regex(KEY_PATTERN).optional(),
+});
 const UpdateSubjectBody = z
   .strictObject({ name: nameField.optional(), ...SubjectDetailsBody })
   .refine((body) => Object.keys(body).length > 0);
@@ -46,9 +50,9 @@ const ImportBody = z.strictObject({
 });
 
 function failure(c: Context, result: DomainFailure): Response {
-  return result.error === 'name_taken'
-    ? c.json({ error: 'name_taken' }, 409)
-    : c.json({ error: 'not_found' }, 404);
+  if (result.error === 'not_found') return c.json({ error: 'not_found' }, 404);
+  // name_taken, name_reserved („Standard“ gehört dem eingebauten Fach), builtin (nicht änderbar, nicht löschbar)
+  return c.json({ error: result.error }, 409);
 }
 
 /** Gültige ID aus dem Pfad oder `null`. Ungültige IDs verhalten sich wie unbekannte (404). */
@@ -64,9 +68,8 @@ function importFailure(c: Context, parsed: Extract<ImportParse, { ok: false }>):
 const IMPORT_PATH = /\/subjects\/import$/;
 
 /** Fächer und Untergruppen. Navigation: Fach → Untergruppe, jede Antwort enthält nur eigene Daten. */
-export function subjectRoutes(db: Db, options: { templatesFile?: string } = {}): Hono<AppEnv> {
-  const templatesFile =
-    options.templatesFile ?? join(APP_ROOT, 'config', 'examples', 'subjects.example.json');
+export function subjectRoutes(db: Db, options: { catalog: SubjectCatalog }): Hono<AppEnv> {
+  const { catalog } = options;
   const app = new Hono<AppEnv>();
 
   // Nur für die eigenen Pfade; der Import darf größer sein als alles andere.
@@ -78,16 +81,26 @@ export function subjectRoutes(db: Db, options: { templatesFile?: string } = {}):
   app.use('/groups/*', small);
   app.use('/subjects/import', limitBody(2 * IMPORT_MAX_CHARACTERS));
 
-  app.get('/subjects', (c) => c.json({ subjects: listSubjects(db) }));
+  // `subjects` sind die Fächer des Nutzers, `defaultSubject` ist das eingebaute Fach „Standard“ für den
+  // fachunabhängigen Chat (wird bei Bedarf angelegt).
+  app.get('/subjects', (c) =>
+    c.json({ subjects: listSubjects(db), defaultSubject: ensureDefaultSubject(db) }),
+  );
 
-  // Neutrale Namensvorschläge fürs Onboarding. Es wird nichts angelegt.
-  app.get('/subjects/templates', (c) => c.json({ subjects: loadSubjectTemplates(templatesFile) }));
+  // Neutrale Vorlagen (Kategorien, Namen, Suchbegriffe) fürs Onboarding und den Dialog „Fach anlegen“.
+  // Es wird nichts angelegt.
+  app.get('/subjects/templates', (c) =>
+    c.json({ categories: catalog.categories, subjects: catalog.subjects }),
+  );
 
   app.post('/subjects', async (c) => {
     const body = await readJson(c, CreateSubjectBody);
     if (!body.ok) return body.response;
-    const { name, ...details } = body.data;
-    const result = createSubject(db, name, details);
+    const { name, templateKey, ...details } = body.data;
+    if (templateKey !== undefined && !catalog.subjects.some((entry) => entry.key === templateKey)) {
+      return c.json({ error: 'invalid_input', field: 'templateKey' }, 400);
+    }
+    const result = createSubject(db, name, { ...details, templateKey });
     return result.ok ? c.json(result.value, 201) : failure(c, result);
   });
 
