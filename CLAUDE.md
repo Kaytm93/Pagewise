@@ -44,6 +44,7 @@ pnpm --filter @pagewise/server reset-passcode   # Passcode vergessen: entfernt P
 - Die UI ist deutsch. Strings gehören in die i18n-Dateien, nicht in Komponenten. Code, Commits und Dateinamen dürfen englisch sein.
 - Modell-Ausgaben und importierte Dateien sind nicht vertrauenswürdig: bereinigen, nie `eval`.
 - Secrets nie in Logs, Fehlermeldungen, Job-Daten oder Prozess-Argumenten.
+- Die CSP erlaubt keine Inline-Styles: im Web-Code nie `style={…}` verwenden, nur Klassen (D-023).
 - `.gitignore` ignoriert Namen wie `secrets*`, `backups/`, `workspaces/`, `uploads/`, `exports/`, `*.db`, `*.log`. Quelltext darf nicht so heißen, sonst wird er still nicht eingecheckt (D-019).
 
 ## Vor jedem Commit

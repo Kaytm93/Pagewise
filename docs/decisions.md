@@ -143,3 +143,22 @@ Folgen der Umbenennung: Paket-Scope `@pagewise/*`, Umgebungsvariablen `PAGEWISE_
 - **CSRF:** Bei ändernden Methoden wird `Sec-Fetch-Site` geprüft (alles außer `same-origin` und `none` wird abgelehnt), und mit Sitzung muss der Header `X-CSRF-Token` mit dem Token der Sitzung übereinstimmen. Einen Vergleich von `Origin` und `Host` gibt es bewusst nicht, weil unklar ist, wie ein Proxy den `Host` verändert, und ein falscher Alarm die ganze App unbenutzbar machen würde.
 - **Rate-Limit:** Hinter Tailscale Serve kommen alle Anfragen von 127.0.0.1, eine Begrenzung je Adresse hätte keinen Sinn. Gezählt wird deshalb für die Instanz: fünf Fehlversuche (Anmeldung, Einrichtungscode, aktueller Passcode beim Wechsel) in 15 Minuten, danach 429 mit `Retry-After`. Jeder Versuch zählt im Voraus und wird bei Erfolg gutgeschrieben, damit gleichzeitige Anfragen die Grenze nicht umgehen. Ein Angreifer im Tailnet kann so die Anmeldung zeitweise sperren. Das ist die gewählte Abwägung gegenüber dem Erraten des Passcodes. Der Zustand liegt nur im Speicher.
 - **API-Fehler:** Antworten enthalten nur Codes (`unauthorized`, `csrf`, `invalid_passcode`, `rate_limited` usw.), nie Eingaben, Pfade oder Hashes. Ein falscher aktueller Passcode beim Wechsel liefert 403 statt 401, damit die Oberfläche nicht zur Anmeldung zurückspringt.
+
+## D-022 Ergänzungen zum Designsystem
+
+Das Designsystem (Heptabase via Refero, Abschnitt 10 des Mega-Prompts) kennt weder eine Fehlerfarbe noch einen ausreichend sichtbaren Rand für Eingabefelder. Beides ist abgeleitet und in `apps/web/src/styles/tokens.css` benannt. Der Kontrast ist in `tokens.test.ts` gegen WCAG AA geprüft.
+
+- **Fehlerfarbe** `--danger`: hell `#b42318`, dunkel `#ff9d92`. Fehler werden zusätzlich mit Symbol und Text gezeigt, nie nur über die Farbe.
+- **Rand von Eingabefeldern** `--control-edge`: hell `#858490`, dunkel `#85827c`. Linen Border (`#e4ded3`) erreicht als Rand eines Bedienelements keine 3 : 1 (WCAG 1.4.11) und bleibt für Trennlinien und Karten.
+- Research Blue bleibt auf Links und kleine aktive Akzente beschränkt (D-008). Aktive Zeilen in der Seitenleiste nutzen stattdessen Paper Beige und Gewicht 500.
+- Linien-Icons für Fächer: `lucide-react` (ISC-Lizenz, nur die genutzten Icons landen im Bundle), Strichstärke 1,6, einfarbig in der Textfarbe. Der Server speichert nur eine Kennung (`calculator`, `flask` …), unbekannte Kennungen zeigen das Standard-Icon.
+- Fallstrick: Ein Token in `@theme inline` darf nicht denselben Namen tragen wie ein Palettenwert in `@theme`. Das ergibt einen Zirkelbezug, der Wert fällt still weg (der Rand der Felder wurde dadurch zunächst schwarz). `tokens.test.ts` prüft das jetzt.
+
+## D-023 Technik der Oberfläche
+
+- **Kein Router-Paket.** Die Ansichten (Start, Fach, Untergruppe, Einstellungen) sind wenige Pfade, `router.ts` liest `location.pathname` und nutzt die History-API. Der Server liefert für unbekannte Pfade außerhalb von `/api` die `index.html`, deshalb funktionieren Neuladen und Lesezeichen.
+- **Strenge CSP, daher keine Inline-Styles.** Die Content-Security-Policy erlaubt `style-src 'self'`. Die Oberfläche setzt deshalb nie ein `style`-Attribut (React `style={…}`, `setAttribute('style')`), sondern nur Klassen. Skripte stellen Werte über das CSSOM ein (`element.style.overflow`), das die CSP nicht betrifft.
+- **CSRF-Token nur im Speicher.** Der Client hält das Token der Sitzung in einer Variablen, nicht in `localStorage`. Nach einem Neuladen holt `GET /api/session` es erneut. Gespeichert wird im Browser nur die Darstellungswahl (`pagewise.theme`).
+- **Fehlerbehandlung nach Code, nicht nach Status.** `unauthorized` und `csrf` schicken die Oberfläche zurück zur Anmeldung, ein falscher Passcode (`invalid_passcode`) nie.
+- **Dialoge und Schublade** sperren den Hintergrund mit `inert`, schließen mit Escape und geben den Fokus zurück. Alle Bedienelemente sind mindestens 44 px hoch.
+- **Tests:** Komponententests laufen mit `jsdom` (Kommentar `@vitest-environment jsdom` in der Datei) gegen einen kleinen Server-Ersatz (`test/fake-server.ts`). jsdom ist auf Version 29 festgelegt, weil Version 30 Node ab 22.22.2 verlangt, die Projektvorgabe aber `>=22.18` ist.
