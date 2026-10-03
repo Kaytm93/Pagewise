@@ -4,9 +4,11 @@ import { join, relative } from 'node:path';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { secureHeaders } from 'hono/secure-headers';
-import { csrfGuard, loadSession } from './auth/http';
+import { csrfGuard, loadSession, requireSession } from './auth/http';
 import type { AppEnv } from './http/types';
 import { authRoutes } from './routes/auth';
+import { profileRoutes } from './routes/profile';
+import { subjectRoutes } from './routes/subjects';
 import type { Services } from './services';
 
 export interface AppOptions {
@@ -55,6 +57,15 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     app.use('/api/*', loadSession(services.sessions));
     app.use('/api/*', csrfGuard);
     app.route('/api', authRoutes({ auth: services.auth, sessions: services.sessions }));
+
+    // Alles Weitere gibt es nur mit Anmeldung. Unbekannte API-Pfade bleiben 404.
+    for (const prefix of ['/api/profile', '/api/onboarding', '/api/subjects', '/api/groups']) {
+      app.use(prefix, requireSession);
+      app.use(`${prefix}/*`, requireSession);
+    }
+    const db = services.database.db;
+    app.route('/api', profileRoutes(db));
+    app.route('/api', subjectRoutes(db));
   }
 
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
