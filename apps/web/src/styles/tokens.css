@@ -1,0 +1,148 @@
+/*
+ * Design-Tokens für Schulheft.
+ * Basis: Heptabase-Stil via Refero ("sonnenbeschienener Schreibtisch"): warme, papierartige
+ * Flächen, Graphit-Bedienelemente, ruhig und typografisch.
+ *
+ * Aufbau:
+ *  1. @theme:        rohe Palette und Formen (--color-eggshell-canvas usw.)
+ *  2. :root:         semantische Tokens für den hellen Modus (--canvas, --ink, ...)
+ *  3. dunkel:        dieselben semantischen Tokens, umgeschaltet über [data-theme="dark"]
+ *                    oder automatisch über prefers-color-scheme, außer [data-theme="light"]
+ *  4. @theme inline: semantische Tokens als Tailwind-Utilities (bg-canvas, text-ink, ...)
+ *
+ * Kontrast: apps/web/src/styles/tokens.test.ts prüft die Kombinationen gegen WCAG AA.
+ */
+
+@theme {
+  /* Palette, hell (Werte aus der Designvorgabe) */
+  --color-eggshell-canvas: #fdfcfb;
+  --color-cloud-surface: #f7f7f7;
+  --color-paper-beige: #f0f0ea;
+  --color-whiteboard-gray: #eeeded;
+  --color-linen-border: #e4ded3;
+  --color-graphite: #2e2e2e;
+  --color-charcoal-copy: #454545;
+  --color-quiet-gray: #6a6972;
+  --color-disabled-ash: #a8a8a8;
+  --color-research-blue: #207dff;
+  /* Dunkleres Blau für Text-Links im hellen Modus: #207dff erreicht als Text keine 4,5 : 1 */
+  --color-link-text: #1560cc;
+
+  /* Palette, dunkel (abgeleitet, warme Graphit-Töne statt reinem Schwarz) */
+  --color-night-workspace: #151514;
+  --color-night-canvas: #191918;
+  --color-night-surface: #222221;
+  --color-night-raised: #2a2a28;
+  --color-night-ink: #ece9e3;
+  --color-night-ink-secondary: #cfcbc4;
+  --color-night-ink-muted: #a3a09a;
+  --color-night-ink-disabled: #6b6964;
+  --color-night-link: #5a9eff;
+
+  /* Typografie */
+  --font-heading: "Instrument Sans", "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-display: 3rem;
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -1.58px;
+  --text-title: 2.25rem;
+  --text-title--line-height: 1.15;
+  --text-title--letter-spacing: -0.54px;
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.4;
+
+  /* Formen */
+  --radius-card: 12px;
+  --radius-box: 8px;
+  --radius-control: 6px;
+  --radius-pill: 9999px;
+
+  /* Elementabstand im 4-px-Raster: Tailwinds --spacing bleibt 0.25rem (4 px) */
+}
+
+:root {
+  color-scheme: light;
+
+  --workspace: var(--color-whiteboard-gray);
+  --canvas: var(--color-eggshell-canvas);
+  --surface: var(--color-cloud-surface);
+  --paper: var(--color-paper-beige);
+  --line: rgba(0, 0, 0, 0.08);
+  --line-warm: var(--color-linen-border);
+
+  --ink: var(--color-graphite);
+  --ink-secondary: var(--color-charcoal-copy);
+  --ink-muted: var(--color-quiet-gray);
+  --ink-disabled: var(--color-disabled-ash);
+
+  --primary: var(--color-graphite);
+  --on-primary: #ffffff;
+
+  --accent: var(--color-research-blue);
+  --link: var(--color-link-text);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --workspace: var(--color-night-workspace);
+  --canvas: var(--color-night-canvas);
+  --surface: var(--color-night-surface);
+  --paper: var(--color-night-raised);
+  --line: rgba(255, 255, 255, 0.1);
+  --line-warm: rgba(255, 255, 255, 0.1);
+
+  --ink: var(--color-night-ink);
+  --ink-secondary: var(--color-night-ink-secondary);
+  --ink-muted: var(--color-night-ink-muted);
+  --ink-disabled: var(--color-night-ink-disabled);
+
+  --primary: var(--color-night-ink);
+  --on-primary: var(--color-night-canvas);
+
+  --accent: var(--color-night-link);
+  --link: var(--color-night-link);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --workspace: var(--color-night-workspace);
+    --canvas: var(--color-night-canvas);
+    --surface: var(--color-night-surface);
+    --paper: var(--color-night-raised);
+    --line: rgba(255, 255, 255, 0.1);
+    --line-warm: rgba(255, 255, 255, 0.1);
+
+    --ink: var(--color-night-ink);
+    --ink-secondary: var(--color-night-ink-secondary);
+    --ink-muted: var(--color-night-ink-muted);
+    --ink-disabled: var(--color-night-ink-disabled);
+
+    --primary: var(--color-night-ink);
+    --on-primary: var(--color-night-canvas);
+
+    --accent: var(--color-night-link);
+    --link: var(--color-night-link);
+  }
+}
+
+@theme inline {
+  --color-workspace: var(--workspace);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-paper: var(--paper);
+  --color-line: var(--line);
+  --color-line-warm: var(--line-warm);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-disabled: var(--ink-disabled);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-link: var(--link);
+}

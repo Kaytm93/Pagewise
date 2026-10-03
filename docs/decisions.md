@@ -48,9 +48,11 @@ Begründung: Kurz, bekannt, erlaubt Selbst-Hosting, Anpassung und Weitergabe ohn
 
 ## D-008 Designsystem: Kontrast bei Links und Hilfstexten
 
-Die Vorgabe „Research Blue `#207dff` nur für Links und kleine aktive Akzente“ wird als Token `--color-research-blue` übernommen. Für **Text-Links** gilt ein dunkleres Token `--color-link-text`, weil `#207dff` auf `#fdfcfb` den Kontrast von 4,5 : 1 für normalen Text nicht erreicht (siehe Test `apps/web/src/styles/tokens.test.ts`, dort stehen die gemessenen Werte). Die originale Farbe bleibt für Fokusringe, Auswahl-Markierungen und große Elemente.
+Die Vorgabe „Research Blue `#207dff` nur für Links und kleine aktive Akzente“ wird als Token `--color-research-blue` übernommen. Für **Text-Links** gilt ein dunkleres Token `--color-link-text` (`#1560cc`), weil `#207dff` als Text den Kontrast von 4,5 : 1 (WCAG AA) nicht erreicht: gemessen 3,77 : 1 auf Eggshell Canvas, 3,60 : 1 auf Cloud Surface, 3,38 : 1 auf Paper Beige und 3,30 : 1 auf Whiteboard Gray. Das dunklere Blau kommt im ungünstigsten Fall auf 5,02 : 1. Die originale Farbe bleibt als `--accent` für Fokusringe und kleine aktive Elemente, dort genügen 3 : 1.
 
-Dark Mode ist abgeleitet und per Test gegen WCAG AA geprüft, siehe `tokens.css`.
+Alle übrigen Kombinationen der Vorgabe erreichen AA (Quiet Gray `#6a6972` mindestens 4,64 : 1 auf den hellen Flächen). Disabled Ash `#a8a8a8` erreicht nur 2,0 bis 2,3 : 1, das ist für deaktivierte Elemente zulässig, darf aber nie für lesbaren Text verwendet werden.
+
+Der Dark Mode ist abgeleitet (Werte aus der Vorgabe, ergänzt um Sekundär- und Hilfstext) und per Test gegen AA geprüft, alle Kombinationen liegen über 5,3 : 1. Die Tests stehen in `apps/web/src/styles/tokens.test.ts`.
 
 ## D-009 Fonts selbst gehostet
 
