@@ -363,3 +363,57 @@ describe('Fachseite und Navigation', () => {
     expect(window.location.pathname).toBe('/exams');
   });
 });
+
+describe('Startseite: Tageslinie (Richtung „Raum“)', () => {
+  afterEach(() => document.documentElement.removeAttribute('data-design'));
+
+  it('zeigt den Tag als Linie: Vergangenes gedämpft, die laufende Stunde hervorgehoben', async () => {
+    const { server, chemie, latein } = setup();
+    server.addLesson({ weekday: 1, startTime: '08:00', endTime: '08:45', subjectId: latein.id });
+    server.addLesson({ weekday: 1, startTime: '09:00', endTime: '09:50', subjectId: chemie.id });
+    server.addLesson({ weekday: 1, startTime: '11:00', endTime: '11:45', subjectId: latein.id });
+    document.documentElement.setAttribute('data-design', 'raum');
+    open(server, '/');
+    const section = within(await screen.findByRole('region', { name: 'Heute' }));
+    const items = await section.findAllByRole('listitem');
+    expect(items.map((item) => item.getAttribute('data-state'))).toEqual(['past', 'now', 'next']);
+    expect(items[1]?.getAttribute('aria-current')).toBe('time');
+    expect(within(items[1] as HTMLElement).getByText('Beispiel-Chemie')).toBeTruthy();
+    expect(within(items[1] as HTMLElement).getByText(/noch 33 Min\./)).toBeTruthy();
+    expect(within(items[0] as HTMLElement).getByText(/vorbei/)).toBeTruthy();
+    // Läuft eine Stunde, trägt sie selbst „Jetzt“, eine eigene Marke gibt es nicht.
+    expect(section.queryByText(/^Jetzt/)).toBeNull();
+  });
+
+  it('setzt die „Jetzt“-Marke mit Uhrzeit zwischen Vergangenes und Kommendes', async () => {
+    const { server, chemie, latein } = setup();
+    server.addLesson({ weekday: 1, startTime: '08:00', endTime: '08:45', subjectId: latein.id });
+    server.addLesson({ weekday: 1, startTime: '11:00', endTime: '11:45', subjectId: chemie.id });
+    document.documentElement.setAttribute('data-design', 'raum');
+    open(server, '/');
+    const section = within(await screen.findByRole('region', { name: 'Heute' }));
+    const items = await section.findAllByRole('listitem');
+    expect(items).toHaveLength(3);
+    expect(items[0]?.getAttribute('data-state')).toBe('past');
+    expect(items[1]?.textContent).toBe('Jetzt 09:17');
+    expect(items[2]?.getAttribute('data-state')).toBe('next');
+  });
+
+  it.each(['lagen', 'atelier'])('gibt es sie in der Richtung „%s“ nicht', async (design) => {
+    const { server, chemie } = setup();
+    server.addLesson({ weekday: 1, startTime: '09:00', endTime: '09:50', subjectId: chemie.id });
+    document.documentElement.setAttribute('data-design', design);
+    open(server, '/');
+    expect(await screen.findByRole('region', { name: 'Als Nächstes' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Heute' })).toBeNull();
+  });
+
+  it('bleibt weg, wenn heute keine Stunde ansteht', async () => {
+    const { server, chemie } = setup();
+    server.addLesson({ weekday: 3, startTime: '09:00', endTime: '09:50', subjectId: chemie.id });
+    document.documentElement.setAttribute('data-design', 'raum');
+    open(server, '/');
+    expect(await screen.findByRole('region', { name: 'Als Nächstes' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Heute' })).toBeNull();
+  });
+});

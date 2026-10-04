@@ -1,0 +1,172 @@
+/*
+ * Designrichtung „Atelier“ (D-045): klar und produktnah. Kein Blattstapel, keine Hülle um den Inhalt: Der Text
+ * steht groß auf dem Grund, über dem das Licht der Fachfarbe liegt (zwei weiche Lichtbänder, Körnung). Die
+ * Seitenleiste ist flach, Karten haben Rand und Schatten, die Fachfarbe zeigt sich als Licht und Linie.
+ *
+ * Wie „Raum“ aufgebaut auf den Klassen aus lagen.css: überschrieben wird nur, was anders aussieht. Farben aus
+ * tokens.css, Bewegung aus motion.css (nur transform und opacity). Im Chat steht das Licht still.
+ */
+
+/* Ohne Fach (Start, Stundenplan, Einstellungen) liegt ein warmes Licht über dem Grund statt des neutralen Tons */
+:root[data-design="atelier"] .lg-app:not([data-subj]) {
+  --subj: #c99a50;
+}
+
+:root[data-design="atelier"][data-theme="dark"] .lg-app:not([data-subj]) {
+  --subj: #c9a56e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-design="atelier"]:not([data-theme="light"]) .lg-app:not([data-subj]) {
+    --subj: #c9a56e;
+  }
+}
+
+@layer components {
+  /* ===== Grund: Papier, darüber das Licht der Fachfarbe und die Körnung ===== */
+  :root[data-design="atelier"] .lg-app::before {
+    background:
+      radial-gradient(
+        62% 52% at 18% -6%,
+        color-mix(in srgb, var(--subj) 22%, transparent),
+        transparent 74%
+      ),
+      radial-gradient(
+        38% 40% at 98% 4%,
+        color-mix(in srgb, var(--subj) 12%, transparent),
+        transparent 72%
+      ),
+      var(--grain), var(--canvas);
+    background-size:
+      auto,
+      auto,
+      180px 180px,
+      auto;
+  }
+
+  /* Lichtband: schräg, langsam wandernd (nur Stufe „Voll“, nicht im Chat) */
+  :root[data-design="atelier"] .lg-app::after {
+    content: "";
+    position: fixed;
+    z-index: -1;
+    top: -30%;
+    left: 8%;
+    width: 90%;
+    height: 160%;
+    background: linear-gradient(
+      90deg,
+      transparent 4%,
+      color-mix(in srgb, var(--subj) 8%, transparent) 22%,
+      transparent 40%,
+      transparent 54%,
+      color-mix(in srgb, var(--subj) 5%, transparent) 70%,
+      transparent 88%
+    );
+    transform: skewX(-30deg);
+    pointer-events: none;
+  }
+
+  .fx-full[data-design="atelier"] .lg-app:not([data-view="chat"])::after {
+    animation: atelier-drift 110s ease-in-out infinite alternate;
+  }
+
+  .tab-hidden[data-design="atelier"] .lg-app::after {
+    animation-play-state: paused;
+  }
+
+  /* ===== Seitenleiste: flach auf dem Arbeitsgrund ===== */
+  :root[data-design="atelier"] .lg-aside {
+    padding-block: 0;
+  }
+
+  :root[data-design="atelier"] .lg-binder {
+    border: 0;
+    border-right: 1px solid var(--line-warm);
+    border-radius: 0;
+    background-color: var(--workspace);
+    background-image: none;
+    box-shadow: none;
+  }
+
+  :root[data-design="atelier"] .lg-spine {
+    display: none;
+  }
+
+  :root[data-design="atelier"] .lg-nav-item[aria-current="page"],
+  :root[data-design="atelier"] .lg-nav-item[data-current="true"] {
+    background-color: var(--paper);
+    border-color: transparent;
+    box-shadow:
+      inset 0 0 0 1px var(--line-warm),
+      inset 0 1px 0 var(--rim);
+  }
+
+  :root[data-design="atelier"] .lg-nav-item[aria-current="page"]::before,
+  :root[data-design="atelier"] .lg-nav-item[data-current="true"]::before {
+    display: none;
+  }
+
+  /* ===== Inhalt: keine Hülle, kein Blattstapel ===== */
+  :root[data-design="atelier"] .lg-ply {
+    display: none;
+  }
+
+  :root[data-design="atelier"] .lg-sheet {
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+  }
+
+  /* Karte: runde Fläche mit Rand und weichem Schatten, Fachfarbe als Licht */
+  :root[data-design="atelier"] .lg-slip {
+    padding: 20px 22px 18px;
+    border: 1px solid var(--line-warm);
+    border-radius: 16px;
+    background-color: var(--surface);
+    box-shadow:
+      inset 0 1px 0 var(--rim),
+      0 1px 2px rgba(var(--shadow), 0.06),
+      0 8px 20px -10px rgba(var(--shadow), calc(var(--shadow-a) * 1.1));
+    transform: none;
+  }
+
+  :root[data-design="atelier"] .lg-slip:hover {
+    transform: translateY(calc(var(--m) * -2px));
+    box-shadow:
+      inset 0 1px 0 var(--rim),
+      0 2px 4px rgba(var(--shadow), 0.05),
+      0 18px 40px -16px rgba(var(--shadow), calc(var(--shadow-a) * 1.6));
+  }
+
+  :root[data-design="atelier"] .lg-tape {
+    display: none;
+  }
+
+  /* Zeilen: die Fachfarbe leuchtet als weiche Fläche statt als Balken */
+  :root[data-design="atelier"] .lg-row {
+    border-radius: 12px;
+  }
+
+  :root[data-design="atelier"] .lg-row::before {
+    display: none;
+  }
+
+  :root[data-design="atelier"] .lg-row:focus-visible,
+  :root[data-design="atelier"] .lg-row:hover {
+    background-color: color-mix(in srgb, var(--subj) 9%, transparent);
+    box-shadow: none;
+    transform: translateX(calc(var(--m) * 2px));
+  }
+}
+
+@keyframes atelier-drift {
+  from {
+    transform: skewX(-30deg) translate3d(calc(var(--m) * -3%), 0, 0);
+  }
+
+  to {
+    transform: skewX(-30deg) translate3d(calc(var(--m) * 8%), 0, 0);
+  }
+}

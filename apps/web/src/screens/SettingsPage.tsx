@@ -3,6 +3,7 @@ import { ApiError } from '../api/client';
 import { messages as m } from '../i18n';
 import { useSession } from '../session/SessionProvider';
 import { Button } from '../ui/Button';
+import { type Design, readDesign, saveDesign } from '../ui/design';
 import { CheckField, PasscodeField } from '../ui/Field';
 import { FieldError } from '../ui/FieldError';
 import { type FxPreference, readFx, saveFx } from '../ui/fx';
@@ -46,6 +47,32 @@ function ThemeChoice() {
       value={theme}
       onChange={choose}
     />
+  );
+}
+
+const DESIGN_CHOICES: { value: Design; label: string }[] = [
+  { value: 'raum', label: m.settings.appearance.design.raum },
+  { value: 'lagen', label: m.settings.appearance.design.lagen },
+  { value: 'atelier', label: m.settings.appearance.design.atelier },
+];
+
+/** Designrichtung: wie die Oberfläche aufgebaut ist (Ordner, Heft oder Atelier). Gilt nur in diesem Browser. */
+function DesignChoice() {
+  const [design, setDesign] = useState<Design>(() => readDesign());
+  const d = m.settings.appearance.design;
+
+  function choose(value: Design) {
+    setDesign(value);
+    saveDesign(value);
+  }
+
+  return (
+    <div className="mt-8">
+      <h3 className="font-heading text-lg">{d.title}</h3>
+      <p className="mt-1 mb-4 max-w-[52ch] text-sm text-ink-muted">{d.lead}</p>
+      <Segmented legend={d.title} options={DESIGN_CHOICES} value={design} onChange={choose} />
+      <p className="mt-3 max-w-[52ch] text-sm text-ink-secondary">{d.help[design]}</p>
+    </div>
   );
 }
 
@@ -238,6 +265,7 @@ export function SettingsPage() {
       <div className="mt-8">
         <Section title={m.settings.appearance.title} lead={m.settings.appearance.lead}>
           <ThemeChoice />
+          <DesignChoice />
           <EffectsChoice />
         </Section>
         <Section title={m.providers.title} lead={m.providers.lead}>

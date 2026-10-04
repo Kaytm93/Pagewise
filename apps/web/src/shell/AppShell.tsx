@@ -1,5 +1,5 @@
 import { Menu } from 'lucide-react';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { messages as m } from '../i18n';
 import { ExamsPage } from '../planning/ExamsPage';
 import { PlannerProvider } from '../planning/PlannerProvider';
@@ -10,6 +10,7 @@ import { HomePage } from '../screens/HomePage';
 import { NotFoundPage } from '../screens/NotFoundPage';
 import { SettingsPage } from '../screens/SettingsPage';
 import { SubjectPage } from '../screens/SubjectPage';
+import { startParallax } from '../ui/parallax';
 import { subjectColorAttr } from '../ui/subject-color';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { Drawer } from './Drawer';
@@ -84,7 +85,8 @@ function depthOf(route: Route): 1 | 2 | 3 {
 }
 
 /**
- * Rahmen der angemeldeten App (Gestaltung „Lagen“): ein Schreibtisch, links der Heftrücken als Seitenleiste
+ * Rahmen der angemeldeten App (Designrichtungen „Raum“, „Lagen“ und „Atelier“, D-045; hier der Aufbau von „Lagen“,
+ * die anderen überschreiben ihn in raum.css und atelier.css): ein Schreibtisch, links der Heftrücken als Seitenleiste
  * (ab „md“ fest, darunter als Schublade), daneben der Blattstapel. Wer tiefer in die App geht, legt ein Blatt
  * mehr auf den Stapel; das neue Blatt wird beim Wechsel aufgelegt.
  */
@@ -101,13 +103,21 @@ function Shell() {
   const title = useTitle(route);
   const color = useRouteColor(route);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const app = useRef<HTMLDivElement>(null);
+
+  useEffect(() => (app.current ? startParallax(app.current) : undefined), []);
 
   useEffect(() => {
     document.title = title === m.app.name ? m.app.name : `${title} · ${m.app.name}`;
   }, [title]);
 
   return (
-    <div className="lg-app md:grid md:grid-cols-[17.25rem_1fr]" data-subj={color}>
+    <div
+      ref={app}
+      className="lg-app md:grid md:grid-cols-[17.25rem_1fr]"
+      data-subj={color}
+      data-view={route.name}
+    >
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded-control focus:border focus:border-line focus:bg-canvas focus:px-3 focus:py-2"
@@ -115,7 +125,7 @@ function Shell() {
         {m.common.skipToContent}
       </a>
 
-      <aside className="sticky top-0 hidden h-dvh py-3.5 md:block">
+      <aside className="lg-aside sticky top-0 hidden h-dvh md:block">
         <div className="lg-binder">
           <Sidebar />
         </div>

@@ -18,6 +18,7 @@ beforeEach(() => {
   window.localStorage.clear();
   document.documentElement.className = '';
   document.documentElement.removeAttribute('data-theme');
+  document.documentElement.removeAttribute('data-design');
 });
 afterEach(() => {
   window.localStorage.clear();
@@ -66,5 +67,32 @@ describe('Einstellungen: Darstellung', () => {
     const group = within(await screen.findByRole('group', { name: 'Darstellung' }));
     await user.click(group.getByRole('radio', { name: 'Dunkel' }));
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+  });
+
+  it('wählt die Designrichtung, merkt sie sich und erklärt sie', async () => {
+    openSettings();
+    const user = userEvent.setup();
+    const group = within(await screen.findByRole('group', { name: 'Designrichtung' }));
+    // Voreinstellung: Raum
+    expect((group.getByRole('radio', { name: 'Raum' }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByText(/Ein Ordner mit Rücken und Heftung/)).toBeTruthy();
+
+    await user.click(group.getByRole('radio', { name: 'Atelier' }));
+    expect(document.documentElement.getAttribute('data-design')).toBe('atelier');
+    expect(window.localStorage.getItem('pagewise.design')).toBe('atelier');
+    expect(screen.getByText(/Klar und produktnah/)).toBeTruthy();
+
+    await user.click(group.getByRole('radio', { name: 'Lagen' }));
+    expect(document.documentElement.getAttribute('data-design')).toBe('lagen');
+    expect(window.localStorage.getItem('pagewise.design')).toBe('lagen');
+  });
+
+  it('zeigt die gespeicherte Richtung beim Öffnen', async () => {
+    window.localStorage.setItem('pagewise.design', 'lagen');
+    openSettings();
+    const group = within(await screen.findByRole('group', { name: 'Designrichtung' }));
+    await waitFor(() =>
+      expect((group.getByRole('radio', { name: 'Lagen' }) as HTMLInputElement).checked).toBe(true),
+    );
   });
 });

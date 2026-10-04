@@ -1,6 +1,7 @@
 import { MessageCircle, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { messages as m } from '../i18n';
+import { DayLine } from '../planning/DayLine';
 import { NextUp } from '../planning/NextUp';
 import { navigate } from '../router';
 import { Button } from '../ui/Button';
@@ -63,6 +64,7 @@ export function HomePage() {
         </p>
       </div>
 
+      <DayLine />
       <NextUp />
 
       <section className="mo-rise mo-i-4 mt-12" aria-labelledby="home-subjects">

@@ -1,6 +1,14 @@
-# Gestaltung („Lagen“)
+# Gestaltung
 
-Stand: 4. Oktober 2026 (D-043). Die Richtung ist bewusst begründet gewählt und lässt sich ändern: Tokens, Bewegungssystem und Hülle sind getrennt von den Bildschirmen.
+Stand: 4. Oktober 2026 (D-043, D-045).
+
+## Designrichtungen (D-045)
+
+Es gibt drei Richtungen, wählbar in den Einstellungen („Darstellung“, Standard **Raum**): **Raum** (Ordner mit Rücken und Heftung, Tageslinie), **Lagen** (Heft mit Heftrücken und Blattstapel, unten beschrieben) und **Atelier** (keine Hülle, großes Licht der Fachfarbe, runde Karten). Das Attribut `data-design` am `<html>` wählt aus, `public/boot.js` setzt es vor dem ersten Anstrich, `ui/design.ts` wechselt es zur Laufzeit. Dateien: `styles/lagen.css` (Grundlage), `styles/raum.css`, `styles/atelier.css` (überschreiben nur Abweichungen). Neue Bildschirme benutzen dieselben Klassen und brauchen keine Fallunterscheidung; was nur in einer Richtung existiert (Tageslinie in Raum), prüft `useDesign()`. Alle Regeln unten (Tokens, Bewegung, Kontrast, CSP) gelten für alle drei.
+
+## Lagen (D-043)
+
+Stand der Beschreibung: 4. Oktober 2026. Die Richtung ist bewusst begründet gewählt und lässt sich ändern: Tokens, Bewegungssystem und Hülle sind getrennt von den Bildschirmen.
 
 ## Idee
 

@@ -243,6 +243,12 @@ export const de = {
       noExams: 'Keine Tests eingetragen.',
       addExam: 'Test eintragen',
     },
+    dayLine: {
+      title: 'Heute',
+      now: 'Jetzt',
+      minutesLeft: 'noch {minutes} Min.',
+      done: 'vorbei',
+    },
     subjectExams: {
       title: 'Anstehende Tests',
       add: 'Test eintragen',
@@ -908,6 +914,20 @@ export const de = {
       system: 'Wie das Gerät',
       light: 'Hell',
       dark: 'Dunkel',
+      design: {
+        title: 'Designrichtung',
+        lead: 'Wie die Oberfläche aufgebaut ist. Gilt nur in diesem Browser, Farben und Inhalte bleiben gleich.',
+        raum: 'Raum',
+        lagen: 'Lagen',
+        atelier: 'Atelier',
+        help: {
+          raum: 'Ein Ordner mit Rücken und Heftung auf dem Schreibtisch, die Startseite zeigt den Tag als Linie mit „Jetzt“-Marke.',
+          lagen:
+            'Ein Heft mit Heftrücken und Blattstapel: Wer tiefer geht, legt ein Blatt mehr auf.',
+          atelier:
+            'Klar und produktnah: große Schrift, Fachfarbe als Licht und Linie, flache Seitenleiste.',
+        },
+      },
       effects: {
         title: 'Bewegung',
         lead: 'Wie viel sich in der Oberfläche bewegt. „Automatisch“ folgt der Einstellung deines Geräts.',

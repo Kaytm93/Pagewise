@@ -36,6 +36,10 @@
   }
 
   /* ===== Heftrücken (Seitenleiste) ===== */
+  .lg-aside {
+    padding-block: 0.875rem;
+  }
+
   .lg-binder {
     position: relative;
     display: flex;

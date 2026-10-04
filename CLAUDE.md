@@ -45,7 +45,7 @@ pnpm --filter @pagewise/server reset-passcode   # Passcode vergessen: entfernt P
 - Modell-Ausgaben und importierte Dateien sind nicht vertrauenswürdig: bereinigen, nie `eval`.
 - Secrets nie in Logs, Fehlermeldungen, Job-Daten oder Prozess-Argumenten.
 - Die CSP erlaubt keine Inline-Styles: im Web-Code nie `style={…}` verwenden, nur Klassen (D-023). Dynamische Werte setzt das Skript über das CSSOM (`element.style.setProperty('--idx', …)`).
-- Gestaltung („Lagen“, D-043): Farben und Bewegung nur über die Tokens in `styles/tokens.css` und `styles/motion.css`, nie feste Werte. Alles Bewegte hängt an `--m`/`--t-*` (Effektstufen), animiert wird nur `transform` und `opacity`. Regeln und Aufbau stehen in [docs/design.md](docs/design.md).
+- Gestaltung (drei Richtungen „Raum“, „Lagen“, „Atelier“, wählbar in den Einstellungen, D-043 und D-045): Farben und Bewegung nur über die Tokens in `styles/tokens.css` und `styles/motion.css`, nie feste Werte. Alles Bewegte hängt an `--m`/`--t-*` (Effektstufen), animiert wird nur `transform` und `opacity`. Neue Bildschirme nutzen die gemeinsamen Klassen (`lg-*`), die Richtungen überschreiben sie in `raum.css` und `atelier.css`. Regeln und Aufbau stehen in [docs/design.md](docs/design.md).
 - `.gitignore` ignoriert Namen wie `secrets*`, `backups/`, `workspaces/`, `uploads/`, `exports/`, `*.db`, `*.log`. Quelltext darf nicht so heißen, sonst wird er still nicht eingecheckt (D-019).
 
 ## Vor jedem Commit
