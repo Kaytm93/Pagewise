@@ -763,6 +763,26 @@ describe('Chats', () => {
       await vi.waitFor(() => expect(restarted.running(chat)).toBeNull());
     });
 
+    it('zählt laufende Antworten und markiert sie beim Beenden als unterbrochen', async () => {
+      const chat = await newChat();
+      expect(harness.services.chats.activeCount()).toBe(0);
+      const { pending } = await startHeld(chat);
+      expect(harness.services.chats.activeCount()).toBe(1);
+
+      await harness.services.chats.shutdown(2_000);
+      const events = parseSse((await pending).text);
+      expect(events.at(-1)).toMatchObject({
+        event: 'stopped',
+        data: { message: { status: 'interrupted', content: 'Anfang' } },
+      });
+      expect(harness.services.chats.activeCount()).toBe(0);
+      // Gespeichert ist „unterbrochen“, nicht „gestoppt“: „Erneut versuchen“ bleibt möglich.
+      expect((await detail(chat)).messages[1]).toMatchObject({
+        status: 'interrupted',
+        content: 'Anfang',
+      });
+    });
+
     it('bricht eine laufende Antwort ab, wenn der Chat gelöscht wird', async () => {
       const chat = await newChat();
       const { pending } = await startHeld(chat);

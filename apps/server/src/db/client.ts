@@ -30,17 +30,26 @@ export const DEFAULT_MIGRATIONS_FOLDER = resolve(here, '..', '..', 'drizzle');
 const BACKUP_PREFIX = 'pagewise-vor-migration-';
 const BACKUPS_TO_KEEP = 5;
 
+export interface OpenOptions {
+  /** Pfad zur `better_sqlite3.node` (gebündelter Server). Ohne Angabe sucht better-sqlite3 selbst. */
+  nativeBinding?: string;
+}
+
 /**
  * Öffnet die SQLite-Datei. Neue Dateien entstehen mit Rechten 600. Fremdschlüssel sind an,
  * WAL ist an, gelöschte Inhalte werden überschrieben (`secure_delete`), damit Löschen auch
  * wirklich löscht.
  */
-export function openDatabase(file: string): DatabaseHandle {
+export function openDatabase(file: string, options: OpenOptions = {}): DatabaseHandle {
   if (file !== ':memory:') {
     closeSync(openSync(file, 'a', 0o600));
     chmodSync(file, 0o600);
   }
-  const sqlite = new Sqlite(file);
+  // Der gebündelte Server liefert die Binärdatei von better-sqlite3 neben dem Bundle aus (nativeBinding).
+  const sqlite = new Sqlite(
+    file,
+    options.nativeBinding ? { nativeBinding: options.nativeBinding } : {},
+  );
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('foreign_keys = ON');
   sqlite.pragma('busy_timeout = 5000');

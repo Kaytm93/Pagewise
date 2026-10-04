@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { eq, lte, ne } from 'drizzle-orm';
+import { count, eq, gt, lte, ne } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { sessions } from '../db/schema';
 
@@ -124,6 +124,14 @@ export class SessionService {
     } else {
       this.db.delete(sessions).run();
     }
+  }
+
+  /** Anzahl der gültigen Anmeldungen (nicht „Geräte“: Browser und installierte App haben je eigene Sitzungen). */
+  countActive(): number {
+    return (
+      this.db.select({ n: count() }).from(sessions).where(gt(sessions.expiresAt, this.now())).get()
+        ?.n ?? 0
+    );
   }
 
   /** Räumt abgelaufene Sitzungen auf und gibt zurück, wie viele es waren. */

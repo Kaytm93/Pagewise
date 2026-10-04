@@ -141,6 +141,8 @@ export class ChatService {
   private readonly tools: ToolRegistry | null;
   private readonly toolSettings: ToolSettings | null;
   private readonly now: () => Date;
+  /** Pagewise wird beendet: abgebrochene Antworten gelten als unterbrochen, nicht als vom Nutzer gestoppt. */
+  private shuttingDown = false;
 
   constructor(
     private readonly db: Db,
@@ -353,6 +355,20 @@ export class ChatService {
   /** Laufende Antwort eines Chats, falls es eine gibt. */
   running(chatId: string): Generation | null {
     return this.active.get(chatId) ?? null;
+  }
+
+  /** Anzahl der Antworten, die gerade laufen (für die Anzeige der Mac-App und die Warnung vor dem Beenden). */
+  activeCount(): number {
+    return this.active.size;
+  }
+
+  /**
+   * Beendet alle Antworten, weil Pagewise ausgeschaltet wird: Der Teiltext bleibt, der Status ist `interrupted`
+   * (wie bei einem Absturz, D-027), sodass „Erneut versuchen“ angeboten wird.
+   */
+  async shutdown(timeoutMs = 3_000): Promise<void> {
+    this.shuttingDown = true;
+    await this.stopAll(timeoutMs);
   }
 
   /** Bricht alle laufenden Antworten ab und wartet kurz, bis sie beendet sind (z. B. vor „Alles löschen“). */
@@ -820,13 +836,15 @@ export class ChatService {
     } | null = null,
   ): void {
     const model = generation.model;
+    const stored: MessageStatus =
+      this.shuttingDown && status === 'stopped' ? 'interrupted' : status;
     let view: MessageView | null = null;
     try {
       this.db
         .update(messages)
         .set({
           content: generation.text,
-          status,
+          status: stored,
           errorCode: code,
           ...(model ? { providerId: model.providerId, model: model.model } : {}),
           ...(agent
@@ -861,7 +879,7 @@ export class ChatService {
       seq: 0,
       role: 'assistant',
       content: generation.text,
-      status,
+      status: stored,
       providerId: model?.providerId ?? null,
       model: model?.model ?? agent?.model ?? null,
       engineProfileId: agent?.engineProfileId ?? null,

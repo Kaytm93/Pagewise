@@ -14,7 +14,7 @@ import { ChatService, type ChatServiceOptions } from './chats/service';
 import { type DatabaseHandle, migrateDatabase, openDatabase } from './db/client';
 import { loadSubjectCatalog, type SubjectCatalog } from './domain/subject-templates';
 import { ensureDefaultSubject } from './domain/subjects';
-import { APP_ROOT } from './paths';
+import { type ResourcePaths, resolveResources } from './paths';
 import { DefaultPrompts } from './prompts/defaults';
 import { ProviderClient } from './providers/client';
 import { ProviderService } from './providers/service';
@@ -65,6 +65,10 @@ export interface ServicesOptions {
   fetch?: typeof fetch;
   /** Nur für Tests: Grenzen und Takt des Chat-Dienstes. */
   chats?: ChatServiceOptions;
+  /** Mitgelieferte Dateien (Migrationen, Katalog, Standard-Prompts). Ohne Angabe: `PAGEWISE_RESOURCES_DIR` oder das Repo. */
+  resources?: ResourcePaths;
+  /** Pfad zur `better_sqlite3.node` des gebündelten Servers. Ohne Angabe: `PAGEWISE_SQLITE_BINDING`, sonst sucht better-sqlite3 selbst. */
+  sqliteBinding?: string;
   /** Nur für Tests: andere Katalogdatei und anderer Ordner für die Standard-Prompts. */
   catalogFile?: string;
   defaultsDir?: string;
@@ -79,10 +83,17 @@ export interface ServicesOptions {
  * die Datenbank und wendet ausstehende Migrationen an.
  */
 export function createServices(dataDir: string, options: ServicesOptions = {}): Services {
+  const resources = options.resources ?? resolveResources(process.env);
   const paths = ensureDataLayout(dataDir);
-  const database = openDatabase(paths.database);
+  const database = openDatabase(paths.database, {
+    nativeBinding:
+      options.sqliteBinding ?? (process.env.PAGEWISE_SQLITE_BINDING?.trim() || undefined),
+  });
   try {
-    migrateDatabase(database, { backupDir: paths.backups });
+    migrateDatabase(database, {
+      backupDir: paths.backups,
+      migrationsFolder: resources.migrations,
+    });
   } catch (error) {
     database.close();
     throw error;
@@ -109,13 +120,8 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     explicitPath: process.env.PAGEWISE_CLAUDE_PATH ?? null,
     ...options.cliDetect,
   });
-  const catalog = loadSubjectCatalog(
-    options.catalogFile ?? join(APP_ROOT, 'config', 'subject-catalog.json'),
-  );
-  const defaults = DefaultPrompts.load(
-    options.defaultsDir ?? join(APP_ROOT, 'prompts', 'defaults'),
-    catalog,
-  );
+  const catalog = loadSubjectCatalog(options.catalogFile ?? resources.catalogFile);
+  const defaults = DefaultPrompts.load(options.defaultsDir ?? resources.defaultsDir, catalog);
   const runner = new AgentRunner({
     db: database.db,
     engines,
