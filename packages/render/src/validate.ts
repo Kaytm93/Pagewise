@@ -1,10 +1,7 @@
-import { checkAbc } from './abc';
 import { type Block, extractBlocks } from './blocks';
 import { type BlockIssue, RenderError } from './errors';
 import { validateGraph } from './graph';
-import { validateMath } from './math';
 import { parseMolSpec, validateFormulaSpec } from './mol';
-import { validateSmiles } from './smiles';
 
 function issue(
   block: Block,
@@ -24,30 +21,36 @@ function issue(
  * Prüft alle Blöcke eines Hefteintrags oder einer Antwort (Formeln, Graph, Molekül, Noten) ohne DOM, also auch
  * auf dem Server. Gibt die Befunde zurück; leer heißt: alles lässt sich zeichnen. Die Befunde enthalten nur
  * feste Codes (siehe `RenderErrorCode`), nie Text aus den Blöcken.
+ *
+ * Die schweren Bibliotheken (KaTeX, abcjs, SmilesDrawer) werden erst geladen, wenn ein Block der Art vorkommt.
  */
-export function validateMarkdown(markdown: string): BlockIssue[] {
+export async function validateMarkdown(markdown: string): Promise<BlockIssue[]> {
   const issues: BlockIssue[] = [];
   for (const block of extractBlocks(markdown)) {
     let error: RenderError | null = null;
-    const severity: BlockIssue['severity'] = 'error';
     switch (block.kind) {
-      case 'math':
+      case 'math': {
+        const { validateMath } = await import('./math');
         error = validateMath(block.source, block.display);
         break;
+      }
       case 'graph':
         error = validateGraph(block.source);
         break;
       case 'mol': {
         const spec = parseMolSpec(block.source);
-        if (!spec.ok) error = spec.error;
-        else
-          error =
-            spec.value.kind === 'smiles'
-              ? validateSmiles(spec.value.value)
-              : validateFormulaSpec(spec.value);
+        if (!spec.ok) {
+          error = spec.error;
+        } else if (spec.value.kind === 'smiles') {
+          const { validateSmiles } = await import('./smiles');
+          error = validateSmiles(spec.value.value);
+        } else {
+          error = validateFormulaSpec(spec.value);
+        }
         break;
       }
       case 'abc': {
+        const { checkAbc } = await import('./abc');
         const check = checkAbc(block.source);
         error = check.error;
         if (!error && check.warning) {
@@ -56,7 +59,7 @@ export function validateMarkdown(markdown: string): BlockIssue[] {
         break;
       }
     }
-    if (error) issues.push(issue(block, error, severity));
+    if (error) issues.push(issue(block, error));
   }
   return issues;
 }

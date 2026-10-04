@@ -317,6 +317,36 @@ export const exams = sqliteTable(
 );
 
 /**
+ * Hefteinträge: Markdown mit Blöcken (Formeln, Graph, Molekül, Noten), pro Fach und optional pro Untergruppe.
+ * Ein Eintrag verschwindet mit seinem Fach (wie dessen Chats), bleibt aber im Fach, wenn nur die Untergruppe
+ * gelöscht wird. Der Text wird unverändert gespeichert und erst beim Anzeigen bereinigt (Modellausgaben sind
+ * nicht vertrauenswürdig). Die Herkunft aus einem Chat ist nur Anzeige: Der Chat darf verschwinden, der Eintrag
+ * nicht, und die Nachricht hat keinen Fremdschlüssel, weil Nachrichten beim Wiederholen neu entstehen.
+ */
+export const notes = sqliteTable(
+  'notes',
+  {
+    id: id(),
+    subjectId: text('subject_id')
+      .notNull()
+      .references(() => subjects.id, { onDelete: 'cascade' }),
+    groupId: text('group_id').references(() => subjectGroups.id, { onDelete: 'set null' }),
+    title: text('title').notNull(),
+    markdown: text('markdown').notNull().default(''),
+    pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
+    /** Liste von Stichwörtern als JSON-Text, höchstens 10 mal 30 Zeichen (siehe domain/notes.ts). */
+    tags: text('tags').notNull().default('[]'),
+    sourceChatId: text('source_chat_id').references(() => chats.id, { onDelete: 'set null' }),
+    sourceMessageId: text('source_message_id'),
+    ...timestamps,
+  },
+  (table) => [
+    index('notes_subject_updated').on(table.subjectId, table.updatedAt),
+    index('notes_group').on(table.groupId),
+  ],
+);
+
+/**
  * Zugangsdaten, genau eine Zeile (id = 1). Gespeichert wird nur der Hash des Passcodes,
  * nie der Passcode selbst. Gibt es keine Zeile, ist Pagewise noch nicht eingerichtet.
  */
@@ -355,4 +385,5 @@ export type EngineProfileRow = typeof engineProfiles.$inferSelect;
 export type AssetRow = typeof assets.$inferSelect;
 export type TimetableRow = typeof timetableEntries.$inferSelect;
 export type ExamRow = typeof exams.$inferSelect;
+export type NoteRow = typeof notes.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;

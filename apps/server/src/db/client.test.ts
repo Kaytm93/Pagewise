@@ -56,6 +56,7 @@ describe('Datenbank', () => {
       'engine_profiles',
       'exams',
       'messages',
+      'notes',
       'profile',
       'providers',
       'sessions',

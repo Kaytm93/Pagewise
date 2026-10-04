@@ -12,6 +12,7 @@ import { authRoutes } from './routes/auth';
 import { chatRoutes } from './routes/chats';
 import { dataRoutes } from './routes/data';
 import { engineRoutes } from './routes/engines';
+import { noteRoutes } from './routes/notes';
 import { plannerRoutes } from './routes/planner';
 import { profileRoutes } from './routes/profile';
 import { promptRoutes } from './routes/prompts';
@@ -85,6 +86,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
       '/api/assets',
       '/api/timetable',
       '/api/exams',
+      '/api/notes',
       '/api/tool-settings',
       '/api/data',
     ]) {
@@ -100,6 +102,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     app.route('/api', engineRoutes(services));
     app.route('/api', assetRoutes(services.assets));
     app.route('/api', plannerRoutes(db));
+    app.route('/api', noteRoutes(db, 'Hefteintrag'));
     app.route('/api', toolSettingsRoutes(services.toolSettings));
     app.route('/api', dataRoutes({ auth: services.auth, eraser: services.eraser }));
   }

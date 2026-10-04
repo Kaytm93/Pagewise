@@ -20,6 +20,9 @@ importers:
       '@hono/node-server':
         specifier: ^2.1.3
         version: 2.1.3(hono@4.13.12)
+      '@pagewise/render':
+        specifier: workspace:*
+        version: link:../../packages/render
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3

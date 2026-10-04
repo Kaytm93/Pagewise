@@ -28,13 +28,13 @@ const good = [
 ].join('\n');
 
 describe('validateMarkdown', () => {
-  it('findet an einem Text mit lauter gültigen Blöcken nichts', () => {
-    expect(validateMarkdown(good)).toEqual([]);
-    expect(validateMarkdown('Nur Text, ohne Blöcke.')).toEqual([]);
-    expect(validateMarkdown('')).toEqual([]);
+  it('findet an einem Text mit lauter gültigen Blöcken nichts', async () => {
+    expect(await validateMarkdown(good)).toEqual([]);
+    expect(await validateMarkdown('Nur Text, ohne Blöcke.')).toEqual([]);
+    expect(await validateMarkdown('')).toEqual([]);
   });
 
-  it('nennt Art, Nummer und Code jedes fehlerhaften Blocks', () => {
+  it('nennt Art, Nummer und Code jedes fehlerhaften Blocks', async () => {
     const text = [
       '$\\frac{1$ und $ok$',
       '```graph',
@@ -50,7 +50,7 @@ describe('validateMarkdown', () => {
       'das ist kein abc',
       '```',
     ].join('\n');
-    const issues = validateMarkdown(text);
+    const issues = await validateMarkdown(text);
     expect(issues.map((i) => [i.kind, i.index, i.code]).sort()).toEqual([
       ['abc', 1, 'invalid_abc'],
       ['graph', 1, 'invalid_expression'],
@@ -62,16 +62,16 @@ describe('validateMarkdown', () => {
     expect(issues.find((i) => i.code === 'unknown_formula')?.detail).toBe('C8H18');
   });
 
-  it('enthält in keinem Befund Text aus den Blöcken', () => {
-    const issues = validateMarkdown(
+  it('enthält in keinem Befund Text aus den Blöcken', async () => {
+    const issues = await validateMarkdown(
       '```graph\n{"functions":["geheimnis(x)"]}\n```\n```abc\nWichtigerText\n```',
     );
     expect(JSON.stringify(issues)).not.toMatch(/geheimnis|WichtigerText/);
   });
 
-  it('prüft große Texte schnell', () => {
+  it('prüft große Texte schnell', async () => {
     const start = Date.now();
-    validateMarkdown(Array.from({ length: 200 }, () => good).join('\n\n'));
+    await validateMarkdown(Array.from({ length: 200 }, () => good).join('\n\n'));
     expect(Date.now() - start).toBeLessThan(5000);
   });
 });

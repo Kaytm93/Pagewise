@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { applyInlineStyles, extractInlineStyles, katexHtml, validateMath } from './math';
+import { katexHtml, validateMath } from './math';
+import { applyInlineStyles, extractInlineStyles } from './math-dom';
 
 describe('Formeln', () => {
   it('rendert gültige Formeln', () => {

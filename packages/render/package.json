@@ -7,10 +7,13 @@
   "exports": {
     ".": "./src/index.ts",
     "./math": "./src/math.ts",
+    "./math-dom": "./src/math-dom.ts",
     "./graph": "./src/graph/index.ts",
     "./mol": "./src/mol/index.ts",
     "./abc": "./src/abc.ts",
+    "./abc-dom": "./src/abc-dom.ts",
     "./smiles": "./src/smiles.ts",
+    "./smiles-dom": "./src/smiles-dom.ts",
     "./sanitize": "./src/sanitize.ts",
     "./validate": "./src/validate.ts"
   },
