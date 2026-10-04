@@ -31,6 +31,13 @@ export function renderAbc(source: string): string {
     abcjs.renderAbc(holder, source, { staffwidth: 680, add_classes: false, responsive: undefined });
     const svg = holder.querySelector('svg');
     if (!svg) throw new RenderError('render_failed');
+    // abcjs setzt nur Breite und Höhe in Bildpunkten. Mit einem Ausschnitt (`viewBox`) skaliert das Bild beim
+    // Verkleinern mit, statt abgeschnitten zu werden.
+    const width = Number.parseFloat(svg.getAttribute('width') ?? '');
+    const height = Number.parseFloat(svg.getAttribute('height') ?? '');
+    if (!svg.hasAttribute('viewBox') && width > 0 && height > 0) {
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    }
     return sanitizeSvg(svg.outerHTML);
   } catch (error) {
     throw error instanceof RenderError ? error : new RenderError('render_failed');
