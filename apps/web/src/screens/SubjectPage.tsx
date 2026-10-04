@@ -3,23 +3,34 @@ import { useState } from 'react';
 import type { Group } from '../api/types';
 import { format, messages as m } from '../i18n';
 import { UpcomingExams } from '../planning/UpcomingExams';
+import { navigate } from '../router';
 import { Button } from '../ui/Button';
 import { Link } from '../ui/Link';
 import { Sheet } from '../ui/Sheet';
 import { SubjectIcon } from '../ui/SubjectIcon';
 import { listRow, sectionTitle } from '../ui/styles';
+import { Tabs } from '../ui/Tabs';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { ChatList } from './chat/ChatList';
 import { SubjectModel } from './chat/SubjectModel';
 import { GroupDialog } from './GroupDialog';
 import { NotFoundPage } from './NotFoundPage';
+import { NoteList } from './notes/NoteList';
 import { PromptRow } from './prompts/PromptRow';
 import { SubjectDialog } from './SubjectDialog';
 import { subjectMeta } from './subject-meta';
 
 type Dialog = { type: 'subject' } | { type: 'group'; group?: Group } | null;
 
-export function SubjectPage({ subjectId, groupId }: { subjectId: string; groupId: string | null }) {
+export function SubjectPage({
+  subjectId,
+  groupId,
+  tab,
+}: {
+  subjectId: string;
+  groupId: string | null;
+  tab?: 'notes';
+}) {
   const { findSubject } = useWorkspace();
   const [dialog, setDialog] = useState<Dialog>(null);
   const subject = findSubject(subjectId);
@@ -132,11 +143,42 @@ export function SubjectPage({ subjectId, groupId }: { subjectId: string; groupId
 
       {!group && !builtin && <UpcomingExams subjectId={subject.id} />}
 
-      <ChatList
-        key={`${subject.id}/${group?.id ?? ''}`}
-        subjectId={subject.id}
-        groupId={group?.id ?? null}
-      />
+      <section className="mt-10 border-t border-line-warm pt-6">
+        <Tabs
+          label={m.notes.tabs}
+          tabs={[
+            { value: 'chats', label: m.notes.chats },
+            { value: 'notes', label: m.notes.notes },
+          ]}
+          value={tab === 'notes' ? 'notes' : 'chats'}
+          onChange={(next) =>
+            navigate(
+              {
+                name: 'subject',
+                subjectId: subject.id,
+                groupId: group?.id ?? null,
+                ...(next === 'notes' && { tab: 'notes' as const }),
+              },
+              { replace: true },
+            )
+          }
+          panel={
+            tab === 'notes' ? (
+              <NoteList
+                key={`${subject.id}/${group?.id ?? ''}`}
+                subjectId={subject.id}
+                groupId={group?.id ?? null}
+              />
+            ) : (
+              <ChatList
+                key={`${subject.id}/${group?.id ?? ''}`}
+                subjectId={subject.id}
+                groupId={group?.id ?? null}
+              />
+            )
+          }
+        />
+      </section>
 
       {dialog?.type === 'subject' && !builtin && (
         <SubjectDialog subject={subject} onClose={close} />

@@ -17,6 +17,9 @@ import { Drawer } from './Drawer';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Sidebar } from './Sidebar';
 
+// Der Hefteintrag-Editor bringt Vorschau und Markdown-Darstellung mit und wird erst beim Öffnen geladen.
+const NotePage = lazy(() => import('../screens/notes/NotePage'));
+
 // Der Chat bringt die Markdown-Darstellung mit und wird erst beim Öffnen eines Chats geladen.
 const ChatPage = lazy(() =>
   import('../screens/chat/ChatPage').then((module) => ({ default: module.ChatPage })),
@@ -35,7 +38,19 @@ function Page({ route }: { route: Route }) {
     case 'exams':
       return <ExamsPage />;
     case 'subject':
-      return <SubjectPage subjectId={route.subjectId} groupId={route.groupId} />;
+      return <SubjectPage subjectId={route.subjectId} groupId={route.groupId} tab={route.tab} />;
+    case 'note':
+      return (
+        <Suspense
+          fallback={
+            <p role="status" className="mx-auto max-w-3xl px-4 py-8 text-ink-secondary">
+              {m.notes.editor.loading}
+            </p>
+          }
+        >
+          <NotePage key={route.noteId} subjectId={route.subjectId} noteId={route.noteId} />
+        </Suspense>
+      );
     case 'chat':
       return (
         <Suspense
@@ -59,7 +74,7 @@ function useTitle(route: Route): string {
   if (route.name === 'settings') return m.settings.title;
   if (route.name === 'timetable') return m.planning.timetable.title;
   if (route.name === 'exams') return m.planning.exams.title;
-  if (route.name === 'chat') {
+  if (route.name === 'chat' || route.name === 'note') {
     return findSubject(route.subjectId)?.name ?? m.app.name;
   }
   if (route.name === 'subject') {
@@ -73,13 +88,21 @@ function useTitle(route: Route): string {
 /** Fachfarbe der Ansicht: nur Fach und Chat haben eine, alles andere ist neutral. */
 function useRouteColor(route: Route): string | undefined {
   const { findSubject } = useWorkspace();
-  if (route.name !== 'subject' && route.name !== 'chat') return undefined;
+  if (route.name !== 'subject' && route.name !== 'chat' && route.name !== 'note') return undefined;
   return subjectColorAttr(findSubject(route.subjectId)?.color);
+}
+
+/**
+ * Schlüssel der Seite: ändert er sich, wird sie neu aufgebaut und das Blatt neu aufgelegt. Der Reiter in einem Fach
+ * gehört nicht dazu, sonst ginge beim Wechsel zwischen Chats und Hefteinträgen der Fokus verloren.
+ */
+function pageKey(route: Route): string {
+  return pathFor(route.name === 'subject' ? { ...route, tab: undefined } : route);
 }
 
 /** Wie viele Blätter unter dem aktuellen liegen: Start und Einstellungen 1, Fach 2, Chat 3. */
 function depthOf(route: Route): 1 | 2 | 3 {
-  if (route.name === 'chat') return 3;
+  if (route.name === 'chat' || route.name === 'note') return 3;
   if (route.name === 'subject' || route.name === 'default-chat') return 2;
   return 1;
 }
@@ -156,8 +179,8 @@ function Shell() {
             <div aria-hidden="true" className="lg-ply lg-p1" />
             <div aria-hidden="true" className="lg-ply lg-p2" />
             <div aria-hidden="true" className="lg-ply lg-p3" />
-            <div key={pathFor(route)} className="lg-arrive">
-              <ErrorBoundary resetKey={pathFor(route)}>
+            <div key={pageKey(route)} className="lg-arrive">
+              <ErrorBoundary resetKey={pageKey(route)}>
                 <Page route={route} />
               </ErrorBoundary>
             </div>

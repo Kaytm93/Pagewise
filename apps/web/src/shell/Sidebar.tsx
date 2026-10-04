@@ -43,7 +43,7 @@ function SubjectRow({
 }) {
   const panelId = `groups-${subject.id}`;
   const active = isActive(route, subject.id, null);
-  const inChat = route.name === 'chat' && route.subjectId === subject.id;
+  const inChat = (route.name === 'chat' || route.name === 'note') && route.subjectId === subject.id;
   return (
     <li data-subj={subjectColorAttr(subject.color)}>
       <div className="flex items-center">
@@ -112,7 +112,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { subjects, defaultSubject } = useWorkspace();
   const route = useRoute();
   const activeSubjectId =
-    route.name === 'subject' || route.name === 'chat' ? route.subjectId : null;
+    route.name === 'subject' || route.name === 'chat' || route.name === 'note'
+      ? route.subjectId
+      : null;
   const [creating, setCreating] = useState(false);
   const [open, setOpen] = useState<Set<string>>(
     () => new Set(activeSubjectId ? [activeSubjectId] : []),

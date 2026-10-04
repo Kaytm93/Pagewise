@@ -310,6 +310,38 @@ export interface Exam {
 
 export type ExamInput = Omit<Exam, 'id'>;
 
+// --- Hefteinträge (Phase 1b) -----------------------------------------------------------------------
+
+/** Ein Hefteintrag in Listen: ohne den ganzen Text, mit einem kurzen Auszug. Zeiten in Millisekunden. */
+export interface NoteSummary {
+  id: string;
+  subjectId: string;
+  groupId: string | null;
+  title: string;
+  pinned: boolean;
+  tags: string[];
+  excerpt: string;
+  /** Der Chat, aus dem der Eintrag stammt, solange es ihn gibt. */
+  sourceChatId: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Note extends NoteSummary {
+  markdown: string;
+}
+
+export interface NoteInput {
+  subjectId: string;
+  groupId?: string | null;
+  title: string;
+  markdown?: string;
+  pinned?: boolean;
+  tags?: string[];
+}
+
+export type NotePatch = Partial<Pick<Note, 'title' | 'markdown' | 'pinned' | 'tags' | 'groupId'>>;
+
 // --- Agent-CLI (Phase 1e) -----------------------------------------------------------------------
 
 export type EngineKind = 'claude-subscription' | 'glm-coding-plan' | 'anthropic-api';

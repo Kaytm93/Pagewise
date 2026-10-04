@@ -9,6 +9,7 @@ import type {
   Exam,
   ModelEntry,
   ModelSettings,
+  Note,
   Profile,
   PromptPreview,
   Provider,
@@ -196,6 +197,7 @@ export class FakeServer {
   timetable: TimetableEntry[] = [];
   weekAnchor: WeekAnchor | null = null;
   exams: Exam[] = [];
+  notes: Note[] = [];
   toolsEnabled = true;
   /** Das eingebaute Fach „Standard“, wie es der echte Server immer mitliefert. */
   defaultSubject: Subject = this.freshDefaultSubject();
@@ -321,6 +323,14 @@ export class FakeServer {
     return [this.defaultSubject, ...this.subjects];
   }
 
+  addGroup(subjectId: string, name: string): { id: string; name: string } {
+    const subject = this.allSubjects().find((entry) => entry.id === subjectId);
+    if (!subject) throw new Error('Fach unbekannt');
+    const group = { id: nextId(), name, kind: null, position: subject.groups.length };
+    subject.groups.push(group);
+    return group;
+  }
+
   addSubject(name: string, extra: Partial<Subject> = {}): Subject {
     const subject: Subject = {
       id: nextId(),
@@ -405,6 +415,7 @@ export class FakeServer {
       this.prompts.clear();
       this.engines = [];
       this.chats = [];
+      this.notes = [];
       this.providers = [];
       this.secrets.clear();
       this.modelSettings = { default: null, fallback: [] };
@@ -447,6 +458,7 @@ export class FakeServer {
       this.handleEngines(method, path, data) ??
       this.handlePrompts(method, path, data) ??
       this.handlePlanner(method, path, data) ??
+      this.handleNotes(method, path, data) ??
       this.handleChats(method, path, data, signal);
     if (extra) return extra;
 
@@ -888,6 +900,129 @@ export class FakeServer {
     };
     this.timetable.push(entry);
     return entry;
+  }
+
+  addNote(subjectId: string, extra: Partial<Note> = {}): Note {
+    const now = Date.now();
+    const note: Note = {
+      id: nextId(),
+      subjectId,
+      groupId: null,
+      title: 'Beispieleintrag',
+      markdown: '',
+      pinned: false,
+      tags: [],
+      excerpt: '',
+      sourceChatId: null,
+      createdAt: now,
+      updatedAt: now,
+      ...extra,
+    };
+    this.notes.push(note);
+    return note;
+  }
+
+  private withExcerpt(note: Note): Note {
+    return { ...note, excerpt: note.markdown.replace(/\s+/g, ' ').trim().slice(0, 160) };
+  }
+
+  private handleNotes(
+    method: string,
+    path: string,
+    data: Record<string, unknown>,
+  ): Response | undefined {
+    const [route = '', query = ''] = path.split('?');
+    if (route === '/api/notes' && method === 'GET') {
+      const params = new URLSearchParams(query);
+      const subjectId = params.get('subjectId');
+      if (!subjectId) return json(400, { error: 'invalid_input', field: 'subjectId' });
+      const groupId = params.get('groupId');
+      const needle = (params.get('q') ?? '').toLowerCase();
+      const list = this.notes
+        .filter(
+          (note) =>
+            note.subjectId === subjectId &&
+            (note.groupId ?? null) === (groupId ?? null) &&
+            (needle === '' ||
+              note.title.toLowerCase().includes(needle) ||
+              note.markdown.toLowerCase().includes(needle)),
+        )
+        .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
+        .map((note) => {
+          const { markdown: _text, ...summary } = this.withExcerpt(note);
+          return summary;
+        });
+      return json(200, { notes: list });
+    }
+    if (route === '/api/notes' && method === 'POST') {
+      const title = String(data.title ?? '').trim();
+      if (title === '' || [...title].length > 120) {
+        return json(400, { error: 'invalid_input', field: 'title' });
+      }
+      const subjectId = String(data.subjectId ?? '');
+      if (!this.allSubjects().some((subject) => subject.id === subjectId)) {
+        return json(400, { error: 'invalid_input', field: 'subjectId' });
+      }
+      const note = this.addNote(subjectId, {
+        groupId: typeof data.groupId === 'string' ? data.groupId : null,
+        title,
+        markdown: String(data.markdown ?? ''),
+        pinned: data.pinned === true,
+        tags: Array.isArray(data.tags) ? (data.tags as string[]) : [],
+      });
+      return json(201, this.withExcerpt(note));
+    }
+    const one = /^\/api\/notes\/([^/]+)$/.exec(route);
+    if (one) {
+      const note = this.notes.find((entry) => entry.id === one[1]);
+      if (!note) return json(404, { error: 'not_found' });
+      if (method === 'GET') return json(200, this.withExcerpt(note));
+      if (method === 'DELETE') {
+        this.notes = this.notes.filter((entry) => entry !== note);
+        return json(204);
+      }
+      if (method === 'PATCH') {
+        if ('title' in data) {
+          const title = String(data.title ?? '').trim();
+          if (title === '') return json(400, { error: 'invalid_input', field: 'title' });
+          note.title = title;
+        }
+        if ('markdown' in data) note.markdown = String(data.markdown ?? '');
+        if ('pinned' in data) note.pinned = data.pinned === true;
+        if ('tags' in data && Array.isArray(data.tags)) note.tags = data.tags as string[];
+        if ('groupId' in data)
+          note.groupId = typeof data.groupId === 'string' ? data.groupId : null;
+        note.updatedAt = Date.now();
+        return json(200, this.withExcerpt(note));
+      }
+    }
+    const fromMessage = /^\/api\/chats\/([^/]+)\/messages\/([^/]+)\/note$/.exec(route);
+    if (fromMessage && method === 'POST') {
+      const chat = this.chats.find((entry) => entry.id === fromMessage[1]);
+      const message = this.chatMessages
+        .get(fromMessage[1] as string)
+        ?.find((entry) => entry.id === fromMessage[2]);
+      if (!chat || !message) return json(404, { error: 'not_found' });
+      const savable = ['complete', 'stopped', 'interrupted'].includes(message.status);
+      if (message.role !== 'assistant' || !savable || message.content.trim() === '') {
+        return json(409, { error: 'not_savable' });
+      }
+      const heading = message.content.split('\n').find((line) => /^\s{0,3}#{1,3}\s+\S/.test(line));
+      const title =
+        (heading ?? message.content)
+          .replace(/^\s{0,3}#{1,3}\s+/, '')
+          .trim()
+          .split('\n')[0]
+          ?.slice(0, 60) || 'Hefteintrag';
+      const note = this.addNote(chat.subjectId, {
+        groupId: chat.groupId,
+        title,
+        markdown: message.content,
+        sourceChatId: chat.id,
+      });
+      return json(201, this.withExcerpt(note));
+    }
+    return undefined;
   }
 
   addExam(subjectId: string, extra: Partial<Exam> = {}): Exam {

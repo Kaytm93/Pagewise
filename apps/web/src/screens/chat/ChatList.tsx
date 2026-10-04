@@ -8,7 +8,7 @@ import { Button } from '../../ui/Button';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
-import { listRow, sectionTitle } from '../../ui/styles';
+import { listRow } from '../../ui/styles';
 import { formatWhen } from './when';
 
 /** Chats eines Fachs oder einer Untergruppe mit „Neuer Chat“. Chats bleiben immer in ihrem Fach. */
@@ -71,9 +71,10 @@ export function ChatList({ subjectId, groupId }: { subjectId: string; groupId: s
   }
 
   return (
-    <section className="mt-10 border-t border-line-warm pt-6" aria-labelledby="chats-heading">
-      <div className="flex items-center justify-between gap-4">
-        <h2 id="chats-heading" className={sectionTitle}>
+    <section className="mt-6" aria-labelledby="chats-heading">
+      <div className="flex items-center justify-end gap-4">
+        {/* Die Überschrift steht jetzt als Reiter über der Liste; für Screenreader bleibt sie als Abschnittstitel */}
+        <h2 id="chats-heading" className="sr-only">
           {m.subject.chats}
         </h2>
         <Button variant="primary" busy={creating} onClick={() => void create()}>

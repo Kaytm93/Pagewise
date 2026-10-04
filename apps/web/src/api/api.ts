@@ -14,6 +14,10 @@ import type {
   Group,
   ImportResult,
   ModelSettings,
+  Note,
+  NoteInput,
+  NotePatch,
+  NoteSummary,
   Profile,
   ProfilePatch,
   PromptPreview,
@@ -204,6 +208,22 @@ export function createApi(client: ApiClient) {
     updateExam: (id: string, patch: Partial<ExamInput>) =>
       client.request<Exam>('PATCH', `/api/exams/${id}`, patch),
     deleteExam: (id: string) => client.request<void>('DELETE', `/api/exams/${id}`),
+
+    // Hefteinträge. `groupId: null` meint „Allgemein“ (ohne Untergruppe), wie bei den Chats.
+    async notes(subjectId: string, groupId: string | null, query = ''): Promise<NoteSummary[]> {
+      const params = new URLSearchParams({ subjectId });
+      if (groupId) params.set('groupId', groupId);
+      if (query.trim() !== '') params.set('q', query.trim());
+      return (await client.request<{ notes: NoteSummary[] }>('GET', `/api/notes?${params}`)).notes;
+    },
+    note: (id: string) => client.request<Note>('GET', `/api/notes/${id}`),
+    createNote: (input: NoteInput) => client.request<Note>('POST', '/api/notes', input),
+    updateNote: (id: string, patch: NotePatch) =>
+      client.request<Note>('PATCH', `/api/notes/${id}`, patch),
+    deleteNote: (id: string) => client.request<void>('DELETE', `/api/notes/${id}`),
+    /** Macht aus einer fertigen Antwort einen Hefteintrag; den Text liest der Server selbst aus der Nachricht. */
+    noteFromMessage: (chatId: string, messageId: string) =>
+      client.request<Note>('POST', `/api/chats/${chatId}/messages/${messageId}/note`),
     async toolsEnabled(): Promise<boolean> {
       return (await client.request<{ enabled: boolean }>('GET', '/api/tool-settings')).enabled;
     },

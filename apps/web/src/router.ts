@@ -5,7 +5,9 @@ export type Route =
   | { name: 'home' }
   /** Der fachunabhängige Standard-Chat (Klick auf „Pagewise“): öffnet einen Chat im eingebauten Fach „Standard“. */
   | { name: 'default-chat' }
-  | { name: 'subject'; subjectId: string; groupId: string | null }
+  /** Ein Fach oder eine Untergruppe; `tab: 'notes'` öffnet den Reiter „Hefteinträge“ (sonst „Chats“). */
+  | { name: 'subject'; subjectId: string; groupId: string | null; tab?: 'notes' }
+  | { name: 'note'; subjectId: string; noteId: string }
   | { name: 'chat'; subjectId: string; chatId: string }
   | { name: 'settings' }
   /** Stundenplan und Testeinträge (Welle 3). */
@@ -26,10 +28,18 @@ export function parseRoute(pathname: string): Route {
     const subjectId = parts[1];
     if (subjectId && ID.test(subjectId)) {
       if (parts.length === 2) return { name: 'subject', subjectId, groupId: null };
+      if (parts.length === 3 && parts[2] === 'notes') {
+        return { name: 'subject', subjectId, groupId: null, tab: 'notes' };
+      }
       const other = parts[3];
       if (parts.length === 4 && other && ID.test(other)) {
         if (parts[2] === 'groups') return { name: 'subject', subjectId, groupId: other };
         if (parts[2] === 'chats') return { name: 'chat', subjectId, chatId: other };
+        if (parts[2] === 'notes') return { name: 'note', subjectId, noteId: other };
+      }
+      if (parts.length === 5 && parts[2] === 'groups' && other && ID.test(other)) {
+        if (parts[4] === 'notes')
+          return { name: 'subject', subjectId, groupId: other, tab: 'notes' };
       }
     }
   }
@@ -49,10 +59,14 @@ export function pathFor(route: Route): string {
       return '/timetable';
     case 'exams':
       return '/exams';
-    case 'subject':
-      return route.groupId
+    case 'subject': {
+      const base = route.groupId
         ? `/subjects/${route.subjectId}/groups/${route.groupId}`
         : `/subjects/${route.subjectId}`;
+      return route.tab === 'notes' ? `${base}/notes` : base;
+    }
+    case 'note':
+      return `/subjects/${route.subjectId}/notes/${route.noteId}`;
     case 'chat':
       return `/subjects/${route.subjectId}/chats/${route.chatId}`;
   }

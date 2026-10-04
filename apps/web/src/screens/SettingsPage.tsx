@@ -2,6 +2,7 @@ import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 import { ApiError } from '../api/client';
 import { messages as m } from '../i18n';
 import { useSession } from '../session/SessionProvider';
+import { readAutoFix, saveAutoFix } from '../ui/autofix';
 import { Button } from '../ui/Button';
 import { type Design, readDesign, saveDesign } from '../ui/design';
 import { CheckField, PasscodeField } from '../ui/Field';
@@ -100,6 +101,23 @@ function EffectsChoice() {
       <Segmented legend={e.title} options={EFFECTS} value={effects} onChange={choose} />
       <p className="mt-3 max-w-[52ch] text-sm text-ink-secondary">{e.help[effects]}</p>
     </div>
+  );
+}
+
+/** Fehlerhafte Blöcke automatisch korrigieren lassen (nur in diesem Browser, Standard: an). */
+function AutoFixChoice() {
+  const [enabled, setEnabled] = useState(() => readAutoFix());
+  const a = m.settings.answers.autoFix;
+  return (
+    <CheckField
+      label={a.label}
+      hint={a.hint}
+      checked={enabled}
+      onChange={(value) => {
+        setEnabled(value);
+        saveAutoFix(value);
+      }}
+    />
   );
 }
 
@@ -267,6 +285,9 @@ export function SettingsPage() {
           <ThemeChoice />
           <DesignChoice />
           <EffectsChoice />
+        </Section>
+        <Section title={m.settings.answers.title} lead={m.settings.answers.lead}>
+          <AutoFixChoice />
         </Section>
         <Section title={m.providers.title} lead={m.providers.lead}>
           <ProvidersSection />

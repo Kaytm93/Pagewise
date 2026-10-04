@@ -4,6 +4,7 @@ import { ApiError } from '../../api/client';
 import { format, messages as m } from '../../i18n';
 import { navigate } from '../../router';
 import { useSession } from '../../session/SessionProvider';
+import { readAutoFix } from '../../ui/autofix';
 import { Button } from '../../ui/Button';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { TextField } from '../../ui/Field';
@@ -14,6 +15,7 @@ import { Sheet } from '../../ui/Sheet';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { commonErrorMessage } from '../auth-errors';
 import { NotFoundPage } from '../NotFoundPage';
+import { autoFixRequest, mayContainBlocks } from './autofix';
 import { Composer } from './Composer';
 import { takeQueuedSend } from './default-chat';
 import { MessageItem } from './MessageItem';
@@ -162,6 +164,27 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
     previousLive.current = state.liveId;
   }, [state.liveId, state.messages]);
 
+  // Automatische Korrektur (höchstens einmal je Antwort): Ist eine Antwort eben fertig geworden und lässt sich
+  // ein Block darin nicht zeichnen, geht einmal eine Anfrage mit den Fehlercodes an das Modell. Beim bloßen
+  // Öffnen eines alten Chats passiert nichts: geprüft wird nur, was in dieser Ansicht gerade fertig wurde.
+  const fixBase = useRef<string | null>(null);
+  const sendRef = useRef(chat.send);
+  sendRef.current = chat.send;
+  useEffect(() => {
+    const finishedId = state.liveId === null ? fixBase.current : null;
+    fixBase.current = state.liveId;
+    if (!finishedId || !readAutoFix()) return;
+    const index = state.messages.findIndex((entry) => entry.id === finishedId);
+    const message = state.messages[index];
+    const before = state.messages[index - 1];
+    if (message?.role !== 'assistant' || message.status !== 'complete') return;
+    if (before?.role === 'user' && before.content.startsWith(m.chat.autoFix.prefix)) return;
+    if (!mayContainBlocks(message.content)) return;
+    void autoFixRequest(message.content)
+      .then((text) => (text ? sendRef.current(text) : undefined))
+      .catch(() => undefined);
+  }, [state.liveId, state.messages]);
+
   const subject = findSubject(subjectId);
   if (state.phase === 'not-found') return <NotFoundPage />;
   if (!subject) return <NotFoundPage />;
@@ -298,6 +321,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
               }
               assetUrl={api.assetUrl}
               onRetryViaApi={apiModel ? () => void chat.retry(true) : undefined}
+              saveNote={{ subjectId, save: (messageId) => api.noteFromMessage(chatId, messageId) }}
             />
           ))
         )}

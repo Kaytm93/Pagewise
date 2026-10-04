@@ -1,5 +1,5 @@
-import { Check, Copy, RotateCcw } from 'lucide-react';
-import { memo } from 'react';
+import { Check, Copy, NotebookPen, RotateCcw } from 'lucide-react';
+import { memo, useState } from 'react';
 import type { ChatMessage, EngineKind } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { Button } from '../../ui/Button';
@@ -56,6 +56,8 @@ interface Props {
   assetUrl?: (id: string) => string;
   /** Nur gesetzt, wenn ein Modell eines Anbieters bereitsteht, das statt des Agenten antworten kann. */
   onRetryViaApi?: () => void;
+  /** Macht aus der Antwort einen Hefteintrag; der Server liest den Text selbst aus der Nachricht. */
+  saveNote?: { subjectId: string; save: (messageId: string) => Promise<{ id: string }> };
 }
 
 export const MessageItem = memo(function MessageItem({
@@ -67,8 +69,26 @@ export const MessageItem = memo(function MessageItem({
   engineKind = null,
   assetUrl,
   onRetryViaApi,
+  saveNote,
 }: Props) {
   const { copied, copy } = useCopy();
+  const [noteState, setNoteState] = useState<
+    | { status: 'idle' }
+    | { status: 'saving' }
+    | { status: 'saved'; id: string }
+    | { status: 'failed' }
+  >({ status: 'idle' });
+
+  async function saveAsNote() {
+    if (!saveNote) return;
+    setNoteState({ status: 'saving' });
+    try {
+      const note = await saveNote.save(message.id);
+      setNoteState({ status: 'saved', id: note.id });
+    } catch {
+      setNoteState({ status: 'failed' });
+    }
+  }
 
   if (message.role === 'user') {
     return (
@@ -151,6 +171,32 @@ export const MessageItem = memo(function MessageItem({
                 <Copy aria-hidden="true" className="size-4" />
               )}
             </button>
+          )}
+          {hasText &&
+            saveNote &&
+            message.status !== 'error' &&
+            (noteState.status === 'saved' ? (
+              <Link
+                to={{ name: 'note', subjectId: saveNote.subjectId, noteId: noteState.id }}
+                className="inline-flex min-h-11 items-center gap-1.5 px-3 text-sm"
+              >
+                <Check aria-hidden="true" className="size-4" />
+                {m.notes.openSaved}
+              </Link>
+            ) : (
+              <Button
+                variant="ghost"
+                busy={noteState.status === 'saving'}
+                onClick={() => void saveAsNote()}
+              >
+                <NotebookPen aria-hidden="true" className="size-4" />
+                {m.notes.saveFromChat}
+              </Button>
+            ))}
+          {noteState.status === 'failed' && (
+            <span role="alert" className="px-3 text-danger">
+              {m.notes.saveFromChatFailed}
+            </span>
           )}
           {canRetry && (
             <Button variant="ghost" onClick={onRetry}>
