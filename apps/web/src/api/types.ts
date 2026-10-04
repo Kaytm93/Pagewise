@@ -24,6 +24,8 @@ export interface Subject {
   groups: Group[];
   /** Eigene Modellwahl des Fachs, `null`: es gilt das Standardmodell. */
   model: Selection | null;
+  /** Gewählter Agent-CLI-Zugang des Fachs (statt eines Modells), sonst `null`. */
+  engineProfileId: string | null;
 }
 
 export interface Profile {
@@ -202,6 +204,8 @@ export interface Chat {
   title: string;
   /** Eigene Modellwahl des Chats, `null`: es gilt die des Fachs, dann das Standardmodell. */
   model: Selection | null;
+  /** Eigener Agent-CLI-Zugang des Chats (statt eines Modells), `null`: es gilt die Wahl des Fachs. */
+  engineProfileId: string | null;
   generating: boolean;
   createdAt: number;
   updatedAt: number;
@@ -227,3 +231,58 @@ export type StreamEvent =
   | { type: 'done'; message: ChatMessage }
   | { type: 'stopped'; message: ChatMessage }
   | { type: 'failed'; code: string; message: ChatMessage };
+
+// --- Agent-CLI (Phase 1e) -----------------------------------------------------------------------
+
+export type EngineKind = 'claude-subscription' | 'glm-coding-plan' | 'anthropic-api';
+
+/** Ein Zugang, mit dem Pagewise das Programm „claude“ startet. Der Schlüssel kommt nie zur Oberfläche. */
+export interface EngineProfile {
+  id: string;
+  kind: EngineKind;
+  name: string;
+  /** Eigene Modellwahl, `null`: Voreinstellung der Art. */
+  model: string | null;
+  timeoutMinutes: number;
+  hasToken: boolean;
+  /** Letzte vier Zeichen, nur bei langen Schlüsseln. */
+  tokenHint: string | null;
+  position: number;
+  createdAt: number;
+}
+
+export interface EngineKindInfo {
+  kind: EngineKind;
+  needsToken: boolean;
+  defaultModel: string | null;
+  /** Adresse, an die das Programm mit diesem Zugang spricht (nur wenn sie von der Voreinstellung abweicht). */
+  endpoint: string | null;
+}
+
+export interface EnginesInfo {
+  kinds: EngineKindInfo[];
+  profiles: EngineProfile[];
+}
+
+export interface CliStatus {
+  state: 'ready' | 'missing' | 'broken';
+  path: string | null;
+  version: string | null;
+  /** Kandidaten, die geprüft wurden und nicht starten. */
+  skipped: { path: string; reason: string }[];
+}
+
+export interface EngineInput {
+  kind: EngineKind;
+  name: string;
+  model?: string | null;
+  timeoutMinutes?: number;
+  token?: string;
+}
+
+export interface EnginePatch {
+  name?: string;
+  model?: string | null;
+  timeoutMinutes?: number;
+  token?: string;
+}

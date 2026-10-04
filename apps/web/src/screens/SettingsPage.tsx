@@ -8,6 +8,7 @@ import { FieldError } from '../ui/FieldError';
 import { Segmented } from '../ui/Segmented';
 import { Sheet } from '../ui/Sheet';
 import { readTheme, saveTheme, type ThemePreference } from '../ui/theme';
+import { AgentSection } from './agents/AgentSection';
 import { commonErrorMessage, rateLimitMessage } from './auth-errors';
 import { EraseDialog } from './EraseDialog';
 import { PromptRow } from './prompts/PromptRow';
@@ -158,6 +159,9 @@ export function SettingsPage() {
         </Section>
         <Section title={m.providers.title} lead={m.providers.lead}>
           <ProvidersSection />
+        </Section>
+        <Section title={m.agents.title} lead={m.agents.lead}>
+          <AgentSection />
         </Section>
         <Section title={m.prompts.title} lead={m.prompts.lead}>
           <PromptRow scope={{ type: 'general' }} layer="general" />

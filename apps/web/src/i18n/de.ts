@@ -522,6 +522,88 @@ export const de = {
       notFound: 'Das Fach oder die Untergruppe gibt es nicht mehr.',
     },
   },
+  /** Agent-CLI (Phase 1e): das Programm Claude Code lokal starten, Zugänge dafür. */
+  agents: {
+    title: 'Agent-CLI',
+    lead: 'Pagewise kann das Programm Claude Code auf diesem Rechner starten. Es arbeitet in einem eigenen Ordner und erzeugt dort Dateien wie PDF und PPTX, die du herunterladen kannst. Dafür brauchst du einen eigenen Zugang.',
+    cli: {
+      title: 'Programm',
+      checking: 'Claude Code wird gesucht …',
+      ready: 'Claude Code gefunden, Version {version}.',
+      readyPath: 'Ort: {path}',
+      missing:
+        'Claude Code wurde nicht gefunden. Installiere es und suche dann erneut. Bis dahin antwortet Pagewise nur mit Modellen von Anbietern.',
+      broken:
+        'Es gibt eine Installation von Claude Code, die aber nicht startet. Prüfe sie im Terminal mit „claude --version“.',
+      skipped: 'Übersprungen, startet nicht: {path}',
+      search: 'Erneut suchen',
+      searching: 'Suche läuft …',
+      failed: 'Die Suche ist fehlgeschlagen.',
+    },
+    profiles: {
+      title: 'Zugänge',
+      empty: 'Noch kein Zugang eingerichtet.',
+      emptyHint:
+        'Ohne Zugang antwortet Pagewise nur mit Modellen von Anbietern. Du kannst jederzeit später einen anlegen.',
+      add: 'Zugang hinzufügen',
+      editNamed: '„{name}“ bearbeiten',
+      detail: '{kind} · {model} · höchstens {minutes} Min.',
+      defaultModel: 'Standardmodell',
+      tokenSet: 'Schlüssel gespeichert',
+      tokenSetEnding: 'Schlüssel gespeichert, endet auf {last4}',
+    },
+    kinds: {
+      'claude-subscription': 'Claude-Abo',
+      'glm-coding-plan': 'GLM Coding Plan (Z.ai)',
+      'anthropic-api': 'Anthropic-API-Schlüssel',
+    },
+    kindHints: {
+      'claude-subscription':
+        'Du meldest dich selbst in Claude Code an (im Terminal mit „claude“). Pagewise liest, speichert und vermittelt keine Zugangsdaten deines Abos.',
+      'glm-coding-plan':
+        'Nutzt deinen GLM Coding Plan von Z.ai über Claude Code. Nur für dich als Kontoinhaber und nur auf diesem Rechner. Gib den Schlüssel nie weiter: Z.ai verbietet es, den Plan mit anderen zu teilen.',
+      'anthropic-api':
+        'Ein eigener Anthropic-API-Schlüssel, abgerechnet nach Verbrauch. Er wird nur hier gespeichert.',
+    },
+    defaultNames: {
+      'claude-subscription': 'Mein Claude-Abo',
+      'glm-coding-plan': 'Mein GLM Coding Plan',
+      'anthropic-api': 'Mein Anthropic-Schlüssel',
+    },
+    rules:
+      'Abo-Zugänge (Claude-Abo, GLM Coding Plan) gelten nur für die persönliche Nutzung des Kontoinhabers und nur auf diesem Rechner. Die Anbieter können ihre Regeln ändern, prüfe sie selbst. Pagewise startet nur die unveränderte, offizielle Anwendung und gehört nicht zu Anthropic oder Z.ai.',
+    form: {
+      createTitle: 'Zugang hinzufügen',
+      editTitle: 'Zugang bearbeiten',
+      kind: 'Art des Zugangs',
+      name: 'Name',
+      model: 'Modell',
+      modelHint: 'Leer lassen für das Standardmodell.',
+      modelHintDefault: 'Leer lassen für {model}.',
+      token: 'Schlüssel',
+      tokenHintCreate: 'Wird nur auf diesem Rechner gespeichert und nie wieder angezeigt.',
+      tokenHintEdit: 'Leer lassen, um den gespeicherten Schlüssel zu behalten.',
+      showToken: 'Schlüssel anzeigen',
+      hideToken: 'Schlüssel verbergen',
+      timeout: 'Höchstdauer eines Auftrags (Minuten)',
+      timeoutHint: 'Danach bricht Pagewise den Auftrag ab.',
+      endpoint: 'Das Programm spricht mit {url}.',
+      delete: 'Zugang löschen',
+    },
+    confirmDelete: {
+      title: 'Zugang „{name}“ löschen?',
+      body: 'Der Zugang und sein gespeicherter Schlüssel werden entfernt. Fächer und Chats, die ihn nutzen, antworten danach wieder mit ihrem Modell.',
+    },
+    errors: {
+      nameTaken: 'Einen Zugang mit diesem Namen gibt es schon.',
+      tokenRequired: 'Für diese Art brauchst du einen Schlüssel.',
+      tokenInvalid: 'Der Schlüssel enthält ungültige Zeichen oder ist zu lang.',
+      invalidModel: 'Bitte gib eine gültige Modellkennung ein (Buchstaben, Ziffern, Punkt, Minus).',
+      invalidTimeout: 'Bitte gib eine ganze Zahl von 1 bis 120 ein.',
+      tooMany: 'Es sind schon so viele Zugänge eingerichtet, wie erlaubt sind.',
+      notFound: 'Diesen Zugang gibt es nicht mehr.',
+    },
+  },
   onboarding: {
     step: 'Schritt {current} von {total}',
     profile: {

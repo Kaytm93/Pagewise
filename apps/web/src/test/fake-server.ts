@@ -2,6 +2,9 @@ import type {
   AvailableModel,
   Chat,
   ChatMessage,
+  CliStatus,
+  EngineKindInfo,
+  EngineProfile,
   ModelEntry,
   ModelSettings,
   Profile,
@@ -233,6 +236,25 @@ export class FakeServer {
   testOutcome: TestOutcome = { ok: true, latencyMs: 42, modelCount: null };
   available: AvailableModel[] = [];
   prompts = new Map<string, string | null>();
+  /** Zugänge für die Agent-CLI. Schlüssel liegen nur in `secrets`, nie in Antworten. */
+  engines: EngineProfile[] = [];
+  engineKinds: EngineKindInfo[] = [
+    { kind: 'claude-subscription', needsToken: false, defaultModel: null, endpoint: null },
+    {
+      kind: 'glm-coding-plan',
+      needsToken: true,
+      defaultModel: 'glm-5.3-flash',
+      endpoint: 'https://api.z.ai/api/anthropic',
+    },
+    { kind: 'anthropic-api', needsToken: true, defaultModel: null, endpoint: null },
+  ];
+  /** Das „gefundene“ Programm; ein Test kann es auf `missing` oder `broken` setzen. */
+  cli: CliStatus = {
+    state: 'ready',
+    path: '/usr/local/bin/claude',
+    version: '2.1.220',
+    skipped: [],
+  };
   chats: Chat[] = [];
   chatMessages = new Map<string, ChatMessage[]>();
   generations = new Map<string, FakeGeneration>();
@@ -267,6 +289,7 @@ export class FakeServer {
       position: -1,
       groups: [],
       model: null,
+      engineProfileId: null,
     };
   }
 
@@ -287,6 +310,7 @@ export class FakeServer {
       position: this.subjects.length,
       groups: [],
       model: null,
+      engineProfileId: null,
       ...extra,
     };
     this.subjects.push(subject);
@@ -355,6 +379,7 @@ export class FakeServer {
       this.subjects = [];
       this.defaultSubject = this.freshDefaultSubject();
       this.prompts.clear();
+      this.engines = [];
       this.chats = [];
       this.providers = [];
       this.secrets.clear();
@@ -395,6 +420,7 @@ export class FakeServer {
 
     const extra =
       this.handleProviders(method, path, data) ??
+      this.handleEngines(method, path, data) ??
       this.handlePrompts(method, path, data) ??
       this.handleChats(method, path, data, signal);
     if (extra) return extra;
@@ -559,6 +585,7 @@ export class FakeServer {
       groupId: null,
       title: '',
       model: null,
+      engineProfileId: null,
       generating: false,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -671,6 +698,19 @@ export class FakeServer {
       const subject = this.allSubjects().find((entry) => entry.id === subjectModel[1]);
       if (!subject) return json(404, { error: 'not_found' });
       subject.model = (data.model as Selection | null) ?? null;
+      if (subject.model) subject.engineProfileId = null;
+      return json(200, subject);
+    }
+    const subjectEngine = /^\/api\/subjects\/([^/]+)\/engine$/.exec(route);
+    if (subjectEngine && method === 'PUT') {
+      const subject = this.allSubjects().find((entry) => entry.id === subjectEngine[1]);
+      if (!subject) return json(404, { error: 'not_found' });
+      const id = (data.engineProfileId as string | null) ?? null;
+      if (id !== null && !this.engines.some((entry) => entry.id === id)) {
+        return json(400, { error: 'invalid_input', field: 'engineProfileId' });
+      }
+      subject.engineProfileId = id;
+      if (id !== null) subject.model = null;
       return json(200, subject);
     }
 
@@ -685,7 +725,18 @@ export class FakeServer {
     }
     if (!action && method === 'PATCH') {
       if (typeof data.title === 'string') chat.title = data.title.trim();
-      if ('model' in data) chat.model = (data.model as Selection | null) ?? null;
+      if ('model' in data) {
+        chat.model = (data.model as Selection | null) ?? null;
+        if (chat.model) chat.engineProfileId = null;
+      }
+      if ('engineProfileId' in data) {
+        const id = (data.engineProfileId as string | null) ?? null;
+        if (id !== null && !this.engines.some((entry) => entry.id === id)) {
+          return json(400, { error: 'invalid_input', field: 'engineProfileId' });
+        }
+        chat.engineProfileId = id;
+        if (id !== null) chat.model = null;
+      }
       return json(200, this.view(chat));
     }
     if (!action && method === 'DELETE') {
@@ -775,6 +826,100 @@ export class FakeServer {
       const text = typeof data.text === 'string' && data.text.trim() !== '' ? data.text : null;
       this.prompts.set(key, text);
       return json(200, view(text));
+    }
+    return undefined;
+  }
+
+  addEngine(name: string, extra: Partial<EngineProfile> = {}): EngineProfile {
+    const profile: EngineProfile = {
+      id: nextId(),
+      kind: 'claude-subscription',
+      name,
+      model: null,
+      timeoutMinutes: 20,
+      hasToken: false,
+      tokenHint: null,
+      position: this.engines.length,
+      createdAt: Date.now(),
+      ...extra,
+    };
+    this.engines.push(profile);
+    return profile;
+  }
+
+  private handleEngines(
+    method: string,
+    path: string,
+    data: Record<string, unknown>,
+  ): Response | undefined {
+    if (method === 'GET' && path === '/api/engines') {
+      return json(200, { kinds: this.engineKinds, profiles: this.engines });
+    }
+    if (method === 'GET' && path === '/api/engines/cli') return json(200, { cli: this.cli });
+    if (method === 'POST' && path === '/api/engines/detect') return json(200, { cli: this.cli });
+
+    if (method === 'POST' && path === '/api/engines') {
+      const kind = data.kind as EngineProfile['kind'];
+      const info = this.engineKinds.find((entry) => entry.kind === kind);
+      const name = String(data.name ?? '').trim();
+      if (!info || !name)
+        return json(400, { error: 'invalid_input', field: !info ? 'kind' : 'name' });
+      const token = typeof data.token === 'string' ? data.token.trim() : '';
+      if (info.needsToken && !token) {
+        return json(400, { error: 'invalid_input', field: 'token', reason: 'token_required' });
+      }
+      if (!info.needsToken && token) {
+        return json(400, { error: 'invalid_input', field: 'token', reason: 'token_not_allowed' });
+      }
+      if (this.engines.some((entry) => entry.name.toLowerCase() === name.toLowerCase())) {
+        return json(409, { error: 'name_taken' });
+      }
+      const profile = this.addEngine(name, {
+        kind,
+        model: (data.model as string | null | undefined) ?? null,
+        timeoutMinutes: (data.timeoutMinutes as number | undefined) ?? 20,
+        hasToken: info.needsToken,
+        tokenHint: info.needsToken && token.length >= 16 ? token.slice(-4) : null,
+      });
+      if (info.needsToken) this.secrets.set(`engine.${profile.id}.token`, token);
+      return json(201, profile);
+    }
+
+    const match = /^\/api\/engines\/([^/]+)$/.exec(path);
+    if (!match) return undefined;
+    const profile = this.engines.find((entry) => entry.id === match[1]);
+    if (!profile) return json(404, { error: 'not_found' });
+    if (method === 'DELETE') {
+      this.engines = this.engines.filter((entry) => entry.id !== profile.id);
+      this.secrets.delete(`engine.${profile.id}.token`);
+      for (const subject of this.allSubjects()) {
+        if (subject.engineProfileId === profile.id) subject.engineProfileId = null;
+      }
+      for (const chat of this.chats)
+        if (chat.engineProfileId === profile.id) chat.engineProfileId = null;
+      return json(204);
+    }
+    if (method === 'PATCH') {
+      if (typeof data.name === 'string') {
+        const name = data.name.trim();
+        if (
+          this.engines.some(
+            (entry) => entry.id !== profile.id && entry.name.toLowerCase() === name.toLowerCase(),
+          )
+        ) {
+          return json(409, { error: 'name_taken' });
+        }
+        profile.name = name;
+      }
+      if ('model' in data) profile.model = (data.model as string | null) ?? null;
+      if (typeof data.timeoutMinutes === 'number') profile.timeoutMinutes = data.timeoutMinutes;
+      if (typeof data.token === 'string' && data.token.trim()) {
+        const token = data.token.trim();
+        this.secrets.set(`engine.${profile.id}.token`, token);
+        profile.hasToken = true;
+        profile.tokenHint = token.length >= 16 ? token.slice(-4) : null;
+      }
+      return json(200, profile);
     }
     return undefined;
   }

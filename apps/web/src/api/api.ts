@@ -4,6 +4,11 @@ import type {
   AvailableModel,
   Chat,
   ChatDetail,
+  CliStatus,
+  EngineInput,
+  EnginePatch,
+  EngineProfile,
+  EnginesInfo,
   Group,
   ImportResult,
   ModelSettings,
@@ -145,12 +150,32 @@ export function createApi(client: ApiClient) {
     createChat: (subjectId: string, groupId: string | null) =>
       client.request<Chat>('POST', '/api/chats', { subjectId, groupId }),
     chat: (id: string) => client.request<ChatDetail>('GET', `/api/chats/${id}`),
-    updateChat: (id: string, patch: { title?: string; model?: Selection | null }) =>
-      client.request<Chat>('PATCH', `/api/chats/${id}`, patch),
+    updateChat: (
+      id: string,
+      patch: { title?: string; model?: Selection | null; engineProfileId?: string | null },
+    ) => client.request<Chat>('PATCH', `/api/chats/${id}`, patch),
     deleteChat: (id: string) => client.request<void>('DELETE', `/api/chats/${id}`),
     stopChat: (id: string) => client.request<void>('POST', `/api/chats/${id}/stop`),
     setSubjectModel: (subjectId: string, model: Selection | null) =>
       client.request<Subject>('PUT', `/api/subjects/${subjectId}/model`, { model }),
+    setSubjectEngine: (subjectId: string, engineProfileId: string | null) =>
+      client.request<Subject>('PUT', `/api/subjects/${subjectId}/engine`, { engineProfileId }),
+
+    // Agent-CLI: Zugänge (schnell) und das gefundene Programm (startet Programme, getrennt geladen)
+    engines: () => client.request<EnginesInfo>('GET', '/api/engines'),
+    createEngine: (input: EngineInput) =>
+      client.request<EngineProfile>('POST', '/api/engines', input),
+    updateEngine: (id: string, patch: EnginePatch) =>
+      client.request<EngineProfile>('PATCH', `/api/engines/${id}`, patch),
+    deleteEngine: (id: string) => client.request<void>('DELETE', `/api/engines/${id}`),
+    async cliStatus(): Promise<CliStatus> {
+      return (await client.request<{ cli: CliStatus }>('GET', '/api/engines/cli')).cli;
+    },
+    async detectCli(): Promise<CliStatus> {
+      return (await client.request<{ cli: CliStatus }>('POST', '/api/engines/detect')).cli;
+    },
+    /** Adresse zum Herunterladen einer Datei (gleiche Herkunft, Anmeldung per Cookie). */
+    assetUrl: (id: string) => `/api/assets/${id}/download`,
     /** Sendet eine Nachricht und liest die Antwort als Strom mit. */
     sendMessage: (
       chatId: string,

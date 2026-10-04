@@ -10,6 +10,10 @@ import {
 import type { Api } from '../api/api';
 import { ApiError } from '../api/client';
 import type {
+  EngineInput,
+  EnginePatch,
+  EngineProfile,
+  EnginesInfo,
   Group,
   ImportResult,
   ModelSettings,
@@ -55,6 +59,12 @@ interface WorkspaceValue {
   removeGroup: (id: string) => Promise<void>;
   providers: Provider[];
   modelSettings: ModelSettings;
+  /** Zugänge für die Agent-CLI und die bekannten Arten. */
+  engines: EnginesInfo;
+  setSubjectEngine: (id: string, engineProfileId: string | null) => Promise<void>;
+  addEngine: (input: EngineInput) => Promise<EngineProfile>;
+  editEngine: (id: string, patch: EnginePatch) => Promise<EngineProfile>;
+  removeEngine: (id: string) => Promise<void>;
   addProvider: (input: ProviderInput) => Promise<Provider>;
   editProvider: (id: string, patch: ProviderPatch) => Promise<Provider>;
   removeProvider: (id: string) => Promise<void>;
@@ -75,6 +85,7 @@ type Loaded = {
   defaultSubject: Subject;
   providers: Provider[];
   modelSettings: ModelSettings;
+  engines: EnginesInfo;
 };
 type LoadState = { status: 'loading' } | { status: 'error' } | ({ status: 'ready' } & Loaded);
 
@@ -95,8 +106,14 @@ export function WorkspaceProvider({
   useEffect(() => {
     let cancelled = false;
     setState({ status: 'loading' });
-    Promise.all([api.profile(), api.subjects(), api.providers(), api.modelSettings()])
-      .then(([profile, list, providers, modelSettings]) => {
+    Promise.all([
+      api.profile(),
+      api.subjects(),
+      api.providers(),
+      api.modelSettings(),
+      api.engines(),
+    ])
+      .then(([profile, list, providers, modelSettings, engines]) => {
         if (!cancelled) {
           setState({
             status: 'ready',
@@ -105,6 +122,7 @@ export function WorkspaceProvider({
             defaultSubject: list.defaultSubject,
             providers,
             modelSettings,
+            engines,
           });
         }
       })
@@ -155,6 +173,27 @@ function buildValue(
         : state.subjects.find((entry) => entry.id === id),
     providers: state.providers,
     modelSettings: state.modelSettings,
+    engines: state.engines,
+    setSubjectEngine: async (id, engineProfileId) => {
+      await api.setSubjectEngine(id, engineProfileId);
+      await refreshSubjects();
+    },
+    addEngine: async (input) => {
+      const profile = await api.createEngine(input);
+      update({ engines: await api.engines() });
+      return profile;
+    },
+    editEngine: async (id, patch) => {
+      const profile = await api.updateEngine(id, patch);
+      update({ engines: await api.engines() });
+      return profile;
+    },
+    removeEngine: async (id) => {
+      await api.deleteEngine(id);
+      // Fächer mit diesem Zugang fallen auf ihr Modell zurück: Liste und Zugänge zusammen holen.
+      const [engines, list] = await Promise.all([api.engines(), api.subjects()]);
+      update({ engines, subjects: list.subjects, defaultSubject: list.defaultSubject });
+    },
     saveProfile: async (patch) => update({ profile: await api.updateProfile(patch) }),
     completeOnboarding: async () => update({ profile: await api.completeOnboarding() }),
     addSubject: async (input) => {

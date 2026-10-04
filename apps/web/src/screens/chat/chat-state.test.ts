@@ -8,6 +8,7 @@ const chat: Chat = {
   groupId: null,
   title: '',
   model: null,
+  engineProfileId: null,
   generating: false,
   createdAt: 1,
   updatedAt: 1,
