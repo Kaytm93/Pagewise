@@ -7,9 +7,11 @@ import { secureHeaders } from 'hono/secure-headers';
 import { csrfGuard, loadSession, requireSession } from './auth/http';
 import { originGuard } from './http/origin';
 import type { AppEnv } from './http/types';
+import { assetRoutes } from './routes/assets';
 import { authRoutes } from './routes/auth';
 import { chatRoutes } from './routes/chats';
 import { dataRoutes } from './routes/data';
+import { engineRoutes } from './routes/engines';
 import { profileRoutes } from './routes/profile';
 import { promptRoutes } from './routes/prompts';
 import { providerRoutes } from './routes/providers';
@@ -77,6 +79,8 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
       '/api/providers',
       '/api/provider-presets',
       '/api/model-settings',
+      '/api/engines',
+      '/api/assets',
       '/api/data',
     ]) {
       app.use(prefix, requireSession);
@@ -88,6 +92,8 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     app.route('/api', chatRoutes(services.chats));
     app.route('/api', promptRoutes(db, services.defaults));
     app.route('/api', providerRoutes(services.providers));
+    app.route('/api', engineRoutes(services));
+    app.route('/api', assetRoutes(services.assets));
     app.route('/api', dataRoutes({ auth: services.auth, eraser: services.eraser }));
   }
 

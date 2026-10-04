@@ -50,8 +50,10 @@ describe('Datenbank', () => {
       .prepare("select name from sqlite_master where type = 'table' and name not like '%drizzle%'")
       .all() as { name: string }[];
     expect(tables.map((t) => t.name).sort()).toEqual([
+      'assets',
       'auth_credentials',
       'chats',
+      'engine_profiles',
       'messages',
       'profile',
       'providers',
@@ -71,6 +73,13 @@ describe('Datenbank', () => {
   it('startet ohne Anbieter und ohne Einstellungen', () => {
     expect(handle.db.select().from(providers).all()).toEqual([]);
     expect(handle.db.select().from(settings).all()).toEqual([]);
+  });
+
+  it('startet ohne Agent-Zugänge und ohne übernommene Dateien', () => {
+    expect(handle.sqlite.prepare('select count(*) as n from engine_profiles').get()).toEqual({
+      n: 0,
+    });
+    expect(handle.sqlite.prepare('select count(*) as n from assets').get()).toEqual({ n: 0 });
   });
 
   it('startet ohne Chats und Nachrichten', () => {

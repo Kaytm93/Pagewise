@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Hono } from 'hono';
+import type { DetectOptions } from './agents/detect';
 import { createApp } from './app';
 import { AttemptLimiter } from './auth/attempt-limiter';
 import type { ChatServiceOptions } from './chats/service';
@@ -53,6 +54,8 @@ export function createHarness(
     /** Katalogdatei und Ordner der Standard-Prompts. Ohne Angabe gibt es keine (leerer Katalog, keine Standardtexte). */
     catalogFile?: string;
     defaultsDir?: string;
+    /** Wo nach „claude“ gesucht wird. Ohne Angabe wird nirgends gesucht (kein Programm gefunden). */
+    cliDetect?: DetectOptions;
   } = {},
 ): Harness {
   const base = mkdtempSync(join(tmpdir(), 'pagewise-test-'));
@@ -63,6 +66,7 @@ export function createHarness(
     chats: options.chats,
     catalogFile: options.catalogFile ?? join(base, 'kein-katalog.json'),
     defaultsDir: options.defaultsDir ?? join(base, 'keine-standards'),
+    cliDetect: options.cliDetect ?? { searchPath: join(base, 'kein-claude'), extraDirs: [] },
   });
   const app = createApp({ version: '1.2.3', services });
 

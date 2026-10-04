@@ -15,10 +15,16 @@ const CreateChatBody = z.strictObject({
   title: titleField.optional(),
 });
 const UpdateChatBody = z
-  .strictObject({ title: titleField.optional(), model: SelectionSchema.nullable().optional() })
-  .refine((body) => Object.keys(body).length > 0);
+  .strictObject({
+    title: titleField.optional(),
+    model: SelectionSchema.nullable().optional(),
+    engineProfileId: idField.nullable().optional(),
+  })
+  .refine((body) => Object.keys(body).length > 0)
+  .refine((body) => !(body.model && body.engineProfileId));
 const SendBody = z.strictObject({ content: messageField });
 const SubjectModelBody = z.strictObject({ model: SelectionSchema.nullable() });
+const SubjectEngineBody = z.strictObject({ engineProfileId: idField.nullable() });
 
 // Zeichen können bis zu vier Byte belegen, dazu kommt das JSON drumherum.
 const MESSAGE_BODY_LIMIT = MESSAGE_MAX_CHARACTERS * 4 + 1024;
@@ -33,6 +39,8 @@ function failure(c: Context, result: ChatFailure): Response {
       return c.json({ error: 'not_found' }, 404);
     case 'unknown_model':
       return c.json({ error: 'invalid_input', field: 'model' }, 400);
+    case 'unknown_engine':
+      return c.json({ error: 'invalid_input', field: 'engineProfileId' }, 400);
     case 'busy':
       return c.json({ error: 'busy' }, 409);
     case 'no_model':
@@ -227,6 +235,15 @@ export function chatRoutes(chats: ChatService): Hono<AppEnv> {
     const body = await readJson(c, SubjectModelBody);
     if (!body.ok) return body.response;
     return respond(c, chats.setSubjectModel(id, body.data.model));
+  });
+
+  // Agent-CLI-Zugang eines Fachs (statt eines Modells).
+  app.put('/subjects/:id/engine', async (c) => {
+    const id = idParam(c);
+    if (!id) return c.json({ error: 'not_found' }, 404);
+    const body = await readJson(c, SubjectEngineBody);
+    if (!body.ok) return body.response;
+    return respond(c, chats.setSubjectEngine(id, body.data.engineProfileId));
   });
 
   return app;

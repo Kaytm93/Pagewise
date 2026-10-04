@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, isNull, max } from 'drizzle-orm';
+import type { EngineProfileService } from '../agents/profiles';
 import type { Db } from '../db/client';
 import {
   type ChatRow,
@@ -27,6 +28,8 @@ export interface ChatView {
   title: string;
   /** Eigene Modellwahl des Chats, `null`: es gilt die des Fachs, dann das Standardmodell. */
   model: Selection | null;
+  /** Eigener Agent-CLI-Zugang des Chats (statt eines Modells), `null`: es gilt die Wahl des Fachs. */
+  engineProfileId: string | null;
   generating: boolean;
   createdAt: number;
   updatedAt: number;
@@ -38,7 +41,14 @@ export interface ChatDetail extends ChatView {
 
 export type ChatFailure = {
   ok: false;
-  error: 'not_found' | 'unknown_model' | 'busy' | 'too_busy' | 'no_model' | 'nothing_to_retry';
+  error:
+    | 'not_found'
+    | 'unknown_model'
+    | 'unknown_engine'
+    | 'busy'
+    | 'too_busy'
+    | 'no_model'
+    | 'nothing_to_retry';
 };
 export type ChatResult<T> = { ok: true; value: T } | ChatFailure;
 
@@ -57,6 +67,8 @@ export interface ChatServiceOptions {
   flushIntervalMs?: number;
   /** Mitgelieferte Standard-Prompts je Fach (D-034). Ohne Angabe gibt es keine. */
   defaults?: DefaultPrompts;
+  /** Zugänge für den Agent-CLI-Adapter. Ohne Angabe gibt es keine (nur API-Modelle). */
+  engines?: EngineProfileService;
 }
 
 const TITLE_MAX = 120;
@@ -90,6 +102,7 @@ export class ChatService {
   private readonly historyMax: number;
   private readonly flushIntervalMs: number;
   private readonly defaults: DefaultPrompts;
+  private readonly engines: EngineProfileService | null;
 
   constructor(
     private readonly db: Db,
@@ -100,6 +113,7 @@ export class ChatService {
     this.historyMax = options.historyMaxCharacters ?? HISTORY_MAX_CHARACTERS;
     this.flushIntervalMs = options.flushIntervalMs ?? 2_000;
     this.defaults = options.defaults ?? DefaultPrompts.empty();
+    this.engines = options.engines ?? null;
     // Antworten, die beim letzten Beenden des Servers liefen, sind unterbrochen. Was schon da war, bleibt.
     this.db
       .update(messages)
@@ -117,6 +131,7 @@ export class ChatService {
       groupId: row.groupId,
       title: row.title,
       model: selectionOf(row.modelProviderId, row.modelId),
+      engineProfileId: row.engineProfileId,
       generating: this.active.has(row.id),
       createdAt: row.createdAt.getTime(),
       updatedAt: row.updatedAt.getTime(),
@@ -188,7 +203,14 @@ export class ChatService {
     return { ok: true, value: this.toChat(row) };
   }
 
-  update(id: string, patch: { title?: string; model?: Selection | null }): ChatResult<ChatView> {
+  /**
+   * Titel, Modell oder Agent-CLI-Zugang eines Chats ändern. Modell und Zugang schließen sich aus: Wer
+   * eines wählt, hebt das andere auf, damit nie unklar ist, womit ein Chat antwortet.
+   */
+  update(
+    id: string,
+    patch: { title?: string; model?: Selection | null; engineProfileId?: string | null },
+  ): ChatResult<ChatView> {
     const row = this.row(id);
     if (!row) return { ok: false, error: 'not_found' };
     const changes: Partial<typeof chats.$inferInsert> = {};
@@ -199,6 +221,19 @@ export class ChatService {
       }
       changes.modelProviderId = patch.model?.providerId ?? null;
       changes.modelId = patch.model?.model ?? null;
+      if (patch.model !== null) changes.engineProfileId = null;
+    }
+    if (patch.engineProfileId !== undefined) {
+      if (patch.engineProfileId !== null && !this.engines?.exists(patch.engineProfileId)) {
+        return { ok: false, error: 'unknown_engine' };
+      }
+      changes.engineProfileId = patch.engineProfileId;
+      if (patch.engineProfileId !== null) {
+        changes.modelProviderId = null;
+        changes.modelId = null;
+        // Ein anderer Zugang ist eine andere Sitzung.
+        if (patch.engineProfileId !== row.engineProfileId) changes.agentSessionId = null;
+      }
     }
     // Umbenennen und Modellwahl zählen nicht als Aktivität: die Liste bleibt nach Nutzung sortiert.
     if (Object.keys(changes).length > 0) {
@@ -227,7 +262,31 @@ export class ChatService {
     }
     this.db
       .update(subjects)
-      .set({ modelProviderId: model?.providerId ?? null, modelId: model?.model ?? null })
+      .set({
+        modelProviderId: model?.providerId ?? null,
+        modelId: model?.model ?? null,
+        // Wer ein Modell wählt, hebt den Agent-CLI-Zugang des Fachs auf.
+        ...(model !== null ? { engineProfileId: null } : {}),
+      })
+      .where(eq(subjects.id, subjectId))
+      .run();
+    const view = getSubject(this.db, subjectId);
+    return view ? { ok: true, value: view } : { ok: false, error: 'not_found' };
+  }
+
+  /** Agent-CLI-Zugang eines Fachs setzen oder mit `null` aufheben (hebt die Modellwahl des Fachs auf). */
+  setSubjectEngine(subjectId: string, engineProfileId: string | null): ChatResult<SubjectView> {
+    const existing = this.db.select().from(subjects).where(eq(subjects.id, subjectId)).get();
+    if (!existing) return { ok: false, error: 'not_found' };
+    if (engineProfileId !== null && !this.engines?.exists(engineProfileId)) {
+      return { ok: false, error: 'unknown_engine' };
+    }
+    this.db
+      .update(subjects)
+      .set({
+        engineProfileId,
+        ...(engineProfileId !== null ? { modelProviderId: null, modelId: null } : {}),
+      })
       .where(eq(subjects.id, subjectId))
       .run();
     const view = getSubject(this.db, subjectId);

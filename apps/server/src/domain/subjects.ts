@@ -28,6 +28,8 @@ export interface SubjectView extends SubjectDetails {
   position: number;
   /** Gewähltes Modell für dieses Fach, `null`: es gilt das Standardmodell. */
   model: Selection | null;
+  /** Gewählter Agent-CLI-Zugang des Fachs (statt eines Modells), sonst `null`. */
+  engineProfileId: string | null;
   groups: GroupView[];
 }
 
@@ -71,6 +73,7 @@ function toSubject(row: typeof subjects.$inferSelect, groups: GroupView[]): Subj
       row.modelProviderId && row.modelId
         ? { providerId: row.modelProviderId, model: row.modelId }
         : null,
+    engineProfileId: row.engineProfileId,
     groups,
   };
 }

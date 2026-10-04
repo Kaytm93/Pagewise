@@ -69,6 +69,29 @@ export const settings = sqliteTable('settings', {
   ...timestamps,
 });
 
+/**
+ * Profile für den Agent-CLI-Adapter (Phase 1e): Mit welchem Zugang startet Pagewise das Programm „claude“?
+ * Zugangsdaten stehen nie hier, sondern im Secret-Speicher unter `engine.<id>.token`. Das Claude-Abo hat
+ * gar keine: Die Anmeldung macht die Person selbst in der CLI, Pagewise fasst keine Tokens an.
+ */
+export const engineProfiles = sqliteTable(
+  'engine_profiles',
+  {
+    id: id(),
+    kind: text('kind', {
+      enum: ['claude-subscription', 'glm-coding-plan', 'anthropic-api'],
+    }).notNull(),
+    name: text('name').notNull(),
+    /** Modell (bei GLM für alle Stufen), `NULL`: Voreinstellung des Profils. */
+    model: text('model'),
+    /** Höchste Laufzeit eines Auftrags in Minuten. */
+    timeoutMinutes: integer('timeout_minutes').notNull().default(20),
+    position: integer('position').notNull().default(0),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex('engine_profiles_name_nocase').on(sql`lower(${table.name})`)],
+);
+
 export const subjects = sqliteTable(
   'subjects',
   {
@@ -95,6 +118,10 @@ export const subjects = sqliteTable(
       onDelete: 'set null',
     }),
     modelId: text('model_id'),
+    /** Gewählter Agent-CLI-Zugang für das Fach. Hat das Fach eine, gilt sie statt des Modells. */
+    engineProfileId: text('engine_profile_id').references(() => engineProfiles.id, {
+      onDelete: 'set null',
+    }),
     position: integer('position').notNull().default(0),
     ...timestamps,
   },
@@ -143,6 +170,12 @@ export const chats = sqliteTable(
       onDelete: 'set null',
     }),
     modelId: text('model_id'),
+    /** Eigener Agent-CLI-Zugang des Chats (hat Vorrang vor Modell und Wahl des Fachs). */
+    engineProfileId: text('engine_profile_id').references(() => engineProfiles.id, {
+      onDelete: 'set null',
+    }),
+    /** Sitzung des Agenten, damit der nächste Auftrag im selben Gespräch weiterläuft (`--resume`). */
+    agentSessionId: text('agent_session_id'),
     ...timestamps,
   },
   (table) => [
@@ -173,6 +206,10 @@ export const messages = sqliteTable(
     /** Was geantwortet hat (nur Anzeige, bewusst ohne Fremdschlüssel: der Verlauf bleibt, wenn der Anbieter geht). */
     providerId: text('provider_id'),
     model: text('model'),
+    /** Zugang, über den ein Agent geantwortet hat (nur Anzeige, ohne Fremdschlüssel wie `provider_id`). */
+    engineProfileId: text('engine_profile_id'),
+    /** Was der Agent getan hat (Werkzeug und Ziel, JSON-Liste), nie Inhalte. `NULL` bei Antworten ohne Agent. */
+    activity: text('activity'),
     errorCode: text('error_code'),
     promptTokens: integer('prompt_tokens'),
     completionTokens: integer('completion_tokens'),
@@ -186,6 +223,33 @@ export const messages = sqliteTable(
       sql`${table.status} in ('complete', 'streaming', 'stopped', 'error', 'interrupted')`,
     ),
   ],
+);
+
+/**
+ * Dateien, die ein Agent in seinem Arbeitsordner erzeugt hat und die Pagewise übernommen hat. Die Datei
+ * selbst liegt im Datenverzeichnis unter `assets/<id>`; hier stehen nur Angaben dazu. Mit dem Chat oder der
+ * Nachricht verschwindet die Zeile, die Datei räumt `AssetService` weg.
+ */
+export const assets = sqliteTable(
+  'assets',
+  {
+    id: id(),
+    chatId: text('chat_id')
+      .notNull()
+      .references(() => chats.id, { onDelete: 'cascade' }),
+    messageId: text('message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    /** Art zur Anzeige (pdf, pptx, bild, text, sonstiges). */
+    kind: text('kind').notNull(),
+    /** Von Pagewise festgelegt (nach der Endung), nie vom Agenten. */
+    mime: text('mime').notNull(),
+    /** Bereinigter Dateiname zum Herunterladen. */
+    name: text('name').notNull(),
+    size: integer('size').notNull(),
+    ...timestamps,
+  },
+  (table) => [index('assets_message').on(table.messageId), index('assets_chat').on(table.chatId)],
 );
 
 /**
@@ -223,4 +287,6 @@ export type Subject = typeof subjects.$inferSelect;
 export type SubjectGroup = typeof subjectGroups.$inferSelect;
 export type ProviderRow = typeof providers.$inferSelect;
 export type ChatRow = typeof chats.$inferSelect;
+export type EngineProfileRow = typeof engineProfiles.$inferSelect;
+export type AssetRow = typeof assets.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;

@@ -1,4 +1,8 @@
 import { join } from 'node:path';
+import { AssetService } from './agents/assets';
+import { CliDetector, type DetectOptions } from './agents/detect';
+import { EngineProfileService } from './agents/profiles';
+import { WorkspaceManager } from './agents/workspace';
 import { AttemptLimiter } from './auth/attempt-limiter';
 import { AuthService } from './auth/auth-service';
 import type { ScryptParams } from './auth/passcode';
@@ -25,6 +29,14 @@ export interface Services {
   sessions: SessionService;
   auth: AuthService;
   providers: ProviderService;
+  /** Zugänge für den Agent-CLI-Adapter (Claude-Abo, GLM Coding Plan, Anthropic-Schlüssel). */
+  engines: EngineProfileService;
+  /** Erkennt das Programm „claude“ auf diesem Rechner. */
+  cli: CliDetector;
+  /** Arbeitsordner der Agenten (`workspaces/`). */
+  workspaces: WorkspaceManager;
+  /** Von Agenten erzeugte Dateien (`assets/`). */
+  assets: AssetService;
   /** Vorlagen für Fächer (Katalog), aus `config/subject-catalog.json`. */
   catalog: SubjectCatalog;
   /** Mitgelieferte Standard-Prompts je Fach (D-034), aus `prompts/defaults`. */
@@ -45,6 +57,8 @@ export interface ServicesOptions {
   /** Nur für Tests: andere Katalogdatei und anderer Ordner für die Standard-Prompts. */
   catalogFile?: string;
   defaultsDir?: string;
+  /** Nur für Tests: wo und wie nach „claude“ gesucht wird. */
+  cliDetect?: DetectOptions;
 }
 
 /**
@@ -74,6 +88,14 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     secrets,
     new ProviderClient({ fetch: options.fetch }),
   );
+  const engines = new EngineProfileService(database.db, secrets);
+  const storage = new LocalStorage(paths.assets);
+  const assets = new AssetService(database.db, storage);
+  const workspaces = new WorkspaceManager(paths.workspaces);
+  const cli = new CliDetector({
+    explicitPath: process.env.PAGEWISE_CLAUDE_PATH ?? null,
+    ...options.cliDetect,
+  });
   const catalog = loadSubjectCatalog(
     options.catalogFile ?? join(APP_ROOT, 'config', 'subject-catalog.json'),
   );
@@ -81,17 +103,21 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     options.defaultsDir ?? join(APP_ROOT, 'prompts', 'defaults'),
     catalog,
   );
-  const chats = new ChatService(database.db, providers, { ...options.chats, defaults });
+  const chats = new ChatService(database.db, providers, { ...options.chats, defaults, engines });
   // Das eingebaute Fach „Standard“ (fachunabhängiger Chat) gehört immer dazu.
   ensureDefaultSubject(database.db);
   return {
     paths,
     database,
-    storage: new LocalStorage(paths.assets),
+    storage,
     secrets,
     sessions,
     auth,
     providers,
+    engines,
+    cli,
+    workspaces,
+    assets,
     catalog,
     defaults,
     chats,
