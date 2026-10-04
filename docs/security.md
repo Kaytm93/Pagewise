@@ -34,7 +34,7 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | Modell-Antworten im Chat: Markdown ohne rohes HTML, Links nur `http`, `https`, `mailto` mit `noopener noreferrer nofollow`, Bilder werden nie geladen; Test belegt: kein `script`, `img`, `onerror`, `javascript:` | umgesetzt (Phase 1a), siehe D-028 |
 | Chat-Antworten und Fehler: Texte der Anbieter und der Nachrichten erscheinen nie in Fehlern oder Logs, nur Codes | umgesetzt (Phase 1a), siehe D-026 und D-027 |
 | Service Worker speichert nur Startseite, `/assets` und `/icons`, nie `/api` oder den Antwort-Strom; Test liest den echten Quelltext | umgesetzt (Phase 1a), siehe D-029 |
-| Bereinigung von SVG, HTML und Formeln in Hefteinträgen | geplant (Phase 1b) |
+| Bereinigung von SVG, HTML und Formeln in Hefteinträgen | **umgesetzt (Phase 1b)**, siehe D-048 und [acceptance-1b.md](acceptance-1b.md) |
 | EXIF-Entfernung, Upload-Prüfung | geplant (Phase 1c) |
 | PDF-Rendering ohne Netzwerk | geplant (Phase 1d) |
 | Agent-CLI mit Umgebungs-Allowlist und Workspace-Isolation (Sandbox und Berechtigungsregeln, `--safe-mode`) | umgesetzt (Phase 1e), siehe D-039, D-040 und [agent-cli.md](agent-cli.md) |

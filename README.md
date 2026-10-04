@@ -2,7 +2,7 @@
 
 Ein selbst gehosteter Schul-Workspace für den Browser. Jede Person richtet ihre eigene Installation ein: eigene Fächer, eigene Prompts, eigene Modelle. Die Daten bleiben auf dem eigenen Rechner.
 
-> **Status:** Phase 1a (Kern). Einrichtung, Fächer und Untergruppen, Prompt-Schichten, Anbieter, Chat mit Streaming und die installierbare Web-App laufen. Dazu die Agent-CLI-Anbindung (Phase 1e, siehe [docs/agent-cli.md](docs/agent-cli.md)). Hefteinträge, Fotos und Export kommen in den nächsten Phasen. Der Stand der Abnahme steht in [docs/acceptance-1a.md](docs/acceptance-1a.md) und [docs/acceptance-1e.md](docs/acceptance-1e.md).
+> **Status:** Phase 1a (Kern) und 1b (Hefteinträge). Einrichtung, Fächer und Untergruppen, Prompt-Schichten, Anbieter, Chat mit Streaming und die installierbare Web-App laufen. Dazu die Agent-CLI-Anbindung (Phase 1e, siehe [docs/agent-cli.md](docs/agent-cli.md)). Hefteinträge (Editor, Formeln, Graphen, Moleküle, Noten) sind gebaut; Fotos und Export kommen in den nächsten Phasen. Der Stand der Abnahme steht in [docs/acceptance-1a.md](docs/acceptance-1a.md), [docs/acceptance-1b.md](docs/acceptance-1b.md) und [docs/acceptance-1e.md](docs/acceptance-1e.md).
 
 ## Was Pagewise werden soll
 

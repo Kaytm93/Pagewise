@@ -25,7 +25,7 @@ In Phase 1 laufen Server und Worker als ein Prozess. Der Worker holt Aufträge t
 
 ## Datenmodell (Vorschlag)
 
-`Profile`, `Subject`, `Group` (Untergruppe), `Chat`, `Message`, `Note` (Hefteintrag), `Asset`, `Job`, `ProviderConfig`, `EngineProfile`. Umgesetzt sind bisher `profile`, `subjects` (mit `kind` und `template_key`, D-038) und `subject_groups` (D-017), `providers` und `settings` (D-026) sowie `chats` und `messages` (D-027), der Rest kommt mit den Inkrementen, die ihn brauchen. Navigation: Fach → Untergruppe → Chats oder Hefteinträge, zusätzlich je Fach eine Ansicht „Allgemein“ ohne Untergruppe. Chats bleiben in ihrem Fach, es gibt keine fachübergreifende Chatliste. Secrets liegen nie im Klartext in der Datenbank.
+`Profile`, `Subject`, `Group` (Untergruppe), `Chat`, `Message`, `Note` (Hefteintrag), `Asset`, `Job`, `ProviderConfig`, `EngineProfile`. Umgesetzt sind bisher `profile`, `subjects` (mit `kind` und `template_key`, D-038) und `subject_groups` (D-017), `providers` und `settings` (D-026) sowie `chats` und `messages` (D-027) und `notes` (Hefteinträge, D-049, Migration 0011), der Rest kommt mit den Inkrementen, die ihn brauchen. Navigation: Fach → Untergruppe → Chats oder Hefteinträge, zusätzlich je Fach eine Ansicht „Allgemein“ ohne Untergruppe. Chats bleiben in ihrem Fach, es gibt keine fachübergreifende Chatliste. Secrets liegen nie im Klartext in der Datenbank.
 
 ## Chat
 
@@ -59,7 +59,8 @@ Fächer entstehen aus einem Katalog neutraler Vorlagen (`config/subject-catalog.
 | --- | --- |
 | `apps/server` | Server, Konfiguration, Start-Check des Datenverzeichnisses, Datenbank (`src/db`), Storage und Secret-Speicher (`src/storage`), Prompt-Schichten (`src/prompts`), Anbieter-Clients und -Verwaltung (`src/providers`), Chats und Antworten im Strom (`src/chats`) |
 | `apps/server/drizzle` | SQL-Migrationen der Datenbank |
-| `apps/web` | Oberfläche (Chat unter `src/screens/chat`), Design-Tokens, i18n |
+| `apps/web` | Oberfläche (Chat unter `src/screens/chat`, Hefteinträge unter `src/screens/notes`), Design-Tokens, i18n |
+| `packages/render` | Gemeinsamer Kern für Hefteinträge (D-046 bis D-048): Blöcke erkennen und ohne DOM prüfen (Fehlercodes), Graphen und Schulmoleküle als SVG, Formeln (KaTeX), Noten (abcjs), Skelettformeln (SmilesDrawer), Bereinigung (DOMPurify). Läuft im Browser, auf dem Server und später im Worker (1d) |
 | `scripts` | Secret-Scan, Privacy-Check, Hook-Installation |
 | `tests` | Repo-weite Tests |
 | `config` | `subject-catalog.json` (Katalog der Fachvorlagen), `examples/` (Beispieldatei für den Import) |
@@ -72,7 +73,7 @@ Fächer entstehen aus einem Katalog neutraler Vorlagen (`config/subject-catalog.
 | --- | --- |
 | 0 Fundament | Repo, Tokens, Health-Endpoint, Sicherheitsbasis |
 | 1a Kern | Onboarding, Fächer, Chats, Prompt-Schichten, Secrets, Provider, Streaming, PWA |
-| 1b Hefteinträge | Editor, Blöcke (Formeln, Graph, Molekül, Noten), Bereinigung |
+| 1b Hefteinträge | Editor, Blöcke (Formeln, Graph, Molekül, Noten), Bereinigung (gebaut, siehe [acceptance-1b.md](acceptance-1b.md)) |
 | 1c Bildeingabe | Foto, Verkleinern, EXIF entfernen, Tafelbild → Hefteintrag |
 | 1d Dateien | PDF- und PPTX-Export, Job-Status |
 | 1e Agent-CLI | Claude-Code-Engine, Profile, Workspace, Streaming (gebaut, siehe [agent-cli.md](agent-cli.md)) |
