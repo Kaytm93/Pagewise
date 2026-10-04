@@ -11,7 +11,7 @@ import type { SecretStore } from './secret-store';
  * bleiben, damit du Pagewise danach sofort neu einrichten kannst (Onboarding startet wieder).
  *
  * Gelöscht werden: Fächer, Untergruppen, Chats, Nachrichten, Profilangaben, Prompts, Anbieter samt
- * Schlüsseln und Einstellungen, alle Dateien in `assets`, `workspaces`, `logs` und die Sicherungen in
+ * Schlüsseln und Einstellungen, alle Dateien in `assets`, `workspaces`, `engine` (Sitzungen der Agenten), `logs` und die Sicherungen in
  * `backups` (sie enthalten ebenfalls die alten Inhalte). Danach wird die Datenbank verdichtet, damit
  * gelöschter Inhalt nicht in freien Seiten oder im Protokoll der Datenbank liegen bleibt.
  *
@@ -56,6 +56,8 @@ export class DataEraser {
       for (const name of readdirSync(dir))
         rmSync(join(dir, name), { recursive: true, force: true });
     }
+    // Eigene Konfigurationen und Sitzungen der Agenten (enthalten Verläufe der Chats).
+    rmSync(join(paths.root, 'engine'), { recursive: true, force: true });
 
     // Das WAL-Protokoll leeren und freie Seiten zurückgeben (mit `secure_delete` überschrieben).
     database.sqlite.pragma('wal_checkpoint(TRUNCATE)');

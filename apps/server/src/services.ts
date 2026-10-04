@@ -1,7 +1,10 @@
 import { join } from 'node:path';
 import { AssetService } from './agents/assets';
+import { AgentCleanup } from './agents/cleanup';
 import { CliDetector, type DetectOptions } from './agents/detect';
+import { ClaudeCodeEngine, type EngineOptions } from './agents/engine';
 import { EngineProfileService } from './agents/profiles';
+import { AgentRunner } from './agents/runner';
 import { WorkspaceManager } from './agents/workspace';
 import { AttemptLimiter } from './auth/attempt-limiter';
 import { AuthService } from './auth/auth-service';
@@ -37,6 +40,8 @@ export interface Services {
   workspaces: WorkspaceManager;
   /** Von Agenten erzeugte Dateien (`assets/`). */
   assets: AssetService;
+  /** Räumt beim Löschen von Fächern und Untergruppen Dateien und Arbeitsordner der Agenten auf. */
+  cleanup: AgentCleanup;
   /** Vorlagen für Fächer (Katalog), aus `config/subject-catalog.json`. */
   catalog: SubjectCatalog;
   /** Mitgelieferte Standard-Prompts je Fach (D-034), aus `prompts/defaults`. */
@@ -59,6 +64,8 @@ export interface ServicesOptions {
   defaultsDir?: string;
   /** Nur für Tests: wo und wie nach „claude“ gesucht wird. */
   cliDetect?: DetectOptions;
+  /** Nur für Tests: Umgebung, Benutzerverzeichnis und Zusatzvariablen des Agent-Prozesses. */
+  agent?: Omit<EngineOptions, 'dataRoot'>;
 }
 
 /**
@@ -103,7 +110,22 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     options.defaultsDir ?? join(APP_ROOT, 'prompts', 'defaults'),
     catalog,
   );
-  const chats = new ChatService(database.db, providers, { ...options.chats, defaults, engines });
+  const runner = new AgentRunner({
+    db: database.db,
+    engines,
+    cli,
+    workspaces,
+    assets,
+    engine: new ClaudeCodeEngine({ ...options.agent, dataRoot: paths.root }),
+  });
+  const chats = new ChatService(database.db, providers, {
+    ...options.chats,
+    defaults,
+    engines,
+    agents: runner,
+    assets,
+  });
+  const cleanup = new AgentCleanup(database.db, chats, assets, workspaces);
   // Das eingebaute Fach „Standard“ (fachunabhängiger Chat) gehört immer dazu.
   ensureDefaultSubject(database.db);
   return {
@@ -118,6 +140,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     cli,
     workspaces,
     assets,
+    cleanup,
     catalog,
     defaults,
     chats,

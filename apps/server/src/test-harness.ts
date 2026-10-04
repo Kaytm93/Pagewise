@@ -7,7 +7,7 @@ import { createApp } from './app';
 import { AttemptLimiter } from './auth/attempt-limiter';
 import type { ChatServiceOptions } from './chats/service';
 import type { AppEnv } from './http/types';
-import { createServices, type Services } from './services';
+import { createServices, type Services, type ServicesOptions } from './services';
 
 export const TEST_PASSCODE = 'ein erfundener Beispiel-Passcode';
 
@@ -56,6 +56,8 @@ export function createHarness(
     defaultsDir?: string;
     /** Wo nach „claude“ gesucht wird. Ohne Angabe wird nirgends gesucht (kein Programm gefunden). */
     cliDetect?: DetectOptions;
+    /** Agent-Prozess (Umgebung, Zusatzvariablen), nur für Tests mit der Ersatz-CLI. */
+    agent?: ServicesOptions['agent'];
   } = {},
 ): Harness {
   const base = mkdtempSync(join(tmpdir(), 'pagewise-test-'));
@@ -67,6 +69,7 @@ export function createHarness(
     catalogFile: options.catalogFile ?? join(base, 'kein-katalog.json'),
     defaultsDir: options.defaultsDir ?? join(base, 'keine-standards'),
     cliDetect: options.cliDetect ?? { searchPath: join(base, 'kein-claude'), extraDirs: [] },
+    agent: options.agent,
   });
   const app = createApp({ version: '1.2.3', services });
 

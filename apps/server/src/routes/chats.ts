@@ -23,6 +23,8 @@ const UpdateChatBody = z
   .refine((body) => Object.keys(body).length > 0)
   .refine((body) => !(body.model && body.engineProfileId));
 const SendBody = z.strictObject({ content: messageField });
+/** `viaApi`: diesen Versuch mit einem API-Modell statt des gewählten Agenten machen. */
+const RetryBody = z.strictObject({ viaApi: z.boolean().optional() });
 const SubjectModelBody = z.strictObject({ model: SelectionSchema.nullable() });
 const SubjectEngineBody = z.strictObject({ engineProfileId: idField.nullable() });
 
@@ -43,6 +45,8 @@ function failure(c: Context, result: ChatFailure): Response {
       return c.json({ error: 'invalid_input', field: 'engineProfileId' }, 400);
     case 'busy':
       return c.json({ error: 'busy' }, 409);
+    case 'workspace_busy':
+      return c.json({ error: 'workspace_busy' }, 409);
     case 'no_model':
       return c.json({ error: 'no_model' }, 409);
     case 'nothing_to_retry':
@@ -65,8 +69,8 @@ function terminalName(event: GenerationEvent): string | null {
 
 /**
  * Schickt eine laufende Antwort als Server-Sent Events. Ablauf: optional `start`, dann `snapshot` mit dem
- * bisherigen Stand (der Browser ersetzt damit seinen Text), danach `model`, `thinking`, `delta` und zum
- * Schluss `done`, `failed` oder `stopped`. Bricht die Verbindung ab, läuft die Antwort weiter: sie wird
+ * bisherigen Stand (der Browser ersetzt damit seinen Text), danach `model`, `thinking`, `delta`, bei Agenten
+ * `activity` (Werkzeugaufrufe) und zum Schluss `done`, `failed` oder `stopped`. Bricht die Verbindung ab, läuft die Antwort weiter: sie wird
  * gespeichert und der Browser kann sich mit GET /chats/:id/generation wieder anhängen.
  * Fehler enthalten nur Codes, nie Texte von Anbietern.
  */
@@ -95,6 +99,9 @@ function streamGeneration(c: Context, generation: Generation, start: StartedGene
         case 'delta':
           send('delta', { text: event.text });
           break;
+        case 'activity':
+          send('activity', { entry: event.entry });
+          break;
         case 'done':
           send('done', { message: event.message });
           break;
@@ -117,6 +124,7 @@ function streamGeneration(c: Context, generation: Generation, start: StartedGene
       text: snapshot.text,
       model: snapshot.model,
       thinking: snapshot.thinking,
+      activity: snapshot.activity,
     });
     if (snapshot.ended) onEvent(snapshot.ended);
 
@@ -203,10 +211,17 @@ export function chatRoutes(chats: ChatService): Hono<AppEnv> {
     return streamGeneration(c, result.value.generation, result.value);
   });
 
-  app.post('/chats/:id/retry', (c) => {
+  app.post('/chats/:id/retry', async (c) => {
     const id = idParam(c);
     if (!id) return c.json({ error: 'not_found' }, 404);
-    const result = chats.retry(id);
+    // Der Rumpf ist optional: ohne Angabe wird wie bisher mit der gewählten Quelle wiederholt.
+    let viaApi = false;
+    if ((await c.req.text()).trim() !== '') {
+      const body = await readJson(c, RetryBody);
+      if (!body.ok) return body.response;
+      viaApi = body.data.viaApi === true;
+    }
+    const result = chats.retry(id, { viaApi });
     if (!result.ok) return failure(c, result);
     return streamGeneration(c, result.value.generation, result.value);
   });

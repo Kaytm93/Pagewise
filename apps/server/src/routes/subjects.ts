@@ -1,6 +1,7 @@
 import type { Context, MiddlewareHandler } from 'hono';
 import { Hono } from 'hono';
 import { z } from 'zod';
+import type { AgentCleanup } from '../agents/cleanup';
 import type { Db } from '../db/client';
 import {
   IMPORT_MAX_CHARACTERS,
@@ -68,7 +69,10 @@ function importFailure(c: Context, parsed: Extract<ImportParse, { ok: false }>):
 const IMPORT_PATH = /\/subjects\/import$/;
 
 /** Fächer und Untergruppen. Navigation: Fach → Untergruppe, jede Antwort enthält nur eigene Daten. */
-export function subjectRoutes(db: Db, options: { catalog: SubjectCatalog }): Hono<AppEnv> {
+export function subjectRoutes(
+  db: Db,
+  options: { catalog: SubjectCatalog; cleanup?: AgentCleanup },
+): Hono<AppEnv> {
   const { catalog } = options;
   const app = new Hono<AppEnv>();
 
@@ -123,10 +127,13 @@ export function subjectRoutes(db: Db, options: { catalog: SubjectCatalog }): Hon
     return result.ok ? c.json(result.value) : failure(c, result);
   });
 
-  app.delete('/subjects/:id', (c) => {
+  app.delete('/subjects/:id', async (c) => {
     const id = idParam(c);
     if (!id) return c.json({ error: 'not_found' }, 404);
+    // Erst laufende Antworten beenden und Dateien vormerken, dann löschen, danach die Dateien entfernen.
+    const finish = (await options.cleanup?.beforeSubjectDelete(id)) ?? null;
     const result = deleteSubject(db, id);
+    if (result.ok) await finish?.();
     return result.ok ? c.body(null, 204) : failure(c, result);
   });
 
@@ -148,10 +155,12 @@ export function subjectRoutes(db: Db, options: { catalog: SubjectCatalog }): Hon
     return result.ok ? c.json(result.value) : failure(c, result);
   });
 
-  app.delete('/groups/:id', (c) => {
+  app.delete('/groups/:id', async (c) => {
     const id = idParam(c);
     if (!id) return c.json({ error: 'not_found' }, 404);
+    const finish = (await options.cleanup?.beforeGroupDelete(id)) ?? null;
     const result = deleteGroup(db, id);
+    if (result.ok) await finish?.();
     return result.ok ? c.body(null, 204) : failure(c, result);
   });
 

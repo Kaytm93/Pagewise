@@ -1,5 +1,9 @@
 import { and, asc, desc, eq, isNull, max } from 'drizzle-orm';
+import { parseActivity, serializeActivity } from '../agents/activity';
+import type { AssetService, AssetView } from '../agents/assets';
+import { formatTranscript, withAgentInstructions } from '../agents/instructions';
 import type { EngineProfileService } from '../agents/profiles';
+import type { AgentOutcome, AgentRunner } from '../agents/runner';
 import type { Db } from '../db/client';
 import {
   type ChatRow,
@@ -48,7 +52,8 @@ export type ChatFailure = {
     | 'busy'
     | 'too_busy'
     | 'no_model'
-    | 'nothing_to_retry';
+    | 'nothing_to_retry'
+    | 'workspace_busy';
 };
 export type ChatResult<T> = { ok: true; value: T } | ChatFailure;
 
@@ -69,7 +74,16 @@ export interface ChatServiceOptions {
   defaults?: DefaultPrompts;
   /** Zugänge für den Agent-CLI-Adapter. Ohne Angabe gibt es keine (nur API-Modelle). */
   engines?: EngineProfileService;
+  /** Führt Antworten über einen Agenten aus. Ohne Angabe antworten Chats immer über API-Modelle. */
+  agents?: AgentRunner;
+  /** Dateien, die Agenten erzeugt haben (für Anzeige und Aufräumen). */
+  assets?: AssetService;
+  /** Wie viele Agenten gleichzeitig arbeiten dürfen (schwerer als eine Modellantwort). */
+  maxAgents?: number;
 }
+
+/** Womit ein Chat antwortet. */
+type Target = { kind: 'engine'; profileId: string } | { kind: 'api'; chain: Selection[] };
 
 const TITLE_MAX = 120;
 
@@ -77,7 +91,7 @@ function selectionOf(providerId: string | null, modelId: string | null): Selecti
   return providerId && modelId ? { providerId, model: modelId } : null;
 }
 
-function toMessage(row: MessageRow): MessageView {
+function toMessage(row: MessageRow, assets: AssetView[] = []): MessageView {
   return {
     id: row.id,
     seq: row.seq,
@@ -86,7 +100,10 @@ function toMessage(row: MessageRow): MessageView {
     status: row.status,
     providerId: row.providerId,
     model: row.model,
+    engineProfileId: row.engineProfileId,
     errorCode: row.errorCode as ChatErrorCode | null,
+    activity: parseActivity(row.activity),
+    assets,
     createdAt: row.createdAt.getTime(),
   };
 }
@@ -103,6 +120,10 @@ export class ChatService {
   private readonly flushIntervalMs: number;
   private readonly defaults: DefaultPrompts;
   private readonly engines: EngineProfileService | null;
+  private readonly agents: AgentRunner | null;
+  private readonly assets: AssetService | null;
+  private readonly maxAgents: number;
+  private readonly activeAgents = new Set<string>();
 
   constructor(
     private readonly db: Db,
@@ -114,6 +135,9 @@ export class ChatService {
     this.flushIntervalMs = options.flushIntervalMs ?? 2_000;
     this.defaults = options.defaults ?? DefaultPrompts.empty();
     this.engines = options.engines ?? null;
+    this.agents = options.agents ?? null;
+    this.assets = options.assets ?? null;
+    this.maxAgents = options.maxAgents ?? 2;
     // Antworten, die beim letzten Beenden des Servers liefen, sind unterbrochen. Was schon da war, bleibt.
     this.db
       .update(messages)
@@ -181,7 +205,14 @@ export class ChatService {
       .where(eq(messages.chatId, id))
       .orderBy(asc(messages.seq))
       .all();
-    return { ok: true, value: { ...this.toChat(row), messages: rows.map(toMessage) } };
+    const files = this.assets?.forMessages(rows.map((message) => message.id)) ?? new Map();
+    return {
+      ok: true,
+      value: {
+        ...this.toChat(row),
+        messages: rows.map((message) => toMessage(message, files.get(message.id) ?? [])),
+      },
+    };
   }
 
   create(subjectId: string, groupId: string | null, title = ''): ChatResult<ChatView> {
@@ -249,8 +280,12 @@ export class ChatService {
 
   remove(id: string): ChatResult<null> {
     this.active.get(id)?.abort.abort();
+    // Die Dateien auf der Platte folgen der Zeile: IDs vor dem Löschen sammeln.
+    const files = this.assets?.idsForChat(id) ?? [];
     const result = this.db.delete(chats).where(eq(chats.id, id)).run();
-    return result.changes > 0 ? { ok: true, value: null } : { ok: false, error: 'not_found' };
+    if (result.changes === 0) return { ok: false, error: 'not_found' };
+    if (files.length > 0) void this.assets?.deleteFiles(files);
+    return { ok: true, value: null };
   }
 
   /** Modellwahl eines Fachs setzen oder mit `null` aufheben. */
@@ -309,6 +344,16 @@ export class ChatService {
     }
   }
 
+  /** Bricht die laufenden Antworten dieser Chats ab und wartet kurz, bis sie beendet sind (vor dem Löschen eines Fachs). */
+  async stopChats(chatIds: string[], timeoutMs = 5_000): Promise<void> {
+    const running = chatIds.filter((id) => this.active.has(id));
+    for (const id of running) this.active.get(id)?.abort.abort();
+    const deadline = Date.now() + timeoutMs;
+    while (running.some((id) => this.active.has(id)) && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }
+
   stop(chatId: string): boolean {
     const generation = this.active.get(chatId);
     generation?.abort.abort();
@@ -316,38 +361,62 @@ export class ChatService {
   }
 
   /**
-   * Reihenfolge der Modelle für diesen Chat: eigene Wahl, sonst die des Fachs, sonst das
-   * Standardmodell, danach die Ausweichmodelle.
+   * Womit dieser Chat antwortet. Reihenfolge: eigener Agent-Zugang des Chats, eigene Modellwahl des Chats,
+   * Agent-Zugang des Fachs, Modellwahl des Fachs, Standardmodell samt Ausweichmodellen. `viaApi` überspringt
+   * die Agenten (für „Mit API-Modell erneut“ nach einem Fehler des Agenten, nur für diesen Versuch).
    */
-  private chainFor(chat: ChatRow): Selection[] {
+  private targetFor(chat: ChatRow, viaApi: boolean): Target {
     const subject = this.db.select().from(subjects).where(eq(subjects.id, chat.subjectId)).get();
+    const ownModel = selectionOf(chat.modelProviderId, chat.modelId);
+    if (!viaApi && this.agents) {
+      if (chat.engineProfileId) return { kind: 'engine', profileId: chat.engineProfileId };
+      if (!ownModel && subject?.engineProfileId) {
+        return { kind: 'engine', profileId: subject.engineProfileId };
+      }
+    }
     const candidates = [
-      selectionOf(chat.modelProviderId, chat.modelId),
+      ownModel,
       selectionOf(subject?.modelProviderId ?? null, subject?.modelId ?? null),
     ];
     const primary = candidates.find((entry) => entry && this.providers.hasModel(entry)) ?? null;
-    return this.providers.chain(primary);
+    return { kind: 'api', chain: this.providers.chain(primary) };
   }
 
   /** Nimmt eine Nachricht an, legt die leere Antwort an und startet sie. Antwortet sofort. */
   send(chatId: string, content: string): ChatResult<StartedGeneration> {
-    return this.start(chatId, content.replace(/\r\n?/g, '\n'));
+    return this.start(chatId, content.replace(/\r\n?/g, '\n'), false);
   }
 
-  /** Wiederholt die letzte Antwort, wenn sie fehlschlug, abgebrochen oder unterbrochen wurde. */
-  retry(chatId: string): ChatResult<StartedGeneration> {
-    return this.start(chatId, null);
+  /**
+   * Wiederholt die letzte Antwort, wenn sie fehlschlug, abgebrochen oder unterbrochen wurde. Mit `viaApi`
+   * antwortet ein API-Modell statt des gewählten Agenten.
+   */
+  retry(chatId: string, options: { viaApi?: boolean } = {}): ChatResult<StartedGeneration> {
+    return this.start(chatId, null, options.viaApi === true);
   }
 
-  private start(chatId: string, content: string | null): ChatResult<StartedGeneration> {
+  private start(
+    chatId: string,
+    content: string | null,
+    viaApi: boolean,
+  ): ChatResult<StartedGeneration> {
     const chat = this.row(chatId);
     if (!chat) return { ok: false, error: 'not_found' };
     if (this.active.has(chatId)) return { ok: false, error: 'busy' };
     if (this.active.size >= this.maxActive) return { ok: false, error: 'too_busy' };
-    const chain = this.chainFor(chat);
-    if (chain.length === 0) return { ok: false, error: 'no_model' };
+    const target = this.targetFor(chat, viaApi);
+    if (target.kind === 'api' && target.chain.length === 0) return { ok: false, error: 'no_model' };
+    let release: (() => void) | null = null;
+    if (target.kind === 'engine') {
+      if (this.activeAgents.size >= this.maxAgents) return { ok: false, error: 'too_busy' };
+      release = this.agents?.reserve(chat.subjectId, chat.groupId) ?? null;
+      if (!release) return { ok: false, error: 'workspace_busy' };
+    }
     const prompt = buildSystemPrompt(this.db, this.defaults, chat.subjectId, chat.groupId);
-    if (!prompt.ok) return { ok: false, error: 'not_found' };
+    if (!prompt.ok) {
+      release?.();
+      return { ok: false, error: 'not_found' };
+    }
 
     const created = this.db.transaction((tx) => {
       let userRow: MessageRow | undefined;
@@ -379,7 +448,14 @@ export class ChatService {
       }
       const assistantRow = tx
         .insert(messages)
-        .values({ chatId, seq, role: 'assistant', content: '', status: 'streaming' })
+        .values({
+          chatId,
+          seq,
+          role: 'assistant',
+          content: '',
+          status: 'streaming',
+          ...(target.kind === 'engine' ? { engineProfileId: target.profileId } : {}),
+        })
         .returning()
         .get();
       tx.update(chats)
@@ -398,15 +474,27 @@ export class ChatService {
         .filter((row) => row.id !== assistantRow.id);
       return { userRow, assistantRow, history };
     });
-    if (created === null) return { ok: false, error: 'nothing_to_retry' };
+    if (created === null) {
+      release?.();
+      return { ok: false, error: 'nothing_to_retry' };
+    }
 
     const generation = new Generation(chatId, created.assistantRow.id);
     this.active.set(chatId, generation);
-    void this.run(generation, {
-      chain,
-      system: prompt.value.system,
-      history: buildHistory(created.history, this.historyMax),
-    });
+    const history = buildHistory(created.history, this.historyMax);
+    if (target.kind === 'engine') {
+      this.activeAgents.add(chatId);
+      void this.runAgent(generation, {
+        release,
+        chat,
+        profileId: target.profileId,
+        system: withAgentInstructions(prompt.value.system),
+        history,
+        sessionId: chat.agentSessionId,
+      });
+    } else {
+      void this.run(generation, { chain: target.chain, system: prompt.value.system, history });
+    }
     return {
       ok: true,
       value: {
@@ -415,6 +503,77 @@ export class ChatService {
         assistantMessage: toMessage(created.assistantRow),
       },
     };
+  }
+
+  /**
+   * Führt die Antwort über einen Agenten aus. Den Verlauf kennt der Agent aus seiner Sitzung (`--resume`);
+   * gibt es keine (erste Nachricht, anderer Zugang, Sitzung verloren), steht der bisherige Verlauf im Auftrag.
+   */
+  private async runAgent(
+    generation: Generation,
+    input: {
+      /** Gibt den Arbeitsordner frei, wenn der Lauf zu Ende ist. */
+      release: (() => void) | null;
+      chat: ChatRow;
+      profileId: string;
+      system: string;
+      history: ChatMessage[];
+      sessionId: string | null;
+    },
+  ): Promise<void> {
+    const runner = this.agents;
+    const lastUser = [...input.history].reverse().find((message) => message.role === 'user');
+    let lastFlush = Date.now();
+    let outcome: AgentOutcome;
+    try {
+      if (!runner || !lastUser) throw new Error('Kein Agent oder kein Auftrag.');
+      const earlier = input.history.slice(0, input.history.lastIndexOf(lastUser));
+      outcome = await runner.run({
+        chatId: input.chat.id,
+        assistantId: generation.assistantId,
+        subjectId: input.chat.subjectId,
+        groupId: input.chat.groupId,
+        profileId: input.profileId,
+        system: input.system,
+        prompt: (resumed) =>
+          resumed || earlier.length === 0
+            ? lastUser.content
+            : formatTranscript(earlier, lastUser.content),
+        sessionId: input.sessionId,
+        signal: generation.abort.signal,
+        onEvent: (event) => {
+          if (event.type === 'delta') {
+            generation.emit({ type: 'delta', text: event.text });
+            if (Date.now() - lastFlush >= this.flushIntervalMs) {
+              lastFlush = Date.now();
+              this.db
+                .update(messages)
+                .set({ content: generation.text })
+                .where(eq(messages.id, generation.assistantId))
+                .run();
+            }
+          } else if (event.type === 'thinking') generation.emit({ type: 'thinking' });
+          else generation.emit({ type: 'activity', entry: event.entry });
+        },
+      });
+    } catch {
+      outcome = {
+        status: 'error',
+        code: 'internal',
+        sessionId: input.sessionId,
+        model: null,
+        activity: generation.activity,
+        assets: [],
+      };
+    }
+    this.activeAgents.delete(input.chat.id);
+    input.release?.();
+    this.finish(generation, outcome.status, outcome.code, null, {
+      engineProfileId: input.profileId,
+      model: outcome.model,
+      activity: outcome.activity,
+      assets: outcome.assets,
+    });
   }
 
   /**
@@ -537,6 +696,12 @@ export class ChatService {
     status: MessageStatus,
     code: ChatErrorCode | null,
     usage: { promptTokens: number | null; completionTokens: number | null } | null,
+    agent: {
+      engineProfileId: string;
+      model: string | null;
+      activity: AgentOutcome['activity'];
+      assets: AssetView[];
+    } | null = null,
   ): void {
     const model = generation.model;
     let view: MessageView | null = null;
@@ -548,6 +713,13 @@ export class ChatService {
           status,
           errorCode: code,
           ...(model ? { providerId: model.providerId, model: model.model } : {}),
+          ...(agent
+            ? {
+                engineProfileId: agent.engineProfileId,
+                model: agent.model,
+                activity: serializeActivity(agent.activity),
+              }
+            : {}),
           promptTokens: usage?.promptTokens ?? null,
           completionTokens: usage?.completionTokens ?? null,
         })
@@ -558,7 +730,7 @@ export class ChatService {
         .from(messages)
         .where(eq(messages.id, generation.assistantId))
         .get();
-      view = row ? toMessage(row) : null;
+      view = row ? toMessage(row, agent?.assets ?? []) : null;
     } catch {
       view = null;
     }
@@ -570,8 +742,11 @@ export class ChatService {
       content: generation.text,
       status,
       providerId: model?.providerId ?? null,
-      model: model?.model ?? null,
+      model: model?.model ?? agent?.model ?? null,
+      engineProfileId: agent?.engineProfileId ?? null,
       errorCode: code,
+      activity: agent?.activity ?? [],
+      assets: agent?.assets ?? [],
       createdAt: Date.now(),
     };
     this.active.delete(generation.chatId);
