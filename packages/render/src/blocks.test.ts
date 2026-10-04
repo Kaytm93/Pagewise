@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractBlocks } from './blocks';
+import { extractBlocks, normalizeDisplayMath } from './blocks';
 
 describe('extractBlocks', () => {
   it('findet umzäunte Blöcke der drei Sprachen und nummeriert sie je Art', () => {
@@ -59,5 +59,24 @@ describe('extractBlocks', () => {
   it('kommt mit Windows-Zeilenenden und leerem Text zurecht', () => {
     expect(extractBlocks('')).toEqual([]);
     expect(extractBlocks('```mol\r\nH2O\r\n```\r\n')[0]?.source).toBe('H2O');
+  });
+});
+
+describe('normalizeDisplayMath', () => {
+  it('macht aus einer Formel allein in der Zeile eine Anzeigeformel mit eigenen $$-Zeilen', () => {
+    expect(normalizeDisplayMath('Text\n\n$$\\frac{1}{2}$$\n\nEnde')).toBe(
+      'Text\n\n$$\n\\frac{1}{2}\n$$\n\nEnde',
+    );
+    expect(normalizeDisplayMath('  $$ x^2 $$  ')).toBe('  $$\n  x^2\n  $$');
+  });
+
+  it('lässt Formeln mitten im Text, mehrzeilige und umzäunte unberührt', () => {
+    const text = 'Mitten $$x$$ im Satz\n\n$$\nx\n$$\n\n```tex\n$$y$$\n```\n\n$$a$$ und $$b$$';
+    expect(normalizeDisplayMath(text)).toBe(text);
+  });
+
+  it('lässt leere und kaputte Formeln unberührt', () => {
+    expect(normalizeDisplayMath('$$ $$')).toBe('$$ $$');
+    expect(normalizeDisplayMath('$$$$')).toBe('$$$$');
   });
 });

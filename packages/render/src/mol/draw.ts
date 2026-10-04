@@ -2,7 +2,7 @@ import type { AngleMark, Atom, Bond, Molecule } from './library';
 
 const S = 54; // Pixel je Bindungslänge
 const LABEL_R = 11; // so weit bleibt die Bindung vom Atomzeichen weg
-const MARGIN = 36;
+const MARGIN = 30;
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
 const n = (value: number) => (Math.round(value * 100) / 100).toString();
@@ -127,12 +127,13 @@ export function renderMoleculeSvg(molecule: Molecule, options: DrawOptions): str
   const maxY =
     Math.max(...ys) +
     MARGIN +
-    (caption ? 26 : 0) +
-    (options.angles && molecule.angles.length ? 16 : 0);
+    (caption ? 22 : 0) +
+    (options.angles && molecule.angles.length ? 10 : 0);
   if (caption) {
     body.push(
       `<text class="pg-caption" fill="currentColor" x="${n((minX + maxX) / 2)}" y="${n(maxY - 8)}" text-anchor="middle" font-size="14">${escapeXml(caption)}</text>`,
     );
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" class="pg-mol" viewBox="${n(minX)} ${n(minY)} ${n(maxX - minX)} ${n(maxY - minY)}" role="img" font-family="Inter, system-ui, sans-serif">${body.join('')}</svg>`;
+  // Breite und Höhe in Bildpunkten wie im Koordinatensystem: so sind Atomzeichen in allen Zeichnungen gleich groß.
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="pg-mol" width="${n(maxX - minX)}" height="${n(maxY - minY)}" viewBox="${n(minX)} ${n(minY)} ${n(maxX - minX)} ${n(maxY - minY)}" role="img" font-family="Inter, system-ui, sans-serif">${body.join('')}</svg>`;
 }

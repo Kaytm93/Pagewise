@@ -1,9 +1,30 @@
-import { Check, Copy } from 'lucide-react';
-import { isValidElement, memo, type ReactNode } from 'react';
+import { normalizeDisplayMath } from '@pagewise/render';
+import { BookMarked, Check, Copy, Lightbulb, PencilLine, Pin } from 'lucide-react';
+import {
+  Children,
+  cloneElement,
+  createContext,
+  isValidElement,
+  lazy,
+  memo,
+  type ReactElement,
+  type ReactNode,
+  Suspense,
+  useContext,
+} from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import { format, messages as m } from '../../i18n';
 import { useCopy } from './useCopy';
+
+// Formeln und Blöcke bringen KaTeX, abcjs und die übrigen Zeichenbibliotheken mit und werden erst geladen, wenn
+// ein solcher Block in einer Antwort vorkommt (das Hauptpaket bleibt klein, der Chat auch).
+const MathView = lazy(() => import('./blocks/MathView'));
+const BlockView = lazy(() => import('./blocks/BlockView'));
+
+/** Ob die Antwort fertig ist: Während des Schreibens ist ein fehlerhafter Block meist nur unfertig. */
+const FinalContext = createContext(true);
 
 function textOf(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
@@ -33,6 +54,103 @@ function CodeBlock({ children }: { children?: ReactNode }) {
         )}
       </button>
     </div>
+  );
+}
+
+function BlockFallback() {
+  return (
+    <span
+      role="status"
+      className="pg-figure mo-shimmer my-4 block h-24 rounded-box bg-paper"
+      aria-busy="true"
+    >
+      <span className="sr-only">{m.blocks.loading}</span>
+    </span>
+  );
+}
+
+/** Umzäunter Block: Formel als Anzeige, Graph, Molekül, Noten oder gewöhnlicher Code. */
+function PreBlock({ children }: { children?: ReactNode }) {
+  const final = useContext(FinalContext);
+  const child = Array.isArray(children) ? children[0] : children;
+  if (isValidElement<{ className?: string; children?: ReactNode }>(child)) {
+    const className = child.props.className ?? '';
+    const source = textOf(child.props.children).replace(/\n$/, '');
+    if (className.includes('math-display')) {
+      return (
+        <Suspense fallback={<BlockFallback />}>
+          <MathView latex={source} display final={final} />
+        </Suspense>
+      );
+    }
+    const kind = /\blanguage-(graph|mol|abc)\b/.exec(className)?.[1];
+    if (kind === 'graph' || kind === 'mol' || kind === 'abc') {
+      return (
+        <Suspense fallback={<BlockFallback />}>
+          <BlockView kind={kind} source={source} final={final} />
+        </Suspense>
+      );
+    }
+  }
+  return <CodeBlock>{children}</CodeBlock>;
+}
+
+const CALLOUT_ICONS = {
+  merksatz: Pin,
+  beispiel: Lightbulb,
+  aufgabe: PencilLine,
+  definition: BookMarked,
+} as const;
+type CalloutKind = keyof typeof CALLOUT_ICONS;
+const CALLOUT = /^\[!(merksatz|beispiel|aufgabe|definition)\]\s*/i;
+
+/**
+ * Zitatblock. Beginnt er mit `[!merksatz]`, `[!beispiel]`, `[!aufgabe]` oder `[!definition]`, wird daraus ein
+ * Hinweiskasten mit Beschriftung und Symbol (die Art steht immer auch als Text da, nie nur als Farbe).
+ */
+function Quote({ children }: { children?: ReactNode }) {
+  const nodes = Children.toArray(children);
+  const index = nodes.findIndex((node) => isValidElement(node));
+  const first = index === -1 ? null : (nodes[index] as ReactElement<{ children?: ReactNode }>);
+  const parts = first ? Children.toArray(first.props.children) : [];
+  const head = parts[0];
+  const match = typeof head === 'string' ? CALLOUT.exec(head) : null;
+  if (!first || !match || typeof head !== 'string') {
+    return (
+      <blockquote className="my-4 border-l-2 border-line-warm pl-4 text-ink-secondary">
+        {children}
+      </blockquote>
+    );
+  }
+  const kind = (match[1] as string).toLowerCase() as CalloutKind;
+  const Icon = CALLOUT_ICONS[kind];
+  const rest = [head.slice(match[0].length), ...parts.slice(1)];
+  const content = [...nodes];
+  content[index] = cloneElement(first, undefined, ...rest);
+  return (
+    <aside
+      className="pg-callout my-4 rounded-box border-l-4 border-subj bg-paper px-4 py-3"
+      data-callout={kind}
+    >
+      <p className="mb-1 flex items-center gap-2 font-heading text-sm font-medium text-ink">
+        <Icon aria-hidden="true" className="size-4 shrink-0" />
+        {m.blocks.callout[kind]}
+      </p>
+      <div className="[&>p]:my-[0.4em] [&>p:first-child]:mt-0 [&>p:last-child]:mb-0">{content}</div>
+    </aside>
+  );
+}
+
+/**
+ * Formel im Text (`$…$`). Steht `$$…$$` in einer eigenen Zeile, behandelt remark-math sie ebenfalls als Formel
+ * „im Text“, mit zusätzlicher Klasse `math-display`: Dann wird sie als eigener Absatz gezeichnet.
+ */
+function InlineMath({ latex, display }: { latex: string; display: boolean }) {
+  const final = useContext(FinalContext);
+  return (
+    <Suspense fallback={<code className="font-mono text-[0.9em]">{`$${latex}$`}</code>}>
+      <MathView latex={latex} display={display} final={final} />
+    </Suspense>
   );
 }
 
@@ -79,20 +197,19 @@ const components: Components = {
     ) : (
       <span>{children}</span>
     ),
-  blockquote: ({ children }) => (
-    <blockquote className="my-4 border-l-2 border-line-warm pl-4 text-ink-secondary">
-      {children}
-    </blockquote>
-  ),
+  blockquote: ({ children }) => <Quote>{children}</Quote>,
   hr: () => <hr className="my-6 border-line" />,
-  pre: ({ children }) => <CodeBlock>{children}</CodeBlock>,
-  code: ({ children, className }) => (
-    <code
-      className={`rounded-control bg-paper px-1.5 py-0.5 font-mono text-[0.9em] ${className ?? ''}`}
-    >
-      {children}
-    </code>
-  ),
+  pre: ({ children }) => <PreBlock>{children}</PreBlock>,
+  code: ({ children, className }) =>
+    className?.includes('math-inline') ? (
+      <InlineMath latex={textOf(children)} display={className.includes('math-display')} />
+    ) : (
+      <code
+        className={`rounded-control bg-paper px-1.5 py-0.5 font-mono text-[0.9em] ${className ?? ''}`}
+      >
+        {children}
+      </code>
+    ),
   table: ({ children }) => (
     <div className="my-4 overflow-x-auto">
       <table className="w-full border-collapse text-sm">{children}</table>
@@ -110,12 +227,21 @@ const components: Components = {
 };
 
 /** Antwort des Modells als Markdown, sicher dargestellt. */
-export const Markdown = memo(function Markdown({ text }: { text: string }) {
+export const Markdown = memo(function Markdown({
+  text,
+  final = true,
+}: {
+  text: string;
+  /** Falsch, solange die Antwort noch geschrieben wird: Blöcke zeigen dann keine Fehlermeldung. */
+  final?: boolean;
+}) {
   return (
-    <div className="max-w-[66ch] text-[1.0625rem] leading-[1.72] break-words">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-        {text}
-      </ReactMarkdown>
-    </div>
+    <FinalContext.Provider value={final}>
+      <div className="max-w-[66ch] text-[1.0625rem] leading-[1.72] break-words">
+        <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} components={components}>
+          {normalizeDisplayMath(text)}
+        </ReactMarkdown>
+      </div>
+    </FinalContext.Provider>
   );
 });

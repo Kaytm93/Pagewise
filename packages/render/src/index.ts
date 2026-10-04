@@ -4,7 +4,13 @@
  * `@pagewise/render/math` (KaTeX), `/graph`, `/mol`, `/abc` (abcjs), `/smiles` (SmilesDrawer), `/sanitize`
  * (DOMPurify) und `/validate` (alles ohne DOM, für den Server).
  */
-export { type Block, extractBlocks, type FenceBlock, type MathBlock } from './blocks';
+export {
+  type Block,
+  extractBlocks,
+  type FenceBlock,
+  type MathBlock,
+  normalizeDisplayMath,
+} from './blocks';
 export {
   type BlockIssue,
   type BlockKind,

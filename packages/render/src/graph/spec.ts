@@ -1,39 +1,4 @@
-import { z } from 'zod';
 import { fail, hasControlChars, LIMITS, ok, type Result } from '../errors';
-
-const range = z
-  .tuple([z.number().finite(), z.number().finite()])
-  .refine(([min, max]) => min < max && max - min <= 1_000_000);
-
-const text = (max: number) =>
-  z
-    .string()
-    .max(max)
-    .refine((value) => !hasControlChars(value));
-
-const fn = z.union([
-  text(200).transform((expr) => ({ expr, label: undefined as string | undefined })),
-  z.strictObject({ expr: text(200), label: text(40).optional() }),
-]);
-
-const point = z.strictObject({
-  x: z.number().finite(),
-  y: z.number().finite(),
-  label: text(40).optional(),
-});
-
-/**
- * Aufbau eines ` ```graph `-Blocks (JSON): `functions` (ein bis sechs Ausdrücke, als Text oder mit Beschriftung),
- * `x` und `y` als Bereiche (`y` entfällt: wird aus den Werten bestimmt), `points` für markierte Punkte
- * (zum Beispiel Nullstellen), `grid` für das Gitter. Unbekannte Felder werden abgelehnt.
- */
-export const graphSpecSchema = z.strictObject({
-  functions: z.array(fn).min(1).max(6),
-  x: range.optional(),
-  y: range.optional(),
-  points: z.array(point).max(20).optional(),
-  grid: z.boolean().optional(),
-});
 
 export interface GraphSpec {
   functions: { expr: string; label: string | undefined }[];
@@ -43,6 +8,38 @@ export interface GraphSpec {
   grid: boolean;
 }
 
+type Json = Record<string, unknown>;
+
+const isObject = (value: unknown): value is Json =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isText = (value: unknown, max: number): value is string =>
+  typeof value === 'string' && value.length <= max && !hasControlChars(value);
+
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFiniteNumber(value);
+
+/** Nur diese Schlüssel sind erlaubt, alles andere lehnt die Prüfung ab (wie bei einem strikten Schema). */
+const hasOnly = (value: Json, keys: string[]) =>
+  Object.keys(value).every((key) => keys.includes(key));
+
+function range(value: unknown): [number, number] | null {
+  if (!Array.isArray(value) || value.length !== 2) return null;
+  const [min, max] = value;
+  if (!isFiniteNumber(min) || !isFiniteNumber(max) || min >= max || max - min > 1_000_000)
+    return null;
+  return [min, max];
+}
+
+/**
+ * Liest den Inhalt eines ` ```graph `-Blocks (JSON): `functions` (ein bis sechs Ausdrücke, als Text oder mit
+ * Beschriftung), `x` und `y` als Bereiche (`y` entfällt: wird aus den Werten bestimmt), `points` für markierte
+ * Punkte (zum Beispiel Nullstellen), `grid` für das Gitter. Unbekannte Felder werden abgelehnt. Von Hand
+ * geprüft statt mit einer Schema-Bibliothek: Die Bibliothek prüft beim Start, ob `new Function` erlaubt ist, und
+ * würde damit in der Konsole einen Verstoß gegen die CSP melden.
+ *
+ * Fehler tragen als Hinweis nur den Namen des Feldes, nie Text aus der Eingabe.
+ */
 export function parseGraphSpec(source: string): Result<GraphSpec> {
   if (source.trim() === '') return fail('empty');
   if (source.length > LIMITS.graph) return fail('too_large');
@@ -52,17 +49,53 @@ export function parseGraphSpec(source: string): Result<GraphSpec> {
   } catch {
     return fail('invalid_json');
   }
-  const parsed = graphSpecSchema.safeParse(json);
-  if (!parsed.success) {
-    const path = parsed.error.issues[0]?.path.filter((part) => typeof part === 'string')[0];
-    return fail('invalid_spec', typeof path === 'string' ? path : undefined);
+  if (!isObject(json)) return fail('invalid_spec');
+  if (!hasOnly(json, ['functions', 'x', 'y', 'points', 'grid'])) return fail('invalid_spec');
+
+  const rawFunctions = json.functions;
+  if (!Array.isArray(rawFunctions) || rawFunctions.length < 1 || rawFunctions.length > 6) {
+    return fail('invalid_spec', 'functions');
   }
-  const value = parsed.data;
-  return ok({
-    functions: value.functions.map((entry) => ({ expr: entry.expr, label: entry.label })),
-    x: value.x ?? [-10, 10],
-    y: value.y ?? null,
-    points: (value.points ?? []).map((p) => ({ x: p.x, y: p.y, label: p.label })),
-    grid: value.grid ?? true,
-  });
+  const functions: GraphSpec['functions'] = [];
+  for (const entry of rawFunctions) {
+    if (isText(entry, LIMITS.expression)) {
+      functions.push({ expr: entry, label: undefined });
+    } else if (
+      isObject(entry) &&
+      hasOnly(entry, ['expr', 'label']) &&
+      isText(entry.expr, LIMITS.expression) &&
+      (entry.label === undefined || isText(entry.label, 40))
+    ) {
+      functions.push({ expr: entry.expr, label: entry.label });
+    } else {
+      return fail('invalid_spec', 'functions');
+    }
+  }
+
+  const x = json.x === undefined ? ([-10, 10] as [number, number]) : range(json.x);
+  if (!x) return fail('invalid_spec', 'x');
+  const y = json.y === undefined ? null : range(json.y);
+  if (json.y !== undefined && !y) return fail('invalid_spec', 'y');
+
+  const points: GraphSpec['points'] = [];
+  if (json.points !== undefined) {
+    if (!Array.isArray(json.points) || json.points.length > 20)
+      return fail('invalid_spec', 'points');
+    for (const point of json.points) {
+      if (
+        !isObject(point) ||
+        !hasOnly(point, ['x', 'y', 'label']) ||
+        !isFiniteNumber(point.x) ||
+        !isFiniteNumber(point.y) ||
+        (point.label !== undefined && !isText(point.label, 40))
+      ) {
+        return fail('invalid_spec', 'points');
+      }
+      points.push({ x: point.x, y: point.y, label: point.label });
+    }
+  }
+
+  if (json.grid !== undefined && typeof json.grid !== 'boolean')
+    return fail('invalid_spec', 'grid');
+  return ok({ functions, x, y, points, grid: json.grid ?? true });
 }

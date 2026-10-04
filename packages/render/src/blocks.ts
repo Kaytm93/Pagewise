@@ -121,3 +121,37 @@ function mathSegments(text: string): { source: string; display: boolean }[] {
   }
   return found;
 }
+
+const ONE_LINE_DISPLAY = /^(\s{0,3})\$\$(.+?)\$\$\s*$/;
+
+/**
+ * Schreibt eine Formel, die allein in einer Zeile in `$$…$$` steht, in die Form mit eigenen Zeilen für `$$`
+ * um. Die Markdown-Erweiterung für Formeln (remark-math) hält `$$x$$` in einer Zeile sonst für eine Formel im
+ * Text, aber Modelle meinen damit eine Anzeigeformel. Zeilen in umzäunten Blöcken bleiben unberührt.
+ */
+export function normalizeDisplayMath(markdown: string): string {
+  const lines = markdown.split('\n');
+  let fence: string | null = null;
+  const out: string[] = [];
+  for (const line of lines) {
+    const open = OPEN.exec(line);
+    if (fence === null && open) {
+      fence = (open[1] as string)[0] as string;
+      out.push(line);
+      continue;
+    }
+    if (fence !== null) {
+      if (new RegExp(`^ {0,3}${fence === '`' ? '`' : '~'}{3,}\\s*$`).test(line)) fence = null;
+      out.push(line);
+      continue;
+    }
+    const match = ONE_LINE_DISPLAY.exec(line);
+    const inner = match?.[2];
+    if (match && inner && !inner.includes('$$') && inner.trim() !== '') {
+      out.push(`${match[1]}$$`, `${match[1]}${inner.trim()}`, `${match[1]}$$`);
+    } else {
+      out.push(line);
+    }
+  }
+  return out.join('\n');
+}

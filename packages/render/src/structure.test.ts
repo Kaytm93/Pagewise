@@ -30,8 +30,12 @@ function files(dir: string): string[] {
 }
 
 describe('packages/render', () => {
-  it.each(PATTERNS)('Quelltext enthält kein %s', (_name, pattern) => {
-    const hits = files(root).filter((file) => pattern.test(readFileSync(file, 'utf8')));
+  it.each(PATTERNS)('Quelltext enthält kein %s', (name, pattern) => {
+    // `math-dom.ts` setzt bereinigtes KaTeX-HTML ein (sanitizeMathHtml davor, math.test.ts prüft es).
+    const allowed = name === 'innerHTML-Zuweisung' ? ['/math-dom.ts'] : [];
+    const hits = files(root)
+      .filter((file) => !allowed.some((suffix) => file.endsWith(suffix)))
+      .filter((file) => pattern.test(readFileSync(file, 'utf8')));
     expect(hits.map((file) => file.slice(root.length))).toEqual([]);
   });
 });

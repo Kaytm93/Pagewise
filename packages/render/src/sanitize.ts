@@ -54,3 +54,32 @@ export function sanitizeSvg(svg: string, win: Window & typeof globalThis = windo
   if (!text.trimStart().startsWith('<svg')) throw new RenderError('render_failed');
   return text;
 }
+
+const MATH_FORBID_TAGS = [...FORBID_TAGS.filter((tag) => tag !== 'a' && tag !== 'style'), 'style'];
+
+/**
+ * Bereinigung der Ausgabe von KaTeX (HTML mit MathML und kleinen SVG-Teilen). Die Bibliothek ist mit
+ * `trust: false` sicher eingestellt, das hier ist eine zweite Schicht: nur HTML, SVG und MathML der
+ * Standardlisten, keine Skripte, Stilelemente, Verweise oder Formulare. Die Stilangaben von KaTeX hat
+ * `extractInlineStyles` (math-dom.ts) vorher als Text herausgenommen und durch die Marke `data-pgs` ersetzt, die
+ * hier erlaubt ist; ein trotzdem übrig gebliebenes `style`-Attribut fällt weg. Der TeX-Quelltext in
+ * `annotation` fällt samt Inhalt weg
+ * (er stünde sonst als sichtbarer Text im Ergebnis), der MathML-Teil für Screenreader bleibt.
+ */
+export function sanitizeMathHtml(html: string, win: Window & typeof globalThis = window): string {
+  if (html.length > MAX_SVG) throw new RenderError('too_large');
+  const purifier = DOMPurify(win);
+  return String(
+    purifier.sanitize(html, {
+      USE_PROFILES: { html: true, svg: true, mathMl: true },
+      ADD_TAGS: ['semantics'],
+      FORBID_TAGS: MATH_FORBID_TAGS,
+      FORBID_ATTR,
+      ADD_ATTR: ['data-pgs'],
+      FORBID_CONTENTS: ['annotation', 'annotation-xml', 'script', 'style'],
+      ALLOW_DATA_ATTR: false,
+      ALLOW_UNKNOWN_PROTOCOLS: false,
+      RETURN_TRUSTED_TYPE: false,
+    }),
+  );
+}

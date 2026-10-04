@@ -96,7 +96,7 @@ export const MessageItem = memo(function MessageItem({
     <article aria-busy={live || undefined}>
       <h3 className="sr-only">{m.chat.answer}</h3>
       {!byAgent && <ToolNotes steps={message.activity} />}
-      {hasText && <Markdown text={message.content} />}
+      {hasText && <Markdown text={message.content} final={!live} />}
       {hasText && live && (
         <p className="mt-2 flex min-h-6 items-center gap-2 text-sm text-ink-muted">
           <span aria-hidden="true" className="mo-caret" />

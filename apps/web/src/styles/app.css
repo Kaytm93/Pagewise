@@ -4,6 +4,7 @@
 @import "./lagen.css";
 @import "./raum.css";
 @import "./atelier.css";
+@import "./blocks.css";
 
 @layer base {
   html {

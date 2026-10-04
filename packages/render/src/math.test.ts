@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { katexHtml, validateMath } from './math';
-import { applyInlineStyles, extractInlineStyles } from './math-dom';
+import { applyInlineStyles, extractInlineStyles, renderMathInto } from './math-dom';
 
 describe('Formeln', () => {
   it('rendert gültige Formeln', () => {
@@ -54,6 +54,7 @@ describe('Stilangaben herausnehmen (CSP)', () => {
   it('nimmt sie aus dem HTML heraus und gibt sie getrennt zurück', () => {
     const { html: clean, styles } = extractInlineStyles(html);
     expect(clean).not.toMatch(/style=/i);
+    expect((clean.match(/data-pgs=/g) ?? []).length).toBe(styles.length);
     expect(styles.length).toBeGreaterThan(3);
     const properties = new Set(styles.flatMap(([, declarations]) => declarations.map(([p]) => p)));
     expect(properties.has('height')).toBe(true);
@@ -66,6 +67,7 @@ describe('Stilangaben herausnehmen (CSP)', () => {
     root.innerHTML = clean;
     expect(root.querySelectorAll('[style]').length).toBe(0);
     applyInlineStyles(root, styles);
+    expect(root.querySelectorAll('[data-pgs]').length).toBe(0);
     const withStyle = [...root.querySelectorAll('*')].filter(
       (element) => (element as HTMLElement).style?.length > 0,
     );
@@ -85,5 +87,54 @@ describe('Stilangaben herausnehmen (CSP)', () => {
         ],
       ],
     ]);
+  });
+});
+
+describe('Formeln einhängen', () => {
+  it('rendert in ein Element, ohne style-Attribute, mit Stilangaben über das CSSOM', () => {
+    const host = document.createElement('div');
+    renderMathInto(host, '\\frac{a+b}{c} = \\sqrt{x}', false);
+    expect(host.querySelector('.katex')).not.toBeNull();
+    // Die Angaben sind jetzt CSSOM-Eigenschaften (jsdom spiegelt sie auch ins Attribut, der Browser mit CSP
+    // bewertet nur das, was beim Parsen im Text stand).
+    const styled = [...host.querySelectorAll('*')].filter(
+      (el) => (el as HTMLElement).style?.length > 0,
+    );
+    expect(styled.length).toBeGreaterThan(3);
+  });
+
+  it('behält den MathML-Teil für Screenreader und entfernt den TeX-Quelltext aus der Annotation', () => {
+    const host = document.createElement('div');
+    renderMathInto(host, 'a_1 + b', false);
+    expect(host.querySelector('.katex-mathml math')).not.toBeNull();
+    expect(host.querySelector('annotation')).toBeNull();
+    // Der Quelltext steht nicht doppelt als sichtbarer Text da
+    expect(host.querySelector('.katex-mathml')?.textContent).not.toContain('a_1');
+  });
+
+  it('lässt bei einer ungültigen Formel den Inhalt unverändert und wirft', () => {
+    const host = document.createElement('div');
+    host.textContent = 'vorher';
+    expect(() => renderMathInto(host, '\\frac{1', false)).toThrowError(
+      expect.objectContaining({ code: 'invalid_math' }),
+    );
+    expect(host.textContent).toBe('vorher');
+  });
+
+  it('bringt Markup im Formeltext nicht ins DOM', () => {
+    const host = document.createElement('div');
+    for (const latex of [
+      '\\text{<img src=x onerror="window.__xss=1">}',
+      '\\text{<script>window.__xss=1</script>}',
+      'x < y > z \\& \\text{a <b>c</b>}',
+    ]) {
+      try {
+        renderMathInto(host, latex, false);
+      } catch {
+        // Ablehnen ist ebenfalls sicher
+      }
+      expect(host.querySelector('img, script, b')).toBeNull();
+      expect(host.innerHTML).not.toMatch(/onerror=/i);
+    }
   });
 });

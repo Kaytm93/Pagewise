@@ -1,0 +1,157 @@
+/*
+ * Darstellung der Blöcke in Antworten und Hefteinträgen (Formeln, Graph, Molekül, Noten). Die Zeichnungen aus
+ * `@pagewise/render` tragen nur Klassen (`pg-*`) und `currentColor` als Rückfall; hier bekommen sie ihre
+ * Farben aus den Tokens, in hell und dunkel. Linien unterscheiden sich nie nur durch die Farbe (gestrichelt
+ * ab der vierten Funktion). Keine Stilangaben im Markup (CSP), alles über Klassen.
+ */
+@layer components {
+  .pg-figure {
+    max-width: 100%;
+  }
+
+  .pg-svg {
+    color: var(--ink);
+  }
+
+  .pg-svg svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  .pg-graph .pg-svg svg {
+    width: 100%;
+    max-width: 36rem;
+  }
+
+  .pg-mol .pg-svg svg {
+    width: auto;
+    max-width: 100%;
+    max-height: 16rem;
+  }
+
+  .pg-abc .pg-svg svg {
+    width: 100%;
+    max-width: 44rem;
+  }
+
+  /* Graph */
+  .pg-grid {
+    stroke: var(--line-warm);
+    stroke-width: 1;
+    fill: none;
+  }
+
+  .pg-axis {
+    stroke: var(--ink-secondary);
+    stroke-width: 1.4;
+  }
+
+  .pg-tick {
+    stroke: var(--ink-secondary);
+    stroke-width: 1;
+  }
+
+  .pg-label {
+    fill: var(--ink-secondary);
+    font-family: var(--font-sans);
+  }
+
+  .pg-fn-0 {
+    stroke: var(--ink);
+  }
+
+  .pg-fn-1 {
+    stroke: var(--link);
+  }
+
+  .pg-fn-2 {
+    stroke: var(--danger);
+  }
+
+  .pg-fn-3 {
+    stroke: var(--ink);
+    stroke-dasharray: 7 5;
+  }
+
+  .pg-fn-4 {
+    stroke: var(--link);
+    stroke-dasharray: 7 5;
+  }
+
+  .pg-fn-5 {
+    stroke: var(--danger);
+    stroke-dasharray: 7 5;
+  }
+
+  .pg-point {
+    fill: var(--ink);
+  }
+
+  /* Molekül */
+  .pg-atom {
+    fill: var(--ink);
+    font-family: var(--font-heading);
+  }
+
+  .pg-bond,
+  .pg-dash,
+  .pg-lp {
+    stroke: var(--ink);
+  }
+
+  .pg-wedge {
+    fill: var(--ink);
+  }
+
+  .pg-angle {
+    stroke: var(--ink-muted);
+  }
+
+  .pg-caption {
+    fill: var(--ink-secondary);
+    font-family: var(--font-sans);
+  }
+
+  /* Skelettformeln (SmilesDrawer) und Noten (abcjs) zeichnen mit festen Farben: auf die Textfarbe umstellen,
+     damit sie im dunklen Modus lesbar bleiben */
+  .pg-mol-smiles .element,
+  .pg-mol-smiles text {
+    fill: currentColor;
+    font-family: var(--font-sans);
+    font-size: 11pt;
+  }
+
+  .pg-mol-smiles .sub {
+    font-size: 3pt;
+  }
+
+  .pg-mol-smiles line,
+  .pg-mol-smiles path,
+  .pg-mol-smiles polygon {
+    stroke: currentColor;
+  }
+
+  .pg-abc svg path,
+  .pg-abc svg rect,
+  .pg-abc svg text {
+    fill: currentColor;
+  }
+
+  .pg-abc svg [stroke="#000000"] {
+    stroke: currentColor;
+  }
+
+  /* Formeln: KaTeX bringt seine eigene Schrift mit; Anzeigeformeln scrollen seitlich statt zu brechen */
+  .pg-math .katex {
+    font-size: 1.08em;
+  }
+
+  .pg-math-display .katex-display {
+    margin: 0;
+  }
+
+  .pg-math-display .katex-display > .katex {
+    max-width: 100%;
+  }
+}

@@ -5,7 +5,7 @@ import { parseGraphSpec } from './spec';
 
 export { compileExpression } from './expression';
 export { niceTicks, renderGraphSvg } from './plot';
-export { type GraphSpec, graphSpecSchema, parseGraphSpec } from './spec';
+export { type GraphSpec, parseGraphSpec } from './spec';
 
 /** Zeichnet den Inhalt eines ` ```graph `-Blocks. Wirft `RenderError`. */
 export function renderGraph(source: string): string {
