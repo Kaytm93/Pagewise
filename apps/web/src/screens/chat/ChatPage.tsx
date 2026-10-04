@@ -16,7 +16,7 @@ import { NotFoundPage } from '../NotFoundPage';
 import { Composer } from './Composer';
 import { MessageItem } from './MessageItem';
 import { ModelDialog } from './ModelDialog';
-import { describeSelection, effectiveModel } from './models';
+import { describeEngine, describeSelection, effectiveModel, effectiveTarget } from './models';
 import { useChat } from './useChat';
 
 type Dialog = 'rename' | 'delete' | 'model' | null;
@@ -101,7 +101,7 @@ function RenameDialog({
 
 export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: string }) {
   const { api } = useSession();
-  const { findSubject, providers, modelSettings } = useWorkspace();
+  const { findSubject, providers, modelSettings, engines } = useWorkspace();
   const chat = useChat(api, chatId);
   const { state } = chat;
   const [dialog, setDialog] = useState<Dialog>(null);
@@ -179,7 +179,9 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
     ? subject.groups.find((entry) => entry.id === current.groupId)
     : undefined;
   const backTo = { name: 'subject', subjectId, groupId: group?.id ?? null } as const;
-  const model = effectiveModel(current.model, subject, modelSettings, providers);
+  const model = effectiveTarget(current, subject, modelSettings, providers, engines.profiles);
+  // Ein Modell eines Anbieters, das statt eines fehlgeschlagenen Agenten antworten könnte.
+  const apiModel = effectiveModel(current.model, subject, modelSettings, providers);
   const messages = state.messages;
   const last = messages[messages.length - 1];
   const canRetry =
@@ -213,7 +215,9 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
   }
 
   const sourceText = model ? m.chat.source[model.source] : null;
-  const inheritedName = describeSelection(providers, subject.model ?? modelSettings.default);
+  const inheritedName =
+    describeEngine(engines.profiles, subject.engineProfileId) ??
+    describeSelection(providers, subject.model ?? modelSettings.default);
 
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-3.5rem)] w-full max-w-3xl flex-col bg-canvas md:min-h-[calc(100dvh-4rem)] md:rounded-card md:border md:border-line">
@@ -274,6 +278,12 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
               thinking={state.thinking}
               canRetry={canRetry && message === last}
               onRetry={() => void chat.retry()}
+              engineKind={
+                engines.profiles.find((profile) => profile.id === message.engineProfileId)?.kind ??
+                null
+              }
+              assetUrl={api.assetUrl}
+              onRetryViaApi={apiModel ? () => void chat.retry(true) : undefined}
             />
           ))
         )}
@@ -337,11 +347,17 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
         <ModelDialog
           title={m.chat.modelDialog.chatTitle}
           lead={m.chat.modelDialog.chatLead}
-          value={current.model}
+          value={{ model: current.model, engineProfileId: current.engineProfileId }}
           inheritLabel={m.chat.modelDialog.inheritChat}
           inheritedName={inheritedName}
-          onSave={async (selection) => {
-            const updated = await api.updateChat(chatId, { model: selection });
+          onSave={async (choice) => {
+            // Wer das eine wählt, hebt das andere auf dem Server auf; nur „keine Wahl“ nennt beides.
+            const patch = choice.engineProfileId
+              ? { engineProfileId: choice.engineProfileId }
+              : choice.model
+                ? { model: choice.model }
+                : { model: null, engineProfileId: null };
+            const updated = await api.updateChat(chatId, patch);
             chat.dispatch({ type: 'meta', chat: updated });
           }}
           onClose={() => setDialog(null)}

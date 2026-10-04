@@ -1,9 +1,11 @@
 import { Check, Copy, RotateCcw } from 'lucide-react';
 import { memo } from 'react';
-import type { ChatMessage } from '../../api/types';
-import { messages as m } from '../../i18n';
+import type { ChatMessage, EngineKind } from '../../api/types';
+import { format, messages as m } from '../../i18n';
 import { Button } from '../../ui/Button';
 import { Link } from '../../ui/Link';
+import { AgentActivity } from './AgentActivity';
+import { AssetList } from './AssetList';
 import { Markdown } from './Markdown';
 import { useCopy } from './useCopy';
 
@@ -16,11 +18,27 @@ const NEEDS_SETTINGS = new Set([
   'no_package',
   'plan_expired',
   'model_not_allowed',
+  'cli_missing',
+  'cli_broken',
+  'profile_missing',
 ]);
 
-function errorText(code: string | null): string {
-  const errors = m.chat.errors as Record<string, string>;
-  return (code ? errors[code] : undefined) ?? m.chat.errors.unknown;
+type Texts = Record<string, string>;
+
+/**
+ * Text zu einem Fehlercode. Bei einem Agenten zuerst die Texte zur Art des Zugangs (ein abgelehnter Schlüssel
+ * heißt beim Abo etwas anderes als bei Z.ai), dann die des Agenten, dann die allgemeinen.
+ */
+function errorText(code: string | null, engineKind: EngineKind | null): string {
+  if (code && engineKind) {
+    const byKind = (m.chat.agentErrors.byKind as Record<string, Texts>)[engineKind]?.[code];
+    if (byKind) return byKind;
+  }
+  if (code) {
+    const agent = (m.chat.agentErrors as unknown as Texts)[code];
+    if (typeof agent === 'string') return agent;
+  }
+  return ((m.chat.errors as Texts)[code ?? ''] ?? m.chat.errors.unknown) as string;
 }
 
 interface Props {
@@ -31,6 +49,12 @@ interface Props {
   /** Nur die letzte Antwort lässt sich wiederholen, und nur wenn sie nicht gelungen ist. */
   canRetry: boolean;
   onRetry: () => void;
+  /** Art des Zugangs, über den der Agent geantwortet hat (`null`: ein Modell hat geantwortet). */
+  engineKind?: EngineKind | null;
+  /** Adresse zum Herunterladen einer erzeugten Datei. */
+  assetUrl?: (id: string) => string;
+  /** Nur gesetzt, wenn ein Modell eines Anbieters bereitsteht, das statt des Agenten antworten kann. */
+  onRetryViaApi?: () => void;
 }
 
 export const MessageItem = memo(function MessageItem({
@@ -39,6 +63,9 @@ export const MessageItem = memo(function MessageItem({
   thinking,
   canRetry,
   onRetry,
+  engineKind = null,
+  assetUrl,
+  onRetryViaApi,
 }: Props) {
   const { copied, copy } = useCopy();
 
@@ -61,6 +88,8 @@ export const MessageItem = memo(function MessageItem({
         ? m.chat.interruptedNote
         : null;
   const hasText = message.content.trim() !== '';
+  const byAgent = message.engineProfileId !== null;
+  const working = message.activity[message.activity.length - 1];
 
   return (
     <article aria-busy={live || undefined}>
@@ -69,16 +98,25 @@ export const MessageItem = memo(function MessageItem({
       {!hasText && live && (
         <p className="flex items-center gap-2 text-ink-muted">
           <span aria-hidden="true" className="size-2 animate-pulse rounded-pill bg-ink-muted" />
-          {thinking ? m.chat.thinking : m.chat.waiting}
+          {byAgent && working
+            ? format(m.chat.agent.workingOn, { step: working.target ?? working.tool })
+            : thinking
+              ? m.chat.thinking
+              : byAgent
+                ? m.chat.agent.working
+                : m.chat.waiting}
         </p>
       )}
       {!hasText && !live && message.status === 'complete' && (
         <p className="text-ink-muted">{m.chat.emptyAnswer}</p>
       )}
 
+      {byAgent && <AgentActivity steps={message.activity} live={live} />}
+      {assetUrl && <AssetList assets={message.assets} url={assetUrl} />}
+
       {failed && (
         <div className="mt-3 rounded-box bg-paper px-4 py-3 text-sm">
-          <p className="font-medium text-danger">{errorText(message.errorCode)}</p>
+          <p className="font-medium text-danger">{errorText(message.errorCode, engineKind)}</p>
           {message.errorCode && NEEDS_SETTINGS.has(message.errorCode) && (
             <Link to={{ name: 'settings' }} className="mt-1 inline-block">
               {m.chat.openSettings}
@@ -108,6 +146,11 @@ export const MessageItem = memo(function MessageItem({
             <Button variant="ghost" onClick={onRetry}>
               <RotateCcw aria-hidden="true" className="size-4" />
               {m.chat.retry}
+            </Button>
+          )}
+          {canRetry && byAgent && onRetryViaApi && (
+            <Button variant="ghost" onClick={onRetryViaApi}>
+              {m.chat.retryViaApi}
             </Button>
           )}
           {message.model && <span className="px-3 break-all">{message.model}</span>}

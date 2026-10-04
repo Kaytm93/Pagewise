@@ -125,6 +125,7 @@ export const de = {
     chatCreateFailed: 'Der Chat konnte nicht angelegt werden.',
     model: 'Modell',
     modelOwn: 'Eigenes Modell: {name}',
+    agentOwn: 'Agent: {name}',
     modelDefault: 'Standardmodell: {name}',
     modelNone: 'Noch kein Modell eingerichtet.',
     modelLead: 'Gilt für alle Chats in diesem Fach, die kein eigenes Modell gewählt haben.',
@@ -228,6 +229,7 @@ export const de = {
     interruptedNote: 'Die Antwort wurde unterbrochen, weil Pagewise neu gestartet wurde.',
     emptyAnswer: '(keine Antwort)',
     retry: 'Erneut versuchen',
+    retryViaApi: 'Mit API-Modell erneut',
     copy: 'Antwort kopieren',
     copied: 'Kopiert',
     copyCode: 'Code kopieren',
@@ -254,6 +256,7 @@ export const de = {
       subject: 'vom Fach',
       default: 'Standardmodell',
     },
+    agentLabel: 'Agent: {name}',
     modelDialog: {
       chatTitle: 'Modell für diesen Chat',
       chatLead:
@@ -269,6 +272,10 @@ export const de = {
       none: 'Es ist noch kein Modell eingerichtet. Trag unter Einstellungen einen Anbieter ein.',
       free: 'kostenlos',
       invalid: 'Dieses Modell gibt es nicht mehr.',
+      groupAgents: 'Agenten (Claude Code)',
+      groupModels: 'Modelle von Anbietern',
+      agentHint:
+        'Ein Agent arbeitet in einem eigenen Ordner dieses Fachs und kann Dateien wie PDF oder PPTX erzeugen, die du herunterladen kannst.',
     },
     errors: {
       unreachable: 'Der Anbieter ist nicht erreichbar.',
@@ -297,8 +304,65 @@ export const de = {
       internal: 'In Pagewise ist ein Fehler aufgetreten.',
       unknown: 'Die Antwort ist fehlgeschlagen.',
     },
+    agent: {
+      working: 'Der Agent arbeitet …',
+      workingOn: 'Der Agent arbeitet: {step}',
+      summary: 'Was der Agent getan hat ({count})',
+      steps: 'Schritte des Agenten',
+      stepRunning: 'läuft',
+      stepDone: 'erledigt',
+      stepError: 'fehlgeschlagen',
+      files: 'Dateien',
+      download: '{name} herunterladen ({size})',
+      tools: {
+        Read: 'Gelesen',
+        Write: 'Geschrieben',
+        Edit: 'Bearbeitet',
+        Glob: 'Dateien gesucht',
+        Grep: 'Durchsucht',
+        Bash: 'Befehl',
+      },
+    },
+    agentErrors: {
+      cli_missing:
+        'Das Programm „claude“ wurde auf diesem Rechner nicht gefunden. Installiere Claude Code und suche es in den Einstellungen unter „Agent-CLI“ erneut.',
+      cli_broken:
+        'Das Programm „claude“ ist vorhanden, startet aber nicht. In den Einstellungen unter „Agent-CLI“ steht, was die Erkennung meldet.',
+      profile_missing: 'Der gewählte Agent-Zugang existiert nicht mehr. Wähle einen anderen.',
+      sandbox_unavailable:
+        'Die Schutzumgebung für den Agenten konnte nicht starten. Unter macOS ist sie eingebaut, unter Linux fehlen vielleicht bubblewrap und socat (siehe docs/agent-cli.md).',
+      workspace_too_deep:
+        'Der Datenordner von Pagewise liegt zu tief im Dateisystem, die Schutzumgebung des Agenten startet dort nicht. Lege ihn näher an die Wurzel (PAGEWISE_DATA_DIR) und starte Pagewise neu.',
+      agent_failed:
+        'Der Agent hat die Aufgabe nicht abgeschlossen. Versuch es noch einmal oder wähle ein Modell von einem Anbieter.',
+      agent_limit:
+        'Der Agent hat sein Limit an Arbeitsschritten erreicht, bevor er fertig war. Teile die Aufgabe in kleinere Schritte.',
+      agent_timeout:
+        'Der Agent hat zu lange gebraucht und wurde beendet. Die Höchstdauer stellst du beim Zugang ein.',
+      byKind: {
+        'claude-subscription': {
+          auth_failed:
+            'Claude Code ist nicht angemeldet. Melde dich im Terminal mit „claude“ an und versuch es dann noch einmal.',
+          rate_limited:
+            'Das Nutzungslimit deines Claude-Abos ist erreicht. Warte, bis es zurückgesetzt wird, oder wähle ein anderes Modell.',
+        },
+        'glm-coding-plan': {
+          auth_failed:
+            'Z.ai lehnt den Schlüssel dieses Zugangs ab. Prüfe ihn in den Einstellungen unter „Agent-CLI“.',
+          rate_limited:
+            'Z.ai meldet zu viele Anfragen oder ein ausgeschöpftes Kontingent deines Plans. Warte etwas und versuch es dann noch einmal.',
+        },
+        'anthropic-api': {
+          auth_failed:
+            'Anthropic lehnt den Schlüssel dieses Zugangs ab. Prüfe ihn in den Einstellungen unter „Agent-CLI“.',
+          rate_limited:
+            'Anthropic meldet zu viele Anfragen. Warte etwas und versuch es noch einmal.',
+        },
+      },
+    },
     problems: {
       busy: 'In diesem Chat läuft noch eine Antwort.',
+      workspace_busy: 'In diesem Fach arbeitet schon ein Agent. Warte, bis er fertig ist.',
       no_model: 'Es ist noch kein Modell gewählt.',
       too_busy: 'Es laufen schon mehrere Antworten. Versuch es gleich noch einmal.',
       nothing_to_retry: 'Es gibt nichts zu wiederholen.',

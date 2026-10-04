@@ -4,17 +4,19 @@ import { format, messages as m } from '../../i18n';
 import { Button } from '../../ui/Button';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { ModelDialog } from './ModelDialog';
-import { describeSelection } from './models';
+import { describeSelection, engineName } from './models';
 
-/** Zeile „Modell“ eines Fachs: zeigt, was gilt, und lässt es ändern. */
+/** Zeile „Modell“ eines Fachs: zeigt, was gilt (Modell oder Agent), und lässt es ändern. */
 export function SubjectModel({ subject }: { subject: Subject }) {
-  const { providers, modelSettings, setSubjectModel } = useWorkspace();
+  const { providers, modelSettings, engines, setSubjectModel, setSubjectEngine } = useWorkspace();
   const [open, setOpen] = useState(false);
+  const ownEngine = engineName(engines.profiles, subject.engineProfileId);
   const own = describeSelection(providers, subject.model);
   const standard = describeSelection(providers, modelSettings.default);
 
   let summary: string;
-  if (own) summary = format(m.subject.modelOwn, { name: own });
+  if (ownEngine) summary = format(m.subject.agentOwn, { name: ownEngine });
+  else if (own) summary = format(m.subject.modelOwn, { name: own });
   else if (standard) summary = format(m.subject.modelDefault, { name: standard });
   else summary = m.subject.modelNone;
 
@@ -36,10 +38,18 @@ export function SubjectModel({ subject }: { subject: Subject }) {
         <ModelDialog
           title={m.chat.modelDialog.subjectTitle}
           lead={m.chat.modelDialog.subjectLead}
-          value={subject.model}
+          value={{ model: subject.model, engineProfileId: subject.engineProfileId }}
           inheritLabel={m.chat.modelDialog.inheritSubject}
           inheritedName={standard}
-          onSave={(selection) => setSubjectModel(subject.id, selection)}
+          onSave={async (choice) => {
+            if (choice.engineProfileId) await setSubjectEngine(subject.id, choice.engineProfileId);
+            else if (choice.model) await setSubjectModel(subject.id, choice.model);
+            else {
+              // „Keine Wahl“ hebt beides auf, was gesetzt ist.
+              if (subject.engineProfileId) await setSubjectEngine(subject.id, null);
+              if (subject.model) await setSubjectModel(subject.id, null);
+            }
+          }}
           onClose={() => setOpen(false)}
         />
       )}

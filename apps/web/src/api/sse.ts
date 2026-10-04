@@ -1,4 +1,11 @@
-import type { ChatMessage, MessageStatus, Selection, StreamEvent } from './types';
+import type {
+  ActivityEntry,
+  ChatAsset,
+  ChatMessage,
+  MessageStatus,
+  Selection,
+  StreamEvent,
+} from './types';
 
 export interface SseMessage {
   event: string;
@@ -47,6 +54,58 @@ type Json = Record<string, unknown>;
 const isRecord = (value: unknown): value is Json => typeof value === 'object' && value !== null;
 const STATUSES: readonly string[] = ['complete', 'streaming', 'stopped', 'error', 'interrupted'];
 
+const ASSET_KINDS: readonly string[] = ['pdf', 'pptx', 'docx', 'xlsx', 'image', 'text'];
+const ACTIVITY_STATES: readonly string[] = ['running', 'done', 'error'];
+
+/** Eintrag der Aktivität eines Agenten. Anzeigetexte werden gekürzt: Der Strom ist nicht vertrauenswürdig. */
+export function asActivity(value: unknown): ActivityEntry | null {
+  if (!isRecord(value)) return null;
+  const { id, tool, target, state } = value;
+  if (
+    typeof id !== 'string' ||
+    typeof tool !== 'string' ||
+    typeof state !== 'string' ||
+    !ACTIVITY_STATES.includes(state)
+  ) {
+    return null;
+  }
+  return {
+    id: id.slice(0, 100),
+    tool: tool.slice(0, 40),
+    target: typeof target === 'string' ? target.slice(0, 120) : null,
+    state: state as ActivityEntry['state'],
+  };
+}
+
+function asActivityList(value: unknown): ActivityEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 100).flatMap((entry, index) => {
+    const parsed = asActivity(
+      isRecord(entry) && entry.id === undefined ? { ...entry, id: String(index) } : entry,
+    );
+    return parsed ? [parsed] : [];
+  });
+}
+
+function asAssets(value: unknown): ChatAsset[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 50).flatMap((entry) => {
+    if (!isRecord(entry)) return [];
+    const { id, name, kind, mime, size } = entry;
+    if (
+      typeof id !== 'string' ||
+      typeof name !== 'string' ||
+      typeof kind !== 'string' ||
+      !ASSET_KINDS.includes(kind) ||
+      typeof mime !== 'string' ||
+      typeof size !== 'number'
+    ) {
+      return [];
+    }
+    return [{ id, name, kind: kind as ChatAsset['kind'], mime, size }];
+  });
+}
+
 function asMessage(value: unknown): ChatMessage | null {
   if (!isRecord(value)) return null;
   const { id, seq, role, content, status, providerId, model, errorCode, createdAt } = value;
@@ -69,7 +128,10 @@ function asMessage(value: unknown): ChatMessage | null {
     status: status as MessageStatus,
     providerId: typeof providerId === 'string' ? providerId : null,
     model: typeof model === 'string' ? model : null,
+    engineProfileId: typeof value.engineProfileId === 'string' ? value.engineProfileId : null,
     errorCode: typeof errorCode === 'string' ? errorCode : null,
+    activity: asActivityList(value.activity),
+    assets: asAssets(value.assets),
     createdAt,
   };
 }
@@ -112,6 +174,7 @@ export function parseStreamEvent(message: SseMessage): StreamEvent | null {
         text: payload.text,
         model: asSelection(payload.model),
         thinking: payload.thinking === true,
+        activity: asActivityList(payload.activity),
       };
     case 'model': {
       const selection = asSelection(payload);
@@ -121,6 +184,10 @@ export function parseStreamEvent(message: SseMessage): StreamEvent | null {
       return { type: 'thinking' };
     case 'delta':
       return typeof payload.text === 'string' ? { type: 'delta', text: payload.text } : null;
+    case 'activity': {
+      const entry = asActivity(payload.entry);
+      return entry ? { type: 'activity', entry } : null;
+    }
     case 'done':
     case 'stopped': {
       const final = asMessage(payload.message);

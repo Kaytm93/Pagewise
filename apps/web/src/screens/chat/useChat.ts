@@ -215,7 +215,10 @@ export function useChat(api: Api, chatId: string) {
   );
 
   const retry = useCallback(
-    () => run((onMessage, signal) => api.retryChat(chatId, onMessage, signal), { changes: true }),
+    (viaApi = false) =>
+      run((onMessage, signal) => api.retryChat(chatId, onMessage, signal, { viaApi }), {
+        changes: true,
+      }),
     [api, chatId, run],
   );
 

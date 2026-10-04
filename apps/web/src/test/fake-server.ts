@@ -1,4 +1,5 @@
 import type {
+  ActivityEntry,
   AvailableModel,
   Chat,
   ChatMessage,
@@ -51,6 +52,7 @@ export class FakeGeneration {
   text = '';
   thinkingSeen = false;
   model: Selection | null = null;
+  steps: ActivityEntry[] = [];
   private readonly streams = new Set<ReadableStreamDefaultController<Uint8Array>>();
 
   constructor(
@@ -86,6 +88,7 @@ export class FakeGeneration {
       text: this.text,
       model: this.model,
       thinking: this.thinkingSeen,
+      activity: this.steps,
     });
     return new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } });
   }
@@ -122,12 +125,23 @@ export class FakeGeneration {
     this.emit('delta', { text });
   }
 
+  /** Ein Werkzeugaufruf eines Agenten beginnt oder endet (gleiche `id` ersetzt den früheren Stand). */
+  activity(entry: ActivityEntry) {
+    const index = this.steps.findIndex((item) => item.id === entry.id);
+    if (index === -1) this.steps = [...this.steps, entry];
+    else this.steps = this.steps.map((item, at) => (at === index ? entry : item));
+    this.emit('activity', { entry });
+  }
+
   private end(event: 'done' | 'stopped' | 'failed', patch: Partial<ChatMessage>, extra = {}) {
     const message: ChatMessage = {
       ...this.assistant,
       content: this.text,
       providerId: this.model?.providerId ?? null,
       model: this.model?.model ?? null,
+      activity: this.steps.map((entry) =>
+        entry.state === 'running' ? { ...entry, state: 'done' as const } : entry,
+      ),
       ...patch,
     };
     this.server.settle(this.chatId, message);
@@ -135,8 +149,8 @@ export class FakeGeneration {
     this.close();
   }
 
-  finish() {
-    this.end('done', { status: 'complete' });
+  finish(patch: Partial<ChatMessage> = {}) {
+    this.end('done', { status: 'complete', ...patch });
   }
 
   stop() {
@@ -612,7 +626,10 @@ export class FakeServer {
       status: 'complete',
       providerId: null,
       model: null,
+      engineProfileId: null,
       errorCode: null,
+      activity: [],
+      assets: [],
       createdAt: Date.now(),
       ...extra,
     };
@@ -653,13 +670,25 @@ export class FakeServer {
     return { ...chat, generating: this.generations.has(chat.id) };
   }
 
-  private hasModel(chat: Chat): boolean {
+  /** Womit der Chat antwortet: Agent-Zugang (Chat, dann Fach) oder Modell. `viaApi` überspringt die Agenten. */
+  private engineFor(chat: Chat, viaApi: boolean): string | null {
+    if (viaApi) return null;
+    const subject = this.allSubjects().find((entry) => entry.id === chat.subjectId);
+    if (chat.engineProfileId) return chat.engineProfileId;
+    return chat.model ? null : (subject?.engineProfileId ?? null);
+  }
+
+  private hasModel(chat: Chat, viaApi = false): boolean {
+    if (this.engineFor(chat, viaApi)) return true;
     const subject = this.allSubjects().find((entry) => entry.id === chat.subjectId);
     return Boolean(chat.model ?? subject?.model ?? this.modelSettings.default);
   }
 
-  private startGeneration(chat: Chat, user: ChatMessage | null): Response {
-    const assistant = this.addMessage(chat.id, 'assistant', '', { status: 'streaming' });
+  private startGeneration(chat: Chat, user: ChatMessage | null, viaApi = false): Response {
+    const assistant = this.addMessage(chat.id, 'assistant', '', {
+      status: 'streaming',
+      engineProfileId: this.engineFor(chat, viaApi),
+    });
     const generation = new FakeGeneration(this, chat.id, assistant);
     this.generations.set(chat.id, generation);
     return generation.open(null, { user });
@@ -756,7 +785,8 @@ export class FakeServer {
 
     if ((action === '/messages' || action === '/retry') && method === 'POST') {
       if (this.generations.has(chat.id)) return json(409, { error: 'busy' });
-      if (!this.hasModel(chat)) return json(409, { error: 'no_model' });
+      const viaApi = action === '/retry' && data.viaApi === true;
+      if (!this.hasModel(chat, viaApi)) return json(409, { error: 'no_model' });
       const list = this.chatMessages.get(chat.id) ?? [];
       if (action === '/retry') {
         const last = list[list.length - 1];
@@ -764,7 +794,7 @@ export class FakeServer {
           return json(409, { error: 'nothing_to_retry' });
         }
         this.chatMessages.set(chat.id, list.slice(0, -1));
-        return this.startGeneration(chat, null);
+        return this.startGeneration(chat, null, viaApi);
       }
       const content = typeof data.content === 'string' ? data.content : '';
       if (content.trim() === '') return json(400, { error: 'invalid_input', field: 'content' });

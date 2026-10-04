@@ -1,4 +1,4 @@
-import type { Chat, ChatDetail, ChatMessage, StreamEvent } from '../../api/types';
+import type { ActivityEntry, Chat, ChatDetail, ChatMessage, StreamEvent } from '../../api/types';
 
 export interface ChatState {
   phase: 'loading' | 'ready' | 'not-found' | 'error';
@@ -34,6 +34,13 @@ function upsert(messages: ChatMessage[], message: ChatMessage): ChatMessage[] {
 function patchLive(state: ChatState, change: (message: ChatMessage) => ChatMessage): ChatMessage[] {
   if (!state.liveId) return state.messages;
   return state.messages.map((entry) => (entry.id === state.liveId ? change(entry) : entry));
+}
+
+/** Setzt einen Schritt ein oder ersetzt den mit gleicher Kennung. */
+function upsertActivity(list: ActivityEntry[], entry: ActivityEntry): ActivityEntry[] {
+  const index = list.findIndex((item) => item.id === entry.id);
+  if (index === -1) return [...list, entry];
+  return list.map((item, at) => (at === index ? entry : item));
 }
 
 function withGenerating(chat: Chat | null, generating: boolean): Chat | null {
@@ -75,6 +82,7 @@ function applyEvent(state: ChatState, event: StreamEvent): ChatState {
                 status: 'streaming',
                 providerId: event.model?.providerId ?? entry.providerId,
                 model: event.model?.model ?? entry.model,
+                activity: event.activity,
               }
             : entry,
         ),
@@ -86,6 +94,14 @@ function applyEvent(state: ChatState, event: StreamEvent): ChatState {
           ...entry,
           providerId: event.providerId,
           model: event.model,
+        })),
+      };
+    case 'activity':
+      return {
+        ...state,
+        messages: patchLive(state, (entry) => ({
+          ...entry,
+          activity: upsertActivity(entry.activity, event.entry),
         })),
       };
     case 'thinking':

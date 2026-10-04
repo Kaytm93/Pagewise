@@ -182,6 +182,24 @@ export interface PromptPreview {
 
 export type MessageStatus = 'complete' | 'streaming' | 'stopped' | 'error' | 'interrupted';
 
+/** Ein Schritt eines Agenten: Werkzeug und Ziel (Datei oder Anfang des Befehls), nie Inhalte. */
+export interface ActivityEntry {
+  id: string;
+  /** Name des Werkzeugs, z. B. „Write“ oder „Bash“. */
+  tool: string;
+  target: string | null;
+  state: 'running' | 'done' | 'error';
+}
+
+/** Eine Datei, die ein Agent erzeugt hat. Der Download läuft über `api.assetUrl(id)`. */
+export interface ChatAsset {
+  id: string;
+  name: string;
+  kind: 'pdf' | 'pptx' | 'docx' | 'xlsx' | 'image' | 'text';
+  mime: string;
+  size: number;
+}
+
 export interface ChatMessage {
   id: string;
   seq: number;
@@ -190,8 +208,14 @@ export interface ChatMessage {
   status: MessageStatus;
   providerId: string | null;
   model: string | null;
+  /** Zugang, über den ein Agent geantwortet hat, sonst `null`. */
+  engineProfileId: string | null;
   /** Fehlercode einer fehlgeschlagenen Antwort, nie ein Text des Anbieters. */
   errorCode: string | null;
+  /** Was der Agent getan hat. Leer bei Antworten von Modellen. */
+  activity: ActivityEntry[];
+  /** Dateien, die der Agent erzeugt hat. */
+  assets: ChatAsset[];
   createdAt: number;
 }
 
@@ -224,10 +248,12 @@ export type StreamEvent =
       text: string;
       model: Selection | null;
       thinking: boolean;
+      activity: ActivityEntry[];
     }
   | { type: 'model'; providerId: string; model: string }
   | { type: 'thinking' }
   | { type: 'delta'; text: string }
+  | { type: 'activity'; entry: ActivityEntry }
   | { type: 'done'; message: ChatMessage }
   | { type: 'stopped'; message: ChatMessage }
   | { type: 'failed'; code: string; message: ChatMessage };

@@ -23,7 +23,10 @@ function msg(id: string, seq: number, extra: Partial<ChatMessage> = {}): ChatMes
     status: 'complete',
     providerId: null,
     model: null,
+    engineProfileId: null,
     errorCode: null,
+    activity: [],
+    assets: [],
     createdAt: 1,
     ...extra,
   };
@@ -108,6 +111,37 @@ describe('chatReducer', () => {
     expect(state.messages.map((entry) => entry.id)).toEqual(['u1', 'a1', 'a2']);
   });
 
+  it('sammelt die Schritte eines Agenten, ersetzt Schritte mit gleicher Kennung und übernimmt den Stand beim Anhängen', () => {
+    const step = (id: string, state: 'running' | 'done') => ({
+      id,
+      tool: 'Write',
+      target: `${id}.pdf`,
+      state,
+    });
+    const state = run([
+      loaded([msg('u1', 1), msg('a1', 2, { status: 'streaming' })], { generating: true }),
+      event({ type: 'activity', entry: step('t1', 'running') }),
+      event({ type: 'activity', entry: step('t2', 'running') }),
+      event({ type: 'activity', entry: step('t1', 'done') }),
+    ]);
+    expect(state.messages[1]?.activity).toEqual([step('t1', 'done'), step('t2', 'running')]);
+    // Beim Wiederanhängen gilt der Stand des Servers.
+    const reattached = run(
+      [
+        event({
+          type: 'snapshot',
+          assistantMessageId: 'a1',
+          text: 'Text',
+          model: null,
+          thinking: false,
+          activity: [step('t9', 'done')],
+        }),
+      ],
+      state,
+    );
+    expect(reattached.messages[1]?.activity).toEqual([step('t9', 'done')]);
+  });
+
   it('ersetzt beim Wiederanhängen den Text durch den Stand des Servers', () => {
     const state = run([
       loaded([msg('u1', 1), msg('a1', 2, { status: 'streaming', content: 'alt' })], {
@@ -119,6 +153,7 @@ describe('chatReducer', () => {
         text: 'alt und neu',
         model: { providerId: 'p1', model: 'modell-a' },
         thinking: false,
+        activity: [],
       }),
       event({ type: 'delta', text: '!' }),
     ]);

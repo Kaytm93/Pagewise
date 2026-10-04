@@ -80,6 +80,7 @@ describe('parseStreamEvent', () => {
       text: 'Hallo',
       model: { providerId: 'p1', model: 'modell-a' },
       thinking: true,
+      activity: [],
     });
     expect(parse('model', { providerId: 'p1', model: 'modell-a' })).toEqual({
       type: 'model',
@@ -88,6 +89,46 @@ describe('parseStreamEvent', () => {
     });
     expect(parse('thinking', {})).toEqual({ type: 'thinking' });
     expect(parse('delta', { text: 'x' })).toEqual({ type: 'delta', text: 'x' });
+  });
+
+  it('liest Schritte und Dateien eines Agenten und kürzt, was zu lang ist', () => {
+    const step = { id: 't1', tool: 'Write', target: 'bericht.pdf', state: 'running' };
+    expect(parse('activity', { entry: step })).toEqual({ type: 'activity', entry: step });
+    expect(parse('activity', { entry: { ...step, target: 'x'.repeat(500) } })).toMatchObject({
+      entry: { target: 'x'.repeat(120) },
+    });
+    expect(
+      parse('snapshot', { assistantMessageId: 'm1', text: '', activity: [step] }),
+    ).toMatchObject({
+      activity: [step],
+    });
+    const asset = { id: 'a1', name: 'bericht.pdf', kind: 'pdf', mime: 'application/pdf', size: 10 };
+    const done = parse('done', {
+      message: message({
+        engineProfileId: 'e1',
+        activity: [{ tool: 'Write', target: null, state: 'done' }],
+        assets: [asset, { ...asset, id: 'a2', kind: 'exe' }, 'kaputt'],
+      }),
+    });
+    expect(done).toMatchObject({
+      message: {
+        engineProfileId: 'e1',
+        activity: [{ id: '0', tool: 'Write', target: null, state: 'done' }],
+        assets: [asset],
+      },
+    });
+  });
+
+  it('übernimmt Nachrichten ohne Angaben eines Agenten mit leeren Listen', () => {
+    expect(parse('done', { message: message() })).toMatchObject({
+      message: { engineProfileId: null, activity: [], assets: [] },
+    });
+  });
+
+  it('ignoriert ungültige Schritte', () => {
+    expect(parse('activity', { entry: { id: 't1', tool: 'Write', state: 'kaputt' } })).toBeNull();
+    expect(parse('activity', { entry: 'x' })).toBeNull();
+    expect(parse('activity', {})).toBeNull();
   });
 
   it('liest das Ende einer Antwort', () => {

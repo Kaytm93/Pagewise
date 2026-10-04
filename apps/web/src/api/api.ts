@@ -183,9 +183,23 @@ export function createApi(client: ApiClient) {
       onMessage: (message: SseMessage) => void,
       signal?: AbortSignal,
     ) => client.stream('POST', `/api/chats/${chatId}/messages`, { content }, onMessage, signal),
-    /** Wiederholt die letzte Antwort, wenn sie fehlschlug, abgebrochen oder unterbrochen wurde. */
-    retryChat: (chatId: string, onMessage: (message: SseMessage) => void, signal?: AbortSignal) =>
-      client.stream('POST', `/api/chats/${chatId}/retry`, undefined, onMessage, signal),
+    /**
+     * Wiederholt die letzte Antwort, wenn sie fehlschlug, abgebrochen oder unterbrochen wurde. Mit `viaApi`
+     * antwortet für diesen Versuch ein API-Modell statt des gewählten Agenten.
+     */
+    retryChat: (
+      chatId: string,
+      onMessage: (message: SseMessage) => void,
+      signal?: AbortSignal,
+      options: { viaApi?: boolean } = {},
+    ) =>
+      client.stream(
+        'POST',
+        `/api/chats/${chatId}/retry`,
+        options.viaApi ? { viaApi: true } : undefined,
+        onMessage,
+        signal,
+      ),
     /** Hängt sich an eine laufende Antwort an, z. B. nach dem Aufwecken des Geräts. */
     attachChat: (chatId: string, onMessage: (message: SseMessage) => void, signal?: AbortSignal) =>
       client.stream('GET', `/api/chats/${chatId}/generation`, undefined, onMessage, signal),
