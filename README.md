@@ -2,7 +2,7 @@
 
 Ein selbst gehosteter Schul-Workspace für den Browser. Jede Person richtet ihre eigene Installation ein: eigene Fächer, eigene Prompts, eigene Modelle. Die Daten bleiben auf dem eigenen Rechner.
 
-> **Status:** Phase 1a (Kern). Einrichtung, Fächer und Untergruppen, Prompt-Schichten, Anbieter, Chat mit Streaming und die installierbare Web-App laufen. Hefteinträge, Fotos, Export und Agent-CLI kommen in den nächsten Phasen. Der Stand der Abnahme steht in [docs/acceptance-1a.md](docs/acceptance-1a.md).
+> **Status:** Phase 1a (Kern). Einrichtung, Fächer und Untergruppen, Prompt-Schichten, Anbieter, Chat mit Streaming und die installierbare Web-App laufen. Dazu die Agent-CLI-Anbindung (Phase 1e, siehe [docs/agent-cli.md](docs/agent-cli.md)). Hefteinträge, Fotos und Export kommen in den nächsten Phasen. Der Stand der Abnahme steht in [docs/acceptance-1a.md](docs/acceptance-1a.md) und [docs/acceptance-1e.md](docs/acceptance-1e.md).
 
 ## Was Pagewise werden soll
 
@@ -13,7 +13,7 @@ Ein selbst gehosteter Schul-Workspace für den Browser. Jede Person richtet ihre
 - **Export als PDF und PPTX.**
 - **Fotos von Heft und Tafel** als Eingabe für ein Vision-Modell.
 - **Viele Modell-Anbieter** über eigene API-Keys, ohne Code-Änderung erweiterbar (Standard: OpenRouter).
-- **Agent-CLI-Anbindung** für lokale Coding-Agenten (zuerst Claude Code), die in einem eigenen Workspace-Ordner Dateien erzeugen.
+- **Agent-CLI-Anbindung** für lokale Coding-Agenten (zuerst Claude Code), die in einem eigenen Workspace-Ordner arbeiten und Dateien wie PDF oder PPTX erzeugen, die du herunterladen kannst. Bei Fehlern gibt es einen Rückfall auf ein Modell eines Anbieters.
 - **Erreichbar im eigenen Tailscale-Netz** vom iPhone, iPad und Mac, als installierbare Web-App.
 
 Die Anwendung startet vollständig leer. Dieses Repository enthält keine Fächerlisten einzelner Personen und keine Lehrkräfte, Stundenpläne oder persönlichen Prompts, nur Code, neutrale Vorlagen (Fachnamen, neutrale Standardtexte) und erfundene Beispiele.
@@ -49,7 +49,7 @@ Mit `PAGEWISE_DATA_DIR` legst du einen anderen Ort fest. Liegt das Datenverzeich
 ## Hinweise zu Anbietern und Abos
 
 - Wenn du Modelle über API-Keys nutzt, gehen deine Eingaben an den jeweiligen Anbieter. Free-Modelle können Prompts protokollieren, gib dort keine sensiblen Daten ein.
-- Die geplante Agent-CLI-Anbindung startet **unveränderte, offizielle Programme** (z. B. Claude Code) auf deinem Rechner. Du meldest dich dort selbst an. Pagewise liest, speichert oder vermittelt keine Zugangsdaten deiner Abos.
+- Die Agent-CLI-Anbindung startet **unveränderte, offizielle Programme** (z. B. Claude Code) auf deinem Rechner, in einer Sandbox und nur im Arbeitsordner des Fachs. Du installierst das Programm selbst und meldest dich dort selbst an. Pagewise liest, speichert oder vermittelt keine Zugangsdaten deiner Abos. Nutzungslimits deines Abos gelten auch für Aufträge aus Pagewise; sie zählen wie deine eigene Nutzung.
 - Abo-Kontingente (z. B. Claude-Abo oder GLM Coding Plan) gelten nur für die gewöhnliche, persönliche Nutzung des Kontoinhabers. Anbieter können ihre Regeln jederzeit ändern. Prüfe die aktuellen Bedingungen selbst, bevor du ein Abo-Profil nutzt.
 - „Claude Code“ und „Anthropic“ sind Marken ihrer Inhaber. Pagewise ist kein Produkt dieser Firmen und wird von ihnen nicht unterstützt.
 

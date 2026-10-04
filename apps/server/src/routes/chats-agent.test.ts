@@ -185,6 +185,30 @@ describe('Chats mit Agent-CLI', () => {
     expect(download.headers.get('content-disposition')).toContain('attachment');
   });
 
+  it('liefert eine PDF- und eine PPTX-Datei aus einem Auftrag als Downloads (Abnahme 1e)', async () => {
+    const chatId = await newChat();
+    const events = parseSse(
+      (await send(chatId, 'Erstelle beides [[write:Bericht.pdf,Folien.pptx]]')).text,
+    );
+    const message = last(events).data.message as {
+      assets: { id: string; name: string; kind: string }[];
+    };
+    expect(message.assets.map((a) => [a.name, a.kind])).toEqual([
+      ['Bericht.pdf', 'pdf'],
+      ['Folien.pptx', 'pptx'],
+    ]);
+    const types: string[] = [];
+    for (const asset of message.assets) {
+      const download = await session.call('GET', `/api/assets/${asset.id}/download`);
+      expect(download.status).toBe(200);
+      types.push(download.headers.get('content-type') ?? '');
+    }
+    expect(types).toEqual([
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    ]);
+  });
+
   it('setzt die Sitzung bei der nächsten Nachricht fort', async () => {
     const chatId = await newChat();
     await send(chatId, 'Erste Frage');

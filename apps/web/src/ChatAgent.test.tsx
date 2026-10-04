@@ -200,6 +200,16 @@ describe('Chat mit Agent: Antwort', () => {
     expect(await screen.findByText(/Claude Code ist nicht angemeldet/)).toBeTruthy();
   });
 
+  it('erklärt „kein Paket“ bei einem Coding Plan anders als bei einem API-Anbieter', async () => {
+    const { server, subject, chat } = setup();
+    open(server, chatPath(subject.id, chat.id));
+    await ask(userEvent.setup(), 'Hallo');
+    await waitFor(() => expect(server.generations.has(chat.id)).toBe(true));
+    act(() => server.generation(chat.id).fail('no_package'));
+    expect(await screen.findByText(/Prüfe, ob dein GLM Coding Plan aktiv ist/)).toBeTruthy();
+    expect(screen.queryByText(/auf dieser Adresse nur Guthaben/)).toBeNull();
+  });
+
   it.each([
     ['cli_missing', /„claude“ wurde auf diesem Rechner nicht gefunden/, true],
     ['sandbox_unavailable', /Schutzumgebung für den Agenten konnte nicht starten/, false],

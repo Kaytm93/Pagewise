@@ -11,6 +11,9 @@ updates:
       # @types/node folgt der Node-Version aus .nvmrc (22), nicht der neuesten Hauptversion.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # jsdom 30 verlangt Node ab 22.22.2, die Projektvorgabe ist >=22.18 (D-023, D-042).
+      - dependency-name: "jsdom"
+        update-types: ["version-update:semver-major"]
     groups:
       minor-and-patch:
         update-types:

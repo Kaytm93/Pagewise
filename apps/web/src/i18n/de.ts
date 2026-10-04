@@ -347,6 +347,8 @@ export const de = {
             'Das Nutzungslimit deines Claude-Abos ist erreicht. Warte, bis es zurückgesetzt wird, oder wähle ein anderes Modell.',
         },
         'glm-coding-plan': {
+          no_package:
+            'Z.ai meldet: kein passendes Paket. Prüfe, ob dein GLM Coding Plan aktiv ist und der Schlüssel zu dem Konto gehört, das den Plan hat.',
           auth_failed:
             'Z.ai lehnt den Schlüssel dieses Zugangs ab. Prüfe ihn in den Einstellungen unter „Agent-CLI“.',
           rate_limited:

@@ -37,7 +37,7 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | Bereinigung von SVG, HTML und Formeln in Hefteinträgen | geplant (Phase 1b) |
 | EXIF-Entfernung, Upload-Prüfung | geplant (Phase 1c) |
 | PDF-Rendering ohne Netzwerk | geplant (Phase 1d) |
-| Agent-CLI mit Umgebungs-Allowlist und Workspace-Isolation | geplant (Phase 1e) |
+| Agent-CLI mit Umgebungs-Allowlist und Workspace-Isolation (Sandbox und Berechtigungsregeln, `--safe-mode`) | umgesetzt (Phase 1e), siehe D-039, D-040 und [agent-cli.md](agent-cli.md) |
 | Strenge CORS-Regel: fremde Herkunft wird abgelehnt, keine `Access-Control-*`-Header | umgesetzt (Phase 1a), siehe D-031 |
 | „Alles löschen“ mit Passcode, leert Datenbank (`VACUUM`), Dateien, Sicherungen und Schlüssel; Test: Text nicht mehr in Datenbankdatei oder WAL | umgesetzt (Phase 1a), siehe D-032 |
 | Je Anbieter: Übersicht, was gesendet wird, und Schalter „Bilder nicht senden“ | Übersicht und Schalter umgesetzt (Phase 1a), Durchsetzung ab Phase 1c, siehe D-033 |

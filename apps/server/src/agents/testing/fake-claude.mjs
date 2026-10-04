@@ -3,7 +3,7 @@
 // wie das echte Programm (gemessen mit 2.1.220), kennt aber weder Netz noch Konten. Das Verhalten steuern
 // Marker im Auftrag (stdin). Nur für Tests, nie für den Betrieb.
 //
-//   [[write:name.pdf]]   legt die Datei im Arbeitsordner an (mit Werkzeug-Ereignissen)
+//   [[write:name.pdf]]   legt die Datei im Arbeitsordner an (mit Werkzeug-Ereignissen); mehrere mit Komma: [[write:a.pdf,b.pptx]]
 //   [[fail]]             Fehler wie bei Z.ai: 429 mit Nummer 1113
 //   [[auth]]             Fehler 401
 //   [[slow]]             schreibt etwas und wartet dann (bis zum Abbruch)
@@ -197,34 +197,41 @@ if (prompt.includes('[[multi]]')) {
   process.exit(0);
 }
 if (write) {
-  const name = write[1];
+  // Mehrere Dateien mit Komma getrennt: [[write:a.pdf,b.pptx]]
+  const names = write[1].split(',').map((entry) => entry.trim());
   text('Ich erstelle die Datei. ');
-  out({
-    type: 'assistant',
-    message: {
-      content: [
-        {
-          type: 'tool_use',
-          id: 'toolu_w',
-          name: 'Write',
-          input: { file_path: join(process.cwd(), name), content: 'FAKE' },
-        },
-      ],
-    },
-    ...parentless,
-  });
-  writeFileSync(join(process.cwd(), name), `FAKE-INHALT-${name}`);
-  out({
-    type: 'user',
-    message: {
-      role: 'user',
-      content: [{ type: 'tool_result', tool_use_id: 'toolu_w', content: 'ok', is_error: false }],
-    },
-    ...parentless,
-  });
+  for (const [index, name] of names.entries()) {
+    const id = `toolu_w${index}`;
+    out({
+      type: 'assistant',
+      message: {
+        content: [
+          {
+            type: 'tool_use',
+            id,
+            name: 'Write',
+            input: { file_path: join(process.cwd(), name), content: 'FAKE' },
+          },
+        ],
+      },
+      ...parentless,
+    });
+    writeFileSync(join(process.cwd(), name), `FAKE-INHALT-${name}`);
+    out({
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [{ type: 'tool_result', tool_use_id: id, content: 'ok', is_error: false }],
+      },
+      ...parentless,
+    });
+  }
   message();
-  text(`Fertig: ${name}`);
-  result({ result: `Ich erstelle die Datei. Fertig: ${name}`, num_turns: 2 });
+  text(`Fertig: ${names.join(', ')}`);
+  result({
+    result: `Ich erstelle die Datei. Fertig: ${names.join(', ')}`,
+    num_turns: names.length + 1,
+  });
   process.exit(0);
 }
 if (prompt.includes('[[huge]]')) {

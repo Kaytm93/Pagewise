@@ -81,14 +81,14 @@ Z.ai nutzt für Coding-Plan-Abos und die Pay-per-Token-API **denselben Schlüsse
 
 | Was du siehst | Wahrscheinliche Ursache | Was hilft |
 | --- | --- | --- |
-| „weder Guthaben noch ein passendes Paket“ (`no_package`, Z.ai 1113) | Plan-Schlüssel am Preset „Z.ai (API)“: dort zählt der Plan nicht, und auf dem Konto ist kein Guthaben | Den Plan nur über die Agent-CLI nutzen (Phase 1e). Für direkte Chats Guthaben aufladen oder OpenRouter nehmen |
+| „weder Guthaben noch ein passendes Paket“ (`no_package`, Z.ai 1113) | Plan-Schlüssel am Preset „Z.ai (API)“: dort zählt der Plan nicht, und auf dem Konto ist kein Guthaben | Den Plan nur über die Agent-CLI nutzen (Einstellungen, „Agent-CLI“). Für direkte Chats Guthaben aufladen oder OpenRouter nehmen |
 | „Der Anbieter kennt dieses Modell nicht“ | Modellkennung mit Präfix wie bei OpenRouter (`z-ai/glm-5.3-flash`) | Bei Z.ai heißen die Modelle `glm-5.3-flash` und `glm-5.3` (Preset schlägt sie vor) |
 | „Kontingent aufgebraucht“ (`quota_exhausted`) | Das 5-Stunden-, Wochen- oder Monatslimit des Plans ist erreicht | Warten, das Limit füllt sich wieder auf |
 | „Abo abgelaufen“ (`plan_expired`) | Das Plan-Abo ist ausgelaufen | Beim Anbieter verlängern |
 | „Modell gehört nicht zum Tarif“ (`model_not_allowed`) | Der Tarif enthält das gewählte Modell nicht | Modell wechseln |
 | Es funktioniert technisch mit `/api/coding/paas/v4` als freiem Anbieter | Das ist ein direkter API-Aufruf aus einer eigenen App und laut Bedingungen für den Plan nicht vorgesehen (D-011) | Nicht nutzen, Agent-CLI verwenden. Die Oberfläche warnt dabei |
 
-Einen **richtigen** Weg für den Coding Plan gibt es nur über den Agent-CLI-Adapter (Phase 1e): die unveränderte `claude`-Binary mit `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic`. Die Reihenfolge der Arbeit wurde deshalb angepasst (D-036).
+Einen **richtigen** Weg für den Coding Plan gibt es nur über den Agent-CLI-Adapter (gebaut, [agent-cli.md](agent-cli.md)): die unveränderte `claude`-Binary mit `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic`. Die Reihenfolge der Arbeit wurde deshalb angepasst (D-036).
 
 ## Secrets
 

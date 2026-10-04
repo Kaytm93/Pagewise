@@ -75,6 +75,6 @@ Fächer entstehen aus einem Katalog neutraler Vorlagen (`config/subject-catalog.
 | 1b Hefteinträge | Editor, Blöcke (Formeln, Graph, Molekül, Noten), Bereinigung |
 | 1c Bildeingabe | Foto, Verkleinern, EXIF entfernen, Tafelbild → Hefteintrag |
 | 1d Dateien | PDF- und PPTX-Export, Job-Status |
-| 1e Agent-CLI | Claude-Code-Engine, Profile, Workspace, Streaming |
+| 1e Agent-CLI | Claude-Code-Engine, Profile, Workspace, Streaming (gebaut, siehe [agent-cli.md](agent-cli.md)) |
 | 2 | Cloud-Fallback und Backup (nicht jetzt bauen, aber nicht verbauen) |
 | 3 | Agent-Modus für API-Modelle (Docker-Sandbox) |
