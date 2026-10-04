@@ -1,11 +1,15 @@
-import { useId } from 'react';
+import { useId, useLayoutEffect, useRef } from 'react';
 
 interface Option<T extends string> {
   value: T;
   label: string;
 }
 
-/** Umschalter mit wenigen, gleichrangigen Optionen (Radiogruppe). Die gewählte Option ist in Graphite gefüllt. */
+/**
+ * Umschalter mit wenigen, gleichrangigen Optionen (Radiogruppe). Die gewählte Option liegt als aufgelegter
+ * Streifen unter dem Text und gleitet mit der Feder zur neuen Wahl (`--idx`, `--n` setzt das Skript über das
+ * CSSOM, siehe D-023). Ohne Bewegung (Effektstufe „Aus“) springt er.
+ */
 export function Segmented<T extends string>({
   legend,
   options,
@@ -18,27 +22,35 @@ export function Segmented<T extends string>({
   onChange: (value: T) => void;
 }) {
   const name = useId();
+  const root = useRef<HTMLFieldSetElement>(null);
+  const index = Math.max(
+    0,
+    options.findIndex((option) => option.value === value),
+  );
+
+  useLayoutEffect(() => {
+    root.current?.style.setProperty('--n', String(options.length));
+    root.current?.style.setProperty('--idx', String(index));
+  }, [options.length, index]);
+
   return (
-    <fieldset className="inline-flex max-w-full flex-wrap rounded-control border border-control-edge p-0.5">
+    <fieldset ref={root} className="lg-seg m-0 min-w-0">
       <legend className="sr-only">{legend}</legend>
       {options.map((option) => (
-        <div key={option.value} className="relative">
+        <label
+          key={option.value}
+          className="mo-press relative flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[9px] px-3 text-center text-[14.5px] text-ink-secondary has-[:checked]:font-medium has-[:checked]:text-ink has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-accent"
+        >
           <input
             type="radio"
             name={name}
-            id={`${name}-${option.value}`}
             value={option.value}
             checked={value === option.value}
             onChange={() => onChange(option.value)}
-            className="peer sr-only"
+            className="absolute inset-0 m-0 size-full cursor-pointer opacity-0"
           />
-          <label
-            htmlFor={`${name}-${option.value}`}
-            className="flex min-h-10 cursor-pointer items-center rounded-[4px] px-4 text-sm font-medium text-ink-secondary peer-checked:bg-primary peer-checked:text-on-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent"
-          >
-            {option.label}
-          </label>
-        </div>
+          {option.label}
+        </label>
       ))}
     </fieldset>
   );

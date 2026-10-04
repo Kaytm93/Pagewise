@@ -5,6 +5,7 @@ import { useSession } from '../../session/SessionProvider';
 import { Button } from '../../ui/Button';
 import { Sheet } from '../../ui/Sheet';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
+import { emptyDefaultChat } from './default-chat';
 
 /**
  * Standard-Chat (Klick auf „Pagewise“): ein Chat ohne Fach. Er liegt im eingebauten Fach „Standard“.
@@ -33,10 +34,7 @@ export function DefaultChatPage() {
     startedAttempt.current = attempt;
     setFailed(false);
     (async () => {
-      const chats = await api.chats(defaultSubject.id, null);
-      const chat =
-        chats.find((entry) => entry.title === '') ??
-        (await api.createChat(defaultSubject.id, null));
+      const chat = await emptyDefaultChat(api, defaultSubject.id);
       if (alive.current) {
         navigate(
           { name: 'chat', subjectId: defaultSubject.id, chatId: chat.id },

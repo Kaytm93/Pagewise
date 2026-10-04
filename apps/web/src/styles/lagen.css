@@ -1,0 +1,397 @@
+/*
+ * Gestaltung „Lagen“ (D-043): Ein Schreibtisch mit Fensterlicht und Papierkörnung, darauf ein Blattstapel.
+ * Die Seitenleiste ist der Heftrücken mit Lochung und Heftfaden, die Seite des Fachs liegt wie ein Blatt
+ * auf den Blättern davor. Tiefe entsteht aus Schatten und Versatz, nicht aus Verläufen im Lesebereich.
+ *
+ * Gestaltet wird hier nur die Hülle. Die Farben kommen aus tokens.css (--sheet, --ply-*, --subj …),
+ * die Bewegung aus motion.css (--m, --t-*, --spring). Alles Bewegte nutzt nur transform und opacity.
+ */
+
+@layer components {
+  /* ===== Schreibtisch ===== */
+  .lg-app {
+    position: relative;
+    isolation: isolate;
+    min-height: 100dvh;
+    --glow: color-mix(in srgb, var(--subj) var(--subj-glow), transparent);
+    transition: --glow var(--t-slow) var(--ease);
+  }
+
+  /* Fensterlicht oben links, Fachfarbe unten rechts, dazu die Körnung: eine feste Fläche hinter allem,
+     einmal gemalt und nicht Teil des Scrollens */
+  .lg-app::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(70% 60% at 14% -10%, var(--light), transparent 72%),
+      radial-gradient(60% 55% at 100% 105%, var(--glow), transparent 72%), var(--grain), var(--desk);
+    background-size:
+      auto,
+      auto,
+      220px 220px,
+      auto;
+    pointer-events: none;
+  }
+
+  /* ===== Heftrücken (Seitenleiste) ===== */
+  .lg-binder {
+    position: relative;
+    display: flex;
+    height: 100%;
+    border: 1px solid var(--line-warm);
+    border-left: 0;
+    border-radius: 0 14px 14px 0;
+    background-color: var(--paper);
+    background-image: var(--grain), linear-gradient(90deg, var(--paper), var(--paper));
+    background-size:
+      220px 220px,
+      auto;
+    box-shadow:
+      inset -1px 0 0 var(--rim),
+      1px 0 0 rgba(var(--shadow), 0.04),
+      8px 0 22px -8px rgba(var(--shadow), calc(var(--shadow-a) * 1.5)),
+      2px 0 6px -2px rgba(var(--shadow), 0.1);
+  }
+
+  /* Lochung: Löcher, durch die man den Schreibtisch sieht, mit Schatten am Rand */
+  .lg-spine {
+    position: relative;
+    flex: 0 0 38px;
+    background:
+      radial-gradient(circle at 50% calc(50% + 1.6px), var(--desk) 0 5.8px, transparent 6.3px),
+      radial-gradient(
+        circle at 50% 50%,
+        var(--hole-shade) 0 7px,
+        rgba(var(--shadow), 0.12) 7.4px 8.4px,
+        transparent 8.9px
+      ),
+      linear-gradient(90deg, rgba(var(--shadow), 0.06), transparent 70%);
+    background-size:
+      38px 68px,
+      38px 68px,
+      auto;
+    background-position:
+      0 20px,
+      0 20px,
+      0 0;
+    background-repeat: repeat-y, repeat-y, no-repeat;
+  }
+
+  /* Heftfaden */
+  .lg-spine::after {
+    content: "";
+    position: absolute;
+    top: 10px;
+    right: 0;
+    bottom: 10px;
+    width: 2px;
+    background: repeating-linear-gradient(to bottom, var(--stitch) 0 7px, transparent 7px 13px);
+  }
+
+  /* ===== Blattstapel ===== */
+  .lg-stack {
+    position: relative;
+  }
+
+  /* Die Blätter darunter: bei jeder Ebene tiefer ein Blatt mehr, leicht versetzt und schief */
+  .lg-ply {
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--line-warm);
+    border-radius: 12px;
+    background-color: var(--ply-1);
+    background-image: var(--grain);
+    background-size: 220px 220px;
+    box-shadow:
+      0 1px 2px rgba(var(--shadow), 0.08),
+      0 6px 14px -6px rgba(var(--shadow), calc(var(--shadow-a) * 0.8));
+    opacity: 0;
+    transform: translate(0, 0) scale(0.99);
+    transition:
+      transform var(--t-slow) var(--spring),
+      opacity var(--t-med) ease;
+    pointer-events: none;
+  }
+
+  .lg-ply.lg-p2 {
+    background-color: var(--ply-2);
+  }
+
+  .lg-ply.lg-p3 {
+    background-color: var(--ply-3);
+  }
+
+  .lg-stack[data-depth="1"] .lg-p1 {
+    opacity: 1;
+    transform: translate(6px, 6px) rotate(calc(var(--m) * 0.28deg));
+  }
+
+  .lg-stack[data-depth="2"] .lg-p1 {
+    opacity: 1;
+    transform: translate(7px, 7px) rotate(calc(var(--m) * 0.3deg));
+  }
+
+  .lg-stack[data-depth="2"] .lg-p2 {
+    opacity: 1;
+    transform: translate(14px, 13px) rotate(calc(var(--m) * -0.26deg));
+  }
+
+  .lg-stack[data-depth="3"] .lg-p1 {
+    opacity: 1;
+    transform: translate(8px, 8px) rotate(calc(var(--m) * 0.34deg));
+  }
+
+  .lg-stack[data-depth="3"] .lg-p2 {
+    opacity: 1;
+    transform: translate(16px, 14px) rotate(calc(var(--m) * -0.3deg));
+  }
+
+  .lg-stack[data-depth="3"] .lg-p3 {
+    opacity: 1;
+    transform: translate(24px, 19px) rotate(calc(var(--m) * 0.22deg));
+  }
+
+  /* Das neue Blatt wird aufgelegt, wenn die Ansicht wechselt */
+  .lg-arrive {
+    position: relative;
+    animation: sheet-arrive var(--t-slow) var(--spring) both;
+  }
+
+  /* ===== Das Blatt ===== */
+  .lg-sheet {
+    position: relative;
+    border: 1px solid var(--line-warm);
+    border-radius: 12px;
+    background-color: var(--sheet);
+    background-image: var(--grain);
+    background-size: 220px 220px;
+    box-shadow:
+      inset 0 1px 0 var(--rim),
+      0 1px 0 rgba(var(--shadow), 0.05),
+      0 1px 2px rgba(var(--shadow), 0.1),
+      0 8px 18px -6px rgba(var(--shadow), var(--shadow-a)),
+      0 28px 44px -26px rgba(var(--shadow), calc(var(--shadow-a) * 1.3));
+  }
+
+  /* Zettel: kleineres Blatt für einzelne Hinweise, leicht schief */
+  .lg-slip {
+    position: relative;
+    padding: 30px 26px 24px;
+    border: 1px solid var(--line-warm);
+    border-radius: 6px;
+    background-color: var(--slip);
+    box-shadow:
+      inset 0 1px 0 var(--rim),
+      0 1px 2px rgba(var(--shadow), 0.1),
+      0 10px 20px -8px rgba(var(--shadow), var(--shadow-a)),
+      0 22px 34px -22px rgba(var(--shadow), calc(var(--shadow-a) * 1.2));
+    transform: rotate(calc(var(--m) * -0.6deg));
+    transform-origin: 50% 0;
+    transition:
+      transform var(--t-slow) var(--spring),
+      box-shadow var(--t-med) ease;
+  }
+
+  @media (hover: hover) {
+    .lg-slip:hover {
+      transform: translateY(calc(var(--m) * -3px)) rotate(calc(var(--m) * -0.25deg));
+    }
+  }
+
+  /* Washi-Tape in der Fachfarbe */
+  .lg-tape {
+    position: absolute;
+    width: 112px;
+    height: 26px;
+    background: color-mix(in srgb, var(--subj) 58%, transparent);
+    box-shadow: 0 1px 2px rgba(var(--shadow), 0.12);
+    transform: rotate(var(--r, -2deg));
+    clip-path: polygon(
+      0 0,
+      3% 18%,
+      0 36%,
+      3% 54%,
+      0 72%,
+      3% 90%,
+      0 100%,
+      100% 100%,
+      97% 82%,
+      100% 64%,
+      97% 46%,
+      100% 28%,
+      97% 10%,
+      100% 0
+    );
+    pointer-events: none;
+  }
+
+  /* Linienmotiv des Fachs: blass, nur Strich */
+  .lg-motif {
+    position: absolute;
+    color: var(--subj);
+    pointer-events: none;
+  }
+
+  /* ===== Zeilen in Listen ===== */
+  .lg-row {
+    position: relative;
+    transition:
+      transform var(--t-med) var(--spring-snap),
+      background-color var(--t-fast) ease,
+      box-shadow var(--t-med) ease;
+  }
+
+  /* Balken in der Fachfarbe, der beim Darüberfahren oder Fokussieren aufklappt */
+  .lg-row::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 0;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--subj);
+    transform: scaleY(0);
+    transform-origin: center;
+    transition: transform var(--t-med) var(--spring-snap);
+  }
+
+  .lg-row:focus-visible::before {
+    transform: scaleY(1);
+  }
+
+  @media (hover: hover) {
+    .lg-row:hover {
+      background-color: var(--sheet);
+      transform: translateX(calc(var(--m) * 4px));
+      box-shadow: 0 6px 14px -8px rgba(var(--shadow), calc(var(--shadow-a) * 1.2));
+    }
+
+    .lg-row:hover::before {
+      transform: scaleY(1);
+    }
+  }
+
+  .lg-row:active {
+    transform: scale(calc(1 - var(--m) * 0.012));
+  }
+
+  /* ===== Eintrag der Seitenleiste ===== */
+  .lg-nav-item {
+    position: relative;
+    transition:
+      background-color var(--t-fast) ease,
+      transform var(--t-med) var(--spring-snap),
+      color var(--t-fast) ease;
+  }
+
+  @media (hover: hover) {
+    .lg-nav-item:hover {
+      background-color: rgba(var(--shadow), 0.05);
+    }
+  }
+
+  .lg-nav-item:active {
+    transform: scale(calc(1 - var(--m) * 0.025));
+  }
+
+  /* Der gewählte Eintrag ist ein aufgelegter Streifen: Blatt, Rand, Schatten und ein Balken in der Fachfarbe */
+  .lg-nav-item[aria-current="page"],
+  .lg-nav-item[data-current="true"] {
+    background-color: var(--sheet);
+    border-color: var(--line-warm);
+    box-shadow:
+      0 1px 0 var(--rim) inset,
+      0 1px 2px rgba(var(--shadow), 0.1),
+      0 4px 10px -4px rgba(var(--shadow), calc(var(--shadow-a) * 0.9));
+    animation: fade var(--t-med) both;
+  }
+
+  .lg-nav-item[aria-current="page"]::before,
+  .lg-nav-item[data-current="true"]::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: -1px;
+    width: 4px;
+    border-radius: 0 3px 3px 0;
+    background: var(--subj);
+  }
+
+  .lg-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--subj);
+    flex: none;
+  }
+
+  /* ===== Umschalter mit federndem Schieber ===== */
+  .lg-seg {
+    position: relative;
+    display: inline-grid;
+    grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr));
+    max-width: 100%;
+    padding: 3px;
+    border: 1px solid var(--line-warm);
+    border-radius: 12px;
+    background: var(--paper);
+    isolation: isolate;
+  }
+
+  .lg-seg::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 3px;
+    bottom: 3px;
+    left: 3px;
+    width: calc((100% - 6px) / var(--n, 2));
+    border-radius: 9px;
+    background: var(--sheet);
+    box-shadow:
+      0 1px 2px rgba(var(--shadow), 0.16),
+      0 3px 8px -3px rgba(var(--shadow), 0.2),
+      inset 0 1px 0 var(--rim);
+    transform: translateX(calc(var(--idx, 0) * 100%));
+    transition: transform var(--t-slow) var(--spring);
+  }
+
+  /* ===== Schaltflächen ===== */
+  .lg-btn-primary {
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.14) inset,
+      0 1px 2px rgba(var(--shadow), 0.3),
+      0 4px 10px -4px rgba(var(--shadow), 0.35);
+  }
+
+  /* ===== Leichte Hilfsklassen ===== */
+  .lg-scrim {
+    background: rgba(var(--shadow), 0.45);
+    animation: fade var(--t-med) both;
+  }
+}
+
+/* Dialog und Menü: kommen mit der Feder an, ohne Weg bei reduzierter Bewegung */
+@keyframes lg-pop {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--m) * 14px)) scale(calc(1 - var(--m) * 0.04));
+  }
+}
+
+.lg-pop {
+  animation: lg-pop var(--t-med) var(--spring-snap) both;
+}
+
+/* Die Schublade fährt mit der Feder ein (mobil) */
+@keyframes lg-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--m) * -104%));
+  }
+}

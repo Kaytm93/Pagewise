@@ -113,8 +113,9 @@ describe('Standard-Chat über den Namen „Pagewise“', () => {
     server.addSubject('Beispielfach A');
     mount(server);
     await screen.findByRole('navigation', { name: 'Navigation' });
-    const main = within(screen.getByRole('main'));
-    const links = await main.findAllByRole('link', { name: /Standard-Chat|Beispielfach A/ });
+    // In der Liste der Fächer; darüber gibt es noch den Link „den Standard-Chat öffnen“.
+    const list = within(await within(screen.getByRole('main')).findByRole('list'));
+    const links = await list.findAllByRole('link', { name: /Standard-Chat|Beispielfach A/ });
     expect(links[0]?.textContent).toContain('Standard-Chat');
     expect(links[1]?.textContent).toContain('Beispielfach A');
   });

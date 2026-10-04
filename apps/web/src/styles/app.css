@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "./tokens.css";
+@import "./motion.css";
+@import "./lagen.css";
 
 @layer base {
   html {
@@ -32,22 +34,5 @@
   :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      /* biome-ignore lint/complexity/noImportantStyles: Reduced Motion muss Utility-Klassen überschreiben */
-      animation-duration: 0.01ms !important;
-      /* biome-ignore lint/complexity/noImportantStyles: Reduced Motion muss Utility-Klassen überschreiben */
-      transition-duration: 0.01ms !important;
-    }
-  }
-}
-
-@keyframes drawer-in {
-  from {
-    transform: translateX(-100%);
   }
 }

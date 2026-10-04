@@ -87,6 +87,19 @@ beforeEach(() => {
 });
 
 describe('Service Worker', () => {
+  it('holt das Startskript zuerst aus dem Netz und zeigt ohne Netz die gemerkte Fassung', async () => {
+    let online = true;
+    const worker = load(async () => {
+      if (!online) throw new TypeError('offline');
+      return new Response('boot();', { headers: { 'content-type': 'text/javascript' } });
+    });
+    const first = (await dispatch(worker, '/boot.js')) as Response;
+    expect(await first.text()).toBe('boot();');
+    online = false;
+    const offline = (await dispatch(worker, '/boot.js')) as Response;
+    expect(await offline.text()).toBe('boot();');
+  });
+
   it('fasst die API nie an, auch nicht den Antwort-Strom', async () => {
     const worker = load(async () => new Response('geheim'));
     for (const path of [

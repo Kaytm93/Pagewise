@@ -297,6 +297,7 @@ export class FakeServer {
       name: 'Standard',
       kind: 'default',
       templateKey: 'standard',
+      color: null,
       teacher: null,
       hoursPerWeek: null,
       icon: null,
@@ -318,6 +319,7 @@ export class FakeServer {
       name,
       kind: 'subject',
       templateKey: null,
+      color: this.subjects.length % 8,
       teacher: null,
       hoursPerWeek: null,
       icon: null,
@@ -980,6 +982,7 @@ export class FakeServer {
       hoursPerWeek: (data.hoursPerWeek as number | null | undefined) ?? null,
       icon: (data.icon as string | null | undefined) ?? null,
       templateKey: templateKey ?? null,
+      ...(typeof data.color === 'number' ? { color: data.color } : {}),
     });
     return json(201, subject);
   }
@@ -1031,6 +1034,7 @@ export class FakeServer {
       if ('teacher' in data) subject.teacher = (data.teacher as string | null) || null;
       if ('hoursPerWeek' in data) subject.hoursPerWeek = data.hoursPerWeek as number | null;
       if ('icon' in data) subject.icon = data.icon as string | null;
+      if (typeof data.color === 'number') subject.color = data.color;
       return json(200, subject);
     }
     return json(404, { error: 'not_found' });

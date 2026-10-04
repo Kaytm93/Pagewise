@@ -45,10 +45,13 @@ const FALLBACK: LucideIcon = BookOpen;
 export function SubjectIcon({
   icon,
   className = 'size-[18px]',
+  strokeWidth = 1.6,
 }: {
   icon: string | null;
   className?: string;
+  /** Strichstärke im 24er-Raster. Das große Motiv auf der Fachseite ist hauchdünn. */
+  strokeWidth?: number;
 }) {
   const Icon = (icon && byId.get(icon)) || FALLBACK;
-  return <Icon aria-hidden="true" strokeWidth={1.6} className={className} />;
+  return <Icon aria-hidden="true" strokeWidth={strokeWidth} className={className} />;
 }

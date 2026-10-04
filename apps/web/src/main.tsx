@@ -9,9 +9,11 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { ApiClient } from './api/client';
 import { registerServiceWorker } from './pwa/register';
+import { initFx } from './ui/fx';
 import { applyTheme, readTheme } from './ui/theme';
 
 applyTheme(readTheme());
+initFx();
 
 const container = document.getElementById('root');
 if (!container) throw new Error('Wurzelelement #root fehlt');

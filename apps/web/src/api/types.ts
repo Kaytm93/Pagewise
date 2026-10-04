@@ -17,6 +17,8 @@ export interface Subject {
   kind: 'subject' | 'default';
   /** Schlüssel der Katalogvorlage, aus der das Fach entstand (verknüpft den Standard-Prompt), sonst `null`. */
   templateKey: string | null;
+  /** Fachfarbe 0 bis 7 (gedämpfte Töne der Oberfläche); `null` für das eingebaute Fach „Standard“. */
+  color: number | null;
   teacher: string | null;
   hoursPerWeek: number | null;
   icon: string | null;
@@ -42,6 +44,8 @@ export interface SubjectInput {
   teacher?: string | null;
   hoursPerWeek?: number | null;
   icon?: string | null;
+  /** Fachfarbe 0 bis 7. Ohne Angabe wählt der Server die am seltensten genutzte. */
+  color?: number;
   /** Schlüssel der Katalogvorlage, aus der das Fach angelegt wird. */
   templateKey?: string;
 }

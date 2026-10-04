@@ -9,6 +9,8 @@
  * - Nur GET derselben Herkunft wird behandelt.
  * - Seitenaufrufe: zuerst das Netz (damit eine neue Version sofort kommt), ohne Netz die gemerkte Startseite.
  * - /assets/*: Dateinamen enthalten einen Hash und ändern sich mit dem Inhalt, deshalb zuerst der Cache.
+ * - /boot.js: kleines Skript, das Darstellung und Effektstufe vor dem ersten Anstrich setzt. Es hat keinen Hash,
+ *   deshalb zuerst das Netz (eine neue Fassung kommt sofort), ohne Netz die gemerkte.
  */
 const SHELL_CACHE = 'pagewise-shell-v1';
 const ASSET_CACHE = 'pagewise-assets-v1';
@@ -66,6 +68,19 @@ async function pageResponse(request) {
   }
 }
 
+async function bootResponse(request) {
+  const cache = await caches.open(SHELL_CACHE);
+  try {
+    const response = await fetch(request);
+    if (response.ok && response.type === 'basic') await cache.put('/boot.js', response.clone());
+    return response;
+  } catch {
+    const fallback = await cache.match('/boot.js');
+    if (fallback) return fallback;
+    throw new Error('offline');
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
@@ -75,6 +90,8 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(pageResponse(request));
+  } else if (url.pathname === '/boot.js') {
+    event.respondWith(bootResponse(request));
   } else if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/icons/')) {
     event.respondWith(assetResponse(request));
   }

@@ -84,7 +84,7 @@ export function Modal({ title, description, onClose, wide = false, children }: M
   return createPortal(
     // biome-ignore lint/a11y/noStaticElementInteractions: Klick auf den Hintergrund schließt; Escape und der Schließen-Button decken die Tastatur ab
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
+      className="lg-scrim fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -96,7 +96,7 @@ export function Modal({ title, description, onClose, wide = false, children }: M
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className={`max-h-[92dvh] w-full overflow-y-auto rounded-t-card border border-line bg-canvas p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl outline-none sm:rounded-card sm:p-6 ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'}`}
+        className={`lg-sheet lg-pop max-h-[92dvh] w-full overflow-y-auto rounded-t-[12px] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] outline-none sm:rounded-[12px] sm:p-6 ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'}`}
       >
         <div className="flex items-start justify-between gap-4">
           <h2 id={titleId} className="font-heading text-xl">
@@ -106,7 +106,7 @@ export function Modal({ title, description, onClose, wide = false, children }: M
             type="button"
             onClick={onClose}
             aria-label={m.common.close}
-            className="-mt-2 -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+            className="mo-press -mt-2 -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] text-ink-muted hover:bg-paper hover:text-ink"
           >
             <X aria-hidden="true" className="size-5" />
           </button>

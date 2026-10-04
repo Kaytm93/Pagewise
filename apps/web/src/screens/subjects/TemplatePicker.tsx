@@ -185,7 +185,7 @@ export function TemplatePicker({
         autoCorrect="off"
         spellCheck={false}
         maxLength={80}
-        className="mt-1.5 block min-h-11 w-full rounded-control border border-control-edge bg-canvas px-3 text-ink placeholder:text-ink-muted"
+        className="mt-1.5 block min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-ink placeholder:text-ink-muted"
       />
 
       {loadError && <FieldError>{loadError}</FieldError>}

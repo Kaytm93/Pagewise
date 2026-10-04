@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Subject } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { Button } from '../../ui/Button';
+import { sectionTitle } from '../../ui/styles';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { ModelDialog } from './ModelDialog';
 import { describeSelection, engineName } from './models';
@@ -21,8 +22,8 @@ export function SubjectModel({ subject }: { subject: Subject }) {
   else summary = m.subject.modelNone;
 
   return (
-    <section className="mt-8 border-t border-line pt-6" aria-labelledby="model-heading">
-      <h2 id="model-heading" className="text-meta font-medium text-ink-muted">
+    <section className="mt-10 border-t border-line-warm pt-6" aria-labelledby="model-heading">
+      <h2 id="model-heading" className={sectionTitle}>
         {m.subject.model}
       </h2>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">

@@ -10,10 +10,12 @@ import { TextField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
 import { Modal } from '../../ui/modal';
+import { Sheet } from '../../ui/Sheet';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { commonErrorMessage } from '../auth-errors';
 import { NotFoundPage } from '../NotFoundPage';
 import { Composer } from './Composer';
+import { takeQueuedSend } from './default-chat';
 import { MessageItem } from './MessageItem';
 import { ModelDialog } from './ModelDialog';
 import { describeEngine, describeSelection, effectiveModel, effectiveTarget } from './models';
@@ -109,6 +111,15 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
   const [actionError, setActionError] = useState<string | null>(null);
   const pinned = useRef(true);
   const previousLive = useRef<string | null>(null);
+  const loadedChatId = state.phase === 'ready' ? (state.chat?.id ?? null) : null;
+
+  // Eine Frage von der Startseite wird gesendet, sobald der Chat geladen ist (einmal, dann ist sie weg).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: nur beim Laden eines Chats; `chat.send` ist stabil genug
+  useEffect(() => {
+    if (!loadedChatId) return;
+    const queued = takeQueuedSend(loadedChatId);
+    if (queued) void chat.send(queued);
+  }, [loadedChatId]);
 
   // Mitlesen: ist man nah am Ende, folgt die Ansicht dem neuen Text; wer hochgescrollt hat, bleibt dort.
   useEffect(() => {
@@ -220,14 +231,14 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
     describeSelection(providers, subject.model ?? modelSettings.default);
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-3.5rem)] w-full max-w-3xl flex-col bg-canvas md:min-h-[calc(100dvh-4rem)] md:rounded-card md:border md:border-line">
-      <header className="border-b border-line px-4 py-3 sm:px-6">
-        <Link to={backTo} className="inline-flex min-h-11 items-center gap-1.5 text-sm">
+    <Sheet flush>
+      <header className="border-b border-line-warm px-4 py-3 sm:px-8 md:pl-10">
+        <Link to={backTo} className="mo-press inline-flex min-h-11 items-center gap-1.5 text-sm">
           <ArrowLeft aria-hidden="true" className="size-4" />
           {group?.name ?? subject.name}
         </Link>
         <div className="flex items-start justify-between gap-2">
-          <h1 className="min-w-0 py-1.5 font-heading text-xl break-words tracking-tight">
+          <h1 className="min-w-0 py-1.5 font-heading text-[21px] break-words tracking-[-0.2px]">
             {title}
           </h1>
           <div className="-mr-2 flex shrink-0">
@@ -263,7 +274,10 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
         </button>
       </header>
 
-      <section aria-label={m.chat.messages} className="flex-1 space-y-6 px-4 py-6 sm:px-6">
+      <section
+        aria-label={m.chat.messages}
+        className="mx-auto w-full max-w-[700px] flex-1 space-y-6 px-4 py-8 sm:px-7"
+      >
         {messages.length === 0 ? (
           <div className="rounded-box bg-paper p-4">
             <p className="font-medium">{m.chat.emptyTitle}</p>
@@ -294,41 +308,43 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
 
       <div
         ref={watchComposer}
-        className="sticky bottom-0 z-10 border-t border-line bg-canvas px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 md:rounded-b-card"
+        className="sticky bottom-0 z-10 rounded-b-[12px] border-t border-line-warm bg-sheet px-4 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:px-8"
       >
-        {chat.reconnecting && (
-          <p role="status" className="mb-2 text-sm text-ink-secondary">
-            {m.chat.reconnecting}
-          </p>
-        )}
-        {chat.problem && (
-          <div className="mb-2 flex flex-wrap items-center gap-x-3">
-            <FieldError>{problemText(chat.problem)}</FieldError>
-            {chat.problem === 'network' && (
-              <Button variant="ghost" onClick={() => void chat.reconnect()}>
-                {m.chat.reconnect}
-              </Button>
-            )}
-          </div>
-        )}
-        {actionError && <FieldError>{actionError}</FieldError>}
-        {!model && (
-          <div className="mb-3 rounded-box bg-paper px-4 py-3 text-sm">
-            <p className="font-medium">{m.chat.noModelTitle}</p>
-            <p className="mt-1 text-ink-secondary">{m.chat.noModelHint}</p>
-            <Link to={{ name: 'settings' }} className="mt-1 inline-block">
-              {m.chat.openSettings}
-            </Link>
-          </div>
-        )}
-        <Composer
-          chatId={chatId}
-          disabled={!model}
-          running={chat.running || current.generating}
-          stopping={chat.stopping}
-          onSend={send}
-          onStop={() => void chat.stop()}
-        />
+        <div className="mx-auto w-full max-w-[700px]">
+          {chat.reconnecting && (
+            <p role="status" className="mb-2 text-sm text-ink-secondary">
+              {m.chat.reconnecting}
+            </p>
+          )}
+          {chat.problem && (
+            <div className="mb-2 flex flex-wrap items-center gap-x-3">
+              <FieldError>{problemText(chat.problem)}</FieldError>
+              {chat.problem === 'network' && (
+                <Button variant="ghost" onClick={() => void chat.reconnect()}>
+                  {m.chat.reconnect}
+                </Button>
+              )}
+            </div>
+          )}
+          {actionError && <FieldError>{actionError}</FieldError>}
+          {!model && (
+            <div className="mb-3 rounded-box bg-paper px-4 py-3 text-sm">
+              <p className="font-medium">{m.chat.noModelTitle}</p>
+              <p className="mt-1 text-ink-secondary">{m.chat.noModelHint}</p>
+              <Link to={{ name: 'settings' }} className="mt-1 inline-block">
+                {m.chat.openSettings}
+              </Link>
+            </div>
+          )}
+          <Composer
+            chatId={chatId}
+            disabled={!model}
+            running={chat.running || current.generating}
+            stopping={chat.stopping}
+            onSend={send}
+            onStop={() => void chat.stop()}
+          />
+        </div>
       </div>
 
       {dialog === 'rename' && (
@@ -363,6 +379,6 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
           onClose={() => setDialog(null)}
         />
       )}
-    </div>
+    </Sheet>
   );
 }

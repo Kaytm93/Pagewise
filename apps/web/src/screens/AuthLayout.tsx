@@ -12,15 +12,19 @@ export function AuthLayout({
   children: ReactNode;
 }) {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-workspace px-4 py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
-      <div className="w-full max-w-md">
-        <p className="mb-6 font-heading text-lg text-ink-secondary">{m.app.name}</p>
-        <div className="rounded-card border border-line bg-canvas p-6 sm:p-8">
-          <h1 className="font-heading text-3xl tracking-tight text-ink sm:text-title">{title}</h1>
-          {lead && <p className="mt-3 text-ink-secondary">{lead}</p>}
-          <div className="mt-6">{children}</div>
+    <div className="lg-app">
+      <main className="flex min-h-dvh items-center justify-center px-4 py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
+        <div className="lg-arrive w-full max-w-md">
+          <p className="mb-6 font-heading text-xl tracking-[-0.3px] text-ink-secondary">
+            {m.app.name}
+          </p>
+          <div className="lg-sheet p-6 sm:p-8">
+            <h1 className="font-heading text-3xl tracking-tight text-ink sm:text-title">{title}</h1>
+            {lead && <p className="mt-3 text-ink-secondary">{lead}</p>}
+            <div className="mt-6">{children}</div>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

@@ -5,6 +5,7 @@ import { useSession } from '../session/SessionProvider';
 import { Button } from '../ui/Button';
 import { PasscodeField } from '../ui/Field';
 import { FieldError } from '../ui/FieldError';
+import { type FxPreference, readFx, saveFx } from '../ui/fx';
 import { Segmented } from '../ui/Segmented';
 import { Sheet } from '../ui/Sheet';
 import { readTheme, saveTheme, type ThemePreference } from '../ui/theme';
@@ -45,6 +46,33 @@ function ThemeChoice() {
       value={theme}
       onChange={choose}
     />
+  );
+}
+
+const EFFECTS: { value: FxPreference; label: string }[] = [
+  { value: 'system', label: m.settings.appearance.effects.system },
+  { value: 'full', label: m.settings.appearance.effects.full },
+  { value: 'reduced', label: m.settings.appearance.effects.reduced },
+  { value: 'off', label: m.settings.appearance.effects.off },
+];
+
+/** Wie viel sich bewegt (Effektstufe): „Automatisch“ folgt dem Gerät, sonst gilt die Wahl. */
+function EffectsChoice() {
+  const [effects, setEffects] = useState<FxPreference>(() => readFx());
+  const e = m.settings.appearance.effects;
+
+  function choose(value: FxPreference) {
+    setEffects(value);
+    saveFx(value);
+  }
+
+  return (
+    <div className="mt-8">
+      <h3 className="font-heading text-lg">{e.title}</h3>
+      <p className="mt-1 mb-4 max-w-[52ch] text-sm text-ink-muted">{e.lead}</p>
+      <Segmented legend={e.title} options={EFFECTS} value={effects} onChange={choose} />
+      <p className="mt-3 max-w-[52ch] text-sm text-ink-secondary">{e.help[effects]}</p>
+    </div>
   );
 }
 
@@ -156,6 +184,7 @@ export function SettingsPage() {
       <div className="mt-8">
         <Section title={m.settings.appearance.title} lead={m.settings.appearance.lead}>
           <ThemeChoice />
+          <EffectsChoice />
         </Section>
         <Section title={m.providers.title} lead={m.providers.lead}>
           <ProvidersSection />

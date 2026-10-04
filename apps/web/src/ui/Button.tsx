@@ -4,11 +4,11 @@ import type { ButtonHTMLAttributes } from 'react';
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 const base =
-  'inline-flex min-h-11 select-none items-center justify-center gap-2 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50';
+  'mo-press inline-flex min-h-11 select-none items-center justify-center gap-2 font-medium disabled:cursor-not-allowed disabled:opacity-50';
 
 // Primäre Aktionen sind Pills in Graphite, alles andere hat die 6-px-Rundung der Bedienelemente.
 const variants: Record<Variant, string> = {
-  primary: 'rounded-pill bg-primary px-5 text-on-primary hover:opacity-90',
+  primary: 'lg-btn-primary rounded-pill bg-primary px-5 text-on-primary hover:opacity-90',
   secondary: 'rounded-control border border-control-edge bg-canvas px-4 text-ink hover:bg-paper',
   ghost: 'rounded-control px-3 text-ink-secondary hover:bg-paper hover:text-ink',
   danger: 'rounded-control border border-control-edge bg-canvas px-4 text-danger hover:bg-paper',

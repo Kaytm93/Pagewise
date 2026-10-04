@@ -1,0 +1,350 @@
+/*
+ * Bewegungssystem (Designrichtung „Lagen“, D-043).
+ *
+ * Alles Bewegte hängt an diesen Variablen, nie an festen Werten:
+ *   --m       Wegfaktor. 1 = volle Wege, 0 = nur Überblenden (kein Verschieben, Drehen, Skalieren).
+ *   --t-*     Dauern. --stagger: Versatz zwischen Elementen einer Liste.
+ *   --spring  Feder als linear()-Easing (Rückfall: cubic-bezier).
+ *
+ * Effektstufen stehen als Klasse am <html> (ui/fx.ts): fx-full (Voreinstellung), fx-reduced (nur kurze
+ * Überblendungen, so folgt die App `prefers-reduced-motion`) und fx-off (keine Bewegung). Information
+ * steckt nie allein in Bewegung: Zustände sind immer auch ohne sie erkennbar.
+ *
+ * Leistung: nur transform und opacity werden animiert, dazu die Farbe des Lichts (@property, ein paar
+ * Pixel Fläche). Dauerläufer (Schimmer, Schreibmarke) laufen nur auf kleinen Flächen und pausieren im
+ * Hintergrund-Tab (Klasse tab-hidden).
+ */
+
+@property --glow {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(0, 0, 0, 0);
+}
+
+:root {
+  --m: 1;
+  --t-fast: 140ms;
+  --t-med: 340ms;
+  --t-slow: 620ms;
+  --stagger: 48ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* Feder: Rückfall ohne linear() */
+  --spring: cubic-bezier(0.2, 0.9, 0.25, 1.04);
+  --spring-snap: cubic-bezier(0.3, 1.3, 0.4, 1);
+}
+
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --spring: linear(
+      0,
+      0.0387,
+      0.1329,
+      0.2559,
+      0.3884,
+      0.5176,
+      0.6352,
+      0.737,
+      0.8213,
+      0.8882,
+      0.9392,
+      0.9763,
+      1.0018,
+      1.018,
+      1.0272,
+      1.031,
+      1.0313,
+      1.0292,
+      1.0258,
+      1.0217,
+      1.0175,
+      1.0136,
+      1.0101,
+      1.0071,
+      1.0047,
+      1.0028,
+      1.0014,
+      1.0004,
+      0.9997,
+      0.9993,
+      0.9991,
+      0.999,
+      0.999,
+      0.9991,
+      0.9992,
+      0.9994,
+      0.9995,
+      0.9996,
+      0.9997,
+      0.9998,
+      1
+    );
+    --spring-snap: linear(
+      0,
+      0.0674,
+      0.2245,
+      0.4167,
+      0.6064,
+      0.7709,
+      0.8996,
+      0.9904,
+      1.047,
+      1.0755,
+      1.0835,
+      1.078,
+      1.0649,
+      1.0489,
+      1.033,
+      1.0193,
+      1.0085,
+      1.0009,
+      0.9961,
+      0.9937,
+      0.993,
+      0.9935,
+      0.9946,
+      0.9959,
+      0.9972,
+      0.9984,
+      0.9993,
+      0.9999,
+      1.0003,
+      1.0005,
+      1.0006,
+      1.0005,
+      1.0005,
+      1.0003,
+      1.0002,
+      1.0001,
+      1.0001,
+      1,
+      1,
+      1,
+      1
+    );
+  }
+}
+
+/* Reduziert: nur kurze Überblendungen, kein Weg */
+:root.fx-reduced {
+  --m: 0;
+  --t-fast: 100ms;
+  --t-med: 140ms;
+  --t-slow: 160ms;
+  --stagger: 0ms;
+  --spring: ease-out;
+  --spring-snap: ease-out;
+  --ease: ease-out;
+}
+
+/* Aus: keine Bewegung */
+:root.fx-off {
+  --m: 0;
+  --t-fast: 0ms;
+  --t-med: 0ms;
+  --t-slow: 0ms;
+  --stagger: 0ms;
+}
+
+:root.fx-off *,
+:root.fx-off *::before,
+:root.fx-off *::after {
+  /* biome-ignore lint/complexity/noImportantStyles: „Aus“ muss jede Animation überstimmen, auch die von Utility-Klassen */
+  animation: none !important;
+  /* biome-ignore lint/complexity/noImportantStyles: siehe oben */
+  transition: none !important;
+  /* biome-ignore lint/complexity/noImportantStyles: siehe oben */
+  scroll-behavior: auto !important;
+}
+
+/* Ohne die Klasse (Skript noch nicht gelaufen) folgt die App dem System */
+@media (prefers-reduced-motion: reduce) {
+  :root:not(.fx-full):not(.fx-reduced):not(.fx-off) {
+    --m: 0;
+    --t-fast: 100ms;
+    --t-med: 140ms;
+    --t-slow: 160ms;
+    --stagger: 0ms;
+    --spring: ease-out;
+    --spring-snap: ease-out;
+    --ease: ease-out;
+  }
+}
+
+/* Im Hintergrund-Tab stehen Dauerläufer still */
+:root.tab-hidden *,
+:root.tab-hidden *::before,
+:root.tab-hidden *::after {
+  /* biome-ignore lint/complexity/noImportantStyles: gilt auch für Animationen aus Utility-Klassen */
+  animation-play-state: paused !important;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--m) * 14px));
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes line-in {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* Das neue Blatt wird aufgelegt: kommt leicht gedreht und angehoben an und setzt sich ab */
+@keyframes sheet-arrive {
+  from {
+    opacity: 0;
+    transform: translate(calc(var(--m) * 1.2%), calc(var(--m) * -1.6%))
+      rotate(calc(var(--m) * 0.7deg));
+  }
+}
+
+/* Gestaffeltes Einblenden: --i setzt die Reihenfolge (per Klasse mo-i-1 … mo-i-8) */
+.mo-rise {
+  animation: rise var(--t-slow) var(--spring) both;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+
+.mo-fade {
+  animation: fade var(--t-med) both;
+}
+
+.mo-i-1 {
+  --i: 1;
+}
+.mo-i-2 {
+  --i: 2;
+}
+.mo-i-3 {
+  --i: 3;
+}
+.mo-i-4 {
+  --i: 4;
+}
+.mo-i-5 {
+  --i: 5;
+}
+.mo-i-6 {
+  --i: 6;
+}
+.mo-i-7 {
+  --i: 7;
+}
+.mo-i-8 {
+  --i: 8;
+}
+
+/* Federndes Drücken für Schaltflächen und Zeilen */
+.mo-press {
+  transition:
+    transform var(--t-med) var(--spring-snap),
+    background-color var(--t-fast) ease,
+    color var(--t-fast) ease;
+}
+
+.mo-press:active {
+  transform: scale(calc(1 - var(--m) * 0.03));
+}
+
+/* Zeile, die beim Darüberfahren etwas zur Seite rückt */
+@media (hover: hover) {
+  .mo-nudge {
+    transition:
+      transform var(--t-med) var(--spring-snap),
+      background-color var(--t-fast) ease;
+  }
+
+  .mo-nudge:hover {
+    transform: translateX(calc(var(--m) * 4px));
+  }
+}
+
+/* Schimmer für Platzhalter: läuft nur auf kleinen Flächen, nur per transform */
+.mo-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.mo-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(255, 250, 235, 0.55) 50%,
+    transparent 80%
+  );
+  transform: translateX(-100%);
+  animation: shimmer 1.5s var(--ease) infinite;
+}
+
+:root[data-theme="dark"] .mo-shimmer::after {
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(255, 240, 215, 0.1) 50%,
+    transparent 80%
+  );
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mo-shimmer::after {
+    background: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgba(255, 240, 215, 0.1) 50%,
+      transparent 80%
+    );
+  }
+}
+
+:root.fx-reduced .mo-shimmer::after,
+:root.fx-off .mo-shimmer::after {
+  animation: none;
+  display: none;
+}
+
+/* Schreibmarke während einer Antwort */
+.mo-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.12em;
+  margin-left: 2px;
+  vertical-align: -0.2em;
+  background: var(--ink);
+  animation: blink 1.05s steps(1) infinite;
+}
+
+:root.fx-reduced .mo-caret,
+:root.fx-off .mo-caret {
+  animation: none;
+}

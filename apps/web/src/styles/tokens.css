@@ -90,6 +90,26 @@
   --link: var(--color-link-text);
   --danger: var(--color-error-ink);
   --control-edge: var(--color-edge-stone);
+
+  /* Lagen (Designrichtung „Lagen“, D-043): Schreibtisch, Blattstapel, Licht und Schatten */
+  --desk: var(--workspace);
+  --sheet: var(--canvas);
+  --ply-1: #f6f4ef;
+  --ply-2: #efece4;
+  --ply-3: #e8e4da;
+  --light: rgba(255, 238, 200, 0.62);
+  /* Schattenfarbe als RGB-Tripel, damit sie mit eigener Deckkraft eingesetzt werden kann */
+  --shadow: 70, 50, 20;
+  --shadow-a: 0.14;
+  --rim: rgba(255, 255, 255, 0.7);
+  --hole: #d9d4c8;
+  --hole-shade: rgba(70, 50, 20, 0.28);
+  --stitch: #c9c2b2;
+  --slip: #fffdf6;
+  --grain: url("../assets/grain-dark.svg");
+  /* Fachfarbe: nur für Flächen und Linien, nie als Textfarbe. Ohne Fach ein neutraler Ton. */
+  --subj: #8a8478;
+  --subj-glow: 12%;
 }
 
 :root[data-theme="dark"] {
@@ -114,6 +134,23 @@
   --link: var(--color-night-link);
   --danger: var(--color-night-error);
   --control-edge: var(--color-night-edge);
+
+  --desk: var(--color-night-workspace);
+  --sheet: #222221;
+  --ply-1: #1e1e1d;
+  --ply-2: #1b1b1a;
+  --ply-3: #181817;
+  --light: rgba(255, 226, 170, 0.075);
+  --shadow: 0, 0, 0;
+  --shadow-a: 0.5;
+  --rim: rgba(255, 240, 215, 0.07);
+  --hole: #121211;
+  --hole-shade: rgba(0, 0, 0, 0.6);
+  --stitch: #4a4944;
+  --slip: #2b2b29;
+  --grain: url("../assets/grain-light.svg");
+  --subj: #8f897d;
+  --subj-glow: 11%;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -139,6 +176,23 @@
     --link: var(--color-night-link);
     --danger: var(--color-night-error);
     --control-edge: var(--color-night-edge);
+
+    --desk: var(--color-night-workspace);
+    --sheet: #222221;
+    --ply-1: #1e1e1d;
+    --ply-2: #1b1b1a;
+    --ply-3: #181817;
+    --light: rgba(255, 226, 170, 0.075);
+    --shadow: 0, 0, 0;
+    --shadow-a: 0.5;
+    --rim: rgba(255, 240, 215, 0.07);
+    --hole: #121211;
+    --hole-shade: rgba(0, 0, 0, 0.6);
+    --stitch: #4a4944;
+    --slip: #2b2b29;
+    --grain: url("../assets/grain-light.svg");
+    --subj: #8f897d;
+    --subj-glow: 11%;
   }
 }
 
@@ -159,4 +213,90 @@
   --color-link: var(--link);
   --color-danger: var(--danger);
   --color-control-edge: var(--control-edge);
+  --color-desk: var(--desk);
+  --color-sheet: var(--sheet);
+  --color-slip: var(--slip);
+  --color-subj: var(--subj);
+}
+
+/*
+ * Fachfarben: acht gedämpfte Töne, jedem Fach fest zugeordnet (ui/subject-color.ts). Sie färben nur Flächen,
+ * Linien und Punkte, nie Text, und die Information steckt immer auch im Namen des Fachs. Kein Regenbogen:
+ * Sättigung und Helligkeit liegen eng beieinander, im Dunkeln sind alle heller.
+ */
+[data-subj="0"] {
+  --subj: #3f8a94;
+}
+[data-subj="1"] {
+  --subj: #b0674d;
+}
+[data-subj="2"] {
+  --subj: #6f8f55;
+}
+[data-subj="3"] {
+  --subj: #b0883a;
+}
+[data-subj="4"] {
+  --subj: #5b79a3;
+}
+[data-subj="5"] {
+  --subj: #a8647a;
+}
+[data-subj="6"] {
+  --subj: #7d6a99;
+}
+[data-subj="7"] {
+  --subj: #6a7f8a;
+}
+
+:root[data-theme="dark"] [data-subj="0"] {
+  --subj: #6fb4bd;
+}
+:root[data-theme="dark"] [data-subj="1"] {
+  --subj: #d3896e;
+}
+:root[data-theme="dark"] [data-subj="2"] {
+  --subj: #9bbd80;
+}
+:root[data-theme="dark"] [data-subj="3"] {
+  --subj: #d3aa5c;
+}
+:root[data-theme="dark"] [data-subj="4"] {
+  --subj: #8ba8d1;
+}
+:root[data-theme="dark"] [data-subj="5"] {
+  --subj: #d08ba0;
+}
+:root[data-theme="dark"] [data-subj="6"] {
+  --subj: #a999c4;
+}
+:root[data-theme="dark"] [data-subj="7"] {
+  --subj: #9bb0ba;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) [data-subj="0"] {
+    --subj: #6fb4bd;
+  }
+  :root:not([data-theme="light"]) [data-subj="1"] {
+    --subj: #d3896e;
+  }
+  :root:not([data-theme="light"]) [data-subj="2"] {
+    --subj: #9bbd80;
+  }
+  :root:not([data-theme="light"]) [data-subj="3"] {
+    --subj: #d3aa5c;
+  }
+  :root:not([data-theme="light"]) [data-subj="4"] {
+    --subj: #8ba8d1;
+  }
+  :root:not([data-theme="light"]) [data-subj="5"] {
+    --subj: #d08ba0;
+  }
+  :root:not([data-theme="light"]) [data-subj="6"] {
+    --subj: #a999c4;
+  }
+  :root:not([data-theme="light"]) [data-subj="7"] {
+    --subj: #9bb0ba;
+  }
 }

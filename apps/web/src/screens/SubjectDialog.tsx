@@ -4,6 +4,7 @@ import type { Subject } from '../api/types';
 import { format, messages as m } from '../i18n';
 import { navigate } from '../router';
 import { Button } from '../ui/Button';
+import { ColorPicker } from '../ui/ColorPicker';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { TextField } from '../ui/Field';
 import { FieldError } from '../ui/FieldError';
@@ -55,6 +56,8 @@ export function SubjectDialog({ subject, onClose }: { subject?: Subject; onClose
   const [teacher, setTeacher] = useState(subject?.teacher ?? '');
   const [hours, setHours] = useState(subject?.hoursPerWeek ? String(subject.hoursPerWeek) : '');
   const [icon, setIcon] = useState(subject?.icon ?? 'book');
+  // Beim Anlegen ohne Auswahl: der Server wählt die Farbe.
+  const [color, setColor] = useState<number | null>(subject?.color ?? null);
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -77,7 +80,13 @@ export function SubjectDialog({ subject, onClose }: { subject?: Subject; onClose
 
     setBusy(true);
     try {
-      const input = { name: name.trim(), teacher: teacher.trim() || null, hoursPerWeek, icon };
+      const input = {
+        name: name.trim(),
+        teacher: teacher.trim() || null,
+        hoursPerWeek,
+        icon,
+        ...(color !== null ? { color } : {}),
+      };
       if (subject) {
         await editSubject(subject.id, input);
       } else {
@@ -184,6 +193,12 @@ export function SubjectDialog({ subject, onClose }: { subject?: Subject; onClose
               className="max-w-64"
             />
             <IconPicker legend={m.subjectDialog.icon} value={icon} onChange={setIcon} />
+            <ColorPicker
+              legend={m.subjectDialog.color}
+              hint={subject ? undefined : m.subjectDialog.colorHint}
+              value={color}
+              onChange={setColor}
+            />
             {errors.form && <FieldError>{errors.form}</FieldError>}
             <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
               {subject && (

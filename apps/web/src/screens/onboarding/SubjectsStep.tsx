@@ -126,7 +126,7 @@ function ImportTab() {
         aria-label={m.onboarding.subjects.importChoose}
         disabled={busy}
         onChange={(event) => void onFile(event.target)}
-        className="mt-3 block w-full text-sm text-ink-secondary file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-control file:border file:border-control-edge file:bg-canvas file:px-4 file:font-medium file:text-ink hover:file:bg-paper"
+        className="mt-3 block w-full text-sm text-ink-secondary file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-control file:border file:border-control-edge file:bg-sheet file:px-4 file:font-medium file:text-ink hover:file:bg-paper"
       />
       {error && <FieldError>{error}</FieldError>}
       {result && (

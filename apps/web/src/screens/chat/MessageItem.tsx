@@ -73,7 +73,7 @@ export const MessageItem = memo(function MessageItem({
     return (
       <article className="flex justify-end">
         <h3 className="sr-only">{m.chat.you}</h3>
-        <p className="max-w-[85%] rounded-card bg-paper px-4 py-3 break-words whitespace-pre-wrap">
+        <p className="max-w-[84%] rounded-[14px_14px_4px_14px] border border-line-warm bg-paper px-4 py-3 text-[1.0313rem] leading-relaxed break-words whitespace-pre-wrap">
           {message.content}
         </p>
       </article>
@@ -95,6 +95,12 @@ export const MessageItem = memo(function MessageItem({
     <article aria-busy={live || undefined}>
       <h3 className="sr-only">{m.chat.answer}</h3>
       {hasText && <Markdown text={message.content} />}
+      {hasText && live && (
+        <p className="mt-2 flex min-h-6 items-center gap-2 text-sm text-ink-muted">
+          <span aria-hidden="true" className="mo-caret" />
+          {m.chat.writing}
+        </p>
+      )}
       {!hasText && live && (
         <p className="flex items-center gap-2 text-ink-muted">
           <span aria-hidden="true" className="size-2 animate-pulse rounded-pill bg-ink-muted" />

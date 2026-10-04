@@ -29,9 +29,13 @@ const light = block(css, ':root {');
 const dark = block(css, ":root[data-theme='dark'] {");
 const darkAuto = block(css, ":root:not([data-theme='light']) {");
 
-function toHex(value: string): string {
+/** Löst `var(--…)` auf: erst in den übergebenen semantischen Tokens, dann in der Palette. */
+function toHex(value: string, tokens: Tokens = {}): string {
   const reference = /^var\((--[\w-]+)\)$/.exec(value);
-  if (reference) return toHex(palette[reference[1] as string] as string);
+  if (reference) {
+    const name = reference[1] as string;
+    return toHex((tokens[name] ?? palette[name]) as string, tokens);
+  }
   if (!/^#[0-9a-f]{6}$/i.test(value)) throw new Error(`Kein Hex-Wert: ${value}`);
   return value;
 }
@@ -49,14 +53,15 @@ function contrast(foreground: string, background: string): number {
   return ((bright as number) + 0.05) / ((dim as number) + 0.05);
 }
 
-const surfaces = ['--canvas', '--surface', '--paper', '--workspace'];
+// Flächen, auf denen Text steht. `--sheet` (Blatt) und `--slip` (Zettel) gehören zur Gestaltung „Lagen“ (D-043).
+const surfaces = ['--canvas', '--surface', '--paper', '--workspace', '--sheet', '--slip'];
 const texts = ['--ink', '--ink-secondary', '--ink-muted', '--link', '--danger'];
 
 describe.each([
   ['hell', light],
   ['dunkel', { ...light, ...dark }],
 ])('Kontrast im %s Modus (WCAG AA)', (_name, tokens) => {
-  const color = (token: string) => toHex(tokens[token] as string);
+  const color = (token: string) => toHex(tokens[token] as string, tokens);
 
   for (const text of texts) {
     for (const surface of surfaces) {
@@ -132,4 +137,34 @@ describe('Research Blue (siehe docs/decisions.md, D-008)', () => {
     const link = toHex(palette['--color-link-text'] as string);
     expect(contrast(link, workspace)).toBeGreaterThanOrEqual(5);
   });
+});
+
+/** Fachfarben: Wert je Nummer, hell und dunkel. */
+function subjectColors(opener: (n: number) => string): string[] {
+  return Array.from({ length: 8 }, (_, n) => toHex(block(css, opener(n))['--subj'] as string));
+}
+const subjectsLight = subjectColors((n) => `[data-subj='${n}'] {`);
+const subjectsDark = subjectColors((n) => `:root[data-theme='dark'] [data-subj='${n}'] {`);
+const subjectsDarkAuto = subjectColors(
+  (n) => `:root:not([data-theme='light']) [data-subj='${n}'] {`,
+);
+
+describe('Fachfarben (D-043)', () => {
+  it('es gibt acht, und im automatischen Dunkelmodus dieselben wie im festen', () => {
+    expect(subjectsLight).toHaveLength(8);
+    expect(new Set(subjectsLight).size).toBe(8);
+    expect(subjectsDarkAuto).toEqual(subjectsDark);
+  });
+
+  it.each([
+    ['hell', subjectsLight, '--sheet', light],
+    ['dunkel', subjectsDark, '--sheet', { ...light, ...dark }],
+  ])(
+    'heben sich im %s Modus als Linie oder Fläche mit mindestens 3 : 1 vom Blatt ab',
+    (_n, colors, surface, tokens) => {
+      for (const color of colors) {
+        expect(contrast(color, toHex(tokens[surface] as string, tokens))).toBeGreaterThanOrEqual(3);
+      }
+    },
+  );
 });

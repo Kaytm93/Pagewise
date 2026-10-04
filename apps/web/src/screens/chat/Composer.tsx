@@ -79,7 +79,7 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
   }
 
   const buttonBase =
-    'inline-flex size-11 shrink-0 items-center justify-center rounded-pill transition-colors disabled:cursor-not-allowed disabled:opacity-50';
+    'mo-press inline-flex size-11 shrink-0 items-center justify-center rounded-[12px] disabled:cursor-not-allowed disabled:opacity-50';
 
   return (
     <form onSubmit={submit}>
@@ -100,7 +100,7 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
           aria-invalid={error ? true : undefined}
           onChange={(event) => update(event.target.value)}
           onKeyDown={onKeyDown}
-          className="max-h-48 min-h-11 min-w-0 flex-1 resize-none rounded-control border border-control-edge bg-canvas px-3.5 py-2.5 text-base leading-snug text-ink placeholder:text-ink-muted disabled:opacity-60"
+          className="max-h-48 min-h-11 min-w-0 flex-1 resize-none rounded-[16px] border border-control-edge bg-sheet px-4 py-2.5 text-[1.0313rem] leading-snug text-ink shadow-[0_1px_2px_rgba(var(--shadow),0.08)] transition-shadow duration-[var(--t-med)] placeholder:text-ink-muted focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none disabled:opacity-60"
         />
         {running ? (
           <button
@@ -108,7 +108,7 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
             onClick={onStop}
             disabled={stopping}
             aria-label={stopping ? m.chat.stopping : m.chat.stop}
-            className={`${buttonBase} border border-control-edge bg-canvas text-ink hover:bg-paper`}
+            className={`${buttonBase} border border-control-edge bg-sheet text-ink hover:bg-paper`}
           >
             <Square aria-hidden="true" className="size-4 fill-current" />
           </button>
@@ -117,7 +117,7 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
             type="submit"
             disabled={disabled || busy || draft.trim() === ''}
             aria-label={m.chat.send}
-            className={`${buttonBase} bg-primary text-on-primary hover:opacity-90`}
+            className={`${buttonBase} lg-btn-primary bg-primary text-on-primary hover:opacity-90`}
           >
             <ArrowUp aria-hidden="true" className="size-5" />
           </button>

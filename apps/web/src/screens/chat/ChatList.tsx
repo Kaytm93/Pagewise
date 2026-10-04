@@ -8,6 +8,7 @@ import { Button } from '../../ui/Button';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
+import { listRow, sectionTitle } from '../../ui/styles';
 import { formatWhen } from './when';
 
 /** Chats eines Fachs oder einer Untergruppe mit „Neuer Chat“. Chats bleiben immer in ihrem Fach. */
@@ -70,9 +71,9 @@ export function ChatList({ subjectId, groupId }: { subjectId: string; groupId: s
   }
 
   return (
-    <section className="mt-8 border-t border-line pt-6" aria-labelledby="chats-heading">
+    <section className="mt-10 border-t border-line-warm pt-6" aria-labelledby="chats-heading">
       <div className="flex items-center justify-between gap-4">
-        <h2 id="chats-heading" className="text-meta font-medium text-ink-muted">
+        <h2 id="chats-heading" className={sectionTitle}>
           {m.subject.chats}
         </h2>
         <Button variant="primary" busy={creating} onClick={() => void create()}>
@@ -84,9 +85,19 @@ export function ChatList({ subjectId, groupId }: { subjectId: string; groupId: s
       {error && <FieldError>{error}</FieldError>}
       {failed && <p className="mt-3 text-ink-secondary">{m.subject.chatsFailed}</p>}
       {!failed && chats === null && (
-        <p role="status" className="mt-3 text-ink-secondary">
-          {m.subject.chatsLoading}
-        </p>
+        <div role="status" className="mt-3">
+          <span className="sr-only">{m.subject.chatsLoading}</span>
+          {[0, 1, 2].map((row) => (
+            <div
+              key={row}
+              aria-hidden="true"
+              className="grid gap-2.5 border-b border-line-warm px-2 py-[18px]"
+            >
+              <span className="mo-shimmer h-[17px] w-[46%] rounded-[7px] bg-ink-muted/20" />
+              <span className="mo-shimmer h-[13px] w-[78%] rounded-[7px] bg-ink-muted/20" />
+            </div>
+          ))}
+        </div>
       )}
       {chats && chats.length === 0 && (
         <div className="mt-3 rounded-box bg-paper p-4">
@@ -95,17 +106,16 @@ export function ChatList({ subjectId, groupId }: { subjectId: string; groupId: s
         </div>
       )}
       {chats && chats.length > 0 && (
-        <ul className="mt-3 divide-y divide-line border-y border-line">
+        <ul className="mt-3 divide-y divide-line-warm border-y border-line-warm">
           {chats.map((chat) => {
             const title = chat.title === '' ? m.subject.chatUntitled : chat.title;
             return (
               <li key={chat.id} className="flex items-center">
-                <Link
-                  to={{ name: 'chat', subjectId, chatId: chat.id }}
-                  className="-ml-3 flex min-h-14 min-w-0 flex-1 flex-col justify-center rounded-box px-3 py-2 text-ink no-underline hover:bg-paper"
-                >
-                  <span className="truncate font-medium">{title}</span>
-                  <span className="truncate text-meta text-ink-muted">
+                <Link to={{ name: 'chat', subjectId, chatId: chat.id }} className={listRow}>
+                  <span className="truncate font-heading text-[19px] tracking-[-0.15px]">
+                    {title}
+                  </span>
+                  <span className="truncate text-sm text-ink-muted">
                     {chat.generating ? m.subject.chatGenerating : formatWhen(chat.updatedAt)}
                   </span>
                 </Link>
@@ -113,7 +123,7 @@ export function ChatList({ subjectId, groupId }: { subjectId: string; groupId: s
                   type="button"
                   onClick={() => setDeleting(chat)}
                   aria-label={format(m.subject.chatDeleteNamed, { name: title })}
-                  className="-mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                  className="mo-press -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] text-ink-muted hover:bg-paper hover:text-ink"
                 >
                   <Trash2 aria-hidden="true" className="size-4" />
                 </button>

@@ -301,6 +301,55 @@ describe('Fach bearbeiten und löschen', () => {
   });
 });
 
+describe('Fachfarbe', () => {
+  it('zeigt die Farbe des Fachs, lässt sie ändern und färbt die Ansicht', async () => {
+    const server = new FakeServer('unlocked');
+    const subject = server.addSubject('Beispielfach A', { color: 2 });
+    window.history.replaceState(null, '', `/subjects/${subject.id}`);
+    mount(server);
+    const user = userEvent.setup();
+
+    // Die Fachfarbe steht als Attribut am Schreibtisch und am Eintrag der Seitenleiste.
+    await screen.findByRole('heading', { name: 'Beispielfach A', level: 1 });
+    expect(document.querySelector('.lg-app')?.getAttribute('data-subj')).toBe('2');
+
+    await user.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Fach bearbeiten' });
+    const colors = within(dialog).getByRole('group', { name: 'Farbe' });
+    expect(
+      (within(colors).getByRole('radio', { name: 'Olivgrün' }) as HTMLInputElement).checked,
+    ).toBe(true);
+    expect(within(colors).getAllByRole('radio')).toHaveLength(8);
+    await user.click(within(colors).getByRole('radio', { name: 'Schieferblau' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() =>
+      expect(document.querySelector('.lg-app')?.getAttribute('data-subj')).toBe('4'),
+    );
+    expect(server.calls('PATCH', `/api/subjects/${subject.id}`)[0]?.body).toMatchObject({
+      color: 4,
+    });
+  });
+
+  it('wählt beim Anlegen ohne Auswahl keine Farbe aus, der Server vergibt sie', async () => {
+    const server = new FakeServer('unlocked');
+    mount(server);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Fach hinzufügen' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Fach anlegen' });
+    await user.click(within(dialog).getByLabelText('Eigenes Fach'));
+    await user.type(within(dialog).getByLabelText('Name'), 'Beispielfach B');
+    expect(within(dialog).getByText(/wählt Pagewise eine Farbe/)).toBeTruthy();
+    for (const radio of within(dialog).getAllByRole('radio', { name: /Petrol|Terrakotta|Ocker/ })) {
+      expect((radio as HTMLInputElement).checked).toBe(false);
+    }
+    await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(server.subjects).toHaveLength(1));
+    const body = server.calls('POST', '/api/subjects')[0]?.body as Record<string, unknown>;
+    expect('color' in body).toBe(false);
+  });
+});
+
 describe('Untergruppen', () => {
   function open(server: FakeServer) {
     const subject = server.addSubject('Beispielfach A');

@@ -138,7 +138,7 @@ export function ModelListEditor({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="min-h-11 min-w-0 flex-1 rounded-control border border-control-edge bg-canvas px-3 text-base text-ink"
+                    className="min-h-11 min-w-0 flex-1 rounded-control border border-control-edge bg-sheet px-3 text-base text-ink"
                   />
                   <button
                     type="button"
@@ -188,7 +188,7 @@ export function ModelListEditor({
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
-            className="min-h-11 w-full rounded-control border border-control-edge bg-canvas px-3 text-base text-ink"
+            className="min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink"
           />
           {draftError && <FieldError>{draftError}</FieldError>}
         </div>
@@ -217,7 +217,7 @@ export function ModelListEditor({
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
-            className="min-h-11 w-full rounded-control border border-control-edge bg-canvas px-3 text-base text-ink"
+            className="min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink"
           />
           {shown.length === 0 ? (
             <p className="mt-3 text-sm text-ink-muted">{m.providers.models.noMatches}</p>

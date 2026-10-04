@@ -7,6 +7,7 @@ import { HomePage } from '../screens/HomePage';
 import { NotFoundPage } from '../screens/NotFoundPage';
 import { SettingsPage } from '../screens/SettingsPage';
 import { SubjectPage } from '../screens/SubjectPage';
+import { subjectColorAttr } from '../ui/subject-color';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { Drawer } from './Drawer';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -59,10 +60,29 @@ function useTitle(route: Route): string {
   return m.app.name;
 }
 
-/** Rahmen der angemeldeten App: feste Seitenleiste ab „md“, darunter eine Kopfzeile mit Schublade. */
+/** Fachfarbe der Ansicht: nur Fach und Chat haben eine, alles andere ist neutral. */
+function useRouteColor(route: Route): string | undefined {
+  const { findSubject } = useWorkspace();
+  if (route.name !== 'subject' && route.name !== 'chat') return undefined;
+  return subjectColorAttr(findSubject(route.subjectId)?.color);
+}
+
+/** Wie viele Blätter unter dem aktuellen liegen: Start und Einstellungen 1, Fach 2, Chat 3. */
+function depthOf(route: Route): 1 | 2 | 3 {
+  if (route.name === 'chat') return 3;
+  if (route.name === 'subject' || route.name === 'default-chat') return 2;
+  return 1;
+}
+
+/**
+ * Rahmen der angemeldeten App (Gestaltung „Lagen“): ein Schreibtisch, links der Heftrücken als Seitenleiste
+ * (ab „md“ fest, darunter als Schublade), daneben der Blattstapel. Wer tiefer in die App geht, legt ein Blatt
+ * mehr auf den Stapel; das neue Blatt wird beim Wechsel aufgelegt.
+ */
 export function AppShell() {
   const route = useRoute();
   const title = useTitle(route);
+  const color = useRouteColor(route);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -70,7 +90,7 @@ export function AppShell() {
   }, [title]);
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[18rem_1fr]">
+    <div className="lg-app md:grid md:grid-cols-[17.25rem_1fr]" data-subj={color}>
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded-control focus:border focus:border-line focus:bg-canvas focus:px-3 focus:py-2"
@@ -78,38 +98,43 @@ export function AppShell() {
         {m.common.skipToContent}
       </a>
 
-      <aside className="sticky top-0 hidden h-dvh border-r border-line bg-canvas md:block">
-        <Sidebar />
+      <aside className="sticky top-0 hidden h-dvh py-3.5 md:block">
+        <div className="lg-binder">
+          <Sidebar />
+        </div>
       </aside>
 
       <div className="flex min-h-dvh min-w-0 flex-col">
-        <header className="sticky top-0 z-30 border-b border-line bg-canvas pt-[env(safe-area-inset-top)] md:hidden">
+        <header className="sticky top-0 z-30 bg-desk pt-[env(safe-area-inset-top)] md:hidden">
           <div className="flex h-14 items-center gap-1 px-2">
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
               aria-label={m.common.openMenu}
               aria-expanded={drawerOpen}
-              className="inline-flex size-11 items-center justify-center rounded-control text-ink-secondary hover:bg-paper hover:text-ink"
+              className="mo-press inline-flex size-11 items-center justify-center rounded-[12px] text-ink hover:bg-paper"
             >
               <Menu aria-hidden="true" className="size-5" />
             </button>
-            <p className="truncate font-heading text-lg">{title}</p>
+            <p className="truncate font-heading text-xl tracking-[-0.2px]">{title}</p>
           </div>
         </header>
 
         <main
           id="main"
           tabIndex={-1}
-          className={`flex-1 bg-workspace outline-none ${
-            route.name === 'chat'
-              ? 'md:px-10 md:py-8'
-              : 'px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:px-10 md:py-12'
-          }`}
+          className="flex-1 px-3 pt-1 pr-[1.75rem] pb-[max(1.75rem,env(safe-area-inset-bottom))] outline-none md:py-3.5 md:pr-12 md:pl-0"
         >
-          <ErrorBoundary resetKey={pathFor(route)}>
-            <Page route={route} />
-          </ErrorBoundary>
+          <div className="lg-stack mx-auto max-w-[1180px]" data-depth={depthOf(route)}>
+            <div aria-hidden="true" className="lg-ply lg-p1" />
+            <div aria-hidden="true" className="lg-ply lg-p2" />
+            <div aria-hidden="true" className="lg-ply lg-p3" />
+            <div key={pathFor(route)} className="lg-arrive">
+              <ErrorBoundary resetKey={pathFor(route)}>
+                <Page route={route} />
+              </ErrorBoundary>
+            </div>
+          </div>
         </main>
       </div>
 

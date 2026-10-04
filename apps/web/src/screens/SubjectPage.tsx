@@ -5,6 +5,8 @@ import { format, messages as m } from '../i18n';
 import { Button } from '../ui/Button';
 import { Link } from '../ui/Link';
 import { Sheet } from '../ui/Sheet';
+import { SubjectIcon } from '../ui/SubjectIcon';
+import { listRow, sectionTitle } from '../ui/styles';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { ChatList } from './chat/ChatList';
 import { SubjectModel } from './chat/SubjectModel';
@@ -29,39 +31,47 @@ export function SubjectPage({ subjectId, groupId }: { subjectId: string; groupId
   const close = () => setDialog(null);
 
   return (
-    <Sheet>
+    <Sheet width="wide">
+      <span aria-hidden="true" className="lg-tape top-5 left-5 [--r:-1.8deg] md:left-11" />
+      {!builtin && (
+        <SubjectIcon
+          icon={subject.icon}
+          strokeWidth={0.4}
+          className="lg-motif top-8 right-5 size-[84px] opacity-80 md:right-12 md:size-[132px]"
+        />
+      )}
       {group && (
         <Link
           to={{ name: 'subject', subjectId: subject.id, groupId: null }}
-          className="mb-3 inline-flex min-h-11 items-center gap-1.5 text-sm"
+          className="mo-press relative mt-6 mb-1 inline-flex min-h-11 items-center gap-1.5 text-sm"
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
           {subject.name}
         </Link>
       )}
-      <div className="flex items-start justify-between gap-4">
+      <div className="relative mt-6 flex items-start justify-between gap-4 pr-24 md:pr-40">
         <div className="min-w-0">
-          <h1 className="font-heading text-3xl tracking-tight text-balance break-words sm:text-title">
+          <h1 className="mo-rise font-heading text-[clamp(40px,6.4vw,64px)] leading-none tracking-[-0.035em] text-balance break-words">
             {group ? group.name : subject.name}
           </h1>
-          {meta && <p className="mt-1 text-meta text-ink-muted">{meta}</p>}
+          {meta && <p className="mo-rise mo-i-1 mt-3 text-ink-muted">{meta}</p>}
         </div>
-        {(group || !builtin) && (
-          <Button
-            variant="secondary"
-            className="shrink-0"
-            onClick={() => setDialog(group ? { type: 'group', group } : { type: 'subject' })}
-          >
-            <Pencil aria-hidden="true" className="size-4" />
-            {m.common.edit}
-          </Button>
-        )}
       </div>
+      {(group || !builtin) && (
+        <Button
+          variant="secondary"
+          className="mt-5"
+          onClick={() => setDialog(group ? { type: 'group', group } : { type: 'subject' })}
+        >
+          <Pencil aria-hidden="true" className="size-4" />
+          {m.common.edit}
+        </Button>
+      )}
 
       {!group && (
-        <section className="mt-8 border-t border-line pt-6" aria-labelledby="groups-heading">
+        <section className="mt-10 border-t border-line-warm pt-6" aria-labelledby="groups-heading">
           <div className="flex items-center justify-between gap-4">
-            <h2 id="groups-heading" className="text-meta font-medium text-ink-muted">
+            <h2 id="groups-heading" className={sectionTitle}>
               {m.subject.groups}
             </h2>
             <Button variant="ghost" className="-mr-3" onClick={() => setDialog({ type: 'group' })}>
@@ -75,14 +85,16 @@ export function SubjectPage({ subjectId, groupId }: { subjectId: string; groupId
               <p className="mt-1 text-sm text-ink-secondary">{m.subject.noGroupsHint}</p>
             </div>
           ) : (
-            <ul className="mt-2 divide-y divide-line border-y border-line">
+            <ul className="mt-2 divide-y divide-line-warm border-y border-line-warm">
               {subject.groups.map((entry) => (
                 <li key={entry.id} className="flex items-center">
                   <Link
                     to={{ name: 'subject', subjectId: subject.id, groupId: entry.id }}
-                    className="-ml-3 flex min-h-14 min-w-0 flex-1 flex-col justify-center rounded-box px-3 py-2 text-ink no-underline hover:bg-paper"
+                    className={listRow}
                   >
-                    <span className="truncate font-medium">{entry.name}</span>
+                    <span className="truncate font-heading text-xl tracking-[-0.2px]">
+                      {entry.name}
+                    </span>
                     {entry.kind && (
                       <span className="truncate text-meta text-ink-muted">{entry.kind}</span>
                     )}
@@ -91,7 +103,7 @@ export function SubjectPage({ subjectId, groupId }: { subjectId: string; groupId
                     type="button"
                     onClick={() => setDialog({ type: 'group', group: entry })}
                     aria-label={format(m.subject.editGroupNamed, { name: entry.name })}
-                    className="-mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                    className="mo-press -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] text-ink-muted hover:bg-paper hover:text-ink"
                   >
                     <Pencil aria-hidden="true" className="size-4" />
                   </button>
@@ -102,8 +114,8 @@ export function SubjectPage({ subjectId, groupId }: { subjectId: string; groupId
         </section>
       )}
 
-      <section className="mt-8 border-t border-line pt-6" aria-labelledby="prompt-heading">
-        <h2 id="prompt-heading" className="text-meta font-medium text-ink-muted">
+      <section className="mt-10 border-t border-line-warm pt-6" aria-labelledby="prompt-heading">
+        <h2 id="prompt-heading" className={sectionTitle}>
           {m.prompts.title}
         </h2>
         <div className="mt-3">

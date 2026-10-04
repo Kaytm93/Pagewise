@@ -45,7 +45,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.failed) return this.props.children;
     const stale = isStaleBundle(this.state.error);
     return (
-      <div role="alert" className="mx-auto max-w-xl rounded-card border border-line bg-canvas p-6">
+      <div role="alert" className="mx-auto max-w-xl lg-sheet p-6">
         <h1 className="font-heading text-xl">
           {stale ? m.shell.updatedTitle : m.shell.crashTitle}
         </h1>

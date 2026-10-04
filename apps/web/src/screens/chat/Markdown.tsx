@@ -24,7 +24,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
         type="button"
         onClick={() => void copy(code)}
         aria-label={m.chat.copyCode}
-        className="absolute top-1 right-1 inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-canvas hover:text-ink"
+        className="absolute top-1 right-1 inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-sheet hover:text-ink"
       >
         {copied ? (
           <Check aria-hidden="true" className="size-4" />
@@ -43,7 +43,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
  * in einer Modellantwort könnte Daten an eine fremde Adresse schicken, die CSP sperrt das ohnehin.
  */
 const components: Components = {
-  p: ({ children }) => <p className="my-3 leading-relaxed first:mt-0 last:mb-0">{children}</p>,
+  p: ({ children }) => <p className="my-[0.9em] first:mt-0 last:mb-0">{children}</p>,
   h1: ({ children }) => <h2 className="mt-6 mb-2 font-heading text-xl first:mt-0">{children}</h2>,
   h2: ({ children }) => <h3 className="mt-6 mb-2 font-heading text-lg first:mt-0">{children}</h3>,
   h3: ({ children }) => (
@@ -54,9 +54,17 @@ const components: Components = {
   ),
   h5: ({ children }) => <h6 className="mt-4 mb-1 font-medium first:mt-0">{children}</h6>,
   h6: ({ children }) => <h6 className="mt-4 mb-1 font-medium first:mt-0">{children}</h6>,
-  ul: ({ children }) => <ul className="my-3 list-disc space-y-1 pl-6">{children}</ul>,
-  ol: ({ children }) => <ol className="my-3 list-decimal space-y-1 pl-6">{children}</ol>,
-  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+  ul: ({ children }) => (
+    <ul className="my-[0.9em] list-disc space-y-[0.55em] pl-[1.4em] marker:text-ink-muted">
+      {children}
+    </ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="my-[0.9em] list-decimal space-y-[0.55em] pl-[1.4em] marker:text-ink-muted">
+      {children}
+    </ol>
+  ),
+  li: ({ children }) => <li className="pl-[0.3em]">{children}</li>,
   // Ein Link, den react-markdown als unsicher entfernt hat (z. B. javascript:), bleibt einfacher Text.
   a: ({ href, children }) =>
     href ? (
@@ -104,7 +112,7 @@ const components: Components = {
 /** Antwort des Modells als Markdown, sicher dargestellt. */
 export const Markdown = memo(function Markdown({ text }: { text: string }) {
   return (
-    <div className="break-words">
+    <div className="max-w-[66ch] text-[1.0625rem] leading-[1.72] break-words">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {text}
       </ReactMarkdown>
