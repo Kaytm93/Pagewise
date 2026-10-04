@@ -1,9 +1,11 @@
 import { Pencil, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { ApiError } from '../../api/client';
 import type { CliStatus, EngineProfile } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { useSession } from '../../session/SessionProvider';
 import { Button } from '../../ui/Button';
+import { TextField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { commonErrorMessage } from '../auth-errors';
@@ -16,6 +18,10 @@ function CliBlock() {
   const [cli, setCli] = useState<CliStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+  const [path, setPath] = useState('');
+  const [pathError, setPathError] = useState<string | null>(null);
+  const [pathSaved, setPathSaved] = useState(false);
+  const [savingPath, setSavingPath] = useState(false);
   const t = m.agents.cli;
 
   useEffect(() => {
@@ -23,7 +29,9 @@ function CliBlock() {
     api
       .cliStatus()
       .then((status) => {
-        if (!cancelled) setCli(status);
+        if (cancelled) return;
+        setCli(status);
+        setPath(status.configuredPath ?? '');
       })
       .catch((caught: unknown) => {
         if (!cancelled) setError(commonErrorMessage(caught));
@@ -42,6 +50,26 @@ function CliBlock() {
       setError(t.failed);
     } finally {
       setSearching(false);
+    }
+  }
+
+  async function savePath(value: string | null) {
+    setSavingPath(true);
+    setPathError(null);
+    setPathSaved(false);
+    try {
+      const status = await api.setCliPath(value === null ? null : value.trim());
+      setCli(status);
+      setPath(status.configuredPath ?? '');
+      setPathSaved(true);
+    } catch (caught) {
+      setPathError(
+        caught instanceof ApiError && caught.code === 'invalid_input'
+          ? t.pathInvalid
+          : commonErrorMessage(caught),
+      );
+    } finally {
+      setSavingPath(false);
     }
   }
 
@@ -78,6 +106,46 @@ function CliBlock() {
       <Button variant="secondary" className="mt-3" busy={searching} onClick={() => void search()}>
         {searching ? t.searching : t.search}
       </Button>
+
+      <form
+        className="mt-5 max-w-xl"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void savePath(path);
+        }}
+      >
+        <TextField
+          label={t.pathLabel}
+          hint={t.pathHint}
+          name="claude-path"
+          value={path}
+          autoComplete="off"
+          spellCheck={false}
+          autoCapitalize="off"
+          inputMode="url"
+          error={pathError}
+          onChange={(event) => {
+            setPath(event.target.value);
+            setPathError(null);
+            setPathSaved(false);
+          }}
+        />
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Button type="submit" variant="secondary" busy={savingPath} disabled={path.trim() === ''}>
+            {savingPath ? t.pathSaving : t.pathSave}
+          </Button>
+          {cli?.configuredPath && (
+            <Button variant="ghost" disabled={savingPath} onClick={() => void savePath(null)}>
+              {t.pathClear}
+            </Button>
+          )}
+          {pathSaved && (
+            <p role="status" className="text-sm text-ink-secondary">
+              {t.pathSaved}
+            </p>
+          )}
+        </div>
+      </form>
     </div>
   );
 }

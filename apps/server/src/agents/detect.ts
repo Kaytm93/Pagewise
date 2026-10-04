@@ -28,8 +28,11 @@ export type CliStatus =
   | { state: 'broken'; skipped: RejectedCli[] };
 
 export interface DetectOptions {
-  /** Ausdrücklich gesetzter Pfad (z. B. `PAGEWISE_CLAUDE_PATH`). Er wird zuerst geprüft. */
-  explicitPath?: string | null;
+  /**
+   * Ausdrücklich gesetzter Pfad (Einstellung der Person, `PAGEWISE_CLAUDE_PATH`). Er wird zuerst geprüft. Eine
+   * Funktion wird bei jeder Suche neu gefragt, damit eine geänderte Einstellung sofort gilt.
+   */
+  explicitPath?: string | null | (() => string | null);
   /** Suchpfad. Standard: `PATH` des Servers. */
   searchPath?: string;
   /** Zusätzliche Ordner, in denen Installationen üblich sind (macOS, npm, nvm, Homebrew). */
@@ -55,6 +58,9 @@ export function defaultExtraDirs(home = homedir()): string[] {
     join(home, '.claude', 'local'),
     join(home, '.npm-global', 'bin'),
     join(home, '.bun', 'bin'),
+    join(home, '.volta', 'bin'),
+    join(home, '.asdf', 'shims'),
+    join(home, '.local', 'share', 'mise', 'shims'),
     '/opt/homebrew/bin',
     '/usr/local/bin',
   ];
@@ -111,7 +117,9 @@ export async function detectClaude(options: DetectOptions = {}): Promise<CliStat
 
   const dirs = [...searchPath.split(delimiter), ...(options.extraDirs ?? defaultExtraDirs())];
   const candidates: string[] = [];
-  if (options.explicitPath) candidates.push(options.explicitPath);
+  const explicit =
+    typeof options.explicitPath === 'function' ? options.explicitPath() : options.explicitPath;
+  if (explicit) candidates.push(explicit);
   for (const dir of dirs) if (dir) candidates.push(join(dir, name));
 
   const seen = new Set<string>();

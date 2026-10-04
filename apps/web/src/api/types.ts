@@ -380,6 +380,8 @@ export interface CliStatus {
   version: string | null;
   /** Kandidaten, die geprüft wurden und nicht starten. */
   skipped: { path: string; reason: string }[];
+  /** Von Hand eingetragener Pfad zu „claude“ (hat Vorrang), sonst `null`. */
+  configuredPath: string | null;
 }
 
 export interface EngineInput {

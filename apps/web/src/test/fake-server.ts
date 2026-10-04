@@ -278,6 +278,7 @@ export class FakeServer {
     path: '/usr/local/bin/claude',
     version: '2.1.220',
     skipped: [],
+    configuredPath: null,
   };
   chats: Chat[] = [];
   chatMessages = new Map<string, ChatMessage[]>();
@@ -1168,6 +1169,17 @@ export class FakeServer {
     }
     if (method === 'GET' && path === '/api/engines/cli') return json(200, { cli: this.cli });
     if (method === 'POST' && path === '/api/engines/detect') return json(200, { cli: this.cli });
+    if (method === 'PUT' && path === '/api/engines/cli-path') {
+      const value = data.path;
+      if (value === null) {
+        this.cli = { ...this.cli, configuredPath: null };
+      } else if (typeof value === 'string' && /^\/.*\/claude$/.test(value)) {
+        this.cli = { ...this.cli, configuredPath: value };
+      } else {
+        return json(400, { error: 'invalid_input', field: 'path' });
+      }
+      return json(200, { cli: this.cli });
+    }
 
     if (method === 'POST' && path === '/api/engines') {
       const kind = data.kind as EngineProfile['kind'];

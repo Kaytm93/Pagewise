@@ -51,7 +51,8 @@ export const de = {
     title: 'Willkommen bei Pagewise',
     lead: 'Pagewise gehört dir und läuft auf deinem Rechner. Lege einen Passcode fest, der den Zugang schützt.',
     codeLabel: 'Einrichtungscode',
-    codeHint: 'Du findest ihn in der Konsole, in der Pagewise gestartet wurde.',
+    codeHint:
+      'Du findest ihn in der Konsole, in der Pagewise gestartet wurde, oder in der Mac-App unter „Hilfe → Einrichtungscode anzeigen“.',
     passcodeLabel: 'Passcode',
     passcodeHint: 'Mindestens 8 Zeichen. Ein langer Satz ist besser als Sonderzeichen.',
     repeatLabel: 'Passcode wiederholen',
@@ -876,6 +877,14 @@ export const de = {
       search: 'Erneut suchen',
       searching: 'Suche läuft …',
       failed: 'Die Suche ist fehlgeschlagen.',
+      pathLabel: 'Pfad zu claude (nur wenn nötig)',
+      pathHint:
+        'Pagewise sucht in den üblichen Ordnern. Liegt das Programm woanders, trage hier den ganzen Pfad ein. Er muss mit „/“ beginnen und auf „claude“ enden, zum Beispiel /opt/homebrew/bin/claude.',
+      pathSave: 'Pfad speichern',
+      pathSaving: 'Speichere …',
+      pathClear: 'Pfad entfernen',
+      pathInvalid: 'Das ist kein gültiger Pfad. Er muss mit „/“ beginnen und auf „claude“ enden.',
+      pathSaved: 'Pfad gespeichert.',
     },
     profiles: {
       title: 'Zugänge',

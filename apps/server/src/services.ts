@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { AssetService } from './agents/assets';
 import { AgentCleanup } from './agents/cleanup';
+import { CliPathSetting } from './agents/cli-path';
 import { CliDetector, type DetectOptions } from './agents/detect';
 import { ClaudeCodeEngine, type EngineOptions } from './agents/engine';
 import { EngineProfileService } from './agents/profiles';
@@ -38,6 +39,8 @@ export interface Services {
   engines: EngineProfileService;
   /** Erkennt das Programm „claude“ auf diesem Rechner. */
   cli: CliDetector;
+  /** Von Hand eingetragener Pfad zu „claude“ (Vorrang vor Umgebungsvariable und Suche). */
+  cliPath: CliPathSetting;
   /** Arbeitsordner der Agenten (`workspaces/`). */
   workspaces: WorkspaceManager;
   /** Von Agenten erzeugte Dateien (`assets/`). */
@@ -116,8 +119,9 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
   const storage = new LocalStorage(paths.assets);
   const assets = new AssetService(database.db, storage);
   const workspaces = new WorkspaceManager(paths.workspaces);
+  const cliPath = new CliPathSetting(database.db);
   const cli = new CliDetector({
-    explicitPath: process.env.PAGEWISE_CLAUDE_PATH ?? null,
+    explicitPath: () => cliPath.get() ?? process.env.PAGEWISE_CLAUDE_PATH ?? null,
     ...options.cliDetect,
   });
   const catalog = loadSubjectCatalog(options.catalogFile ?? resources.catalogFile);
@@ -154,6 +158,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     providers,
     engines,
     cli,
+    cliPath,
     workspaces,
     assets,
     cleanup,

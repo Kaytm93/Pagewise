@@ -1,7 +1,7 @@
 import { chmodSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createHarness, type Harness, type Session } from '../test-harness';
+import { createHarness, type Harness, type Session, TEST_PASSCODE } from '../test-harness';
 
 // Fake-Schlüssel werden zur Laufzeit zusammengesetzt, damit der Secret-Scan den Quelltext nicht trifft.
 const TOKEN = ['beispiel', 'token', 'abcdefghijklmnop'].join('-');
@@ -21,6 +21,7 @@ describe('Agent-CLI: Zugänge und Erkennung', () => {
     ['GET', '/api/engines'],
     ['GET', '/api/engines/cli'],
     ['POST', '/api/engines/detect'],
+    ['PUT', '/api/engines/cli-path'],
     ['POST', '/api/engines'],
     ['PATCH', '/api/engines/3f2b8c1e-5a4d-4e6f-8a9b-0c1d2e3f4a5b'],
     ['DELETE', '/api/engines/3f2b8c1e-5a4d-4e6f-8a9b-0c1d2e3f4a5b'],
@@ -34,7 +35,7 @@ describe('Agent-CLI: Zugänge und Erkennung', () => {
     expect(reply.status).toBe(200);
     expect(reply.body).toMatchObject({ profiles: [] });
     expect((await session.call('GET', '/api/engines/cli')).body).toEqual({
-      cli: { state: 'missing', path: null, version: null, skipped: [] },
+      cli: { state: 'missing', path: null, version: null, skipped: [], configuredPath: null },
     });
     const kinds = reply.body.kinds as {
       kind: string;
@@ -50,6 +51,83 @@ describe('Agent-CLI: Zugänge und Erkennung', () => {
       needsToken: true,
       endpoint: 'https://api.z.ai/api/anthropic',
       defaultModel: 'glm-5.3-flash',
+    });
+  });
+
+  describe('Pfad zu claude von Hand eintragen', () => {
+    function fakeClaude(dir: string, version = '2.0.7', name = 'claude'): string {
+      mkdirSync(dir, { recursive: true });
+      const file = join(dir, name);
+      writeFileSync(file, `#!/bin/sh\necho "${version} (Claude Code)"\n`);
+      chmodSync(file, 0o755);
+      return file;
+    }
+
+    it('findet claude über den eingetragenen Pfad, auch außerhalb von PATH und üblichen Orten, und merkt ihn sich', async () => {
+      const file = fakeClaude(join(harness.services.paths.root, '..', 'woanders', 'bin'));
+      const saved = await session.call('PUT', '/api/engines/cli-path', { path: file });
+      expect(saved.status).toBe(200);
+      expect(saved.body).toMatchObject({
+        cli: { state: 'ready', path: file, version: '2.0.7', configuredPath: file },
+      });
+      expect((await session.call('GET', '/api/engines/cli')).body).toMatchObject({
+        cli: { state: 'ready', configuredPath: file },
+      });
+      // Der Eintrag liegt in den Einstellungen und überlebt einen neuen Detektor.
+      expect(harness.services.cliPath.get()).toBe(file);
+    });
+
+    it('meldet einen eingetragenen Pfad, der nicht startet, als übersprungen, und räumt mit null auf', async () => {
+      const dir = join(harness.services.paths.root, '..', 'kaputt');
+      mkdirSync(dir, { recursive: true });
+      const file = join(dir, 'claude');
+      writeFileSync(file, '#!/bin/sh\nexit 3\n');
+      chmodSync(file, 0o755);
+      const saved = await session.call('PUT', '/api/engines/cli-path', { path: file });
+      expect(saved.body).toMatchObject({
+        cli: { state: 'broken', configuredPath: file, skipped: [{ path: file, reason: 'failed' }] },
+      });
+      const cleared = await session.call('PUT', '/api/engines/cli-path', { path: null });
+      expect(cleared.body).toMatchObject({ cli: { state: 'missing', configuredPath: null } });
+      expect(harness.services.cliPath.get()).toBeNull();
+    });
+
+    it.each([
+      ['relativer Pfad', 'bin/claude'],
+      ['Umweg über ..', '/opt/beispiel/../claude'],
+      ['andere Datei als claude', '/bin/sh'],
+      ['Verzeichnis statt Datei', '/opt/beispiel/claude/'],
+      ['Steuerzeichen', '/opt/beispiel/claude\nrm'],
+      ['leer', '   '],
+      ['zu lang', `/${'a'.repeat(1100)}/claude`],
+    ])('lehnt %s ab', async (_name, path) => {
+      const reply = await session.call('PUT', '/api/engines/cli-path', { path });
+      expect(reply.status).toBe(400);
+      expect(reply.body).toEqual({ error: 'invalid_input', field: 'path' });
+      expect(harness.services.cliPath.get()).toBeNull();
+    });
+
+    it('lehnt fremde Felder und falsche Typen ab', async () => {
+      for (const body of [
+        {},
+        { path: 5 },
+        { path: '/x/claude', extra: 1 },
+        { pfad: '/x/claude' },
+      ]) {
+        expect(
+          (await session.call('PUT', '/api/engines/cli-path', body)).status,
+          JSON.stringify(body),
+        ).toBe(400);
+      }
+    });
+
+    it('wird von „Alles löschen“ entfernt und nutzt die Anmeldung wie alle Engine-Routen', async () => {
+      const file = fakeClaude(join(harness.services.paths.root, '..', 'bin2'));
+      await session.call('PUT', '/api/engines/cli-path', { path: file });
+      expect(harness.services.cliPath.get()).toBe(file);
+      const erased = await session.call('POST', '/api/data/erase', { passcode: TEST_PASSCODE });
+      expect(erased.status).toBe(204);
+      expect(harness.services.cliPath.get()).toBeNull();
     });
   });
 

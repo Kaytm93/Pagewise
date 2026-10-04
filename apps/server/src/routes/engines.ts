@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { validateCliPath } from '../agents/cli-path';
 import type { CliStatus } from '../agents/detect';
 import {
   ENGINE_KINDS,
@@ -57,11 +58,19 @@ function idParam(c: Context): string | null {
 }
 
 /** Was die Oberfläche über das gefundene Programm erfährt. Pfade sind die auf diesem Rechner. */
-function cliView(status: CliStatus) {
+function cliView(status: CliStatus, configuredPath: string | null) {
   return status.state === 'ready'
-    ? { state: status.state, path: status.path, version: status.version, skipped: status.skipped }
-    : { state: status.state, path: null, version: null, skipped: status.skipped };
+    ? {
+        state: status.state,
+        path: status.path,
+        version: status.version,
+        skipped: status.skipped,
+        configuredPath,
+      }
+    : { state: status.state, path: null, version: null, skipped: status.skipped, configuredPath };
 }
+
+const CliPathBody = z.strictObject({ path: z.string().max(1024).nullable() });
 
 /** Beschreibung der Arten, damit die Oberfläche nichts fest einbauen muss. */
 const KINDS = [
@@ -79,7 +88,9 @@ const KINDS = [
  * Agent-CLI (Phase 1e): die Zugänge für das Programm „claude“ und dessen Erkennung. Schlüssel gehen nur hinein
  * (`token`), nie heraus: Antworten enthalten `hasToken` und bei langen Schlüsseln die letzten vier Zeichen.
  */
-export function engineRoutes(services: Pick<Services, 'engines' | 'cli'>): Hono<AppEnv> {
+export function engineRoutes(
+  services: Pick<Services, 'engines' | 'cli' | 'cliPath'>,
+): Hono<AppEnv> {
   const engines: EngineProfileService = services.engines;
   const app = new Hono<AppEnv>();
   app.use('/engines', limitBody(16 * 1024));
@@ -89,12 +100,28 @@ export function engineRoutes(services: Pick<Services, 'engines' | 'cli'>): Hono<
   app.get('/engines', async (c) => c.json({ kinds: KINDS, profiles: await engines.list() }));
 
   // Das gefundene Programm. Die Suche startet Programme und kann etwas dauern, deshalb getrennt und zwischengespeichert.
-  app.get('/engines/cli', async (c) => c.json({ cli: cliView(await services.cli.status()) }));
+  app.get('/engines/cli', async (c) =>
+    c.json({ cli: cliView(await services.cli.status(), services.cliPath.get()) }),
+  );
 
   // Erneut nach dem Programm suchen (z. B. nach der Installation).
   app.post('/engines/detect', async (c) =>
-    c.json({ cli: cliView(await services.cli.status(true)) }),
+    c.json({ cli: cliView(await services.cli.status(true), services.cliPath.get()) }),
   );
+
+  // Pfad zu „claude“ von Hand eintragen (eine aus Finder oder Anmeldung gestartete App hat nur einen knappen PATH).
+  // `null` entfernt ihn. Der Pfad muss absolut sein und die Datei „claude“ heißen (siehe `validateCliPath`).
+  app.put('/engines/cli-path', async (c) => {
+    const body = await readJson(c, CliPathBody);
+    if (!body.ok) return body.response;
+    let path: string | null = null;
+    if (body.data.path !== null) {
+      path = validateCliPath(body.data.path);
+      if (path === null) return c.json({ error: 'invalid_input', field: 'path' }, 400);
+    }
+    services.cliPath.set(path);
+    return c.json({ cli: cliView(await services.cli.status(true), services.cliPath.get()) });
+  });
 
   app.post('/engines', async (c) => {
     const body = await readJson(c, CreateBody);

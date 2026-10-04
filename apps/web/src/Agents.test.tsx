@@ -37,7 +37,13 @@ describe('Einstellungen: Agent-CLI', () => {
 
   it('erklärt, wenn das Programm fehlt, und sucht auf Wunsch erneut', async () => {
     const server = new FakeServer('unlocked');
-    server.cli = { state: 'missing', path: null, version: null, skipped: [] };
+    server.cli = {
+      state: 'missing',
+      path: null,
+      version: null,
+      skipped: [],
+      configuredPath: null,
+    };
     openSettings(server);
     const view = await section();
     expect(await view.findByText(/Claude Code wurde nicht gefunden/)).toBeTruthy();
@@ -49,10 +55,94 @@ describe('Einstellungen: Agent-CLI', () => {
       path: '/opt/homebrew/bin/claude',
       version: '2.2.0',
       skipped: [],
+      configuredPath: null,
     };
     await userEvent.setup().click(view.getByRole('button', { name: 'Erneut suchen' }));
     expect(await view.findByText('Claude Code gefunden, Version 2.2.0.')).toBeTruthy();
     expect(server.calls('POST', '/api/engines/detect')).toHaveLength(1);
+  });
+
+  describe('Pfad zu claude', () => {
+    it('trägt einen Pfad ein, speichert ihn, zeigt das Ergebnis und kann ihn wieder entfernen', async () => {
+      const server = new FakeServer('unlocked');
+      server.cli = {
+        state: 'missing',
+        path: null,
+        version: null,
+        skipped: [],
+        configuredPath: null,
+      };
+      openSettings(server);
+      const view = await section();
+      const user = userEvent.setup();
+      const input = (await view.findByLabelText(
+        'Pfad zu claude (nur wenn nötig)',
+      )) as HTMLInputElement;
+      expect(input.value).toBe('');
+      expect(view.queryByRole('button', { name: 'Pfad entfernen' })).toBeNull();
+      expect(
+        (view.getByRole('button', { name: 'Pfad speichern' }) as HTMLButtonElement).disabled,
+      ).toBe(true);
+
+      // Der Server findet das Programm, sobald der Pfad steht.
+      server.cli = {
+        state: 'ready',
+        path: '/opt/beispiel/bin/claude',
+        version: '2.3.0',
+        skipped: [],
+        configuredPath: null,
+      };
+      await user.type(input, '/opt/beispiel/bin/claude');
+      await user.click(view.getByRole('button', { name: 'Pfad speichern' }));
+      expect(await view.findByText('Pfad gespeichert.')).toBeTruthy();
+      expect(server.calls('PUT', '/api/engines/cli-path')[0]?.body).toEqual({
+        path: '/opt/beispiel/bin/claude',
+      });
+      expect(await view.findByText('Claude Code gefunden, Version 2.3.0.')).toBeTruthy();
+      expect(
+        (view.getByLabelText('Pfad zu claude (nur wenn nötig)') as HTMLInputElement).value,
+      ).toBe('/opt/beispiel/bin/claude');
+
+      await user.click(await view.findByRole('button', { name: 'Pfad entfernen' }));
+      await waitFor(() =>
+        expect(server.calls('PUT', '/api/engines/cli-path').at(-1)?.body).toEqual({ path: null }),
+      );
+      await waitFor(() =>
+        expect(view.queryByRole('button', { name: 'Pfad entfernen' })).toBeNull(),
+      );
+      expect(
+        (view.getByLabelText('Pfad zu claude (nur wenn nötig)') as HTMLInputElement).value,
+      ).toBe('');
+    });
+
+    it('zeigt einen eingetragenen Pfad beim Öffnen und meldet einen ungültigen am Feld', async () => {
+      const server = new FakeServer('unlocked');
+      server.cli = {
+        state: 'ready',
+        path: '/opt/beispiel/bin/claude',
+        version: '2.3.0',
+        skipped: [],
+        configuredPath: '/opt/beispiel/bin/claude',
+      };
+      openSettings(server);
+      const view = await section();
+      const user = userEvent.setup();
+      const input = (await view.findByLabelText(
+        'Pfad zu claude (nur wenn nötig)',
+      )) as HTMLInputElement;
+      await waitFor(() => expect(input.value).toBe('/opt/beispiel/bin/claude'));
+
+      await user.clear(input);
+      await user.type(input, 'claude');
+      await user.click(view.getByRole('button', { name: 'Pfad speichern' }));
+      expect(
+        await view.findByText(
+          'Das ist kein gültiger Pfad. Er muss mit „/“ beginnen und auf „claude“ enden.',
+        ),
+      ).toBeTruthy();
+      expect(input.getAttribute('aria-invalid')).toBe('true');
+      expect(view.queryByText('Pfad gespeichert.')).toBeNull();
+    });
   });
 
   it('nennt einen defekten Kandidaten, wenn keiner startet, und übersprungene bei einem Treffer', async () => {
@@ -62,6 +152,7 @@ describe('Einstellungen: Agent-CLI', () => {
       path: null,
       version: null,
       skipped: [{ path: '/Users/beispiel/.local/bin/claude', reason: 'failed' }],
+      configuredPath: null,
     };
     openSettings(server);
     const view = await section();

@@ -184,6 +184,11 @@ export function createApi(client: ApiClient) {
     async detectCli(): Promise<CliStatus> {
       return (await client.request<{ cli: CliStatus }>('POST', '/api/engines/detect')).cli;
     },
+    /** Trägt den Pfad zu „claude“ von Hand ein (`null` entfernt ihn) und sucht danach neu. */
+    async setCliPath(path: string | null): Promise<CliStatus> {
+      return (await client.request<{ cli: CliStatus }>('PUT', '/api/engines/cli-path', { path }))
+        .cli;
+    },
     // Stundenplan, Tests und der Schalter für den Werkzeugzugriff der KI (Welle 3)
     timetable: () => client.request<TimetableData>('GET', '/api/timetable'),
     createTimetableEntry: (input: TimetableInput) =>
