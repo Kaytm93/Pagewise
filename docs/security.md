@@ -10,9 +10,9 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | Zugriff aus dem Netz | Server bindet nur an Loopback, Erreichbarkeit nur über Tailscale Serve, kein Funnel |
 | Fremder Zugriff im eigenen Netz | Passcode (Hash), Sitzungs-Cookies, Rate-Limit, CSRF-Schutz, strenge CORS-Regel, Security-Header |
 | Schadcode aus Modell-Ausgaben | Markdown ohne rohes HTML, Bereinigung von SVG und HTML, kein `eval` |
-| Prompt-Injection über Bilder, Dateien, Antworten | Inhalte lösen nie selbstständig Aktionen aus, Agenten laufen mit Whitelist und im Workspace |
+| Prompt-Injection über Bilder, Dateien, Antworten, Notizen | Inhalte lösen nie selbstständig Aktionen aus, Agenten laufen mit Whitelist und im Workspace, Werkzeuge der KI lesen nur und ihre Ergebnisse gelten als Daten (D-044) |
 | Abfluss von Schlüsseln | Secrets nur serverseitig, nie in Antworten, Logs, Jobs oder Exporten, nie als Prozess-Argument |
-| Daten bei Anbietern | Transparente Anzeige pro Anbieter, Option „Bilder nicht senden“, Hinweis bei Free-Modellen |
+| Daten bei Anbietern | Transparente Anzeige pro Anbieter, Option „Bilder nicht senden“, Schalter für Stundenplan und Tests (global und je Anbieter, nur bei Abruf), Hinweis bei Free-Modellen |
 
 ## Stand der Umsetzung
 
@@ -70,3 +70,4 @@ Alles, was Nutzerdaten enthält, liegt im Datenverzeichnis: Datenbank, Uploads, 
 - Der Passcode-Schutz ist für ein privates Tailnet gedacht, nicht für das offene Internet.
 
 Meldeweg für Sicherheitslücken: [SECURITY.md](../SECURITY.md).
+| Werkzeugzugriff der KI: nur lesend, geprüfte Argumente, begrenzte Ausgabe, Schalter global und je Anbieter, nur Name und Zustand gespeichert | umgesetzt (Welle 3), siehe D-044 und [tools.md](tools.md) |

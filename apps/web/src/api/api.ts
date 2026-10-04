@@ -9,6 +9,8 @@ import type {
   EnginePatch,
   EngineProfile,
   EnginesInfo,
+  Exam,
+  ExamInput,
   Group,
   ImportResult,
   ModelSettings,
@@ -28,6 +30,10 @@ import type {
   SubjectInput,
   SubjectList,
   TestOutcome,
+  TimetableData,
+  TimetableEntry,
+  TimetableInput,
+  WeekAnchor,
 } from './types';
 
 function promptPath(scope: PromptScope): string {
@@ -174,6 +180,38 @@ export function createApi(client: ApiClient) {
     async detectCli(): Promise<CliStatus> {
       return (await client.request<{ cli: CliStatus }>('POST', '/api/engines/detect')).cli;
     },
+    // Stundenplan, Tests und der Schalter für den Werkzeugzugriff der KI (Welle 3)
+    timetable: () => client.request<TimetableData>('GET', '/api/timetable'),
+    createTimetableEntry: (input: TimetableInput) =>
+      client.request<TimetableEntry>('POST', '/api/timetable', input),
+    updateTimetableEntry: (id: string, patch: Partial<TimetableInput>) =>
+      client.request<TimetableEntry>('PATCH', `/api/timetable/${id}`, patch),
+    deleteTimetableEntry: (id: string) => client.request<void>('DELETE', `/api/timetable/${id}`),
+    /** Legt fest, welche Wochenart die Woche mit diesem Datum hat, oder hebt es mit `null` auf. */
+    async setWeekAnchor(
+      anchor: { date: string; week: 'a' | 'b' } | null,
+    ): Promise<WeekAnchor | null> {
+      return (
+        await client.request<{ weekAnchor: WeekAnchor | null }>('PUT', '/api/timetable/week', {
+          anchor,
+        })
+      ).weekAnchor;
+    },
+    async exams(): Promise<Exam[]> {
+      return (await client.request<{ exams: Exam[] }>('GET', '/api/exams')).exams;
+    },
+    createExam: (input: ExamInput) => client.request<Exam>('POST', '/api/exams', input),
+    updateExam: (id: string, patch: Partial<ExamInput>) =>
+      client.request<Exam>('PATCH', `/api/exams/${id}`, patch),
+    deleteExam: (id: string) => client.request<void>('DELETE', `/api/exams/${id}`),
+    async toolsEnabled(): Promise<boolean> {
+      return (await client.request<{ enabled: boolean }>('GET', '/api/tool-settings')).enabled;
+    },
+    async setToolsEnabled(enabled: boolean): Promise<boolean> {
+      return (await client.request<{ enabled: boolean }>('PUT', '/api/tool-settings', { enabled }))
+        .enabled;
+    },
+
     /** Adresse zum Herunterladen einer Datei (gleiche Herkunft, Anmeldung per Cookie). */
     assetUrl: (id: string) => `/api/assets/${id}/download`,
     /** Sendet eine Nachricht und liest die Antwort als Strom mit. */

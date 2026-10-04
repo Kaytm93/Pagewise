@@ -1,9 +1,9 @@
-import { type FormEvent, type ReactNode, useState } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 import { ApiError } from '../api/client';
 import { messages as m } from '../i18n';
 import { useSession } from '../session/SessionProvider';
 import { Button } from '../ui/Button';
-import { PasscodeField } from '../ui/Field';
+import { CheckField, PasscodeField } from '../ui/Field';
 import { FieldError } from '../ui/FieldError';
 import { type FxPreference, readFx, saveFx } from '../ui/fx';
 import { Segmented } from '../ui/Segmented';
@@ -72,6 +72,60 @@ function EffectsChoice() {
       <p className="mt-1 mb-4 max-w-[52ch] text-sm text-ink-muted">{e.lead}</p>
       <Segmented legend={e.title} options={EFFECTS} value={effects} onChange={choose} />
       <p className="mt-3 max-w-[52ch] text-sm text-ink-secondary">{e.help[effects]}</p>
+    </div>
+  );
+}
+
+/** Der globale Schalter: darf die KI Stundenplan und Tests über Werkzeuge einsehen? (Standard: ja.) */
+function ToolsChoice() {
+  const { api } = useSession();
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [failed, setFailed] = useState(false);
+  const t = m.settings.tools;
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .toolsEnabled()
+      .then((value) => {
+        if (!cancelled) setEnabled(value);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
+
+  async function change(next: boolean) {
+    setFailed(false);
+    const before = enabled;
+    setEnabled(next);
+    try {
+      setEnabled(await api.setToolsEnabled(next));
+    } catch {
+      setEnabled(before);
+      setFailed(true);
+    }
+  }
+
+  if (enabled === null && !failed) {
+    return (
+      <p role="status" className="text-ink-muted">
+        {t.loading}
+      </p>
+    );
+  }
+  return (
+    <div>
+      <CheckField
+        label={t.label}
+        hint={t.hint}
+        checked={enabled ?? true}
+        onChange={(value) => void change(value)}
+      />
+      {failed && <FieldError>{t.failed}</FieldError>}
     </div>
   );
 }
@@ -188,6 +242,9 @@ export function SettingsPage() {
         </Section>
         <Section title={m.providers.title} lead={m.providers.lead}>
           <ProvidersSection />
+        </Section>
+        <Section title={m.settings.tools.title} lead={m.settings.tools.lead}>
+          <ToolsChoice />
         </Section>
         <Section title={m.agents.title} lead={m.agents.lead}>
           <AgentSection />

@@ -108,6 +108,8 @@ export interface Provider {
   models: ProviderModel[];
   /** Bilder an diesen Anbieter senden? Aus: nur Text verlässt den Rechner. */
   sendImages: boolean;
+  /** Darf das Modell Stundenplan und Tests über Werkzeuge einsehen? Aus: diese Daten gehen nie an den Anbieter. */
+  allowTools: boolean;
   hasKey: boolean;
   /** Letzte vier Zeichen, nur bei langen Schlüsseln. Der Schlüssel selbst kommt nie an. */
   keyHint: string | null;
@@ -128,6 +130,7 @@ export interface ProviderInput {
   apiKey?: string;
   models?: ModelEntry[];
   sendImages?: boolean;
+  allowTools?: boolean;
 }
 
 export interface ProviderPatch {
@@ -135,6 +138,7 @@ export interface ProviderPatch {
   baseUrl?: string;
   models?: ModelEntry[];
   sendImages?: boolean;
+  allowTools?: boolean;
   apiKey?: string;
   clearKey?: boolean;
 }
@@ -261,6 +265,50 @@ export type StreamEvent =
   | { type: 'done'; message: ChatMessage }
   | { type: 'stopped'; message: ChatMessage }
   | { type: 'failed'; code: string; message: ChatMessage };
+
+// --- Stundenplan und Tests (Welle 3) ----------------------------------------------------------------
+
+export type WeekKind = 'all' | 'a' | 'b';
+
+/** Eine Stunde im Stundenplan. Zeiten sind frei (`HH:MM`), `weekday` 1 = Montag bis 7 = Sonntag. */
+export interface TimetableEntry {
+  id: string;
+  weekday: number;
+  startTime: string;
+  endTime: string;
+  /** `null`: ohne Fach, oder das Fach wurde gelöscht. */
+  subjectId: string | null;
+  room: string | null;
+  note: string | null;
+  week: WeekKind;
+}
+
+export type TimetableInput = Omit<TimetableEntry, 'id'>;
+
+/** Eine bekannte Woche („diese Woche ist A“): ihr Montag und ihre Art. */
+export interface WeekAnchor {
+  monday: string;
+  week: 'a' | 'b';
+}
+
+export interface TimetableData {
+  entries: TimetableEntry[];
+  weekAnchor: WeekAnchor | null;
+}
+
+/** Ein Testeintrag (Schulaufgabe, Test, Ex, Referat …). `date` ist `YYYY-MM-DD`. */
+export interface Exam {
+  id: string;
+  subjectId: string;
+  kind: string;
+  title: string | null;
+  date: string;
+  time: string | null;
+  topics: string | null;
+  notes: string | null;
+}
+
+export type ExamInput = Omit<Exam, 'id'>;
 
 // --- Agent-CLI (Phase 1e) -----------------------------------------------------------------------
 

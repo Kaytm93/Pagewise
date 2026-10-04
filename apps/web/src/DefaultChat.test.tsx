@@ -129,7 +129,15 @@ describe('Fach „Standard“ in der Oberfläche', () => {
     await screen.findByRole('navigation', { name: 'Navigation' });
     const links = within(nav()).getAllByRole('link');
     const names = links.map((link) => link.textContent);
-    expect(names.slice(0, 4)).toEqual(['Pagewise', 'Start', 'Standard', 'Beispielfach A']);
+    // Danach Stundenplan und Tests, dann die Fächer des Nutzers.
+    expect(names.slice(0, 6)).toEqual([
+      'Pagewise',
+      'Start',
+      'Standard',
+      'Stundenplan',
+      'Tests',
+      'Beispielfach A',
+    ]);
     expect(within(nav()).getByRole('link', { name: 'Standard' }).getAttribute('href')).toBe(
       `/subjects/${server.defaultSubject.id}`,
     );

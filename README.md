@@ -9,6 +9,7 @@ Ein selbst gehosteter Schul-Workspace für den Browser. Jede Person richtet ihre
 - **Fächer und Untergruppen**: aus einem Katalog von über 60 neutralen Vorlagen (Sprachen, Naturwissenschaften, Gesellschaft, Kunst, Sport …) mit Suche oder frei angelegt, dazu Untergruppen (z. B. „Referat“ oder „Schulaufgabe“). Chats gehören fest zu einem Fach.
 - **Standard-Chat** für Fragen ohne Fach: ein Klick auf „Pagewise“. Er liegt im eingebauten Fach „Standard“.
 - **Standard-Prompt je Fach**: ein neutraler, für alle gleicher Text, der gilt, solange du nichts Eigenes einträgst. Du kannst ihn ändern und jederzeit zurücksetzen.
+- **Stundenplan und Tests** (Schulaufgabe, Test, Ex, Referat … mit Datum): Übersicht „Als Nächstes“ auf der Startseite. Die KI kann beides nur lesend nachschlagen, wenn du es erlaubst (Schalter global und je Anbieter), und zeigt im Chat, wann sie es getan hat.
 - **Hefteinträge** mit Formeln, Funktionsgraphen, chemischen Strukturen und Noten, einzeln angelegt oder aus einem Chat oder Foto erzeugt.
 - **Export als PDF und PPTX.**
 - **Fotos von Heft und Tafel** als Eingabe für ein Vision-Modell.

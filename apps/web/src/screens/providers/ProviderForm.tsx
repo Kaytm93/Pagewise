@@ -73,6 +73,7 @@ export function ProviderForm({
   const [apiKey, setApiKey] = useState('');
   const [removeKey, setRemoveKey] = useState(false);
   const [sendImages, setSendImages] = useState(provider?.sendImages ?? true);
+  const [allowTools, setAllowTools] = useState(provider?.allowTools ?? true);
   const [models, setModels] = useState<ModelEntry[]>(
     provider ? provider.models.map(toEntry) : (preset?.models ?? []),
   );
@@ -111,6 +112,7 @@ export function ProviderForm({
           patch.models = models;
         }
         if (sendImages !== provider.sendImages) patch.sendImages = sendImages;
+        if (allowTools !== provider.allowTools) patch.allowTools = allowTools;
         if (apiKey.trim() !== '') patch.apiKey = apiKey.trim();
         else if (removeKey) patch.clearKey = true;
         if (Object.keys(patch).length === 0) {
@@ -127,6 +129,7 @@ export function ProviderForm({
             ...(apiKey.trim() !== '' ? { apiKey: apiKey.trim() } : {}),
             models,
             ...(sendImages ? {} : { sendImages: false }),
+            ...(allowTools ? {} : { allowTools: false }),
           }),
         );
       }
@@ -234,6 +237,7 @@ export function ProviderForm({
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-secondary">
           <li>{m.providers.form.sentText}</li>
           <li>{m.providers.form.sentImages}</li>
+          <li>{m.providers.form.sentTools}</li>
           <li>{m.providers.form.sentNever}</li>
         </ul>
         <div className="mt-2">
@@ -242,6 +246,12 @@ export function ProviderForm({
             hint={m.providers.form.sendImagesHint}
             checked={sendImages}
             onChange={setSendImages}
+          />
+          <CheckField
+            label={m.providers.form.allowTools}
+            hint={m.providers.form.allowToolsHint}
+            checked={allowTools}
+            onChange={setAllowTools}
           />
         </div>
       </section>

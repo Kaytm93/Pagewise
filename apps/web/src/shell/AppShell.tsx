@@ -1,6 +1,9 @@
 import { Menu } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { messages as m } from '../i18n';
+import { ExamsPage } from '../planning/ExamsPage';
+import { PlannerProvider } from '../planning/PlannerProvider';
+import { TimetablePage } from '../planning/TimetablePage';
 import { pathFor, type Route, useRoute } from '../router';
 import { DefaultChatPage } from '../screens/chat/DefaultChatPage';
 import { HomePage } from '../screens/HomePage';
@@ -26,6 +29,10 @@ function Page({ route }: { route: Route }) {
       return <SettingsPage />;
     case 'default-chat':
       return <DefaultChatPage />;
+    case 'timetable':
+      return <TimetablePage />;
+    case 'exams':
+      return <ExamsPage />;
     case 'subject':
       return <SubjectPage subjectId={route.subjectId} groupId={route.groupId} />;
     case 'chat':
@@ -49,6 +56,8 @@ function Page({ route }: { route: Route }) {
 function useTitle(route: Route): string {
   const { findSubject } = useWorkspace();
   if (route.name === 'settings') return m.settings.title;
+  if (route.name === 'timetable') return m.planning.timetable.title;
+  if (route.name === 'exams') return m.planning.exams.title;
   if (route.name === 'chat') {
     return findSubject(route.subjectId)?.name ?? m.app.name;
   }
@@ -80,6 +89,14 @@ function depthOf(route: Route): 1 | 2 | 3 {
  * mehr auf den Stapel; das neue Blatt wird beim Wechsel aufgelegt.
  */
 export function AppShell() {
+  return (
+    <PlannerProvider>
+      <Shell />
+    </PlannerProvider>
+  );
+}
+
+function Shell() {
   const route = useRoute();
   const title = useTitle(route);
   const color = useRouteColor(route);

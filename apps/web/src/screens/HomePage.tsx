@@ -1,6 +1,7 @@
 import { MessageCircle, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { messages as m } from '../i18n';
+import { NextUp } from '../planning/NextUp';
 import { navigate } from '../router';
 import { Button } from '../ui/Button';
 import { Link } from '../ui/Link';
@@ -62,7 +63,9 @@ export function HomePage() {
         </p>
       </div>
 
-      <section className="mo-rise mo-i-3 mt-12" aria-labelledby="home-subjects">
+      <NextUp />
+
+      <section className="mo-rise mo-i-4 mt-12" aria-labelledby="home-subjects">
         <h2
           id="home-subjects"
           className="mb-3.5 font-sans text-[15px] font-medium tracking-[0.06em] text-ink-muted uppercase"

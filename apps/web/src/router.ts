@@ -8,6 +8,9 @@ export type Route =
   | { name: 'subject'; subjectId: string; groupId: string | null }
   | { name: 'chat'; subjectId: string; chatId: string }
   | { name: 'settings' }
+  /** Stundenplan und Testeinträge (Welle 3). */
+  | { name: 'timetable' }
+  | { name: 'exams' }
   | { name: 'not-found' };
 
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -17,6 +20,8 @@ export function parseRoute(pathname: string): Route {
   if (parts.length === 0) return { name: 'home' };
   if (parts[0] === 'settings' && parts.length === 1) return { name: 'settings' };
   if (parts[0] === 'chat' && parts.length === 1) return { name: 'default-chat' };
+  if (parts[0] === 'timetable' && parts.length === 1) return { name: 'timetable' };
+  if (parts[0] === 'exams' && parts.length === 1) return { name: 'exams' };
   if (parts[0] === 'subjects') {
     const subjectId = parts[1];
     if (subjectId && ID.test(subjectId)) {
@@ -40,6 +45,10 @@ export function pathFor(route: Route): string {
       return '/settings';
     case 'default-chat':
       return '/chat';
+    case 'timetable':
+      return '/timetable';
+    case 'exams':
+      return '/exams';
     case 'subject':
       return route.groupId
         ? `/subjects/${route.subjectId}/groups/${route.groupId}`

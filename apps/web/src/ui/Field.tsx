@@ -155,6 +155,8 @@ interface TextAreaFieldProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaEle
   label: string;
   hint?: string;
   error?: string | null;
+  /** Niedriges Feld für kurze Notizen statt der hohen Fläche für Prompts. */
+  compact?: boolean;
 }
 
 /** Mehrzeiliges Textfeld (z. B. für Prompts). Die Höhe lässt sich ziehen. */
@@ -162,6 +164,7 @@ export function TextAreaField({
   label,
   hint,
   error,
+  compact = false,
   className = '',
   ...textarea
 }: TextAreaFieldProps) {
@@ -178,7 +181,7 @@ export function TextAreaField({
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy || undefined}
-        className="mt-1.5 min-h-60 w-full resize-y rounded-control border border-control-edge bg-sheet px-3 py-2.5 text-base leading-relaxed text-ink disabled:opacity-60"
+        className={`mt-1.5 ${compact ? 'min-h-24' : 'min-h-60'} w-full resize-y rounded-control border border-control-edge bg-sheet px-3 py-2.5 text-base leading-relaxed text-ink disabled:opacity-60`}
         {...textarea}
       />
       {hint && (

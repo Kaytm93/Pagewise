@@ -4,7 +4,7 @@ Stand: Phase 1a (c) und (d) umgesetzt. Anbieter und Modelle lassen sich in der O
 
 ## Provider-Registry
 
-Gebaut ist der Typ `openai-compatible`: Name, Basis-URL, optionaler API-Key und eine Modellliste. Je Modell gibt es vier Fähigkeiten (Bilder, Werkzeuge, Denken, Streaming), die du selbst setzt, weil die Schnittstelle sie nicht zuverlässig meldet. Die Liste kannst du von Hand pflegen oder mit „Vom Anbieter laden“ aus `/models` übernehmen (höchstens 100 Modelle je Anbieter, die Auswahl bleibt bei dir).
+Gebaut ist der Typ `openai-compatible`: Name, Basis-URL, optionaler API-Key und eine Modellliste. Je Modell gibt es vier Fähigkeiten (Bilder, Werkzeuge, Denken, Streaming), die du selbst setzt, weil die Schnittstelle sie nicht zuverlässig meldet. „Werkzeuge“ braucht ein Modell, damit es Stundenplan und Tests nachschlagen darf (siehe [tools.md](tools.md)); je Anbieter lässt sich das außerdem ausschalten. Die Liste kannst du von Hand pflegen oder mit „Vom Anbieter laden“ aus `/models` übernehmen (höchstens 100 Modelle je Anbieter, die Auswahl bleibt bei dir).
 
 Weitere Typen (`anthropic-messages`, `gemini`) sind nicht gebaut und kommen erst bei Bedarf. Jeder Anbieter mit OpenAI-kompatibler Schnittstelle geht schon jetzt über „Eigener Anbieter“ (zum Beispiel OpenAI, Mistral, Groq, DeepSeek).
 

@@ -7,6 +7,7 @@ import { Link } from '../../ui/Link';
 import { AgentActivity } from './AgentActivity';
 import { AssetList } from './AssetList';
 import { Markdown } from './Markdown';
+import { isModelTool, ToolNotes } from './ToolNotes';
 import { useCopy } from './useCopy';
 
 /** Fehler, bei denen die Einstellungen weiterhelfen. */
@@ -94,6 +95,7 @@ export const MessageItem = memo(function MessageItem({
   return (
     <article aria-busy={live || undefined}>
       <h3 className="sr-only">{m.chat.answer}</h3>
+      {!byAgent && <ToolNotes steps={message.activity} />}
       {hasText && <Markdown text={message.content} />}
       {hasText && live && (
         <p className="mt-2 flex min-h-6 items-center gap-2 text-sm text-ink-muted">
@@ -117,7 +119,9 @@ export const MessageItem = memo(function MessageItem({
         <p className="text-ink-muted">{m.chat.emptyAnswer}</p>
       )}
 
-      {byAgent && <AgentActivity steps={message.activity} live={live} />}
+      {byAgent && (
+        <AgentActivity steps={message.activity.filter((step) => !isModelTool(step))} live={live} />
+      )}
       {assetUrl && <AssetList assets={message.assets} url={assetUrl} />}
 
       {failed && (

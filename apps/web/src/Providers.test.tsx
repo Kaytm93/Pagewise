@@ -484,6 +484,53 @@ describe('Daten an Anbieter', () => {
   });
 });
 
+describe('Stundenplan und Tests für diesen Anbieter', () => {
+  it('erlaubt sie standardmäßig und lässt sich beim Anlegen und Bearbeiten ausschalten', async () => {
+    await openSettings();
+    const server = new FakeServer('unlocked');
+    mount(server);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Anbieter hinzufügen' }));
+    let dialog = await screen.findByRole('dialog', { name: 'Anbieter hinzufügen' });
+    const box = () =>
+      within(dialog).getByRole('checkbox', { name: /Stundenplan und Tests einsehen lassen/ });
+    expect((box() as HTMLInputElement).checked).toBe(true);
+    // Die Übersicht „Was an diesen Anbieter geht“ nennt es ausdrücklich.
+    expect(
+      within(dialog).getByText(
+        /Stundenplan und Tests nur, wenn das Modell sie über ein Werkzeug abfragt/,
+      ),
+    ).toBeTruthy();
+    await user.type(within(dialog).getByLabelText(/API-Schlüssel/), KEY);
+    await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(server.calls('POST', '/api/providers')[0]?.body).not.toHaveProperty('allowTools');
+
+    await user.click(await screen.findByRole('button', { name: 'Anbieter hinzufügen' }));
+    dialog = await screen.findByRole('dialog', { name: 'Anbieter hinzufügen' });
+    await user.click(box());
+    await user.clear(within(dialog).getByLabelText('Name'));
+    await user.type(within(dialog).getByLabelText('Name'), 'Ohne Werkzeuge');
+    await user.type(within(dialog).getByLabelText(/API-Schlüssel/), KEY);
+    await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(server.calls('POST', '/api/providers')[1]?.body).toMatchObject({ allowTools: false });
+
+    const provider = server.providers.find((entry) => entry.name === 'Ohne Werkzeuge');
+    expect(provider?.allowTools).toBe(false);
+    await user.click(await screen.findByRole('button', { name: '„Ohne Werkzeuge“ bearbeiten' }));
+    dialog = await screen.findByRole('dialog', { name: 'Anbieter bearbeiten' });
+    expect((box() as HTMLInputElement).checked).toBe(false);
+    await user.click(box());
+    await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(server.calls('PATCH', `/api/providers/${provider?.id}`)[0]?.body).toEqual({
+      allowTools: true,
+    });
+  });
+});
+
 describe('Standardmodell und Ausweichmodelle', () => {
   function withModels() {
     const server = new FakeServer('unlocked');

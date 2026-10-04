@@ -2,6 +2,7 @@ import { ArrowLeft, Pencil, Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { Group } from '../api/types';
 import { format, messages as m } from '../i18n';
+import { UpcomingExams } from '../planning/UpcomingExams';
 import { Button } from '../ui/Button';
 import { Link } from '../ui/Link';
 import { Sheet } from '../ui/Sheet';
@@ -128,6 +129,8 @@ export function SubjectPage({ subjectId, groupId }: { subjectId: string; groupId
       </section>
 
       {!group && <SubjectModel subject={subject} />}
+
+      {!group && !builtin && <UpcomingExams subjectId={subject.id} />}
 
       <ChatList
         key={`${subject.id}/${group?.id ?? ''}`}

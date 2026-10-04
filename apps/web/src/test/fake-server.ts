@@ -6,6 +6,7 @@ import type {
   CliStatus,
   EngineKindInfo,
   EngineProfile,
+  Exam,
   ModelEntry,
   ModelSettings,
   Profile,
@@ -16,6 +17,8 @@ import type {
   Subject,
   SubjectCatalog,
   TestOutcome,
+  TimetableEntry,
+  WeekAnchor,
 } from '../api/types';
 
 export interface RecordedRequest {
@@ -189,6 +192,11 @@ export class FakeServer {
     onboardingCompleted: true,
   };
   subjects: Subject[] = [];
+  /** Stundenplan, Tests, bekannte Woche und der Schalter für den Werkzeugzugriff der KI (Welle 3). */
+  timetable: TimetableEntry[] = [];
+  weekAnchor: WeekAnchor | null = null;
+  exams: Exam[] = [];
+  toolsEnabled = true;
   /** Das eingebaute Fach „Standard“, wie es der echte Server immer mitliefert. */
   defaultSubject: Subject = this.freshDefaultSubject();
   /** Katalog der Fachvorlagen (erfundene Namen). */
@@ -438,6 +446,7 @@ export class FakeServer {
       this.handleProviders(method, path, data) ??
       this.handleEngines(method, path, data) ??
       this.handlePrompts(method, path, data) ??
+      this.handlePlanner(method, path, data) ??
       this.handleChats(method, path, data, signal);
     if (extra) return extra;
 
@@ -453,6 +462,7 @@ export class FakeServer {
       baseUrl: 'https://anbieter.example.test/v1',
       models: [],
       sendImages: true,
+      allowTools: true,
       hasKey: false,
       keyHint: null,
       warning: null,
@@ -527,6 +537,7 @@ export class FakeServer {
         baseUrl: baseUrl.trim().replace(/\/+$/, ''),
         models: this.withFree(models),
         sendImages: data.sendImages !== false,
+        allowTools: data.allowTools !== false,
         warning: /\/api\/coding(\/|$)/.test(baseUrl) ? 'coding_plan' : null,
       });
       if (typeof data.apiKey === 'string') {
@@ -578,6 +589,7 @@ export class FakeServer {
       }
       if (Array.isArray(data.models)) provider.models = this.withFree(data.models as ModelEntry[]);
       if (typeof data.sendImages === 'boolean') provider.sendImages = data.sendImages;
+      if (typeof data.allowTools === 'boolean') provider.allowTools = data.allowTools;
       if (typeof data.apiKey === 'string') {
         this.secrets.set(provider.id, data.apiKey);
         provider.hasKey = true;
@@ -862,6 +874,135 @@ export class FakeServer {
     return undefined;
   }
 
+  addLesson(extra: Partial<TimetableEntry> = {}): TimetableEntry {
+    const entry: TimetableEntry = {
+      id: nextId(),
+      weekday: 1,
+      startTime: '08:00',
+      endTime: '08:45',
+      subjectId: null,
+      room: null,
+      note: null,
+      week: 'all',
+      ...extra,
+    };
+    this.timetable.push(entry);
+    return entry;
+  }
+
+  addExam(subjectId: string, extra: Partial<Exam> = {}): Exam {
+    const exam: Exam = {
+      id: nextId(),
+      subjectId,
+      kind: 'Test',
+      title: null,
+      date: '2026-10-08',
+      time: null,
+      topics: null,
+      notes: null,
+      ...extra,
+    };
+    this.exams.push(exam);
+    return exam;
+  }
+
+  private handlePlanner(
+    method: string,
+    path: string,
+    data: Record<string, unknown>,
+  ): Response | undefined {
+    const time = /^([01]\d|2[0-3]):[0-5]\d$/;
+    const date = /^\d{4}-\d{2}-\d{2}$/;
+    if (path === '/api/tool-settings') {
+      if (method === 'PUT') this.toolsEnabled = data.enabled === true;
+      return json(200, { enabled: this.toolsEnabled });
+    }
+    if (path === '/api/timetable' && method === 'GET') {
+      return json(200, { entries: this.timetable, weekAnchor: this.weekAnchor });
+    }
+    if (path === '/api/timetable' && method === 'POST') {
+      const start = String(data.startTime ?? '');
+      const end = String(data.endTime ?? '');
+      if (!time.test(start) || !time.test(end) || end <= start) {
+        return json(400, { error: 'invalid_input', field: 'endTime', reason: 'before_start' });
+      }
+      const weekday = Number(data.weekday);
+      if (!Number.isInteger(weekday) || weekday < 1 || weekday > 7) {
+        return json(400, { error: 'invalid_input', field: 'weekday' });
+      }
+      return json(
+        201,
+        this.addLesson({
+          weekday,
+          startTime: start,
+          endTime: end,
+          subjectId: (data.subjectId as string | null) ?? null,
+          room: (data.room as string | null) ?? null,
+          note: (data.note as string | null) ?? null,
+          week: (data.week as TimetableEntry['week']) ?? 'all',
+        }),
+      );
+    }
+    if (path === '/api/timetable/week' && method === 'PUT') {
+      const anchor = data.anchor as { date: string; week: 'a' | 'b' } | null;
+      this.weekAnchor = anchor ? { monday: mondayOfDate(anchor.date), week: anchor.week } : null;
+      return json(200, { weekAnchor: this.weekAnchor });
+    }
+    const lesson = /^\/api\/timetable\/([^/]+)$/.exec(path);
+    if (lesson) {
+      const found = this.timetable.find((entry) => entry.id === lesson[1]);
+      if (!found) return json(404, { error: 'not_found' });
+      if (method === 'DELETE') {
+        this.timetable = this.timetable.filter((entry) => entry !== found);
+        return json(204);
+      }
+      if (method === 'PATCH') {
+        const next = { ...found, ...data } as TimetableEntry;
+        if (next.endTime <= next.startTime) {
+          return json(400, { error: 'invalid_input', field: 'endTime', reason: 'before_start' });
+        }
+        Object.assign(found, next);
+        return json(200, found);
+      }
+    }
+    if (path === '/api/exams' && method === 'GET') return json(200, { exams: this.exams });
+    if (path === '/api/exams' && method === 'POST') {
+      if (!date.test(String(data.date ?? ''))) {
+        return json(400, { error: 'invalid_input', field: 'date' });
+      }
+      if (
+        !this.allSubjects().some((entry) => entry.id === data.subjectId && entry.kind !== 'default')
+      ) {
+        return json(400, { error: 'invalid_input', field: 'subjectId' });
+      }
+      return json(
+        201,
+        this.addExam(String(data.subjectId), {
+          kind: String(data.kind ?? ''),
+          title: (data.title as string | null) ?? null,
+          date: String(data.date),
+          time: (data.time as string | null) ?? null,
+          topics: (data.topics as string | null) ?? null,
+          notes: (data.notes as string | null) ?? null,
+        }),
+      );
+    }
+    const exam = /^\/api\/exams\/([^/]+)$/.exec(path);
+    if (exam) {
+      const found = this.exams.find((entry) => entry.id === exam[1]);
+      if (!found) return json(404, { error: 'not_found' });
+      if (method === 'DELETE') {
+        this.exams = this.exams.filter((entry) => entry !== found);
+        return json(204);
+      }
+      if (method === 'PATCH') {
+        Object.assign(found, data);
+        return json(200, found);
+      }
+    }
+    return undefined;
+  }
+
   addEngine(name: string, extra: Partial<EngineProfile> = {}): EngineProfile {
     const profile: EngineProfile = {
       id: nextId(),
@@ -1083,4 +1224,13 @@ export class FakeServer {
     }
     return json(404, { error: 'not_found' });
   }
+}
+
+/** Montag der Woche eines Datums (`YYYY-MM-DD`), für den Server-Ersatz. */
+function mondayOfDate(date: string): string {
+  const [year, month, day] = date.split('-').map(Number) as [number, number, number];
+  const value = new Date(Date.UTC(year, month - 1, day));
+  const weekday = value.getUTCDay() === 0 ? 7 : value.getUTCDay();
+  value.setUTCDate(value.getUTCDate() + 1 - weekday);
+  return value.toISOString().slice(0, 10);
 }

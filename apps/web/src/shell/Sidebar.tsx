@@ -1,4 +1,12 @@
-import { ChevronRight, House, MessageCircle, Plus, Settings } from 'lucide-react';
+import {
+  CalendarDays,
+  ChevronRight,
+  ClipboardList,
+  House,
+  MessageCircle,
+  Plus,
+  Settings,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Subject } from '../api/types';
 import { messages as m } from '../i18n';
@@ -167,6 +175,36 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               </Link>
             </li>
             {row(defaultSubject)}
+            <li className="flex items-center">
+              <Link
+                to={{ name: 'timetable' }}
+                onClick={onNavigate}
+                aria-current={route.name === 'timetable' ? 'page' : undefined}
+                className={`${rowBase} ${route.name === 'timetable' ? rowActive : ''}`}
+              >
+                <CalendarDays
+                  aria-hidden="true"
+                  strokeWidth={1.6}
+                  className="size-[18px] shrink-0"
+                />
+                {m.sidebar.timetable}
+              </Link>
+            </li>
+            <li className="flex items-center">
+              <Link
+                to={{ name: 'exams' }}
+                onClick={onNavigate}
+                aria-current={route.name === 'exams' ? 'page' : undefined}
+                className={`${rowBase} ${route.name === 'exams' ? rowActive : ''}`}
+              >
+                <ClipboardList
+                  aria-hidden="true"
+                  strokeWidth={1.6}
+                  className="size-[18px] shrink-0"
+                />
+                {m.sidebar.exams}
+              </Link>
+            </li>
           </ul>
 
           <h2 className="px-3.5 pt-3 pb-1 font-sans text-[12.5px] font-medium tracking-[0.06em] text-ink-muted uppercase">
