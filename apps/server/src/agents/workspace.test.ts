@@ -29,8 +29,9 @@ describe('WorkspaceManager', () => {
     const main = manager.ensure(SUBJECT, null);
     const group = manager.ensure(SUBJECT, GROUP);
     expect(main).not.toBe(group);
-    expect(main.endsWith(`${SUBJECT}/main`)).toBe(true);
-    expect(group.endsWith(`${SUBJECT}/groups/${GROUP}`)).toBe(true);
+    // Flach, damit der Pfad für die Sandbox kurz bleibt.
+    expect(main.endsWith(`/workspaces/${SUBJECT}`)).toBe(true);
+    expect(group.endsWith(`/workspaces/${GROUP}`)).toBe(true);
     expect(manager.ensure(SUBJECT, null)).toBe(main);
   });
 
@@ -55,8 +56,10 @@ describe('WorkspaceManager', () => {
     manager.removeGroup(SUBJECT, GROUP);
     expect(existsSync(manager.pathFor(SUBJECT, GROUP))).toBe(false);
     expect(existsSync(manager.pathFor(SUBJECT, null))).toBe(true);
-    manager.removeSubject(SUBJECT);
+    writeFileSync(join(manager.ensure(SUBJECT, GROUP), 'c.txt'), 'z');
+    manager.removeSubject(SUBJECT, [GROUP]);
     expect(existsSync(join(root, SUBJECT))).toBe(false);
+    expect(existsSync(join(root, GROUP))).toBe(false);
     // Unbekanntes und Ungültiges ist harmlos.
     manager.removeSubject(SUBJECT);
     manager.removeSubject('../irgendwas');

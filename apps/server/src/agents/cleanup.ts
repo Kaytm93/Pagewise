@@ -34,9 +34,16 @@ export class AgentCleanup {
       .map((row) => row.id);
     await this.chatService.stopChats(chatIds);
     const files = this.assets.idsForSubject(subjectId);
+    // Die Untergruppen sind nach dem Löschen aus der Datenbank verschwunden: ihre IDs jetzt vormerken.
+    const groupIds = this.db
+      .select({ id: subjectGroups.id })
+      .from(subjectGroups)
+      .where(eq(subjectGroups.subjectId, subjectId))
+      .all()
+      .map((row) => row.id);
     return async () => {
       await this.assets.deleteFiles(files);
-      this.workspaces.removeSubject(subjectId);
+      this.workspaces.removeSubject(subjectId, groupIds);
     };
   }
 

@@ -147,7 +147,7 @@ describe('Chats mit Agent-CLI', () => {
       },
     });
     const [call] = logs();
-    expect(call?.cwd.endsWith(`/workspaces/${subjectId}/main`)).toBe(true);
+    expect(call?.cwd.endsWith(`/workspaces/${subjectId}`)).toBe(true);
     // Der Auftrag ist nur die Nachricht der Person, das System-Prompt kommt aus der Datei.
     expect(call?.prompt).toBe('Erkläre ein Beispiel');
     expect(call?.systemPrompt).toContain('## Arbeitsumgebung');
@@ -342,6 +342,7 @@ describe('Chats mit Agent-CLI', () => {
     // Ohne einen echten Lauf (der Pfad einer Untergruppe ist tiefer als ein temporärer Ordner erlaubt).
     const { services } = harness;
     const dir = services.workspaces.ensure(subjectId, group);
+    const subjectDir = services.workspaces.ensure(subjectId, null);
     writeFileSync(join(dir, 'b.pdf'), 'Beispiel');
     const message = services.database.db
       .insert(messages)
@@ -357,8 +358,8 @@ describe('Chats mit Agent-CLI', () => {
     expect((await session.call('DELETE', `/api/groups/${group}`)).status).toBe(204);
     expect(existsSync(file)).toBe(false);
     expect(existsSync(dir)).toBe(false);
-    // Das Fach selbst bleibt.
-    expect(existsSync(join(services.paths.workspaces, subjectId))).toBe(true);
+    // Der Arbeitsordner des Fachs selbst bleibt.
+    expect(existsSync(subjectDir)).toBe(true);
   });
 
   it('„Alles löschen“ entfernt auch Konfigurationen und Sitzungen der Agenten', async () => {

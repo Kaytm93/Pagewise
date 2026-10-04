@@ -17,8 +17,12 @@ import { snapshotDir, type WorkspaceManager } from './workspace';
  * die Nachricht zu speichern.
  */
 
-/** Ab dieser Zahl von Pfadbestandteilen scheitert die Sandbox beim Start (gemessen, siehe docs/agent-cli.md). */
-export const MAX_WORKSPACE_DEPTH = 11;
+/**
+ * Wie viele Pfadbestandteile der Arbeitsordner höchstens haben darf. Gemessen mit Claude Code 2.1.220 auf
+ * macOS: bis 10 startet die Sandbox, ab 11 wird ihr Profil so groß (über 1 MB), dass Befehle mit E2BIG scheitern
+ * (siehe docs/agent-cli.md). Der Standardpfad auf macOS hat 7, mit Untergruppen ebenfalls 7.
+ */
+export const MAX_WORKSPACE_DEPTH = 10;
 
 export type RunnerEvent =
   | { type: 'delta'; text: string }

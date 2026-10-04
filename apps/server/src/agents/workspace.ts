@@ -3,9 +3,12 @@ import { join, relative, sep } from 'node:path';
 import { isInside } from '../data-dir';
 
 /**
- * Arbeitsordner der Agenten: ein eigener Ordner je Fach und Untergruppe unter `<Datenverzeichnis>/workspaces`.
- * Der Agent darf nichts außerhalb davon lesen oder schreiben (siehe docs/agent-cli.md). Die Namen der
- * Unterordner sind IDs, nie Texte des Nutzers: Das verhindert Pfadtricks und hält Fachnamen aus dem Dateisystem.
+ * Arbeitsordner der Agenten: ein eigener Ordner je Fach und je Untergruppe, direkt unter
+ * `<Datenverzeichnis>/workspaces/<ID>`. Der Agent darf nichts außerhalb davon lesen oder schreiben (siehe
+ * docs/agent-cli.md). Die Namen sind IDs, nie Texte des Nutzers: Das verhindert Pfadtricks und hält Fachnamen aus
+ * dem Dateisystem. Der Pfad ist absichtlich flach: Die Sandbox von Claude Code erzeugt bei tiefen Pfaden ein
+ * riesiges Profil, das nicht mehr startet (ab 11 Pfadbestandteilen gemessen), und jeder Bestandteil zählt.
+ * Fach- und Untergruppen-IDs sind Zufalls-UUIDs und stoßen nicht aneinander.
  */
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -28,9 +31,7 @@ export class WorkspaceManager {
     if (!UUID.test(subjectId) || (groupId !== null && !UUID.test(groupId))) {
       throw new Error('Ungültige ID für einen Arbeitsordner.');
     }
-    return groupId === null
-      ? join(this.root, subjectId, 'main')
-      : join(this.root, subjectId, 'groups', groupId);
+    return join(this.root, groupId ?? subjectId);
   }
 
   /** Legt den Ordner mit Rechten 700 an und gibt den aufgelösten Pfad zurück. */
@@ -45,10 +46,11 @@ export class WorkspaceManager {
     return real;
   }
 
-  /** Entfernt alle Arbeitsordner eines Fachs (auch die der Untergruppen). */
-  removeSubject(subjectId: string): void {
+  /** Entfernt den Arbeitsordner eines Fachs und die seiner Untergruppen (deren IDs kennt nur die Datenbank). */
+  removeSubject(subjectId: string, groupIds: readonly string[] = []): void {
     if (!UUID.test(subjectId)) return;
     rmSync(join(this.root, subjectId), { recursive: true, force: true });
+    for (const groupId of groupIds) this.removeGroup(subjectId, groupId);
   }
 
   removeGroup(subjectId: string, groupId: string): void {
