@@ -17,7 +17,7 @@ const isText = (value: unknown, max: number): value is string =>
   typeof value === 'string' && value.length <= max && !hasControlChars(value);
 
 const isFiniteNumber = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isFiniteNumber(value);
+  typeof value === 'number' && Number.isFinite(value);
 
 /** Nur diese Schlüssel sind erlaubt, alles andere lehnt die Prüfung ab (wie bei einem strikten Schema). */
 const hasOnly = (value: Json, keys: string[]) =>
