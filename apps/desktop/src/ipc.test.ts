@@ -5,7 +5,18 @@ const DIR = 'file:///Applications/Pagewise.app/Contents/Resources/app.asar/dist/
 
 describe('IPC mit Hüllen-Fenstern', () => {
   it('hat genau die festen Kanäle', () => {
-    expect(CHANNELS).toEqual({ getStatus: 'pagewise:get-status' });
+    expect(CHANNELS).toEqual({
+      getStatus: 'pagewise:get-status',
+      getConnectView: 'pagewise:connect:get-view',
+      setupServe: 'pagewise:connect:setup-serve',
+      useAltPort: 'pagewise:connect:use-alt-port',
+      resetServe: 'pagewise:connect:reset-serve',
+      renameHost: 'pagewise:connect:rename-host',
+      copyAddress: 'pagewise:connect:copy-address',
+      openTailscale: 'pagewise:connect:open-tailscale',
+      openAdmin: 'pagewise:connect:open-admin',
+      openDownload: 'pagewise:connect:open-download',
+    });
   });
 
   it('vertraut nur Seiten aus dem eigenen Ordner', () => {

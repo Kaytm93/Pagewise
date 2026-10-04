@@ -25,9 +25,14 @@ import {
   ROUTES,
   SERVER_HOST,
   SERVER_PORT,
+  TAILSCALE_ADMIN_DNS_URL,
+  TAILSCALE_ADMIN_MACHINES_URL,
+  TAILSCALE_APP_PATH,
+  TAILSCALE_DOWNLOAD_URL,
   WINDOW_DATA_DIRNAME,
 } from './config';
-import { connectWindowDir, showConnect } from './connect-window';
+import { ConnectController } from './connect-controller';
+import { ConnectWindow, connectWindowDir } from './connect-window';
 import { uniqueDownloadPath } from './downloads';
 import { ERASE_DATA_TYPES, ERASE_PATH, isEraseSuccess } from './erase-hook';
 import { messages as m } from './i18n';
@@ -43,6 +48,9 @@ import { buildServerEnv } from './server-env';
 import { fitBounds, SettingsStore, ZOOM_MAX, ZOOM_MIN } from './settings-store';
 import { buildDesktopStatus, type DesktopStatus } from './status';
 import { type ChildHandle, ServerSupervisor } from './supervisor';
+import { realExec } from './tailscale/cli';
+import type { Inspection } from './tailscale/service';
+import { TailscaleService } from './tailscale/service';
 import { buildTrayMenuTemplate } from './tray-menu';
 import { buildWindowOptions } from './window-options';
 
@@ -377,6 +385,101 @@ function changeOpenAtLogin(enabled: boolean): void {
   }
 }
 
+// --- Tailscale und „Mit iPhone und iPad verbinden“ ---------------------------------------------------
+
+const tailscaleService = new TailscaleService({ exec: realExec(), localPort: SERVER_PORT });
+let funnelWarned = false;
+let lastEnsure = 0;
+
+function rememberInspection(inspection: Inspection): void {
+  const next = { state: inspection.state, address: inspection.address };
+  if (tailscale.view?.state === next.state && tailscale.view.address === next.address) return;
+  tailscale.view = next;
+  rebuildMenus();
+}
+
+const connectController = new ConnectController({
+  tailscale: tailscaleService,
+  confirm: async ({ title, detail, confirmLabel }) => {
+    const parent = connectWindow.parentWindow();
+    const options = {
+      type: 'warning' as const,
+      message: title,
+      detail,
+      buttons: [confirmLabel, m.dialogs.cancel],
+      defaultId: 1,
+      cancelId: 1,
+    };
+    const result = parent
+      ? await dialog.showMessageBox(parent, options)
+      : await dialog.showMessageBox(options);
+    return result.response === 0;
+  },
+  copy: (text) => clipboard.writeText(text),
+  openExternal: (url) => void shell.openExternal(url),
+  openPath: (path) => void shell.openPath(path),
+  keepAwake: () => store.read().keepAwake,
+  rememberServe: (enabled) => {
+    store.update({ tailscaleServe: enabled });
+  },
+  changed: rememberInspection,
+  urls: {
+    download: TAILSCALE_DOWNLOAD_URL,
+    adminDns: TAILSCALE_ADMIN_DNS_URL,
+    adminMachines: TAILSCALE_ADMIN_MACHINES_URL,
+    appPath: TAILSCALE_APP_PATH,
+  },
+});
+
+const connectWindow = new ConnectWindow(
+  connectController,
+  { shellDir, preload: join(__dirname, 'preload.cjs') },
+  () => mainWindow,
+);
+
+/**
+ * Liest den Zustand von Tailscale (für das Menüleisten-Symbol), warnt einmal pro Start, wenn Funnel an ist, und stellt
+ * eine früher von der App eingerichtete Freigabe wieder her (idempotent). Eine Freigabe, die die Person nie eingerichtet
+ * hat, fasst die App nicht an, eine fremde nie.
+ */
+async function refreshTailscale(): Promise<void> {
+  if (smokeTest) return;
+  let inspection = await tailscaleService.inspect();
+  const wanted = store.read().tailscaleServe;
+  const retryAfterMs = 5 * 60_000;
+  if (
+    wanted &&
+    inspection.state === 'running' &&
+    !inspection.serve?.ours &&
+    !inspection.hostnamePersonal &&
+    inspection.proposedPort !== null &&
+    Date.now() - lastEnsure > retryAfterMs
+  ) {
+    lastEnsure = Date.now();
+    const outcome = await tailscaleService.setupServe();
+    if (outcome.ok) inspection = outcome.inspection;
+  }
+  rememberInspection(inspection);
+  if (inspection.funnel && !funnelWarned) {
+    funnelWarned = true;
+    const result = await dialog.showMessageBox({
+      type: 'warning',
+      message: m.connect.funnelDialog.title,
+      detail: m.connect.funnelDialog.detail,
+      buttons: [m.connect.funnelDialog.reset, m.connect.funnelDialog.ignore],
+      defaultId: 1,
+      cancelId: 1,
+    });
+    if (result.response === 0) {
+      const outcome = await tailscaleService.resetServe();
+      if (outcome.ok) {
+        store.update({ tailscaleServe: false });
+        rememberInspection(outcome.inspection);
+      }
+    }
+  }
+}
+
 const actions: MenuActions & { copyAddress(): void; openWindow(): void } = {
   newChat: () => navigate(ROUTES.newChat),
   openSettings: () => navigate(ROUTES.settings),
@@ -386,7 +489,7 @@ const actions: MenuActions & { copyAddress(): void; openWindow(): void } = {
   zoomOut: () => changeZoom(-0.5),
   resetZoom: () => changeZoom('reset'),
   closeWindow: () => mainWindow?.hide(),
-  showConnect: () => showConnect(),
+  showConnect: () => connectWindow.show(),
   showSetupCode: () => void showSetupCode(),
   setKeepAwake,
   setOpenAtLogin: changeOpenAtLogin,
@@ -583,6 +686,8 @@ if (smokeTest) {
     supervisor.start();
     mainWindow = createMainWindow();
     rebuildMenus();
+    void refreshTailscale();
+    setInterval(() => void refreshTailscale(), 60_000).unref();
     // Laufende Antworten halten den Mac wach, auch bei ausgeschaltetem Schalter.
     setInterval(() => void refreshServerStatus(), 5_000).unref();
   });

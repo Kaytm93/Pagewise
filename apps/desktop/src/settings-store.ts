@@ -8,12 +8,15 @@ export interface DesktopSettings {
   zoomLevel: number;
   /** Mac wach halten (Voreinstellung an: Der Mac ist der Server). */
   keepAwake: boolean;
+  /** Die Person hat die Freigabe über Tailscale Serve mit der App eingerichtet: Die App prüft sie beim Start. */
+  tailscaleServe: boolean;
 }
 
 export const DEFAULT_SETTINGS: DesktopSettings = {
   windowBounds: null,
   zoomLevel: 0,
   keepAwake: true,
+  tailscaleServe: false,
 };
 
 export const ZOOM_MIN = -3;
@@ -44,6 +47,10 @@ export function parseSettings(raw: unknown): DesktopSettings {
       ? Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(zoom * 2) / 2))
       : 0,
     keepAwake: typeof value.keepAwake === 'boolean' ? value.keepAwake : DEFAULT_SETTINGS.keepAwake,
+    tailscaleServe:
+      typeof value.tailscaleServe === 'boolean'
+        ? value.tailscaleServe
+        : DEFAULT_SETTINGS.tailscaleServe,
   };
 }
 

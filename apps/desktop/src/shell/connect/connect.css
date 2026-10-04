@@ -1,0 +1,102 @@
+h2 {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.body {
+  margin-bottom: 1rem;
+}
+.notice {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.notice.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+  font-weight: 600;
+}
+.address {
+  display: block;
+  margin: 0 0 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font:
+    600 14px / 1.4 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  word-break: break-all;
+  user-select: all;
+}
+.qr {
+  display: block;
+  width: 220px;
+  height: 220px;
+  margin: 0.75rem 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+button {
+  min-height: 36px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+button.primary {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--bg);
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+form {
+  margin: 0.5rem 0 1rem;
+}
+label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+input {
+  width: 100%;
+  min-height: 36px;
+  margin-bottom: 0.5rem;
+  padding: 0 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+.status {
+  min-height: 1.5rem;
+  color: var(--muted);
+}
+.note {
+  color: var(--muted);
+  font-size: 13px;
+}

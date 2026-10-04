@@ -86,6 +86,8 @@ describe('Keine Abkürzungen bei Berechtigungen und Code', () => {
           'decision.url',
           'DOCS_URL',
           "'x-apple.systempreferences:com.apple.LoginItems-Settings.extension'",
+          // Die Verbindung zum Controller: Er ruft sie nur mit festen Adressen auf (siehe der nächste Test).
+          'url',
         ],
         argument,
       ).toContain(argument);
@@ -172,5 +174,72 @@ describe('Hauptfenster', () => {
     expect(main.indexOf('installPermissionPolicy(session.defaultSession)')).toBeLessThan(
       main.lastIndexOf('mainWindow = createMainWindow()'),
     );
+  });
+});
+
+describe('Verbindungsfenster und Preload', () => {
+  const preload = read('preload.ts');
+
+  it('legt nur feste, benannte Funktionen in die Seite, nie ein allgemeines invoke oder send', () => {
+    expect(preload).not.toMatch(/exposeInMainWorld\([^)]*ipcRenderer\s*[,)]/);
+    expect(preload).not.toMatch(/:\s*ipcRenderer\b/);
+    expect(preload).not.toMatch(/\binvoke:\s|\bsend:\s|\bon:\s|\bonce:\s|\bremoveListener/);
+    for (const call of preload.matchAll(/ipcRenderer\.invoke\(([^)]*)\)/g)) {
+      expect(call[1], call[0]).toMatch(/^\s*CHANNELS\.\w+/);
+    }
+  });
+
+  it('jeder Kanal des Preloads hat einen Handler, der den Absender prüft', () => {
+    const window = read('connect-window.ts');
+    expect(window).toContain('isTrustedSender(event.senderFrame?.url');
+    expect(window).toContain('event.sender === this.window.webContents');
+    for (const channel of preload.matchAll(/CHANNELS\.(\w+)/g)) {
+      const name = channel[1] ?? '';
+      if (name === 'getStatus') continue;
+      expect(window, name).toContain(`CHANNELS.${name}`);
+    }
+  });
+
+  it('die Seite prüft den QR-Pfad mit derselben Zeichenmenge wie der Hauptprozess', async () => {
+    const { QR_PATH_PATTERN } = await import('./tailscale/qr');
+    const page = read('shell/connect/connect.js');
+    expect(page).toContain(`const QR_PATH = ${QR_PATH_PATTERN.toString()};`);
+  });
+
+  it('die Seite baut alles mit textContent und createElement, nie aus Text mit Markup', () => {
+    const page = stripComments(read('shell/connect/connect.js'));
+    expect(page).not.toMatch(
+      /innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\(|new Function|\.style\b|setAttribute\(\s*['"]style/,
+    );
+    expect(page).toContain('textContent');
+  });
+
+  it('das Verbindungsfenster hat die Hüllen-Optionen mit eigenem Preload und lässt keine Navigation zu', () => {
+    const window = read('connect-window.ts');
+    expect(window).toContain('buildShellWindowOptions(');
+    expect(window).toMatch(/will-navigate', \(event\) => event\.preventDefault\(\)/);
+    expect(window).toMatch(/setWindowOpenHandler\(\(\) => \(\{ action: 'deny' \}\)\)/);
+  });
+
+  it('der Controller öffnet nur feste Adressen aus der Konfiguration, nie etwas, das die Seite schickt', () => {
+    const controller = stripComments(read('connect-controller.ts'));
+    const calls = [...controller.matchAll(/deps\.openExternal\(([^;]*)\);/g)].map((m) =>
+      (m[1] ?? '').replace(/\s+/g, ' ').trim(),
+    );
+    expect(calls.length).toBeGreaterThan(0);
+    for (const argument of calls) {
+      expect(argument, argument).toMatch(
+        /^(this\.deps\.urls\.\w+|kind === 'dns' \? this\.deps\.urls\.adminDns : this\.deps\.urls\.adminMachines)$/,
+      );
+    }
+  });
+
+  it('ruft nie tailscale funnel auf, auch nicht in Texten für Befehle', () => {
+    for (const { path, text } of all.filter(
+      (f) => f.path.includes('/tailscale/') && f.path.endsWith('.ts'),
+    )) {
+      const code = stripComments(text);
+      expect(code, path).not.toMatch(/['"`]funnel['"`]/);
+    }
   });
 });

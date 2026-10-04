@@ -36,6 +36,7 @@ describe('Einstellungen der Hülle', () => {
       windowBounds: { x: 10, y: 20, width: 1100, height: 800 },
       zoomLevel: 1,
       keepAwake: false,
+      tailscaleServe: false,
     });
     expect(statSync(file).mode & 0o777).toBe(0o600);
     expect(readFileSync(file, 'utf8').endsWith('\n')).toBe(true);
@@ -56,7 +57,12 @@ describe('Einstellungen der Hülle', () => {
         keepAwake: 'ja',
         fremd: 'wird ignoriert',
       }),
-    ).toEqual({ windowBounds: { width: 900, height: 700 }, zoomLevel: ZOOM_MAX, keepAwake: true });
+    ).toEqual({
+      windowBounds: { width: 900, height: 700 },
+      zoomLevel: ZOOM_MAX,
+      keepAwake: true,
+      tailscaleServe: false,
+    });
     expect(parseSettings({ zoomLevel: -99 }).zoomLevel).toBe(ZOOM_MIN);
     expect(parseSettings({ zoomLevel: Number.NaN }).zoomLevel).toBe(0);
     expect(parseSettings({ zoomLevel: 0.26 }).zoomLevel).toBe(0.5);
@@ -77,6 +83,7 @@ describe('Einstellungen der Hülle', () => {
     store.update({ keepAwake: false, ...({ geheim: 'x' } as object) });
     expect(Object.keys(JSON.parse(readFileSync(file, 'utf8'))).sort()).toEqual([
       'keepAwake',
+      'tailscaleServe',
       'windowBounds',
       'zoomLevel',
     ]);

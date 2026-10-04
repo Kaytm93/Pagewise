@@ -18,3 +18,9 @@ export const WINDOW_DATA_DIRNAME = 'Fenster';
 export const APP_NAME = 'Pagewise';
 export const DOCS_URL = 'https://github.com/Kaytm93/Pagewise/blob/main/docs/self-hosting.md';
 export const RELEASES_API_URL = 'https://api.github.com/repos/Kaytm93/Pagewise/releases/latest';
+
+/** Feste Adressen, die die App im Browser öffnen kann (nur auf Klick, nie von sich aus). */
+export const TAILSCALE_DOWNLOAD_URL = 'https://tailscale.com/download';
+export const TAILSCALE_ADMIN_DNS_URL = 'https://login.tailscale.com/admin/dns';
+export const TAILSCALE_ADMIN_MACHINES_URL = 'https://login.tailscale.com/admin/machines';
+export const TAILSCALE_APP_PATH = '/Applications/Tailscale.app';

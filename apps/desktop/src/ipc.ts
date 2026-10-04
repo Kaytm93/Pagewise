@@ -6,6 +6,15 @@
  */
 export const CHANNELS = {
   getStatus: 'pagewise:get-status',
+  getConnectView: 'pagewise:connect:get-view',
+  setupServe: 'pagewise:connect:setup-serve',
+  useAltPort: 'pagewise:connect:use-alt-port',
+  resetServe: 'pagewise:connect:reset-serve',
+  renameHost: 'pagewise:connect:rename-host',
+  copyAddress: 'pagewise:connect:copy-address',
+  openTailscale: 'pagewise:connect:open-tailscale',
+  openAdmin: 'pagewise:connect:open-admin',
+  openDownload: 'pagewise:connect:open-download',
 } as const;
 
 export type Channel = (typeof CHANNELS)[keyof typeof CHANNELS];
