@@ -103,6 +103,12 @@ export const subjects = sqliteTable(
     /** Kennung eines Linien-Icons der Oberfläche, optional. Unbekannte Kennungen zeigen das Standard-Icon. */
     icon: text('icon'),
     /**
+     * Fachfarbe als Nummer 0 bis 7 (gedämpfte Farben der Oberfläche, D-043). Neue Fächer bekommen die am
+     * seltensten genutzte, damit sich Farben erst wiederholen, wenn alle acht vergeben sind. `NULL` ist neutral
+     * (das eingebaute Fach „Standard“).
+     */
+    color: integer('color'),
+    /**
      * Eigener Fach-Prompt (Schicht 2), vom Nutzer geschrieben. `NULL` heißt „Standard aktiv“: Es gilt der
      * mitgelieferte Standardtext des Fachs (D-034). Ein eigener Text verdrängt ihn.
      */

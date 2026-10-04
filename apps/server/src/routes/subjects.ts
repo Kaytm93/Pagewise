@@ -18,6 +18,7 @@ import {
   ensureDefaultSubject,
   importSubjects,
   listSubjects,
+  SUBJECT_COLORS,
   updateGroup,
   updateSubject,
 } from '../domain/subjects';
@@ -29,6 +30,13 @@ const SubjectDetailsBody = {
   teacher: optionalTextField.optional(),
   hoursPerWeek: hoursField.optional(),
   icon: iconField.optional(),
+  /** Fachfarbe 0 bis 7. Ohne Angabe wählt der Server die am seltensten genutzte. */
+  color: z
+    .number()
+    .int()
+    .min(0)
+    .max(SUBJECT_COLORS - 1)
+    .optional(),
 };
 const CreateSubjectBody = z.strictObject({
   name: nameField,

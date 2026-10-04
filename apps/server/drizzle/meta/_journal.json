@@ -57,6 +57,13 @@
       "when": 1791058813626,
       "tag": "0007_agent_engine",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1791100688152,
+      "tag": "0008_subject_color",
+      "breakpoints": true
     }
   ]
 }

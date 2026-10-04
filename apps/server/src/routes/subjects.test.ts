@@ -304,6 +304,69 @@ describe('Fächer und Untergruppen', () => {
     });
   });
 
+  describe('Fachfarbe (D-043)', () => {
+    const colorOf = async (name: string) =>
+      ((await list()).find((subject) => subject.name === name) as unknown as { color: number })
+        .color;
+
+    it('vergibt neue Farben reihum, bis alle acht genutzt sind, dann die seltenste', async () => {
+      const names = Array.from({ length: 10 }, (_, n) => `Beispielfach ${n + 1}`);
+      const colors: number[] = [];
+      for (const name of names) {
+        colors.push(((await addSubject(name)) as unknown as { color: number }).color);
+      }
+      expect(colors).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 0, 1]);
+    });
+
+    it('füllt eine Lücke wieder, wenn ein Fach gelöscht wurde, und ändert keine bestehende Farbe', async () => {
+      const a = await addSubject('Beispielfach A');
+      const b = await addSubject('Beispielfach B');
+      await addSubject('Beispielfach C');
+      expect(await session.call('DELETE', `/api/subjects/${b.id}`)).toMatchObject({ status: 204 });
+      const d = (await addSubject('Beispielfach D')) as unknown as { color: number };
+      expect(d.color).toBe(1);
+      expect(await colorOf('Beispielfach A')).toBe((a as unknown as { color: number }).color);
+      expect(await colorOf('Beispielfach C')).toBe(2);
+    });
+
+    it('lässt die Farbe beim Anlegen und Ändern wählen und prüft den Bereich', async () => {
+      const created = await session.call('POST', '/api/subjects', {
+        name: 'Beispielfach A',
+        color: 5,
+      });
+      expect(created.body).toMatchObject({ color: 5 });
+      const id = created.body.id as string;
+      expect((await session.call('PATCH', `/api/subjects/${id}`, { color: 2 })).body).toMatchObject(
+        {
+          color: 2,
+        },
+      );
+      for (const color of [8, -1, 1.5, 'rot']) {
+        const bad = await session.call('PATCH', `/api/subjects/${id}`, { color });
+        expect(bad.status).toBe(400);
+        expect(bad.body).toEqual({ error: 'invalid_input', field: 'color' });
+      }
+      expect(await colorOf('Beispielfach A')).toBe(2);
+    });
+
+    it('vergibt auch beim Import Farben, und das eingebaute Fach bleibt neutral', async () => {
+      const imported = await session.call('POST', '/api/subjects/import', {
+        format: 'json',
+        content: JSON.stringify({
+          version: 1,
+          subjects: [{ name: 'Beispielfach A' }, { name: 'Beispielfach B' }],
+        }),
+      });
+      expect(imported.status).toBe(200);
+      expect(await colorOf('Beispielfach A')).toBe(0);
+      expect(await colorOf('Beispielfach B')).toBe(1);
+      const standard = (await session.call('GET', '/api/subjects')).body.defaultSubject as {
+        color: number | null;
+      };
+      expect(standard.color).toBeNull();
+    });
+  });
+
   describe('Vorlagen', () => {
     it('liefert ohne Katalogdatei eine leere Liste', async () => {
       const reply = await session.call('GET', '/api/subjects/templates');

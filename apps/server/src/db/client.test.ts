@@ -309,6 +309,40 @@ describe('Migrationen mit Sicherung', () => {
     expect(handle.db.select().from(subjects).all()).toHaveLength(1);
   });
 
+  it('färbt bestehende Fächer bei der Migration reihum nach ihrer Position, das eingebaute Fach nicht', () => {
+    // Stand vor der Migration „subject_color“: alle Migrationen außer der letzten.
+    const journalPath = join(migrationsFolder, 'meta', '_journal.json');
+    const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as {
+      entries: { tag: string }[];
+    };
+    const full = JSON.stringify(journal);
+    journal.entries = journal.entries.filter((entry) => !entry.tag.endsWith('_subject_color'));
+    writeFileSync(journalPath, JSON.stringify(journal));
+    migrateDatabase(handle, { migrationsFolder, backupDir });
+    const insert = handle.sqlite.prepare(
+      'insert into subjects (id, name, kind, position, created_at, updated_at) values (?, ?, ?, ?, 0, 0)',
+    );
+    insert.run('a', 'Eins', 'subject', 0);
+    insert.run('b', 'Zwei', 'subject', 1);
+    insert.run('c', 'Drei', 'subject', 1);
+    insert.run('d', 'Standard', 'default', -1);
+    for (let n = 0; n < 9; n += 1) insert.run(`x${n}`, `Fach ${n}`, 'subject', 10 + n);
+
+    writeFileSync(journalPath, full);
+    migrateDatabase(handle, { migrationsFolder, backupDir });
+    const colors = handle.sqlite
+      .prepare('select id, color from subjects order by position, rowid')
+      .all() as { id: string; color: number | null }[];
+    expect(colors.slice(0, 4)).toEqual([
+      { id: 'd', color: null },
+      { id: 'a', color: 0 },
+      { id: 'b', color: 1 },
+      { id: 'c', color: 2 },
+    ]);
+    // Danach geht es reihum weiter und beginnt nach acht von vorn.
+    expect(colors.slice(4).map((row) => row.color)).toEqual([3, 4, 5, 6, 7, 0, 1, 2, 3]);
+  });
+
   it('sichert nicht erneut, wenn nichts mehr aussteht', () => {
     migrateDatabase(handle, { migrationsFolder, backupDir });
     withExtraMigration();

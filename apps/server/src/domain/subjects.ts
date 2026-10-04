@@ -18,6 +18,9 @@ export interface SubjectDetails {
   icon: string | null;
 }
 
+/** Anzahl der Fachfarben der Oberfläche (Nummern 0 bis 7, siehe D-043). */
+export const SUBJECT_COLORS = 8;
+
 export interface SubjectView extends SubjectDetails {
   id: string;
   name: string;
@@ -25,6 +28,8 @@ export interface SubjectView extends SubjectDetails {
   kind: 'subject' | 'default';
   /** Schlüssel der Katalogvorlage, aus der das Fach angelegt wurde, sonst `null`. */
   templateKey: string | null;
+  /** Fachfarbe 0 bis 7, `null` für das eingebaute Fach „Standard“ (neutral). */
+  color: number | null;
   position: number;
   /** Gewähltes Modell für dieses Fach, `null`: es gilt das Standardmodell. */
   model: Selection | null;
@@ -43,6 +48,7 @@ export type DomainResult<T> = { ok: true; value: T } | DomainFailure;
 /** Änderungen an einem Fach. Fehlt ein Feld, bleibt es unverändert; `null` leert es. */
 export interface SubjectPatch extends Partial<SubjectDetails> {
   name?: string;
+  color?: number;
 }
 
 export interface GroupPatch {
@@ -65,6 +71,7 @@ function toSubject(row: typeof subjects.$inferSelect, groups: GroupView[]): Subj
     name: row.name,
     kind: row.kind,
     templateKey: row.templateKey,
+    color: row.color,
     teacher: row.teacher,
     hoursPerWeek: row.hoursPerWeek,
     icon: row.icon,
@@ -167,10 +174,25 @@ function nextPosition(current: number | null): number {
   return current === null ? 0 : current + 1;
 }
 
+/**
+ * Die Farbe für ein neues Fach: die am seltensten genutzte (bei Gleichstand die kleinste Nummer). So
+ * wiederholt sich keine Farbe, bevor alle acht vergeben sind, und eine einmal vergebene bleibt gleich.
+ */
+function leastUsedColor(db: Db): number {
+  const counts = new Array<number>(SUBJECT_COLORS).fill(0);
+  for (const row of db.select({ color: subjects.color }).from(subjects).all()) {
+    if (row.color !== null && row.color >= 0 && row.color < SUBJECT_COLORS) {
+      counts[row.color] = (counts[row.color] ?? 0) + 1;
+    }
+  }
+  const lowest = Math.min(...counts);
+  return counts.indexOf(lowest);
+}
+
 export function createSubject(
   db: Db,
   name: string,
-  details: Partial<SubjectDetails> & { templateKey?: string | null } = {},
+  details: Partial<SubjectDetails> & { templateKey?: string | null; color?: number } = {},
 ): DomainResult<SubjectView> {
   if (isReservedName(name)) return { ok: false, error: 'name_reserved' };
   const taken = db.select({ name: subjects.name }).from(subjects).all();
@@ -189,6 +211,7 @@ export function createSubject(
         hoursPerWeek: details.hoursPerWeek ?? null,
         icon: details.icon ?? null,
         templateKey: details.templateKey ?? null,
+        color: details.color ?? leastUsedColor(db),
         position: nextPosition(last?.value ?? null),
       })
       .returning()
@@ -222,6 +245,7 @@ export function updateSubject(db: Db, id: string, patch: SubjectPatch): DomainRe
   if (patch.teacher !== undefined) changes.teacher = patch.teacher;
   if (patch.hoursPerWeek !== undefined) changes.hoursPerWeek = patch.hoursPerWeek;
   if (patch.icon !== undefined) changes.icon = patch.icon;
+  if (patch.color !== undefined) changes.color = patch.color;
 
   try {
     if (Object.keys(changes).length > 0) {
