@@ -44,7 +44,13 @@ export function isAbort(error: unknown): boolean {
 export class ApiClient {
   private csrfToken: string | null = null;
   private readonly fetchImpl: typeof fetch;
+  /** Dieselbe `fetch`-Funktion, die der Client nutzt (für die Verbindungsprobe, damit Tests einen Ersatz haben). */
+  get fetcher(): typeof fetch {
+    return this.fetchImpl;
+  }
   onSessionLost: (() => void) | undefined;
+  /** Wird aufgerufen, wenn eine Anfrage am Netz gescheitert ist (der Server antwortet nicht). */
+  onNetworkError: (() => void) | undefined;
 
   constructor(options: ApiClientOptions = {}) {
     this.fetchImpl = options.fetch ?? ((...args) => fetch(...args));
@@ -76,6 +82,7 @@ export class ApiClient {
       });
     } catch (error) {
       if (isAbort(error)) throw error;
+      this.onNetworkError?.();
       throw new ApiError('network', 0);
     }
   }

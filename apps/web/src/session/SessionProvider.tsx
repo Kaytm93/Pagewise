@@ -5,10 +5,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { type Api, createApi } from '../api/api';
 import type { ApiClient } from '../api/client';
+import { useOnRecovered } from '../connection/ConnectionProvider';
+import { LOAD_TIMEOUT_MS, withTimeout } from '../connection/timeout';
 
 /**
  * Wo steht die Anmeldung?
@@ -40,16 +43,34 @@ export function SessionProvider({ client, children }: { client: ApiClient; child
   const api = useMemo(() => createApi(client), [client]);
   const [status, setStatus] = useState<SessionStatus>('loading');
 
-  const reload = useCallback(async () => {
-    try {
-      const info = await api.session();
-      client.setCsrfToken(info.state === 'unlocked' ? info.csrfToken : null);
-      setStatus(info.state);
-    } catch {
-      client.setCsrfToken(null);
-      setStatus('unreachable');
-    }
-  }, [api, client]);
+  /** `soft`: ein Fehlschlag lässt die geladene Ansicht stehen (kein Vollbild „Server antwortet nicht“). */
+  const latest = useRef(0);
+  const reload = useCallback(
+    async (soft = false) => {
+      // Ein spätes Ergebnis einer älteren Anfrage (Zeitlimit, neuer Versuch) darf den Stand nicht überschreiben.
+      const mine = ++latest.current;
+      try {
+        // Ein Mac, der schläft, lässt die Verbindung hängen: nach dem Zeitlimit „nicht erreichbar“ zeigen.
+        const info = await withTimeout(api.session(), LOAD_TIMEOUT_MS);
+        if (mine !== latest.current) return;
+        client.setCsrfToken(info.state === 'unlocked' ? info.csrfToken : null);
+        setStatus(info.state);
+      } catch {
+        if (soft || mine !== latest.current) return;
+        client.setCsrfToken(null);
+        setStatus('unreachable');
+      }
+    },
+    [api, client],
+  );
+
+  // Kommt der Mac nach einem Ausfall zurück, Sitzung nachsehen, ohne die Ansicht zu verlassen (Entwürfe bleiben).
+  // Steht die App noch auf „lädt“ oder „nicht erreichbar“, ist das die normale Ladung.
+  const statusRef = useRef(status);
+  statusRef.current = status;
+  useOnRecovered(() => {
+    void reload(statusRef.current !== 'loading' && statusRef.current !== 'unreachable');
+  });
 
   // Der Server vergisst die Sitzung (Ablauf, Passcode-Wechsel, Zurücksetzen): neu nachsehen.
   useEffect(() => {

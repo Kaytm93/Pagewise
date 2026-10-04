@@ -17,7 +17,7 @@ export function StepFrame({
 }) {
   return (
     <div className="lg-app">
-      <main className="min-h-dvh px-4 py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
+      <main className="min-h-dvh py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(2.5rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))]">
         <div className="lg-arrive mx-auto w-full max-w-xl">
           <p className="mb-6 font-heading text-xl tracking-[-0.3px] text-ink-secondary">
             {m.app.name}

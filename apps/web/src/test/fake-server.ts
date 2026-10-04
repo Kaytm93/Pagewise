@@ -374,6 +374,9 @@ export class FakeServer {
   private handle({ method, path, body, headers, signal }: RecordedRequest): Response {
     const data = (body ?? {}) as Record<string, unknown>;
 
+    if (method === 'GET' && path === '/api/health') {
+      return json(200, { status: 'ok', version: 'test' });
+    }
     if (method === 'GET' && path === '/api/session') {
       return this.state === 'unlocked'
         ? json(200, { state: 'unlocked', csrfToken: TEST_CSRF })

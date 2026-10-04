@@ -26,3 +26,15 @@ Legende: **Agent getestet** = Test oder Lauf im Container (Befehl genannt). **Ka
 | `PAGEWISE_RESOURCES_DIR`, Portkonflikt, Instanzsperre, geordnetes Beenden | ja: `server.test.ts`, `bundle.test.ts`, `instance-lock.test.ts` | – |
 | Einrichtungscode nur über Bibliothek und IPC, nicht in Ausgabe oder HTTP | ja: `server.test.ts`, `control/embedded.test.ts` | – |
 | Laufende Antworten beim Beenden als `interrupted` | ja: `routes/chats.test.ts` | – |
+
+## P iPad und iPhone robuster ([D-052](decisions.md))
+
+| Punkt | Agent getestet | Kay prüft |
+| --- | --- | --- |
+| Service Worker: 3 s (Seite), 1,5 s (`boot.js`), Rückfall auf die gemerkte Fassung, späte Netzantwort aktualisiert den Speicher, 502 bis 504, Vorabspeichern | ja: `pnpm --filter @pagewise/web test` (`pwa/sw.test.ts`, simuliertes hängendes Netz mit Fake-Zeit); im echten Chromium mit Server, der nie antwortet: Seite nach 4,5 s | iPhone: Mac in den Ruhezustand schicken (Apfelmenü), Tailscale bleibt verbunden, Pagewise auf dem Home-Bildschirm öffnen: die Oberfläche erscheint nach wenigen Sekunden samt Hinweis, kein weißer Bildschirm |
+| Banner „Mac nicht erreichbar“ erscheint und verschwindet, Ansichten und Entwürfe bleiben | ja: `Connection.test.tsx`, `connection/monitor.test.ts` (Abstände 2, 5, 10, 30 s, alle Anlässe), Echtbrowser: Banner sichtbar, 0 CSP-Verstöße, 0 Konsolenmeldungen | iPad: in einem Chat etwas tippen (nicht senden), Mac schlafen schicken, zurück in die App wechseln: Banner, Entwurf bleibt; Mac aufwecken: Banner verschwindet von selbst, spätestens nach „Erneut versuchen“ |
+| Zeitlimit beim Laden (8 s) statt ewigem „Verbindung wird geprüft …“ | ja: `Connection.test.tsx`; Echtbrowser | iPhone: App bei schlafendem Mac starten: nach etwa 8 Sekunden „Der Server antwortet nicht.“ |
+| Manifest und maskierbares Icon | ja: `pwa/pwa-files.test.ts` (1024 × 1024, deckend, getrennte Zwecke) | iPhone: neu zum Home-Bildschirm hinzufügen, Icon sieht richtig aus (hell und dunkel, alle drei Designrichtungen) |
+| Safe-Areas links und rechts | Klassen im Quelltext und erzeugtes CSS geprüft (`ui/safe-area.test.ts`) | iPhone quer (Notch links und rechts): nichts verschwindet hinter der Aussparung (Seitenleiste, Chat, Dialog, Anmeldung) |
+| Tastatur: Eingabezeile hebt sich | ja, mit gefälschtem `visualViewport` (`ui/keyboard.test.ts`) | iPad und iPhone: Chat-Eingabe antippen: Eingabezeile bleibt über der Tastatur sichtbar; Dialog mit Eingabefeld ebenso; Tastatur schließen: alles zurück |
+

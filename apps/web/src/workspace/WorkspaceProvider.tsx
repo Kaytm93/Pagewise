@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import type { Api } from '../api/api';
@@ -27,6 +28,8 @@ import type {
   SubjectInput,
   SubjectTemplate,
 } from '../api/types';
+import { useOnRecovered } from '../connection/ConnectionProvider';
+import { LOAD_TIMEOUT_MS, withTimeout } from '../connection/timeout';
 import { useSession } from '../session/SessionProvider';
 
 /** Ergebnis von „Fächer aus Vorlagen anlegen“. */
@@ -106,13 +109,16 @@ export function WorkspaceProvider({
   useEffect(() => {
     let cancelled = false;
     setState({ status: 'loading' });
-    Promise.all([
-      api.profile(),
-      api.subjects(),
-      api.providers(),
-      api.modelSettings(),
-      api.engines(),
-    ])
+    withTimeout(
+      Promise.all([
+        api.profile(),
+        api.subjects(),
+        api.providers(),
+        api.modelSettings(),
+        api.engines(),
+      ]),
+      LOAD_TIMEOUT_MS,
+    )
       .then(([profile, list, providers, modelSettings, engines]) => {
         if (!cancelled) {
           setState({
@@ -135,6 +141,41 @@ export function WorkspaceProvider({
   }, [api, attempt]);
 
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
+
+  // Nach einem Ausfall des Servers den Arbeitsbereich neu holen, ohne die Ansicht zu verlassen: Was schon da ist,
+  // bleibt stehen (auch Entwürfe in Eingabefeldern), ein Fehlschlag ändert nichts. War das Laden gescheitert,
+  // beginnt es von vorn.
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  useOnRecovered(() => {
+    if (stateRef.current.status !== 'ready') {
+      retry();
+      return;
+    }
+    Promise.all([
+      api.profile(),
+      api.subjects(),
+      api.providers(),
+      api.modelSettings(),
+      api.engines(),
+    ])
+      .then(([profile, list, providers, modelSettings, engines]) =>
+        setState((current) =>
+          current.status === 'ready'
+            ? {
+                ...current,
+                profile,
+                subjects: list.subjects,
+                defaultSubject: list.defaultSubject,
+                providers,
+                modelSettings,
+                engines,
+              }
+            : current,
+        ),
+      )
+      .catch(() => {});
+  });
 
   const value = useMemo<WorkspaceValue | null>(() => {
     if (state.status !== 'ready') return null;

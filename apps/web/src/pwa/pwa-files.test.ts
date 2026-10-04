@@ -60,6 +60,39 @@ describe('Web-App-Manifest', () => {
     expect(sizes).toContain('512x512');
     expect(manifest.icons.some((icon) => icon.purpose === 'maskable')).toBe(true);
   });
+
+  it('trägt das maskierbare Icon als PNG (1024 × 1024, deckend, ohne Rand) und als SVG ein', () => {
+    const maskable = manifest.icons.filter((icon) => icon.purpose === 'maskable');
+    const big = maskable.find((icon) => icon.sizes === '1024x1024');
+    expect(big?.src).toBe('/icons/icon-maskable-1024.png');
+    const file = read('public/icons/icon-maskable-1024.png');
+    expect(pngSize(file)).toEqual({ width: 1024, height: 1024 });
+    // Farbtyp 2 = RGB ohne Alpha: Masken dürfen nie auf Transparenz treffen.
+    expect(file[25]).toBe(2);
+    expect(maskable.some((icon) => icon.src === '/icons/icon-maskable.svg')).toBe(true);
+    // Der gesamte Inhalt steht im Bild (Sicherheitszone 80 %): Der Hintergrund füllt die ganze Fläche.
+    const svg = read('public/icons/icon-maskable.svg').toString('utf8');
+    expect(svg).toContain('<rect width="512" height="512"');
+  });
+
+  it('kombiniert „any“ und „maskable“ nie in einem Eintrag (getrennte Icons wirken überall gleich)', () => {
+    for (const icon of manifest.icons) {
+      expect(['any', 'maskable'], icon.src).toContain(icon.purpose);
+    }
+  });
+
+  it('verlässt sich für iOS nur auf Schlüssel, die Safari auswertet', () => {
+    // Auf iOS wirken display, name, short_name, start_url, scope, id, theme_color und die Icons.
+    // background_color, orientation, display_override, share_target und shortcuts werden dort ignoriert.
+    const raw = JSON.parse(read('public/manifest.webmanifest').toString('utf8')) as Record<
+      string,
+      unknown
+    >;
+    for (const key of ['display_override', 'share_target', 'shortcuts']) {
+      expect(raw[key], key).toBeUndefined();
+    }
+    expect(raw.display).toBe('standalone');
+  });
 });
 
 describe('index.html', () => {

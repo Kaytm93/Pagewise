@@ -11,11 +11,13 @@ import { ApiClient } from './api/client';
 import { registerServiceWorker } from './pwa/register';
 import { applyDesign, readDesign } from './ui/design';
 import { initFx } from './ui/fx';
+import { startKeyboardInset } from './ui/keyboard';
 import { applyTheme, readTheme } from './ui/theme';
 
 applyTheme(readTheme());
 applyDesign(readDesign());
 initFx();
+startKeyboardInset();
 
 const container = document.getElementById('root');
 if (!container) throw new Error('Wurzelelement #root fehlt');

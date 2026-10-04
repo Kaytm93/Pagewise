@@ -137,7 +137,7 @@ function Shell() {
   return (
     <div
       ref={app}
-      className="lg-app md:grid md:grid-cols-[17.25rem_1fr]"
+      className="lg-app md:grid md:grid-cols-[calc(17.25rem+env(safe-area-inset-left))_1fr]"
       data-subj={color}
       data-view={route.name}
     >
@@ -148,7 +148,7 @@ function Shell() {
         {m.common.skipToContent}
       </a>
 
-      <aside className="lg-aside sticky top-0 hidden h-dvh md:block">
+      <aside className="lg-aside sticky top-0 hidden h-dvh pl-[env(safe-area-inset-left)] md:block">
         <div className="lg-binder">
           <Sidebar />
         </div>
@@ -156,7 +156,7 @@ function Shell() {
 
       <div className="flex min-h-dvh min-w-0 flex-col">
         <header className="sticky top-0 z-30 bg-desk pt-[env(safe-area-inset-top)] md:hidden">
-          <div className="flex h-14 items-center gap-1 px-2">
+          <div className="flex h-14 items-center gap-1 pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]">
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
@@ -173,7 +173,7 @@ function Shell() {
         <main
           id="main"
           tabIndex={-1}
-          className="flex-1 px-3 pt-1 pr-[1.75rem] pb-[max(1.75rem,env(safe-area-inset-bottom))] outline-none md:py-3.5 md:pr-12 md:pl-0"
+          className="flex-1 pt-1 pr-[max(1.75rem,env(safe-area-inset-right))] pb-[max(1.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] outline-none md:py-3.5 md:pr-[max(3rem,env(safe-area-inset-right))] md:pl-0"
         >
           <div className="lg-stack mx-auto max-w-[1180px]" data-depth={depthOf(route)}>
             <div aria-hidden="true" className="lg-ply lg-p1" />

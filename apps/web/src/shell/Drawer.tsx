@@ -31,7 +31,7 @@ export function Drawer({
         aria-modal="true"
         aria-label={label}
         tabIndex={-1}
-        className="lg-binder h-full w-[min(19rem,86vw)] animate-[lg-drawer-in_var(--t-slow)_var(--spring)_both] outline-none"
+        className="lg-binder h-full w-[min(calc(19rem+env(safe-area-inset-left)),90vw)] animate-[lg-drawer-in_var(--t-slow)_var(--spring)_both] pl-[env(safe-area-inset-left)] outline-none"
       >
         {children}
       </div>

@@ -1,4 +1,6 @@
 import type { ApiClient } from './api/client';
+import { ConnectionBanner } from './connection/ConnectionBanner';
+import { ConnectionProvider } from './connection/ConnectionProvider';
 import { ConnectionScreen } from './screens/ConnectionScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { Onboarding } from './screens/Onboarding';
@@ -34,10 +36,23 @@ function Gate() {
   }
 }
 
+/** Gate samt Hinweis „Mac nicht erreichbar“. Beim ersten Laden zeigt der Vollbild-Hinweis dasselbe, dort kein Banner. */
+function Frame() {
+  const { status } = useSession();
+  return (
+    <>
+      <Gate />
+      {status !== 'loading' && status !== 'unreachable' && <ConnectionBanner />}
+    </>
+  );
+}
+
 export function App({ client }: { client: ApiClient }) {
   return (
-    <SessionProvider client={client}>
-      <Gate />
-    </SessionProvider>
+    <ConnectionProvider client={client}>
+      <SessionProvider client={client}>
+        <Frame />
+      </SessionProvider>
+    </ConnectionProvider>
   );
 }

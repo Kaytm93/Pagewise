@@ -84,7 +84,7 @@ export function Modal({ title, description, onClose, wide = false, children }: M
   return createPortal(
     // biome-ignore lint/a11y/noStaticElementInteractions: Klick auf den Hintergrund schließt; Escape und der Schließen-Button decken die Tastatur ab
     <div
-      className="lg-scrim fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
+      className="lg-scrim fixed inset-0 z-50 flex items-end justify-center pb-[var(--kb,0px)] sm:items-center sm:p-4 sm:pb-[max(1rem,var(--kb,0px))]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -96,7 +96,7 @@ export function Modal({ title, description, onClose, wide = false, children }: M
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className={`lg-sheet lg-pop max-h-[92dvh] w-full overflow-y-auto rounded-t-[12px] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] outline-none sm:rounded-[12px] sm:p-6 ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'}`}
+        className={`lg-sheet lg-pop max-h-[calc(92dvh-var(--kb,0px))] w-full overflow-y-auto rounded-t-[12px] p-5 pr-[max(1.25rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))] outline-none sm:rounded-[12px] sm:p-6 ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'}`}
       >
         <div className="flex items-start justify-between gap-4">
           <h2 id={titleId} className="font-heading text-xl">

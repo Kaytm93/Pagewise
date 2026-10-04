@@ -13,7 +13,7 @@ export function AuthLayout({
 }) {
   return (
     <div className="lg-app">
-      <main className="flex min-h-dvh items-center justify-center px-4 py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
+      <main className="flex min-h-dvh items-center justify-center py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(2.5rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))]">
         <div className="lg-arrive w-full max-w-md">
           <p className="mb-6 font-heading text-xl tracking-[-0.3px] text-ink-secondary">
             {m.app.name}

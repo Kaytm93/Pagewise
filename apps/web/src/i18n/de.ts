@@ -42,6 +42,10 @@ export const de = {
     loading: 'Verbindung wird geprüft …',
     error: 'Der Server antwortet nicht.',
     hint: 'Läuft er noch? Starte ihn mit „pnpm start“. Auf einem anderen Gerät prüfst du außerdem, ob Tailscale verbunden ist.',
+    banner: {
+      text: 'Mac nicht erreichbar. Schläft er, oder ist Tailscale getrennt?',
+      checking: 'Prüfe …',
+    },
   },
   setup: {
     title: 'Willkommen bei Pagewise',
