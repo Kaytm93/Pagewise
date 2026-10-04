@@ -64,6 +64,13 @@
       "when": 1791100688152,
       "tag": "0008_subject_color",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1791101546831,
+      "tag": "0009_timetable_exams",
+      "breakpoints": true
     }
   ]
 }

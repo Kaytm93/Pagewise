@@ -259,6 +259,59 @@ export const assets = sqliteTable(
 );
 
 /**
+ * Stundenplan: eine Zeile je Stunde und Woche (Welle 3). Zeiten sind frei (`HH:MM`), kein festes Raster. Das Fach
+ * ist optional und bleibt leer, wenn es gelöscht wird (die Stunde im Plan besteht weiter). `week` kennt die
+ * Wochenart „jede“, „A“ oder „B“.
+ */
+export const timetableEntries = sqliteTable(
+  'timetable_entries',
+  {
+    id: id(),
+    /** 1 = Montag bis 7 = Sonntag. */
+    weekday: integer('weekday').notNull(),
+    startTime: text('start_time').notNull(),
+    endTime: text('end_time').notNull(),
+    subjectId: text('subject_id').references(() => subjects.id, { onDelete: 'set null' }),
+    room: text('room'),
+    note: text('note'),
+    week: text('week', { enum: ['all', 'a', 'b'] })
+      .notNull()
+      .default('all'),
+    ...timestamps,
+  },
+  (table) => [
+    index('timetable_weekday').on(table.weekday, table.startTime),
+    check('timetable_weekday_range', sql`${table.weekday} between 1 and 7`),
+    check('timetable_week_kind', sql`${table.week} in ('all', 'a', 'b')`),
+  ],
+);
+
+/**
+ * Testeinträge (Schulaufgabe, Test, Ex, Referat …) mit Datum. Sie gehören zu einem Fach und verschwinden mit
+ * ihm, wie dessen Chats. Eine Note gibt es in dieser Version nicht.
+ */
+export const exams = sqliteTable(
+  'exams',
+  {
+    id: id(),
+    subjectId: text('subject_id')
+      .notNull()
+      .references(() => subjects.id, { onDelete: 'cascade' }),
+    /** Frei, bis 40 Zeichen. Die Oberfläche schlägt gängige Arten vor. */
+    kind: text('kind').notNull(),
+    title: text('title'),
+    /** `YYYY-MM-DD`, lokales Datum ohne Zeitzone. */
+    date: text('date').notNull(),
+    /** `HH:MM`, optional. */
+    time: text('time'),
+    topics: text('topics'),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (table) => [index('exams_date').on(table.date), index('exams_subject').on(table.subjectId)],
+);
+
+/**
  * Zugangsdaten, genau eine Zeile (id = 1). Gespeichert wird nur der Hash des Passcodes,
  * nie der Passcode selbst. Gibt es keine Zeile, ist Pagewise noch nicht eingerichtet.
  */
@@ -295,4 +348,6 @@ export type ProviderRow = typeof providers.$inferSelect;
 export type ChatRow = typeof chats.$inferSelect;
 export type EngineProfileRow = typeof engineProfiles.$inferSelect;
 export type AssetRow = typeof assets.$inferSelect;
+export type TimetableRow = typeof timetableEntries.$inferSelect;
+export type ExamRow = typeof exams.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;
