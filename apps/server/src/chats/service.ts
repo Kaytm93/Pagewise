@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, isNull, max } from 'drizzle-orm';
-import { parseActivity, serializeActivity } from '../agents/activity';
+import { parseActivity, serializeActivity, settleActivity } from '../agents/activity';
 import type { AssetService, AssetView } from '../agents/assets';
 import { formatTranscript, withAgentInstructions } from '../agents/instructions';
 import type { EngineProfileService } from '../agents/profiles';
@@ -16,10 +16,13 @@ import {
 import { buildSystemPrompt } from '../domain/prompts';
 import { getSubject, type SubjectView } from '../domain/subjects';
 import { DefaultPrompts } from '../prompts/defaults';
-import type { ChatMessage } from '../providers/client';
+import type { ChatMessage, ToolCall } from '../providers/client';
 import { ProviderError } from '../providers/errors';
 import type { Selection } from '../providers/models';
 import type { ProviderService } from '../providers/service';
+import { withToolInstructions } from '../tools/instructions';
+import type { ToolRegistry } from '../tools/registry';
+import type { ToolSettings } from '../tools/settings';
 import { type ChatErrorCode, Generation, type MessageStatus, type MessageView } from './generation';
 import { buildHistory, HISTORY_MAX_CHARACTERS, titleFrom } from './history';
 
@@ -80,7 +83,18 @@ export interface ChatServiceOptions {
   assets?: AssetService;
   /** Wie viele Agenten gleichzeitig arbeiten dürfen (schwerer als eine Modellantwort). */
   maxAgents?: number;
+  /** Werkzeuge, die Modelle aufrufen dürfen (Stundenplan, Tests). Ohne Angabe gibt es keine. */
+  tools?: ToolRegistry;
+  /** Globaler Schalter für Werkzeuge. Ohne Angabe gilt „an“. */
+  toolSettings?: ToolSettings;
+  /** Aktuelle Zeit; in Tests fest. */
+  now?: () => Date;
 }
+
+/** Wie viele Runden von Werkzeugaufrufen eine Antwort höchstens macht; danach muss das Modell antworten. */
+export const MAX_TOOL_ROUNDS = 4;
+/** Wie viele Werkzeugaufrufe eine Antwort insgesamt höchstens ausführt. */
+export const MAX_TOOL_CALLS = 12;
 
 /** Womit ein Chat antwortet. */
 type Target = { kind: 'engine'; profileId: string } | { kind: 'api'; chain: Selection[] };
@@ -124,6 +138,9 @@ export class ChatService {
   private readonly assets: AssetService | null;
   private readonly maxAgents: number;
   private readonly activeAgents = new Set<string>();
+  private readonly tools: ToolRegistry | null;
+  private readonly toolSettings: ToolSettings | null;
+  private readonly now: () => Date;
 
   constructor(
     private readonly db: Db,
@@ -138,6 +155,9 @@ export class ChatService {
     this.agents = options.agents ?? null;
     this.assets = options.assets ?? null;
     this.maxAgents = options.maxAgents ?? 2;
+    this.tools = options.tools ?? null;
+    this.toolSettings = options.toolSettings ?? null;
+    this.now = options.now ?? (() => new Date());
     // Antworten, die beim letzten Beenden des Servers liefen, sind unterbrochen. Was schon da war, bleibt.
     this.db
       .update(messages)
@@ -578,8 +598,13 @@ export class ChatService {
 
   /**
    * Führt die Antwort aus: probiert die Modelle der Reihe nach. Gewechselt wird nur bei einem Fehler,
-   * bei dem ein anderes Modell helfen kann, und nur solange noch kein Text da ist. Eine Antwort, die
-   * mitten im Text abbricht, bleibt als Teilantwort stehen.
+   * bei dem ein anderes Modell helfen kann, und nur solange noch kein Text da ist und kein Werkzeug lief.
+   * Eine Antwort, die mitten im Text abbricht, bleibt als Teilantwort stehen.
+   *
+   * Werkzeuge (Stundenplan, Tests): Nur wenn der globale Schalter an ist, der Anbieter sie erlaubt und das
+   * Modell sie kann, bekommt das Modell sie angeboten. Ruft es welche auf, laufen sie hier (nur lesend, geprüft,
+   * begrenzt), ihre Ergebnisse gehen als Daten zurück an das Modell, höchstens {@link MAX_TOOL_ROUNDS} Runden.
+   * Gespeichert wird nur, welches Werkzeug lief, nie Argumente oder Ergebnisse.
    */
   private async run(
     generation: Generation,
@@ -622,39 +647,124 @@ export class ChatService {
           .run();
         usage = null;
 
+        const registry = this.tools;
+        const toolsOn =
+          registry !== null &&
+          (this.toolSettings?.enabled() ?? true) &&
+          resolved.allowTools &&
+          resolved.model.tools;
+        const system = toolsOn ? withToolInstructions(input.system, this.now()) : input.system;
+        const conversation: ChatMessage[] = [{ role: 'system', content: system }, ...input.history];
+        let rounds = 0;
+        let calls = 0;
+        let usedTools = false;
+        // Die Nutzung zählt über alle Runden einer Antwort zusammen.
+        const addUsage = (next: {
+          promptTokens: number | null;
+          completionTokens: number | null;
+        }) => {
+          usage = {
+            promptTokens: sum(usage?.promptTokens ?? null, next.promptTokens),
+            completionTokens: sum(usage?.completionTokens ?? null, next.completionTokens),
+          };
+        };
+
         try {
-          const stream = this.providers.client.streamChat(
-            resolved.target,
-            {
-              model: selection.model,
-              messages: [{ role: 'system', content: input.system }, ...input.history],
-            },
-            generation.abort.signal,
-          );
-          for await (const event of stream) {
-            if (event.type === 'delta') {
-              if (event.text === '') continue;
-              generation.emit({ type: 'delta', text: event.text });
-              if (Date.now() - lastFlush >= this.flushIntervalMs) {
-                lastFlush = Date.now();
-                this.db
-                  .update(messages)
-                  .set({ content: generation.text })
-                  .where(eq(messages.id, assistantId))
-                  .run();
+          for (;;) {
+            let roundText = '';
+            let requested: ToolCall[] | null = null;
+            const stream = this.providers.client.streamChat(
+              resolved.target,
+              {
+                model: selection.model,
+                messages: conversation,
+                // In der letzten Runde ohne Werkzeuge: Das Modell muss mit dem antworten, was es hat.
+                tools:
+                  toolsOn && registry && rounds < MAX_TOOL_ROUNDS ? registry.specs() : undefined,
+              },
+              generation.abort.signal,
+            );
+            for await (const event of stream) {
+              if (event.type === 'delta') {
+                if (event.text === '') continue;
+                // Zwischen dem Text vor und nach einem Werkzeugaufruf steht ein Absatz.
+                if (roundText === '' && generation.text !== '' && !generation.text.endsWith('\n')) {
+                  generation.emit({ type: 'delta', text: '\n\n' });
+                }
+                roundText += event.text;
+                generation.emit({ type: 'delta', text: event.text });
+                if (Date.now() - lastFlush >= this.flushIntervalMs) {
+                  lastFlush = Date.now();
+                  this.db
+                    .update(messages)
+                    .set({ content: generation.text })
+                    .where(eq(messages.id, assistantId))
+                    .run();
+                }
+              } else if (event.type === 'reasoning') {
+                generation.emit({ type: 'thinking' });
+              } else if (event.type === 'usage') {
+                addUsage({
+                  promptTokens: event.promptTokens,
+                  completionTokens: event.completionTokens,
+                });
+              } else if (event.type === 'tool_calls') {
+                requested = event.calls;
               }
-            } else if (event.type === 'reasoning') {
-              generation.emit({ type: 'thinking' });
-            } else if (event.type === 'usage') {
-              usage = {
-                promptTokens: event.promptTokens,
-                completionTokens: event.completionTokens,
-              };
+            }
+
+            if (!requested || !toolsOn || !registry) break;
+            rounds += 1;
+            usedTools = true;
+            conversation.push({ role: 'assistant', content: roundText, toolCalls: requested });
+            for (const call of requested) {
+              if (generation.abort.signal.aborted) break;
+              const id = `tool-${calls}`;
+              if (calls >= MAX_TOOL_CALLS) {
+                conversation.push({
+                  role: 'tool',
+                  toolCallId: call.id,
+                  content: JSON.stringify({ error: 'too_many_calls' }),
+                });
+                continue;
+              }
+              calls += 1;
+              generation.emit({
+                type: 'activity',
+                entry: { id, tool: call.name, target: null, state: 'running' },
+              });
+              const outcome = registry.execute(call.name, call.arguments, {
+                db: this.db,
+                now: this.now,
+              });
+              generation.emit({
+                type: 'activity',
+                entry: {
+                  id,
+                  tool: call.name,
+                  target: outcome.ok ? outcome.target : null,
+                  state: outcome.ok ? 'done' : 'error',
+                },
+              });
+              conversation.push({ role: 'tool', toolCallId: call.id, content: outcome.content });
+            }
+            if (generation.abort.signal.aborted) {
+              status = 'stopped';
+              code = null;
+              settled = true;
+              break;
             }
           }
+          if (settled) break;
           if (generation.text.trim() === '') {
             // Ein Modell, das nichts sagt: das nächste versuchen, sonst als Fehler melden.
             lastCode = 'empty_response';
+            if (usedTools) {
+              status = 'error';
+              code = lastCode;
+              settled = true;
+              break;
+            }
             continue;
           }
           status = 'complete';
@@ -671,8 +781,14 @@ export class ChatService {
           // Nie die Meldung eines Fehlers weitergeben: sie könnte Teile von Schlüssel oder Eingabe enthalten.
           const known = error instanceof ProviderError ? error : null;
           lastCode = known?.code ?? 'internal';
-          if (known?.retryable && generation.text === '' && index < input.chain.length - 1)
+          if (
+            known?.retryable &&
+            generation.text === '' &&
+            !usedTools &&
+            index < input.chain.length - 1
+          ) {
             continue;
+          }
           status = 'error';
           code = lastCode;
           settled = true;
@@ -719,7 +835,12 @@ export class ChatService {
                 model: agent.model,
                 activity: serializeActivity(agent.activity),
               }
-            : {}),
+            : {
+                // Werkzeugaufrufe eines Modells: nur Name und Zustand, nie Argumente oder Ergebnisse.
+                activity: serializeActivity(
+                  settleActivity(generation.activity, status === 'stopped'),
+                ),
+              }),
           promptTokens: usage?.promptTokens ?? null,
           completionTokens: usage?.completionTokens ?? null,
         })
@@ -754,4 +875,8 @@ export class ChatService {
     else if (status === 'stopped') generation.emit({ type: 'stopped', message });
     else generation.emit({ type: 'failed', code: code ?? 'internal', message });
   }
+}
+
+function sum(a: number | null, b: number | null): number | null {
+  return a === null && b === null ? null : (a ?? 0) + (b ?? 0);
 }

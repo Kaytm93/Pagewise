@@ -1,3 +1,4 @@
+import type { ToolSpec } from '../tools/registry';
 import { codeForStatus, codeFromBody, ProviderError } from './errors';
 import { readSse } from './sse';
 
@@ -17,9 +18,20 @@ export interface UpstreamModel {
   free: boolean;
 }
 
+/** Ein Werkzeugaufruf des Modells. `arguments` ist die rohe JSON-Zeichenfolge: nicht vertrauenswürdig, erst prüfen. */
+export interface ToolCall {
+  id: string;
+  name: string;
+  arguments: string;
+}
+
 export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
+  /** Nur Antworten des Assistenten: die Werkzeugaufrufe dieser Runde. */
+  toolCalls?: ToolCall[];
+  /** Nur Rolle `tool`: Kennung des Aufrufs, auf den das Ergebnis antwortet. */
+  toolCallId?: string;
 }
 
 export interface ChatRequest {
@@ -27,11 +39,15 @@ export interface ChatRequest {
   messages: ChatMessage[];
   temperature?: number;
   maxTokens?: number;
+  /** Werkzeuge, die das Modell aufrufen darf. Ohne Angabe gibt es keine. */
+  tools?: ToolSpec[];
 }
 
 export type ChatEvent =
   | { type: 'delta'; text: string }
   | { type: 'reasoning'; text: string }
+  /** Das Modell will Werkzeuge aufrufen (kommt nach dem Strom, vollständig zusammengesetzt; die Reihenfolge zu `finish` ist nicht festgelegt). */
+  | { type: 'tool_calls'; calls: ToolCall[] }
   | { type: 'usage'; promptTokens: number | null; completionTokens: number | null }
   | { type: 'finish'; reason: string | null };
 
@@ -51,6 +67,9 @@ const MAX_JSON_BYTES = 8 * 1024 * 1024;
 const MAX_LISTED_MODELS = 2000;
 const MAX_REPLY_CHARACTERS = 200_000;
 const MAX_ERROR_BODY_BYTES = 4096;
+const MAX_TOOL_CALLS = 8;
+const MAX_TOOL_ARGUMENT_CHARACTERS = 16_384;
+const TOOL_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 
 type Json = unknown;
 
@@ -299,11 +318,17 @@ export class ProviderClient {
 
     const body: Record<string, unknown> = {
       model: request.model,
-      messages: request.messages,
+      messages: request.messages.map(wireMessage),
       stream: true,
     };
     if (request.temperature !== undefined) body.temperature = request.temperature;
     if (request.maxTokens !== undefined) body.max_tokens = request.maxTokens;
+    if (request.tools && request.tools.length > 0) {
+      body.tools = request.tools.map((tool) => ({
+        type: 'function',
+        function: { name: tool.name, description: tool.description, parameters: tool.parameters },
+      }));
+    }
 
     try {
       arm();
@@ -324,10 +349,11 @@ export class ProviderClient {
 
       let finished = false;
       let characters = 0;
+      const pending = new Map<number, PartialCall>();
       try {
         for await (const sse of readSse(response.body, arm)) {
           if (sse.data === '[DONE]') break;
-          for (const event of this.parseChunk(sse.data)) {
+          for (const event of this.parseChunk(sse.data, pending)) {
             if (event.type === 'delta' || event.type === 'reasoning') {
               characters += event.text.length;
               if (characters > MAX_REPLY_CHARACTERS) throw new ProviderError('invalid_response');
@@ -340,6 +366,7 @@ export class ProviderClient {
         if (error instanceof ProviderError) throw error;
         throw this.abortError(signal, null, watchdog) ?? new ProviderError('unreachable');
       }
+      if (pending.size > 0) yield { type: 'tool_calls', calls: completeCalls(pending) };
       if (!finished) yield { type: 'finish', reason: null };
     } finally {
       clearTimeout(timer);
@@ -347,7 +374,7 @@ export class ProviderClient {
   }
 
   /** Ein Datenblock des Stroms. Fehler mitten im Strom sind Teil des Blocks (`error`). */
-  private parseChunk(data: string): ChatEvent[] {
+  private parseChunk(data: string, pending: Map<number, PartialCall>): ChatEvent[] {
     let json: Json;
     try {
       json = JSON.parse(data);
@@ -371,6 +398,7 @@ export class ProviderClient {
       if (reasoning) events.push({ type: 'reasoning', text: reasoning });
       const content = str(delta?.content);
       if (content) events.push({ type: 'delta', text: content });
+      if (Array.isArray(delta?.tool_calls)) collectToolCalls(delta.tool_calls, pending);
     }
     if (isRecord(json.usage)) {
       events.push({
@@ -394,10 +422,14 @@ export class ProviderClient {
     const choice =
       Array.isArray(json.choices) && isRecord(json.choices[0]) ? json.choices[0] : null;
     const message = choice && isRecord(choice.message) ? choice.message : null;
-    const content = str(message?.content);
+    const calls = new Map<number, PartialCall>();
+    if (Array.isArray(message?.tool_calls)) collectToolCalls(message.tool_calls, calls);
+    // Mit Werkzeugaufrufen darf der Text fehlen (`null`).
+    const content = str(message?.content) ?? (calls.size > 0 ? '' : null);
     if (content === null) throw new ProviderError('invalid_response');
     if (content.length > MAX_REPLY_CHARACTERS) throw new ProviderError('invalid_response');
     if (content) yield { type: 'delta', text: content };
+    if (calls.size > 0) yield { type: 'tool_calls', calls: completeCalls(calls) };
     if (isRecord(json.usage)) {
       yield {
         type: 'usage',
@@ -407,4 +439,58 @@ export class ProviderClient {
     }
     yield { type: 'finish', reason: str(choice?.finish_reason) };
   }
+}
+
+/** Ein Werkzeugaufruf, der im Strom stückweise ankommt. */
+interface PartialCall {
+  id: string | null;
+  name: string;
+  arguments: string;
+}
+
+/** Die Nachricht, wie sie die Schnittstelle erwartet (OpenAI-Format). */
+function wireMessage(message: ChatMessage): Record<string, unknown> {
+  if (message.role === 'tool') {
+    return { role: 'tool', tool_call_id: message.toolCallId, content: message.content };
+  }
+  if (message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0) {
+    return {
+      role: 'assistant',
+      content: message.content === '' ? null : message.content,
+      tool_calls: message.toolCalls.map((call) => ({
+        id: call.id,
+        type: 'function',
+        function: { name: call.name, arguments: call.arguments },
+      })),
+    };
+  }
+  return { role: message.role, content: message.content };
+}
+
+/** Sammelt Werkzeugaufrufe aus einem Block des Stroms (`index` ordnet Stücke einem Aufruf zu). */
+function collectToolCalls(list: Json[], pending: Map<number, PartialCall>): void {
+  for (const [position, entry] of list.entries()) {
+    if (!isRecord(entry)) continue;
+    const index = int(entry.index) ?? position;
+    if (index < 0 || index >= MAX_TOOL_CALLS) throw new ProviderError('invalid_response');
+    const call = pending.get(index) ?? { id: null, name: '', arguments: '' };
+    const fn = isRecord(entry.function) ? entry.function : null;
+    call.id = str(entry.id) ?? call.id;
+    call.name += str(fn?.name) ?? '';
+    call.arguments += str(fn?.arguments) ?? '';
+    if (call.arguments.length > MAX_TOOL_ARGUMENT_CHARACTERS || call.name.length > 64) {
+      throw new ProviderError('invalid_response');
+    }
+    pending.set(index, call);
+  }
+}
+
+/** Macht aus den gesammelten Stücken fertige Aufrufe: nur gültige Namen, höchstens {@link MAX_TOOL_CALLS}. */
+function completeCalls(pending: Map<number, PartialCall>): ToolCall[] {
+  return [...pending.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([index, call]) => {
+      if (!TOOL_NAME.test(call.name)) throw new ProviderError('invalid_response');
+      return { id: call.id ?? `call_${index}`, name: call.name, arguments: call.arguments };
+    });
 }

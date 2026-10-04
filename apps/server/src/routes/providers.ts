@@ -17,6 +17,7 @@ const CreateBody = z.strictObject({
   apiKey: ApiKey.optional(),
   models: ModelListSchema.optional(),
   sendImages: z.boolean().optional(),
+  allowTools: z.boolean().optional(),
 });
 
 const UpdateBody = z
@@ -25,6 +26,7 @@ const UpdateBody = z
     baseUrl: z.string().max(200).optional(),
     models: ModelListSchema.optional(),
     sendImages: z.boolean().optional(),
+    allowTools: z.boolean().optional(),
     apiKey: ApiKey.optional(),
     clearKey: z.boolean().optional(),
   })

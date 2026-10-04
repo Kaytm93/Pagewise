@@ -658,3 +658,213 @@ describe('ProviderClient.streamChat', () => {
     expect(events.filter((event) => event.type === 'delta')).toHaveLength(8);
   });
 });
+
+describe('ProviderClient.streamChat: Werkzeugaufrufe', () => {
+  const tools = [
+    {
+      name: 'get_exams',
+      description: 'Liest Tests.',
+      parameters: { type: 'object', properties: {}, additionalProperties: false },
+    },
+  ];
+  const call = (index: number, extra: Record<string, unknown>) =>
+    chunk({ tool_calls: [{ index, ...extra }] });
+
+  it('sendet Werkzeuge im Format der Schnittstelle und Werkzeug-Nachrichten mit Aufruf-ID', async () => {
+    const { fetch, calls } = fakeFetch(() => sse([chunk({ content: 'x' }), 'data: [DONE]\n\n']));
+    const client = new ProviderClient({ fetch });
+    await drain(
+      client.streamChat(target, {
+        model: 'modell-a',
+        tools,
+        messages: [
+          { role: 'user', content: 'Wann ist der Test?' },
+          {
+            role: 'assistant',
+            content: '',
+            toolCalls: [{ id: 'call_1', name: 'get_exams', arguments: '{"from":"2026-10-04"}' }],
+          },
+          { role: 'tool', toolCallId: 'call_1', content: '{"exams":[]}' },
+        ],
+      }),
+    );
+    const body = calls[0]?.body as { tools: unknown; messages: unknown[] };
+    expect(body.tools).toEqual([
+      {
+        type: 'function',
+        function: {
+          name: 'get_exams',
+          description: 'Liest Tests.',
+          parameters: tools[0]?.parameters,
+        },
+      },
+    ]);
+    expect(body.messages).toEqual([
+      { role: 'user', content: 'Wann ist der Test?' },
+      {
+        role: 'assistant',
+        content: null,
+        tool_calls: [
+          {
+            id: 'call_1',
+            type: 'function',
+            function: { name: 'get_exams', arguments: '{"from":"2026-10-04"}' },
+          },
+        ],
+      },
+      { role: 'tool', tool_call_id: 'call_1', content: '{"exams":[]}' },
+    ]);
+  });
+
+  it('sendet ohne Werkzeuge kein Feld „tools“', async () => {
+    const { fetch, calls } = fakeFetch(() => sse(['data: [DONE]\n\n']));
+    await drain(new ProviderClient({ fetch }).streamChat(target, { model: 'm', messages: [] }));
+    await drain(
+      new ProviderClient({ fetch }).streamChat(target, { model: 'm', messages: [], tools: [] }),
+    );
+    for (const entry of calls) expect(Object.keys(entry.body as object)).not.toContain('tools');
+  });
+
+  it('setzt einen Aufruf aus Stücken zusammen, auch wenn die Argumente zerteilt ankommen', async () => {
+    const { fetch } = fakeFetch(() =>
+      sse([
+        call(0, { id: 'call_a', type: 'function', function: { name: 'get_ex', arguments: '' } }),
+        call(0, { function: { name: 'ams', arguments: '{"fr' } }),
+        call(0, { function: { arguments: 'om":"2026-10-04"}' } }),
+        `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'tool_calls' }] })}\n\n`,
+        'data: [DONE]\n\n',
+      ]),
+    );
+    const events = await drain(
+      new ProviderClient({ fetch }).streamChat(target, { ...request, tools }),
+    );
+    expect(events.filter((event) => event.type === 'tool_calls')).toEqual([
+      {
+        type: 'tool_calls',
+        calls: [{ id: 'call_a', name: 'get_exams', arguments: '{"from":"2026-10-04"}' }],
+      },
+    ]);
+    expect(events.find((event) => event.type === 'finish')).toEqual({
+      type: 'finish',
+      reason: 'tool_calls',
+    });
+  });
+
+  it('liefert mehrere Aufrufe in der Reihenfolge ihres Index, auch aus einem Block, und vergibt fehlende IDs', async () => {
+    const { fetch } = fakeFetch(() =>
+      sse([
+        chunk({
+          tool_calls: [
+            { index: 1, function: { name: 'get_exams', arguments: '{}' } },
+            { index: 0, id: 'x', function: { name: 'get_timetable', arguments: '{"weekday":2}' } },
+          ],
+        }),
+        'data: [DONE]\n\n',
+      ]),
+    );
+    const events = await drain(
+      new ProviderClient({ fetch }).streamChat(target, { ...request, tools }),
+    );
+    const calls = events.find((event) => event.type === 'tool_calls');
+    expect(calls).toEqual({
+      type: 'tool_calls',
+      calls: [
+        { id: 'x', name: 'get_timetable', arguments: '{"weekday":2}' },
+        { id: 'call_1', name: 'get_exams', arguments: '{}' },
+      ],
+    });
+  });
+
+  it('trennt Text vor dem Aufruf vom Aufruf', async () => {
+    const { fetch } = fakeFetch(() =>
+      sse([
+        chunk({ content: 'Ich sehe nach.' }),
+        call(0, { id: 'c', function: { name: 'get_exams', arguments: '{}' } }),
+        'data: [DONE]\n\n',
+      ]),
+    );
+    const events = await drain(
+      new ProviderClient({ fetch }).streamChat(target, { ...request, tools }),
+    );
+    expect(events.map((event) => event.type).sort()).toEqual(['delta', 'finish', 'tool_calls']);
+  });
+
+  it('lehnt unzulässige Werkzeugnamen, zu viele Aufrufe und zu lange Argumente ab', async () => {
+    const run = (chunks: string[]) =>
+      failure(
+        drain(
+          new ProviderClient({ fetch: fakeFetch(() => sse(chunks)).fetch }).streamChat(target, {
+            ...request,
+            tools,
+          }),
+        ),
+      );
+    expect(
+      (
+        await run([
+          call(0, { id: 'c', function: { name: 'sh -c "rm -rf"', arguments: '{}' } }),
+          'data: [DONE]\n\n',
+        ])
+      ).code,
+    ).toBe('invalid_response');
+    expect(
+      (
+        await run([
+          call(0, { id: 'c', function: { name: 'x'.repeat(65), arguments: '{}' } }),
+          'data: [DONE]\n\n',
+        ])
+      ).code,
+    ).toBe('invalid_response');
+    expect((await run([call(8, { id: 'c', function: { name: 'a', arguments: '{}' } })])).code).toBe(
+      'invalid_response',
+    );
+    expect(
+      (await run([call(0, { id: 'c', function: { name: 'a', arguments: 'x'.repeat(17_000) } })]))
+        .code,
+    ).toBe('invalid_response');
+  });
+
+  it('ignoriert Einträge ohne Struktur', async () => {
+    const { fetch } = fakeFetch(() =>
+      sse([chunk({ tool_calls: ['kaputt', null, 5] }), 'data: [DONE]\n\n']),
+    );
+    const events = await drain(
+      new ProviderClient({ fetch }).streamChat(target, { ...request, tools }),
+    );
+    expect(events.some((event) => event.type === 'tool_calls')).toBe(false);
+  });
+
+  it('liest Werkzeugaufrufe auch aus einer gewöhnlichen JSON-Antwort, in der der Text fehlt', async () => {
+    const { fetch } = fakeFetch(() =>
+      json({
+        choices: [
+          {
+            message: {
+              role: 'assistant',
+              content: null,
+              tool_calls: [
+                { id: 'c1', type: 'function', function: { name: 'get_exams', arguments: '{}' } },
+              ],
+            },
+            finish_reason: 'tool_calls',
+          },
+        ],
+      }),
+    );
+    const events = await drain(
+      new ProviderClient({ fetch }).streamChat(target, { ...request, tools }),
+    );
+    expect(events).toEqual([
+      { type: 'tool_calls', calls: [{ id: 'c1', name: 'get_exams', arguments: '{}' }] },
+      { type: 'finish', reason: 'tool_calls' },
+    ]);
+  });
+
+  it('meldet eine JSON-Antwort ohne Text und ohne Aufrufe weiter als ungültig', async () => {
+    const { fetch } = fakeFetch(() =>
+      json({ choices: [{ message: { content: null }, finish_reason: 'stop' }] }),
+    );
+    const error = await failure(drain(new ProviderClient({ fetch }).streamChat(target, request)));
+    expect(error.code).toBe('invalid_response');
+  });
+});

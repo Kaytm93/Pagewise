@@ -54,6 +54,7 @@ describe('Datenbank', () => {
       'auth_credentials',
       'chats',
       'engine_profiles',
+      'exams',
       'messages',
       'profile',
       'providers',
@@ -61,6 +62,7 @@ describe('Datenbank', () => {
       'settings',
       'subject_groups',
       'subjects',
+      'timetable_entries',
     ]);
   });
 
@@ -316,7 +318,9 @@ describe('Migrationen mit Sicherung', () => {
       entries: { tag: string }[];
     };
     const full = JSON.stringify(journal);
-    journal.entries = journal.entries.filter((entry) => !entry.tag.endsWith('_subject_color'));
+    // Alles ab dieser Migration weglassen: Drizzle wendet nur Migrationen an, die neuer sind als die letzte.
+    const cut = journal.entries.findIndex((entry) => entry.tag.endsWith('_subject_color'));
+    journal.entries = journal.entries.slice(0, cut);
     writeFileSync(journalPath, JSON.stringify(journal));
     migrateDatabase(handle, { migrationsFolder, backupDir });
     const insert = handle.sqlite.prepare(

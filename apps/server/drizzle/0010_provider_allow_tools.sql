@@ -1,0 +1,1 @@
+ALTER TABLE `providers` ADD `allow_tools` integer DEFAULT true NOT NULL;

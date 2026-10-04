@@ -22,6 +22,8 @@ import { type DataPaths, ensureDataLayout } from './storage/data-paths';
 import { DataEraser } from './storage/eraser';
 import { FileSecretStore, type SecretStore } from './storage/secret-store';
 import { LocalStorage, type Storage } from './storage/storage';
+import { createToolRegistry, type ToolRegistry } from './tools';
+import { ToolSettings } from './tools/settings';
 
 /** Alles, was auf das Datenverzeichnis zugreift. Wird beim Start einmal gebaut. */
 export interface Services {
@@ -46,6 +48,10 @@ export interface Services {
   catalog: SubjectCatalog;
   /** Mitgelieferte Standard-Prompts je Fach (D-034), aus `prompts/defaults`. */
   defaults: DefaultPrompts;
+  /** Werkzeuge, die Chat-Modelle aufrufen dürfen (nur lesend: Stundenplan und Tests). */
+  tools: ToolRegistry;
+  /** Globaler Schalter für den Werkzeugzugriff der KI. */
+  toolSettings: ToolSettings;
   chats: ChatService;
   eraser: DataEraser;
   close(): void;
@@ -118,12 +124,16 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     assets,
     engine: new ClaudeCodeEngine({ ...options.agent, dataRoot: paths.root }),
   });
+  const tools = createToolRegistry();
+  const toolSettings = new ToolSettings(database.db);
   const chats = new ChatService(database.db, providers, {
     ...options.chats,
     defaults,
     engines,
     agents: runner,
     assets,
+    tools,
+    toolSettings,
   });
   const cleanup = new AgentCleanup(database.db, chats, assets, workspaces);
   // Das eingebaute Fach „Standard“ (fachunabhängiger Chat) gehört immer dazu.
@@ -143,6 +153,8 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     cleanup,
     catalog,
     defaults,
+    tools,
+    toolSettings,
     chats,
     eraser: new DataEraser({ database, paths, secrets, chats }),
     close: () => database.close(),

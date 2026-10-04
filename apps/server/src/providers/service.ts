@@ -31,6 +31,8 @@ export interface ProviderView {
   models: ModelView[];
   /** Bilder an diesen Anbieter senden? Aus bedeutet: nur Text verlässt den Rechner. */
   sendImages: boolean;
+  /** Darf das Modell Stundenplan und Tests über Werkzeuge einsehen? Aus bedeutet: diese Daten gehen nie an den Anbieter. */
+  allowTools: boolean;
   hasKey: boolean;
   /** Letzte vier Zeichen, nur bei langen Schlüsseln. Der Schlüssel selbst verlässt den Server nie. */
   keyHint: string | null;
@@ -73,6 +75,7 @@ export interface CreateProviderInput {
   apiKey?: string;
   models?: ModelEntry[];
   sendImages?: boolean;
+  allowTools?: boolean;
 }
 
 export interface UpdateProviderInput {
@@ -80,6 +83,7 @@ export interface UpdateProviderInput {
   baseUrl?: string;
   models?: ModelEntry[];
   sendImages?: boolean;
+  allowTools?: boolean;
   /** Neuer Schlüssel. Ein leerer Wert wird vorher abgelehnt. */
   apiKey?: string;
   clearKey?: boolean;
@@ -135,6 +139,7 @@ export class ProviderService {
         free: isFreeModel(model.id),
       })),
       sendImages: row.sendImages,
+      allowTools: row.allowTools,
       hasKey: hints.has(name),
       keyHint: hints.get(name) ?? null,
       warning: isCodingPlanUrl(row.baseUrl) ? 'coding_plan' : null,
@@ -184,6 +189,7 @@ export class ProviderService {
           baseUrl: url.url,
           models: JSON.stringify(models),
           sendImages: input.sendImages ?? true,
+          allowTools: input.allowTools ?? true,
           position: last?.value === null || last?.value === undefined ? 0 : last.value + 1,
         })
         .returning()
@@ -249,6 +255,7 @@ export class ProviderService {
     }
     if (input.models !== undefined) changes.models = JSON.stringify(input.models);
     if (input.sendImages !== undefined) changes.sendImages = input.sendImages;
+    if (input.allowTools !== undefined) changes.allowTools = input.allowTools;
 
     // Zuerst den Schlüssel prüfen und schreiben: schlägt das fehl, bleibt alles andere unverändert.
     if (input.apiKey !== undefined) {
@@ -290,15 +297,19 @@ export class ProviderService {
     return this.db.select().from(providers).where(eq(providers.id, id)).get()?.sendImages ?? false;
   }
 
-  private async target(
-    id: string,
-  ): Promise<{ target: Target; preset: string; models: ModelEntry[] } | null> {
+  private async target(id: string): Promise<{
+    target: Target;
+    preset: string;
+    models: ModelEntry[];
+    allowTools: boolean;
+  } | null> {
     const row = this.db.select().from(providers).where(eq(providers.id, id)).get();
     if (!row) return null;
     return {
       target: { baseUrl: row.baseUrl, apiKey: (await this.secrets.get(secretName(id))) ?? null },
       preset: row.preset,
       models: parseStoredModels(row.models),
+      allowTools: row.allowTools,
     };
   }
 
@@ -421,9 +432,11 @@ export class ProviderService {
   /** Alles, was eine Anfrage braucht. Nur für Server-Code: enthält den Schlüssel. */
   async resolve(
     selection: Selection,
-  ): Promise<{ target: Target; model: ModelEntry; preset: string } | null> {
+  ): Promise<{ target: Target; model: ModelEntry; preset: string; allowTools: boolean } | null> {
     const found = await this.target(selection.providerId);
     const model = found?.models.find((entry) => entry.id === selection.model);
-    return found && model ? { target: found.target, model, preset: found.preset } : null;
+    return found && model
+      ? { target: found.target, model, preset: found.preset, allowTools: found.allowTools }
+      : null;
   }
 }

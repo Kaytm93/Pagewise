@@ -56,6 +56,11 @@ export const providers = sqliteTable(
     models: text('models').notNull().default('[]'),
     /** Dürfen Bilder an diesen Anbieter gehen? Aus: Der Chat sendet nur Text (Abschnitt „Daten an Dritte“). */
     sendImages: integer('send_images', { mode: 'boolean' }).notNull().default(true),
+    /**
+     * Darf das Modell dieses Anbieters Stundenplan und Tests über Werkzeuge nachschlagen (Welle 3)? Aus: Diese
+     * Daten gehen nie an den Anbieter. Wirkt zusätzlich zum globalen Schalter und zum Werkzeug-Flag des Modells.
+     */
+    allowTools: integer('allow_tools', { mode: 'boolean' }).notNull().default(true),
     position: integer('position').notNull().default(0),
     ...timestamps,
   },
