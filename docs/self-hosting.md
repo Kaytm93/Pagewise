@@ -1,6 +1,6 @@
 # Selbst hosten
 
-Stand: Phase 1a. Der Server läuft, die Oberfläche ist als installierbare Web-App gebaut (Onboarding, Fächer, Chat). Die Tailscale-Schritte unten sind aus der Doku abgeleitet und noch nicht auf iPhone und iPad geprüft.
+Stand: Phase 1b, Mac-App gebaut. Der Server läuft, die Oberfläche ist als installierbare Web-App gebaut (Onboarding, Fächer, Chat, Hefteinträge). Auf dem Mac gibt es zusätzlich eine echte App (`Pagewise.app`, Abschnitt unten). Die Tailscale-Schritte sind aus der Doku abgeleitet und noch nicht auf iPhone und iPad geprüft; was nur auf dem Mac prüfbar ist, steht in [acceptance-mac.md](acceptance-mac.md).
 
 ## Voraussetzungen
 
@@ -8,7 +8,42 @@ Stand: Phase 1a. Der Server läuft, die Oberfläche ist als installierbare Web-A
 - Node.js ab 22.18 und pnpm ab 10
 - Tailscale auf dem Rechner und auf den Geräten, mit denen du zugreifen willst
 
-## Starten
+## Mac-App (`Pagewise.app`)
+
+Der Mac ist der Server. Die App ist eine Hülle um denselben Server und dieselbe Oberfläche: eigenes Fenster ohne Adressleiste, Menüleiste mit Kürzeln, Symbol in der Menüleiste, Start bei der Anmeldung, hält den Mac wach, zeigt den Einrichtungscode, richtet Tailscale Serve ein und zeigt Adresse und QR-Code für iPhone und iPad ([D-050](decisions.md) bis [D-056](decisions.md)). iPhone und iPad bleiben Web-Apps im Browser (Teilen → „Zum Home-Bildschirm“).
+
+**Selbst bauen (empfohlen, ohne Apple-Konto).** Auf dem Mac (macOS 13 oder neuer ist die Vorgabe von Electron, siehe D-055), mit Node ab 22.18 und pnpm:
+
+```bash
+pnpm install
+pnpm app:mac            # baut und installiert nach ~/Applications/Pagewise.app
+open ~/Applications/Pagewise.app
+```
+
+`pnpm app:mac --no-install` baut nur, `--arch x64` baut für Intel-Macs, `--dest <Ordner>` wählt einen anderen Zielordner. Läuft Pagewise gerade, bricht das Skript ab (erst beenden). Eine selbst gebaute App wird von macOS nicht blockiert. Sie ist nur „ad hoc“ signiert (ohne Apple-Konto), das reicht für den eigenen Mac.
+
+**Fertige App aus der CI.** Der Job `desktop-mac` baut `Pagewise.app` für Apple-Silizium und legt sie drei Tage lang als Artefakt `Pagewise-mac-arm64` ab (Actions → Lauf → Artefakte). Sie ist nicht notarisiert, macOS blockiert sie deshalb beim ersten Start (Anleitung nach Apple, **von mir nicht geprüft**, die Seite von Apple ist aus meiner Umgebung nicht erreichbar):
+
+1. Zip entpacken, `Pagewise.app` nach Programme (oder `~/Applications`) ziehen.
+2. Einmal öffnen. macOS meldet, dass die App nicht überprüft werden konnte, und lässt sie nicht starten.
+3. Systemeinstellungen → Datenschutz & Sicherheit → nach unten scrollen → bei Pagewise **„Trotzdem öffnen“**, Kennwort eingeben. Seit macOS 15 (Sequoia) gibt es dafür **kein** „Control-Klick → Öffnen“ mehr (laut Auftrag, nicht verifiziert).
+
+Eine Entwicklerzertifikat-Signatur mit Notarisierung (damit die Warnung entfällt) kostet 99 USD pro Jahr und ist **nicht eingerichtet**: [D-056](decisions.md) beschreibt Aufwand und Voraussetzungen, die Entscheidung liegt bei dir.
+
+**Was die App für dich übernimmt.**
+
+- **Einrichtungscode:** erscheint beim ersten Start (und nach „Passcode zurücksetzen“) in einem Dialog mit „Kopieren“, später unter Hilfe → „Einrichtungscode anzeigen …“. Die Konsole brauchst du nicht.
+- **iPhone und iPad verbinden:** Hilfe → „Mit iPhone und iPad verbinden …“ (oder das Symbol in der Menüleiste) zeigt, ob Tailscale läuft, richtet `tailscale serve` ein, zeigt die Adresse mit QR-Code und warnt vor einem Rechnernamen, der nach einer Person klingt (Zertifikatsverzeichnis, siehe unten). **Funnel** richtet die App nie ein; ist es irgendwo an, warnt sie in Rot und bietet das Zurücksetzen an.
+- **Mac wach halten:** an, solange die App läuft (das Display darf ausgehen). Bei **zugeklapptem Deckel ohne externes Display** schläft ein MacBook trotzdem; dann ist Pagewise auf iPhone und iPad nicht erreichbar, auch nicht mit der App.
+- **Start bei Anmeldung:** Hilfe → „Bei Anmeldung starten“ (die App startet dann ohne Fenster, das Symbol in der Menüleiste zeigt den Zustand). Verlangt macOS eine Freigabe, steht sie in Systemeinstellungen → Allgemein → Anmeldeobjekte.
+- **Fenster schließen** beendet nichts (der Server läuft weiter). **Beenden** (Cmd+Q) fragt nach, wenn Antworten laufen oder Geräte angemeldet sind, und beendet dann auch den Server.
+- **`claude` nicht gefunden?** Programme aus dem Finder sehen nur einen knappen `PATH`: Einstellungen → Agent-CLI → „Pfad zu claude“ (`which claude` im Terminal zeigt ihn).
+
+**Daten:** wie überall `~/Library/Application Support/Pagewise` (Server) und darin `Fenster` (Cookies, Einstellungen des Fensters). „Alles löschen“ leert beides, nicht den Passcode.
+
+**Lizenzen:** `Pagewise.app/Contents/Resources/licenses/` enthält die Hinweise zu allen mitgelieferten Paketen sowie die Lizenzen von Electron und Chromium.
+
+## Starten ohne App (Befehlszeile)
 
 ```bash
 pnpm install
@@ -65,7 +100,7 @@ Quellen (abgerufen am 3. Oktober 2026):
 
 ## Rechner wach halten
 
-Der Rechner muss laufen, solange du von anderen Geräten zugreifst. Auf dem Mac stellst du in den Systemeinstellungen den Ruhezustand bei Netzbetrieb ab oder startest den Server mit `caffeinate -s pnpm start`. Ein Autostart über `launchd` kommt in Phase 1a.
+Der Rechner muss laufen, solange du von anderen Geräten zugreifst. Auf dem Mac stellst du in den Systemeinstellungen den Ruhezustand bei Netzbetrieb ab oder startest den Server mit `caffeinate -s pnpm start`. Mit der Mac-App (siehe oben) übernimmt sie das (Hilfe → „Mac wach halten“, „Bei Anmeldung starten“).
 
 ## Docker (optional)
 

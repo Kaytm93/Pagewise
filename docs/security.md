@@ -45,6 +45,27 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | Standard-Prompts im öffentlichen Repo (D-034): neutral, ohne Namen, Orte, Schulen, Bundesländer, Lehrplan- oder Prüfungsangaben; Test prüft jede Datei | umgesetzt, siehe D-034 |
 | „Alles löschen“ leert jede Tabelle außer Anmeldung, Sitzungen und Migrationsprotokoll (auch künftige) | umgesetzt, siehe D-038 |
 | Verschlüsselte Backups und Export | geplant |
+| Werkzeugzugriff der KI: nur lesend, geprüfte Argumente, begrenzte Ausgabe, Schalter global und je Anbieter, nur Name und Zustand gespeichert | umgesetzt (Welle 3), siehe D-044 und [tools.md](tools.md) |
+| Mac-App: Fenster mit Sandkasten, getrenntem Kontext und ohne Node, Hauptfenster ohne Preload, alle Berechtigungen der Seite abgelehnt, Navigation nur zur eigenen Herkunft | umgesetzt (Mac-Hülle), im echten Electron gemessen, siehe D-053 |
+| Mac-App: Server als Unterprozess mit Allowlist-Umgebung und leerer Argumentliste, Status und Einrichtungscode nur über IPC, nie über HTTP | umgesetzt, siehe D-050, D-051, D-053 |
+| Mac-App: Hüllen-Fenster nur mit festen Funktionen im Preload, IPC nur von eigenen lokalen Seiten (Sender und Frame-URL geprüft), strenge CSP ohne Inline-Skript und -Style | umgesetzt, siehe D-053, D-054 |
+| Mac-App: Tailscale nur über `execFile` ohne Shell mit minimaler Umgebung, nie `tailscale funnel`, rote Warnung bei öffentlicher Freigabe, Warnung bei Rechnernamen mit Personenbezug | umgesetzt, siehe D-054 |
+| Mac-App: keine Telemetrie, Chromium-Hintergrundverbindungen abgeschaltet (Netzprotokoll geprüft) | umgesetzt (unter Linux gemessen, am Mac ungeprüft), siehe D-053 |
+| Mac-App: Lizenzhinweise der mitgelieferten Pakete in der App | umgesetzt, siehe D-055 |
+| Mac-App: Developer-ID-Signatur und Notarisierung | **nicht eingerichtet** (Stufe 1: nur ad hoc), Entscheidungsvorlage D-056 |
+
+## Mac-App
+
+Die Mac-App ist eine Hülle um denselben Server (D-050 bis D-056). Wo die Grenzen liegen:
+
+- **Das Hauptfenster lädt nur den eigenen Server** (`http://127.0.0.1:3000`). Es hat keinen Preload und damit keine Brücke in den Inhalt, `contextIsolation` und `sandbox` sind an, Node ist aus (`require` und `process` sind in der Seite nicht vorhanden, gemessen). Fremde Links gehen in den Standardbrowser, `file:`, `javascript:` und `data:` werden abgelehnt, `window.open` öffnet nie ein App-Fenster. Alle Berechtigungen der Seite (Kamera, Mikrofon, Standort, Benachrichtigungen, Geräte, Zwischenablage) werden abgelehnt.
+- **Hüllen-Fenster** („Mit iPhone und iPad verbinden“, Start- und Fehlerseite) sind lokale Seiten mit eigener strenger CSP und einem Preload mit **festen Funktionen**; der Hauptprozess nimmt IPC nur von diesen Seiten an und prüft Sender und Frame-URL. Die Seite kann keine Befehle, Pfade oder Adressen vorgeben.
+- **Der Server läuft als Unterprozess** mit einer ausdrücklich zusammengestellten Umgebung (nur `HOME`, `USER`, Sprache, Zeitzone, ein erweiterter `PATH` und die `PAGEWISE_*`-Werte, nie `process.env` als Ganzes) und leerer Argumentliste. Schlüssel anderer Programme, Proxy-Einstellungen, `NODE_OPTIONS` und `DYLD_*` kommen nie an.
+- **Status und Steuerung laufen nur über IPC, nie über HTTP.** Hinter Tailscale Serve kommen alle Anfragen von 127.0.0.1 (D-021): ein „nur lokaler“ Endpunkt wäre für das ganze Tailnet sichtbar. Der Einrichtungscode erscheint nur in einem Dialog der App.
+- **Tailscale** wird nur mit `execFile` ohne Shell, mit Zeitlimit und minimaler Umgebung aufgerufen. `tailscale funnel` kommt im Quelltext nicht vor (Strukturtest). Die App prüft bei jeder Abfrage, ob irgendeine Freigabe öffentlich ist, und warnt in Rot. Eine fremde Freigabe überschreibt sie nie, `serve reset` (nimmt alle Freigaben weg) nur nach Rückfrage.
+- **Keine Telemetrie.** Chromium-Schalter schalten Hintergrundverbindungen (Komponenten-Updates, Verbindungsprüfung, Domain-Reliability) ab; ein Strukturtest sucht fremde Adressen im Quelltext. Unter Linux blieb im Netzprotokoll nur der Download eines Rechtschreib-Wörterbuchs, den es auf dem Mac nicht gibt (D-053). Am Mac nicht gemessen.
+- **Signatur.** Stufe 1 (D-055) signiert nur ad hoc und notarisiert nicht: macOS blockiert eine heruntergeladene App deshalb beim ersten Start, eine selbst gebaute nicht. Das ist ein Komfort-, kein Sicherheitsmerkmal: Eine ad-hoc-Signatur sagt nichts über den Urheber. **Lade `Pagewise.app` nur aus deinem eigenen Build oder aus der CI dieses Repos.**
+- **Daten des Fensters** (Cookies, `localStorage`, Cache) liegen im Datenverzeichnis unter `Fenster` mit Rechten 700, getrennt vom Server; „Alles löschen“ leert sie (nicht den Passcode).
 
 ## Datenverzeichnis
 
@@ -68,6 +89,7 @@ Alles, was Nutzerdaten enthält, liegt im Datenverzeichnis: Datenbank, Uploads, 
 - „Alles löschen“ erreicht nur Pagewise selbst. Kopien durch Time Machine, Snapshots des Dateisystems oder eine Cloud-Sicherung des Ordners bleiben bestehen, und auf SSDs gibt es kein garantiertes Überschreiben. Schließe das Datenverzeichnis aus solchen Sicherungen aus, wenn das wichtig ist.
 - Die Antworten im Chat sind Text des Modells. Pagewise zeigt sie bereinigt an, prüft aber nicht, ob sie stimmen. Ein Modell kann sich irren, erfundene Quellen nennen oder Anweisungen aus eingefügten Texten folgen. Prüfe Wichtiges nach.
 - Der Passcode-Schutz ist für ein privates Tailnet gedacht, nicht für das offene Internet.
+- Mit HTTPS im Tailnet steht der **Rechnername im öffentlichen Zertifikatsverzeichnis** (laut Tailscale). Die Mac-App warnt vor Namen, die nach einer Person klingen, und schlägt `pagewise-mac` vor; die Erkennung ist eine Näherung und beweist keine Unbedenklichkeit.
+- Die Mac-App hält den Mac wach, solange sie läuft, aber ein MacBook mit **zugeklapptem Deckel ohne externes Display schläft trotzdem**: Dann ist Pagewise auf iPhone und iPad nicht erreichbar.
 
 Meldeweg für Sicherheitslücken: [SECURITY.md](../SECURITY.md).
-| Werkzeugzugriff der KI: nur lesend, geprüfte Argumente, begrenzte Ausgabe, Schalter global und je Anbieter, nur Name und Zustand gespeichert | umgesetzt (Welle 3), siehe D-044 und [tools.md](tools.md) |

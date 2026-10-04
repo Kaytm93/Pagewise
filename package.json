@@ -17,6 +17,7 @@
     "format": "biome check --write .",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test && vitest run",
+    "app:mac": "node scripts/app-mac.mjs",
     "scan": "node scripts/secret-scan.mjs --all && node scripts/check-privacy.mjs --all",
     "prepare": "node scripts/install-hooks.mjs"
   },

@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { packager } from '@electron/packager';
@@ -51,6 +52,16 @@ const [appDir] = await packager({
   executableName: 'Pagewise',
   appBundleId: 'io.github.kaytm93.pagewise',
   appCategoryType: 'public.app-category.education',
+  appCopyright: 'Pagewise, MIT-Lizenz',
+  // Die Voreinstellung von Electron („This app needs access to the camera“ usw.) ist englisch. Pagewise lehnt alle
+  // Berechtigungsanfragen der Seite ab (`permissions.ts`), macOS fragt also nie; die Texte stehen nur im Paket.
+  usageDescription: {
+    AudioCapture: 'Pagewise nutzt keine Audioaufnahme.',
+    BluetoothAlways: 'Pagewise nutzt kein Bluetooth.',
+    BluetoothPeripheral: 'Pagewise nutzt kein Bluetooth.',
+    Camera: 'Pagewise nutzt die Kamera nicht.',
+    Microphone: 'Pagewise nutzt das Mikrofon nicht.',
+  },
   icon: join(root, 'assets', 'icon'),
   asar: true,
   prune: false,
@@ -61,14 +72,31 @@ const [appDir] = await packager({
     if (path === '') return false;
     return !(path === '/package.json' || path === '/dist' || path.startsWith('/dist/'));
   },
-  extraResource: [join(root, 'dist', 'server')],
+  extraResource: [join(root, 'dist', 'server'), join(root, 'dist', 'licenses')],
   quiet: true,
 });
 
 if (!appDir) throw new Error('Der Packager hat keinen Ordner geliefert.');
 
+// Electron legt `LICENSE` und `LICENSES.chromium.html` neben die App, nicht hinein: Wer nur `Pagewise.app` kopiert,
+// verlöre sie. Sie gehören in die App (Resources/licenses), vor der Signatur.
+const app = platform === 'darwin' ? join(appDir, 'Pagewise.app') : appDir;
+const resources =
+  platform === 'darwin' ? join(app, 'Contents', 'Resources') : join(appDir, 'resources');
+const licenseDir = join(resources, 'licenses');
+mkdirSync(licenseDir, { recursive: true });
+// Neben der App; ersatzweise aus dem heruntergeladenen Electron dieses Systems (gleiche Dateien).
+const licenseSources = [appDir, join(root, 'node_modules', 'electron', 'dist')];
+for (const [from, to] of [
+  ['LICENSE', 'Electron-LICENSE'],
+  ['LICENSES.chromium.html', 'LICENSES.chromium.html'],
+] as const) {
+  const source = licenseSources.map((dir) => join(dir, from)).find((path) => existsSync(path));
+  if (!source) throw new Error(`${from} von Electron und Chromium fehlt (Lizenzhinweis).`);
+  copyFileSync(source, join(licenseDir, to));
+}
+
 if (platform === 'darwin') {
-  const app = join(appDir, 'Pagewise.app');
   if (process.platform === 'darwin') {
     // Ad-hoc-Signatur (ohne Identität): Auf Apple-Silizium startet ein verändertes Paket sonst nicht. Kein Hardened
     // Runtime, damit die unsigniert mitgelieferte Binärdatei von better-sqlite3 geladen werden darf.

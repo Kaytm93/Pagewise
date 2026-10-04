@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -64,3 +65,54 @@ jobs:
 
       - name: Abhängigkeiten prüfen
         run: pnpm audit --audit-level high
+
+  # Pagewise.app auf macOS bauen und prüfen (D-055, Stufe 1: nur ad-hoc signiert, keine Developer-ID, keine
+  # Notarisierung). `macos-latest` ist laut README von actions/runner-images (gelesen am 4. Oktober 2026) macOS 26 auf
+  # Apple-Silizium (arm64). Die Datei im Artefakt ist für Tests gedacht und läuft nach dem Herunterladen unter der
+  # Quarantäne von macOS (Anleitung: docs/self-hosting.md).
+  desktop-mac:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Pagewise.app bauen (arm64, ad-hoc signiert)
+        run: pnpm app:mac --no-install --arch arm64
+
+      - name: Aufbau und Signatur der App prüfen
+        run: |
+          set -euo pipefail
+          app="apps/desktop/out/Pagewise-darwin-arm64/Pagewise.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          ls "$app/Contents/Resources" "$app/Contents/Resources/server" "$app/Contents/Resources/licenses"
+          test -f "$app/Contents/Resources/server/better_sqlite3.node"
+          test -f "$app/Contents/Resources/licenses/THIRD-PARTY-LICENSES.txt"
+          file "$app/Contents/Resources/server/better_sqlite3.node"
+
+      - name: Rauchtest der gepackten App (ohne Fenster)
+        run: apps/desktop/out/Pagewise-darwin-arm64/Pagewise.app/Contents/MacOS/Pagewise --smoke-test
+
+      # `ditto` erhält Rechte, Verknüpfungen und Signatur; das Zip des Artefakts allein würde Rechte verlieren.
+      - name: Packen
+        run: |
+          set -euo pipefail
+          ditto -c -k --keepParent apps/desktop/out/Pagewise-darwin-arm64/Pagewise.app Pagewise-mac-arm64.zip
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Pagewise-mac-arm64
+          path: Pagewise-mac-arm64.zip
+          retention-days: 3
+          if-no-files-found: error
+

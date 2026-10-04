@@ -2,7 +2,7 @@
 
 Ein selbst gehosteter Schul-Workspace für den Browser. Jede Person richtet ihre eigene Installation ein: eigene Fächer, eigene Prompts, eigene Modelle. Die Daten bleiben auf dem eigenen Rechner.
 
-> **Status:** Phase 1a (Kern) und 1b (Hefteinträge). Einrichtung, Fächer und Untergruppen, Prompt-Schichten, Anbieter, Chat mit Streaming und die installierbare Web-App laufen. Dazu die Agent-CLI-Anbindung (Phase 1e, siehe [docs/agent-cli.md](docs/agent-cli.md)). Hefteinträge (Editor, Formeln, Graphen, Moleküle, Noten) sind gebaut; Fotos und Export kommen in den nächsten Phasen. Der Stand der Abnahme steht in [docs/acceptance-1a.md](docs/acceptance-1a.md), [docs/acceptance-1b.md](docs/acceptance-1b.md) und [docs/acceptance-1e.md](docs/acceptance-1e.md).
+> **Status:** Phase 1a (Kern) und 1b (Hefteinträge), dazu die Mac-App (`Pagewise.app`, [Abnahme](docs/acceptance-mac.md)). Einrichtung, Fächer und Untergruppen, Prompt-Schichten, Anbieter, Chat mit Streaming und die installierbare Web-App laufen. Dazu die Agent-CLI-Anbindung (Phase 1e, siehe [docs/agent-cli.md](docs/agent-cli.md)). Hefteinträge (Editor, Formeln, Graphen, Moleküle, Noten) sind gebaut; Fotos und Export kommen in den nächsten Phasen. Der Stand der Abnahme steht in [docs/acceptance-1a.md](docs/acceptance-1a.md), [docs/acceptance-1b.md](docs/acceptance-1b.md) und [docs/acceptance-1e.md](docs/acceptance-1e.md).
 
 ## Was Pagewise werden soll
 
@@ -15,7 +15,7 @@ Ein selbst gehosteter Schul-Workspace für den Browser. Jede Person richtet ihre
 - **Fotos von Heft und Tafel** als Eingabe für ein Vision-Modell.
 - **Viele Modell-Anbieter** über eigene API-Keys, ohne Code-Änderung erweiterbar (Standard: OpenRouter).
 - **Agent-CLI-Anbindung** für lokale Coding-Agenten (zuerst Claude Code), die in einem eigenen Workspace-Ordner arbeiten und Dateien wie PDF oder PPTX erzeugen, die du herunterladen kannst. Bei Fehlern gibt es einen Rückfall auf ein Modell eines Anbieters.
-- **Erreichbar im eigenen Tailscale-Netz** vom iPhone, iPad und Mac, als installierbare Web-App.
+- **Erreichbar im eigenen Tailscale-Netz** vom iPhone und iPad als installierbare Web-App; auf dem Mac als echte App (`Pagewise.app`: eigenes Fenster, Menüleiste, hält den Mac wach, zeigt Adresse und QR-Code für iPhone und iPad).
 
 Die Anwendung startet vollständig leer. Dieses Repository enthält keine Fächerlisten einzelner Personen und keine Lehrkräfte, Stundenpläne oder persönlichen Prompts, nur Code, neutrale Vorlagen (Fachnamen, neutrale Standardtexte) und erfundene Beispiele.
 
@@ -33,6 +33,14 @@ Für den Betrieb:
 ```bash
 pnpm start    # baut die Oberfläche und startet den Server auf 127.0.0.1:3000
 ```
+
+Auf dem Mac gibt es eine echte App, die sich selbst baut und in `~/Applications` legt (Node ab 22.18, pnpm, kein Apple-Konto nötig):
+
+```bash
+pnpm app:mac
+```
+
+Mehr dazu, auch zur fertigen App aus der CI und zur Warnung von macOS, in [docs/self-hosting.md](docs/self-hosting.md).
 
 Der Server bindet ausschließlich an die lokale Adresse. Den Zugriff von anderen Geräten richtest du über Tailscale Serve ein, siehe [docs/self-hosting.md](docs/self-hosting.md).
 

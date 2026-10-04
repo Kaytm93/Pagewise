@@ -1,13 +1,14 @@
 # Architektur
 
-Stand: Phase 1a läuft. Gebaut sind Datenbank, Migrationen, Storage, Secret-Speicher, Anmeldung, Profil, Fächer und Untergruppen, Prompt-Schichten und die Provider-Registry (jeweils API und Oberfläche) sowie das Onboarding. Der Chat mit Streaming und die PWA (Manifest, Service Worker, Icons) sind gebaut. Noch offen in 1a: Anleitung für Tailscale Serve und die Abnahme. Der Rest ab Phase 1a ist Plan und kann sich beim Bauen ändern, Abweichungen stehen in [decisions.md](decisions.md).
+Stand: Phase 1a läuft. Gebaut sind Datenbank, Migrationen, Storage, Secret-Speicher, Anmeldung, Profil, Fächer und Untergruppen, Prompt-Schichten und die Provider-Registry (jeweils API und Oberfläche) sowie das Onboarding. Der Chat mit Streaming und die PWA (Manifest, Service Worker, Icons) sind gebaut. Dazu gibt es die Mac-App `apps/desktop` (Electron-Hülle, D-050 bis D-056). Der Rest ab Phase 1a ist Plan und kann sich beim Bauen ändern, Abweichungen stehen in [decisions.md](decisions.md).
 
 ## Überblick
 
 ```
-iPhone / iPad / Mac (Browser, PWA)
-        │  HTTPS im Tailnet (Tailscale Serve)
-        ▼
+iPhone / iPad (Browser, PWA)          Mac: Pagewise.app (Electron-Hülle, eigenes Fenster)
+        │  HTTPS im Tailnet                      │  lädt http://127.0.0.1:3000, startet und überwacht den Server
+        │  (Tailscale Serve)                     │  (utilityProcess, Status nur über IPC)
+        ▼                                        ▼
  127.0.0.1:3000  ── apps/server (Hono) ───────────────────────────────┐
                       │  API, SSE-Streaming, Auslieferung von apps/web │
                       │                                                │
@@ -20,6 +21,8 @@ iPhone / iPad / Mac (Browser, PWA)
               Datenverzeichnis (außerhalb des Repos) ◄─────────────────┘
               SQLite, Assets, Workspaces, Logs, Secrets, Backups
 ```
+
+**Mac-App (D-050 bis D-056).** `apps/desktop` ist nur die Hülle: Sie startet den gebündelten Server als `utilityProcess` (Allowlist-Umgebung, Steuerkanal über IPC), lädt die Oberfläche **vom Server** (nicht aus eigenen Dateien: Herkunftsprüfung, CSP, Cookie und Service Worker hängen an der Adresse des Servers), hält den Mac wach, bietet Menü, Menüleisten-Symbol und Start bei Anmeldung und richtet Tailscale Serve für iPhone und iPad ein. iPad und iPhone bleiben Web-Apps; der Mac ist der Server (schläft er, ist Pagewise dort nicht erreichbar). Ein Server-Bundle (`apps/server/scripts/bundle.ts`, esbuild) macht den Server ohne `node_modules` lauffähig (D-051).
 
 In Phase 1 laufen Server und Worker als ein Prozess. Der Worker holt Aufträge trotzdem über eine HTTP-Job-API und nicht über direkte Funktionsaufrufe, damit er später an anderer Stelle laufen kann (Phase 2).
 
@@ -59,6 +62,7 @@ Fächer entstehen aus einem Katalog neutraler Vorlagen (`config/subject-catalog.
 | --- | --- |
 | `apps/server` | Server, Konfiguration, Start-Check des Datenverzeichnisses, Datenbank (`src/db`), Storage und Secret-Speicher (`src/storage`), Prompt-Schichten (`src/prompts`), Anbieter-Clients und -Verwaltung (`src/providers`), Chats und Antworten im Strom (`src/chats`) |
 | `apps/server/drizzle` | SQL-Migrationen der Datenbank |
+| `apps/desktop` | Mac-App (Electron): Fenster, Menü, Menüleisten-Symbol, Server-Überwacher, Tailscale-Modul und Verbindungsfenster, Packen als `Pagewise.app` (D-050 bis D-056). Eigener Rauchtest `--smoke-test` |
 | `apps/web` | Oberfläche (Chat unter `src/screens/chat`, Hefteinträge unter `src/screens/notes`), Design-Tokens, i18n |
 | `packages/render` | Gemeinsamer Kern für Hefteinträge (D-046 bis D-048): Blöcke erkennen und ohne DOM prüfen (Fehlercodes), Graphen und Schulmoleküle als SVG, Formeln (KaTeX), Noten (abcjs), Skelettformeln (SmilesDrawer), Bereinigung (DOMPurify). Läuft im Browser, auf dem Server und später im Worker (1d) |
 | `scripts` | Secret-Scan, Privacy-Check, Hook-Installation |
@@ -77,5 +81,6 @@ Fächer entstehen aus einem Katalog neutraler Vorlagen (`config/subject-catalog.
 | 1c Bildeingabe | Foto, Verkleinern, EXIF entfernen, Tafelbild → Hefteintrag |
 | 1d Dateien | PDF- und PPTX-Export, Job-Status |
 | 1e Agent-CLI | Claude-Code-Engine, Profile, Workspace, Streaming (gebaut, siehe [agent-cli.md](agent-cli.md)) |
+| Mac-App | Hülle um den Server: M0 bis M4 gebaut (Spike, Bundle, Hülle, Tailscale, Bauen und CI), Abnahme siehe [acceptance-mac.md](acceptance-mac.md); Stufe 2 der Verteilung ist eine Entscheidungsvorlage (D-056) |
 | 2 | Cloud-Fallback und Backup (nicht jetzt bauen, aber nicht verbauen) |
 | 3 | Agent-Modus für API-Modelle (Docker-Sandbox) |

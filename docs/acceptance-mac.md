@@ -84,5 +84,22 @@ Alle Punkte mit „ja“ unter Linux: `pnpm --filter @pagewise/desktop test` (11
 | `tailscale funnel` kommt nie vor; ist Funnel an, rote Warnung und Dialog beim Start, „Freigabe zurücksetzen“ mit Rückfrage | ja: Strukturtest, im echten Electron mit Fake-Zustand | Mac (nur im Testtailnet): `tailscale funnel 3000` im Terminal einschalten; beim nächsten Start der App Dialog, im Fenster rote Warnung; „Freigabe zurücksetzen“ nimmt sie weg; danach `tailscale serve status` leer. **Danach `tailscale funnel reset`** zur Sicherheit |
 | Freigabe überlebt einen Neustart des Macs | nein (Verhalten von Tailscale) | Mac: Neustart, Tailscale und Pagewise starten, `tailscale serve status` zeigt die Freigabe weiter; wenn nicht, richtet die App sie beim Start wieder ein (nur, wenn sie früher darüber eingerichtet wurde) |
 | iPhone und iPad erreichen Pagewise über die Adresse | nein | iPhone: Safari → Adresse → Pagewise lädt, Einrichtung bzw. Anmeldung; Teilen → „Zum Home-Bildschirm“; App öffnet im Vollbild |
-| Tailscale-Adresse kopieren im Menüleisten-Symbol | ja: Menüstruktur mit Adresse | Mac: Symbol → „Adresse kopieren“, einfügen: `https://…ts.net` |
+| Tailscale-Adresse kopieren im Menüleisten-Symbol | ja: Menüstruktur mit Adresse | Mac: Symbol → „Tailscale-Adresse kopieren“, einfügen: `https://…ts.net` |
 | Schlafender Mac, ehrlicher Hinweis im Fenster („Schläft er, ist Pagewise dort nicht erreichbar“) | ja: Text vorhanden | siehe M2 und P |
+
+## M4 Bauen und Verteilen, Stufe 1 ([D-055](decisions.md), Stufe 2: [D-056](decisions.md))
+
+„Agent getestet“ heißt hier: unter Linux (Packen für `darwin-arm64` und `linux-x64`, Aufbau des Pakets, Rauchtest der gepackten Linux-App, Repo-Tests). Alles, was `codesign`, `ditto` oder den Start auf macOS braucht, läuft erst in der macOS-CI und bei Kay.
+
+| Punkt | Agent getestet | Kay prüft |
+| --- | --- | --- |
+| `pnpm app:mac` baut und installiert nach `~/Applications` | Argumente, Zielordner, Abbruch außerhalb von macOS, kein Shell-Aufruf (`tests/app-mac.test.mjs`); Packen für `darwin-arm64` unter Linux (Aufbau von `Pagewise.app` mit `Info.plist`, Ressourcen, Lizenzen) | Mac: `pnpm install && pnpm app:mac`; am Ende steht „Installiert: …“ und `codesign --verify` meldet keinen Fehler; `open ~/Applications/Pagewise.app` startet die App, ohne dass macOS blockiert (`xattr -l ~/Applications/Pagewise.app` zeigt kein `com.apple.quarantine`) |
+| Läuft Pagewise schon, bricht das Skript ab, statt die App zu überschreiben | nein (`pgrep -x Pagewise`, nur auf dem Mac) | Mac: Pagewise starten, `pnpm app:mac`: Abbruch mit Hinweis; Pagewise beenden, Befehl wiederholen: klappt |
+| macOS-CI `desktop-mac` grün: Bauen, Signatur prüfen, Rauchtest der gepackten App, Artefakt | Job geschrieben und die Schritte einzeln unter Linux nachgestellt (Packen, Aufbau, Rauchtest der gepackten Linux-App) | Seite „Actions“ auf GitHub: letzter Lauf von `desktop-mac` grün (**der erste Lauf kann rot sein**: macOS-Läufer waren hier nicht erreichbar, ich behebe es nach Meldung); Artefakt `Pagewise-mac-arm64` ist da und etwa so groß wie das Zip (siehe unten) |
+| Artefakt aus der CI starten (Quarantäne) | nein | Mac (Apple-Silizium): Zip aus dem Artefakt laden, entpacken, `Pagewise.app` nach `~/Applications`; erster Start wird blockiert; Systemeinstellungen → Datenschutz & Sicherheit → „Trotzdem öffnen“ (Anleitung in `docs/self-hosting.md`, **ungeprüft**); danach startet die App. Stimmt die Anleitung nicht, bitte die Meldung von macOS wörtlich melden |
+| Mindestversion | nur gelesen: `LSMinimumSystemVersion` 13.0 (Vorgabe von Electron 44) | Mac-Modell und macOS-Version nennen (Apfelmenü → Über diesen Mac), danach lege ich eine Mindestversion fest oder lasse sie |
+| Lizenzhinweise in der App | ja: `licenses.test.ts` (128 Pakete, nichts Unfreies, Schriften mit OFL-Text), `Resources/licenses/` im gepackten Paket | Mac: `ls ~/Applications/Pagewise.app/Contents/Resources/licenses` zeigt `THIRD-PARTY-LICENSES.txt`, `Electron-LICENSE`, `LICENSES.chromium.html` |
+| Deutsche Zugriffsfragen im Paket, App fragt nie nach Kamera, Mikrofon, Bluetooth | `Info.plist` gelesen, Test am Quelltext; Ablehnung aller Berechtigungen im echten Electron (M2) | Mac: Systemeinstellungen → Datenschutz & Sicherheit → Kamera/Mikrofon: Pagewise taucht dort nicht auf, auch nicht nach der Nutzung |
+| Größe der App | rund 325 MB entpackt (`darwin-arm64`, gepackt unter Linux) | Mac: `du -sh ~/Applications/Pagewise.app`; Zip aus der CI notieren |
+| Stufe 2 (Entwicklerzertifikat, Notarisierung, DMG) | nur Entscheidungsvorlage, **nichts eingerichtet** | Kay entscheidet nach D-056 (Alter, 99 USD pro Jahr, Bedarf); bis dahin nichts zu tun |
+

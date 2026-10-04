@@ -243,3 +243,29 @@ describe('Verbindungsfenster und Preload', () => {
     }
   });
 });
+
+describe('Packen und Verteilen (Stufe 1)', () => {
+  const scripts = join(src, '..', 'scripts');
+  const packageScript = readFileSync(join(scripts, 'package.ts'), 'utf8');
+
+  it('nimmt Server und Lizenzhinweise als Ressourcen mit und legt die Lizenzen von Electron in die App', () => {
+    expect(packageScript).toMatch(/extraResource: \[[^\]]*'server'[^\]]*'licenses'[^\]]*\]/);
+    expect(packageScript).toContain('Electron-LICENSE');
+    expect(packageScript).toContain('LICENSES.chromium.html');
+  });
+
+  it('hat deutsche Texte für die Zugriffsfragen von macOS (die App lehnt sie ohnehin ab)', () => {
+    expect(packageScript).toMatch(
+      /usageDescription: \{[^}]*Camera: 'Pagewise nutzt die Kamera nicht\.'/,
+    );
+    expect(stripComments(packageScript)).not.toContain('This app needs');
+  });
+
+  it('signiert in Stufe 1 nur ad hoc: keine Zugangsdaten, keine Identität, kein Flag, das Abfragen überspringt', () => {
+    const code = stripComments(packageScript);
+    expect(code).toContain("'--sign', '-'");
+    expect(code).not.toMatch(/osxSign\s*:|osxNotarize\s*:/);
+    expect(code).not.toMatch(/process\.env\.(APPLE|CSC|NOTARY)/);
+    expect(code).not.toMatch(/dangerously|skip-permissions/);
+  });
+});

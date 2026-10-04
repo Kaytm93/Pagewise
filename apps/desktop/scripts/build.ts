@@ -1,9 +1,10 @@
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync, rmSync } from 'node:fs';
+import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bundleServer } from '@pagewise/server/bundle';
 import { build } from 'esbuild';
+import { collectLicenses, renderLicenses } from './licenses';
 
 /**
  * Baut alles, was die Mac-App braucht, nach `dist/`:
@@ -11,6 +12,7 @@ import { build } from 'esbuild';
  *   shell/                  Seiten der Hüllen-Fenster (eigene CSP)
  *   assets/                 Menüleisten-Symbol
  *   server/                 gebündelter Server samt Oberfläche, Migrationen, Katalog, Binärdatei von better-sqlite3
+ *   licenses/               Lizenzhinweise der gebündelten Pakete (kommt als Resources/licenses in die App)
  *
  * Aufruf: tsx scripts/build.ts [--skip-web] [--platform darwin] [--arch arm64]
  * `--platform` und `--arch` bestimmen, welche Binärdatei von better-sqlite3 mitgeht (Standard: dieses System).
@@ -58,4 +60,16 @@ const result = await bundleServer({
   platform: value('--platform') as NodeJS.Platform | undefined,
   arch: value('--arch'),
 });
+// Lizenzhinweise der Pakete, die in Server, Oberfläche und Hülle stecken (siehe `licenses.ts`). Die Hülle bündelt nur
+// `uqr` (steht bei den Entwicklungsabhängigkeiten, weil alles gebündelt wird).
+const licenseDir = join(dist, 'licenses');
+mkdirSync(licenseDir, { recursive: true });
+const packages = collectLicenses([
+  { dir: join(repo, 'apps', 'server') },
+  { dir: join(repo, 'apps', 'web') },
+  { dir: join(repo, 'packages', 'render') },
+  { dir: root, names: ['uqr'] },
+]);
+writeFileSync(join(licenseDir, 'THIRD-PARTY-LICENSES.txt'), renderLicenses(packages));
+
 console.log(`Mac-App gebaut: ${dist} (Server: ${result.outDir})`);
