@@ -1,0 +1,29 @@
+{
+  "name": "@pagewise/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pagewise für den Mac: eigenes Fenster, Menüleiste, hält den Server am Laufen. Lädt Server und Oberfläche, ersetzt sie nicht.",
+  "author": "Kaytm93",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "tsx scripts/build.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "ensure-electron": "node scripts/ensure-electron.mjs",
+    "start": "pnpm build && pnpm ensure-electron && electron .",
+    "smoke": "pnpm build && pnpm ensure-electron && node scripts/run-smoke.mjs",
+    "package": "tsx scripts/package.ts"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "@pagewise/server": "workspace:*",
+    "@types/node": "^22.0.0",
+    "electron": "44.5.1",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}

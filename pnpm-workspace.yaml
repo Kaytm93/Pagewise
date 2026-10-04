@@ -9,5 +9,9 @@ onlyBuiltDependencies:
 # better-sqlite3 liefert fertige Binärdateien für macOS, Linux und Windows mit und lädt sie
 # direkt. Ein Kompilierschritt (node-gyp) ist unnötig und würde auf Rechnern ohne
 # Entwicklerwerkzeuge scheitern, deshalb bleibt er aus.
+# Electron lädt seine Binärdatei (rund 280 MB) in einem Installationsskript. Das soll nicht jedes
+# `pnpm install` tun (Web, Server und Docker brauchen es nicht): `apps/desktop/scripts/ensure-electron.mjs`
+# holt sie bei Bedarf.
 ignoredBuiltDependencies:
   - better-sqlite3
+  - electron
