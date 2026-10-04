@@ -12,8 +12,10 @@
 //   [[crash]]            beendet sich ohne Ergebnis mit Exit-Code 2
 //   [[nosession]]        schickt keine Sitzungs-ID
 //   [[multi]]            zwei Nachrichten mit einem Werkzeugaufruf dazwischen
+//   [[sandboxfail]]      meldet beim Start, dass die Sandbox nicht verfügbar ist (Exit 1, kein Ergebnis)
+//   [[noresume]]         bei --resume: Sitzung nicht gefunden
 import { randomUUID } from 'node:crypto';
-import { appendFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const argv = process.argv.slice(2);
@@ -27,17 +29,25 @@ if (argv.includes('--version')) {
   process.exit(0);
 }
 
-const chunks = [];
-for await (const chunk of process.stdin) chunks.push(chunk);
-const prompt = Buffer.concat(chunks).toString('utf8');
-
 const flag = (name) => {
   const index = argv.indexOf(name);
   return index === -1 ? null : (argv[index + 1] ?? null);
 };
 
+const chunks = [];
+for await (const chunk of process.stdin) chunks.push(chunk);
+const prompt = Buffer.concat(chunks).toString('utf8');
+
+const readIfPresent = (path) => {
+  try {
+    return path ? readFileSync(path, 'utf8') : null;
+  } catch {
+    return null;
+  }
+};
+
 if (process.env.FAKE_CLAUDE_LOG) {
-  // Aufzeichnung für Tests: Argumente, Umgebung, Arbeitsordner und Länge des Auftrags (nicht der Auftrag selbst).
+  // Aufzeichnung für Tests: Argumente, Umgebung, Arbeitsordner, Auftrag und der Inhalt der übergebenen Dateien.
   appendFileSync(
     process.env.FAKE_CLAUDE_LOG,
     `${JSON.stringify({
@@ -47,6 +57,8 @@ if (process.env.FAKE_CLAUDE_LOG) {
       promptLength: prompt.length,
       prompt,
       stdinWasEmpty: prompt === '',
+      settings: readIfPresent(flag('--settings')),
+      systemPrompt: readIfPresent(flag('--append-system-prompt-file')),
     })}\n`,
   );
 }
@@ -114,6 +126,21 @@ const fail = (status, body, code = 'unknown') => {
   process.exit(1);
 };
 
+if (prompt.includes('[[sandboxfail]]')) {
+  process.stderr.write('Error: sandbox dependencies are not available (bubblewrap missing)\n');
+  process.exit(1);
+}
+if (flag('--resume') && prompt.includes('[[noresume]]')) {
+  out({
+    type: 'result',
+    subtype: 'error_during_execution',
+    is_error: true,
+    num_turns: 0,
+    errors: [`No conversation found with session ID: ${flag('--resume')}`],
+    session_id: flag('--resume'),
+  });
+  process.exit(1);
+}
 if (prompt.includes('[[auth]]')) fail(401, 'Not logged in', 'authentication_failed');
 if (prompt.includes('[[fail]]')) {
   fail(429, '{"error":{"code":"1113","message":"Insufficient balance"}}', 'rate_limit');
@@ -201,8 +228,9 @@ if (write) {
   process.exit(0);
 }
 if (prompt.includes('[[huge]]')) {
-  process.stdout.write(`${'x'.repeat(3 * 1024 * 1024)}\n`);
-  process.exit(0);
+  // process.exit() würde die Ausgabe an einer Pipe nach dem ersten Puffer abschneiden: erst warten, bis alles raus ist.
+  process.stdout.write(`${'x'.repeat(9 * 1024 * 1024)}\n`, () => process.exit(0));
+  await sleep(60_000);
 }
 if (prompt.includes('[[slow]]') || prompt.includes('[[ignoreterm]]')) {
   text('Ich arbeite …');

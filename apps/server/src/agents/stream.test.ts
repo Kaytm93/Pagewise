@@ -59,6 +59,7 @@ describe('AgentStreamParser: normaler Verlauf', () => {
         turns: 1,
         durationMs: 42,
         denied: 0,
+        resumeFailed: false,
       },
     ]);
   });
@@ -68,7 +69,16 @@ describe('AgentStreamParser: normaler Verlauf', () => {
       '{"is_error":false,"result":"fertig","type":"result","num_turns":2,"duration_ms":5}',
     ]);
     expect(events).toEqual([
-      { type: 'result', ok: true, text: 'fertig', code: null, turns: 2, durationMs: 5, denied: 0 },
+      {
+        type: 'result',
+        ok: true,
+        text: 'fertig',
+        code: null,
+        turns: 2,
+        durationMs: 5,
+        denied: 0,
+        resumeFailed: false,
+      },
     ]);
   });
 
@@ -265,7 +275,16 @@ describe('AgentStreamParser: Fehler werden zu Codes, nie zu Text', () => {
   ])('ordnet %j dem Code %s zu', (extra, code) => {
     const events = run([resultLine(extra)]);
     expect(events).toEqual([
-      { type: 'result', ok: false, text: '', code, turns: 1, durationMs: 3, denied: 0 },
+      {
+        type: 'result',
+        ok: false,
+        text: '',
+        code,
+        turns: 1,
+        durationMs: 3,
+        denied: 0,
+        resumeFailed: false,
+      },
     ]);
   });
 
@@ -318,6 +337,19 @@ describe('AgentStreamParser: Fehler werden zu Codes, nie zu Text', () => {
       resultLine({ result: 'irgendwas' }),
     ]);
     expect(events.at(-1)).toMatchObject({ code: 'auth_failed' });
+  });
+
+  it('erkennt eine nicht mehr vorhandene Sitzung', () => {
+    const events = run([
+      line({
+        type: 'result',
+        subtype: 'error_during_execution',
+        is_error: true,
+        num_turns: 0,
+        errors: ['No conversation found with session ID: 28a3da41-4031-49c8-924f-41d04fb709ae'],
+      }),
+    ]);
+    expect(events[0]).toMatchObject({ ok: false, resumeFailed: true });
   });
 
   it('zählt verweigerte Zugriffe, ohne ihre Inhalte weiterzugeben', () => {

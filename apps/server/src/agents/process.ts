@@ -59,6 +59,7 @@ export class ProcessRun {
   private stage = 0;
   private hardTimer: ReturnType<typeof setTimeout> | undefined;
   private terminating = false;
+  private exited = false;
 
   constructor(private readonly spec: RunSpec) {
     this.lines = { [Symbol.asyncIterator]: () => this.iterator() };
@@ -81,6 +82,7 @@ export class ProcessRun {
         resolve({ code: null, signal: null, reason: 'spawn_failed' });
       });
       child.once('close', (code, signal) => {
+        this.exited = true;
         clearTimeout(this.killTimer);
         clearTimeout(this.hardTimer);
         this.flushLine();
@@ -172,7 +174,8 @@ export class ProcessRun {
 
   /** Beendet den Lauf: Signale an die Prozessgruppe, jede Stufe erst nach der Gnadenfrist der vorigen. */
   private terminate(reason: EndReason): void {
-    if (this.terminating) return;
+    // Nach dem Ende gibt es nichts mehr zu beenden (und die Prozessnummer könnte neu vergeben sein).
+    if (this.terminating || this.exited) return;
     this.terminating = true;
     this.reason = reason;
     this.nextSignal();

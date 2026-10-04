@@ -48,6 +48,8 @@ export type AgentEvent =
       durationMs: number | null;
       /** Wie viele Zugriffe die Rechte des Programms verweigert haben (Anzahl, nie Inhalte). */
       denied: number;
+      /** `--resume` fand die Sitzung nicht mehr (z. B. nach dem Löschen des Konfigurationsordners). */
+      resumeFailed: boolean;
     };
 
 type Json = Record<string, unknown>;
@@ -245,6 +247,11 @@ export class AgentStreamParser {
         turns: num(json.num_turns),
         durationMs: num(json.duration_ms),
         denied: Array.isArray(json.permission_denials) ? json.permission_denials.length : 0,
+        resumeFailed:
+          Array.isArray(json.errors) &&
+          json.errors.some(
+            (entry) => typeof entry === 'string' && /no conversation found/i.test(entry),
+          ),
       },
     ];
   }
