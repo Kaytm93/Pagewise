@@ -166,6 +166,15 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
     [api, noteId],
   );
 
+  // Der Tab-Titel nennt den Eintrag, das Fach als Zusatz (Muster wie in der Hülle: „Titel · Pagewise“).
+  useEffect(() => {
+    if (phase !== 'ready' || !note) return;
+    const subject = findSubject(subjectId);
+    if (!subject || note.subjectId !== subjectId) return;
+    const name = title.trim() === '' ? m.notes.untitled : title.trim();
+    document.title = `${name} · ${subject.name} · ${m.app.name}`;
+  }, [phase, note, title, findSubject, subjectId]);
+
   const subject = findSubject(subjectId);
   if (phase === 'not-found') return <NotFoundPage />;
   if (phase === 'loading') {
@@ -244,6 +253,7 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
 
   return (
     <Sheet width="wide">
+      <h1 className="sr-only">{title.trim() === '' ? m.notes.untitled : title.trim()}</h1>
       <Link
         to={backTo}
         className="mo-press mt-2 inline-flex min-h-11 items-center gap-1.5 text-sm"

@@ -333,6 +333,7 @@ export const de = {
       unpin: 'Anheftung lösen',
       delete: 'Löschen',
       loading: 'Hefteintrag wird geladen',
+      headline: 'Hefteintrag',
       loadFailed: 'Der Hefteintrag konnte nicht geladen werden.',
       tags: 'Stichwörter',
       tagsHint: 'Mit Komma getrennt, bis zu 10.',

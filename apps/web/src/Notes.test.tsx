@@ -361,6 +361,21 @@ describe('Editor', () => {
     expect(preview.querySelector('a[href^="javascript:"]')).toBeNull();
     expect((window as unknown as { __angriff?: number }).__angriff).toBeUndefined();
   });
+
+  it('nennt Eintrag und Fach im Tab-Titel und in der Seitenüberschrift', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { title: 'Mein Eintrag', markdown: 'Start' });
+    open(server, notePath(subject.id, note.id));
+    expect(await screen.findByRole('heading', { name: 'Mein Eintrag', level: 1 })).toBeTruthy();
+    await screen.findByRole('textbox', { name: 'Titel' });
+    expect(document.title).toBe('Mein Eintrag · Beispielfach A · Pagewise');
+
+    // Leerer Titel: sinnvoller Platzhalter statt leerer Überschrift
+    const user = userEvent.setup();
+    await user.clear(screen.getByRole('textbox', { name: 'Titel' }));
+    expect(await screen.findByRole('heading', { name: 'Ohne Titel', level: 1 })).toBeTruthy();
+    expect(document.title).toBe('Ohne Titel · Beispielfach A · Pagewise');
+  });
 });
 
 describe('Antwort aus dem Chat als Hefteintrag', () => {
