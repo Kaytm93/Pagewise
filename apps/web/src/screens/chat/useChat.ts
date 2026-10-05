@@ -228,9 +228,12 @@ export function useChat(api: Api, chatId: string) {
     try {
       await api.stopChat(chatId);
     } catch {
+      // Der Stopp ist nicht beim Server angekommen: das sichtbar melden, statt den Knopf still freizugeben.
       setStopping(false);
+      setProblem('stop_failed');
       return;
     }
+    setProblem(null);
     // Ohne offene Verbindung kommt das Ende nicht als Ereignis an: dann den Stand holen.
     if (!controller.current) {
       await loadDetail();

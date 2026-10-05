@@ -639,6 +639,7 @@ export const de = {
       not_found: 'Diesen Chat gibt es nicht mehr.',
       invalid_input: 'Die Nachricht ist nicht gültig.',
       network: 'Der Server antwortet nicht. Läuft Pagewise noch?',
+      stop_failed: 'Das Stoppen ist fehlgeschlagen. Bitte noch einmal versuchen.',
       unknown: 'Das hat nicht geklappt. Bitte versuch es noch einmal.',
     },
   },

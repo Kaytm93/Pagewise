@@ -125,6 +125,33 @@ describe('Chat: Antworten', () => {
     expect(screen.getByRole('button', { name: 'Senden' })).toBeTruthy();
   });
 
+  it('meldet einen fehlgeschlagenen Stopp und lässt sich erneut drücken', async () => {
+    const { server, subject, chat } = setup();
+    open(server, chatPath(subject.id, chat.id));
+    const user = userEvent.setup();
+    await ask(user, 'Erkläre etwas Langes');
+    await waitFor(() => expect(server.generations.has(chat.id)).toBe(true));
+    act(() => server.generation(chat.id).delta('Zuerst das Wichtigste'));
+    await screen.findByText('Zuerst das Wichtigste');
+
+    // Der Server nimmt den Stopp nicht an.
+    server.replyOnce('POST', `/api/chats/${chat.id}/stop`, () => json(500, { error: 'internal' }));
+
+    await user.click(screen.getByRole('button', { name: 'Antwort stoppen' }));
+    expect(await screen.findByText(/Das Stoppen ist fehlgeschlagen/)).toBeTruthy();
+    expect(server.calls('POST', `/api/chats/${chat.id}/stop`)).toHaveLength(1);
+    // Der Stoppen-Knopf ist wieder da und bedienbar; die Antwort läuft weiter.
+    const wieder = screen.getByRole('button', { name: 'Antwort stoppen' });
+    expect((wieder as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByText('Zuerst das Wichtigste')).toBeTruthy();
+
+    // Ein zweiter Versuch klappt; die Meldung verschwindet.
+    await user.click(wieder);
+    expect(await screen.findByText('Antwort gestoppt.')).toBeTruthy();
+    expect(screen.queryByText(/Das Stoppen ist fehlgeschlagen/)).toBeNull();
+    expect(server.calls('POST', `/api/chats/${chat.id}/stop`)).toHaveLength(2);
+  });
+
   it('zeigt Fehler als Text zum Code, behält den Teiltext und wiederholt die Antwort', async () => {
     const { server, subject, chat } = setup();
     open(server, chatPath(subject.id, chat.id));
