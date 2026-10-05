@@ -348,3 +348,9 @@
 :root.fx-off .mo-caret {
   animation: none;
 }
+
+/* Pulsierender Wartepunkt (Tailwind animate-pulse): Dauerläufer, steht schon bei „Reduziert“ still */
+:root.fx-reduced .animate-pulse,
+:root.fx-off .animate-pulse {
+  animation: none;
+}
