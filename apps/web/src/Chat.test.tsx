@@ -518,6 +518,25 @@ describe('Chat: sichere Darstellung', () => {
     expect(screen.getByText('Zitat').closest('blockquote')).toBeTruthy();
   });
 
+  it('markiert Aufgabenlisten nur mit dem Kästchen, nicht mit Aufzählungspunkten', async () => {
+    const { server, subject, chat } = setup();
+    server.addMessage(chat.id, 'user', 'Frage');
+    server.addMessage(chat.id, 'assistant', '- [ ] a\n- [x] b');
+    open(server, chatPath(subject.id, chat.id));
+
+    await screen.findByText('a');
+    const article = screen.getAllByRole('article')[1] as HTMLElement;
+    const list = within(article).getByRole('list');
+    expect(list.className).toContain('contains-task-list');
+    expect(list.className).not.toContain('list-disc');
+    const items = within(list).getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    for (const item of items) {
+      expect(item.className).toContain('task-list-item');
+      expect(within(item).getByRole('checkbox')).toBeTruthy();
+    }
+  });
+
   it('kopiert Antwort und Code', async () => {
     const { server, subject, chat } = setup();
     server.addMessage(chat.id, 'user', 'Frage');

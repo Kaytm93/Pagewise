@@ -172,17 +172,36 @@ const components: Components = {
   ),
   h5: ({ children }) => <h6 className="mt-4 mb-1 font-medium first:mt-0">{children}</h6>,
   h6: ({ children }) => <h6 className="mt-4 mb-1 font-medium first:mt-0">{children}</h6>,
-  ul: ({ children }) => (
-    <ul className="my-[0.9em] list-disc space-y-[0.55em] pl-[1.4em] marker:text-ink-muted">
+  ul: ({ children, className }) => {
+    // Aufgabenlisten (remark-gfm, `- [ ]`) bringen ihr eigenes Kästchen mit: keine Aufzählungspunkte zusätzlich.
+    const tasks = className?.includes('contains-task-list') ?? false;
+    return (
+      <ul
+        className={`my-[0.9em] space-y-[0.55em] pl-[1.4em] ${tasks ? '' : 'list-disc marker:text-ink-muted'} ${className ?? ''}`}
+      >
+        {children}
+      </ul>
+    );
+  },
+  ol: ({ children, className }) => {
+    const tasks = className?.includes('contains-task-list') ?? false;
+    return (
+      <ol
+        className={`my-[0.9em] space-y-[0.55em] pl-[1.4em] ${tasks ? '' : 'list-decimal marker:text-ink-muted'} ${className ?? ''}`}
+      >
+        {children}
+      </ol>
+    );
+  },
+  li: ({ children, className }) => (
+    <li
+      className={
+        className?.includes('task-list-item') ? className : `pl-[0.3em] ${className ?? ''}`.trim()
+      }
+    >
       {children}
-    </ul>
+    </li>
   ),
-  ol: ({ children }) => (
-    <ol className="my-[0.9em] list-decimal space-y-[0.55em] pl-[1.4em] marker:text-ink-muted">
-      {children}
-    </ol>
-  ),
-  li: ({ children }) => <li className="pl-[0.3em]">{children}</li>,
   // Ein Link, den react-markdown als unsicher entfernt hat (z. B. javascript:), bleibt einfacher Text.
   a: ({ href, children }) =>
     href ? (
