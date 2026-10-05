@@ -173,7 +173,7 @@ function Shell() {
         <main
           id="main"
           tabIndex={-1}
-          className="flex-1 pt-1 pr-[max(1.75rem,env(safe-area-inset-right))] pb-[max(1.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] outline-none md:py-3.5 md:pr-[max(3rem,env(safe-area-inset-right))] md:pl-0"
+          className="flex-1 scroll-mt-20 pt-1 pr-[max(1.75rem,env(safe-area-inset-right))] pb-[max(1.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] outline-none md:py-3.5 md:pr-[max(3rem,env(safe-area-inset-right))] md:pl-0"
         >
           <div className="lg-stack mx-auto max-w-[1180px]" data-depth={depthOf(route)}>
             <div aria-hidden="true" className="lg-ply lg-p1" />
