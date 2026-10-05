@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +11,8 @@ const repo = resolve(desktop, '..', '..');
 let dir: string;
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'pw-lic-'));
+  // macOS: `/var` ist ein Symlink auf `/private/var` — das Paket findet den realen Pfad.
+  dir = realpathSync(dir);
 });
 afterEach(() => {
   rmSync(dir, { recursive: true, force: true });

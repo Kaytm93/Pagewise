@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -49,7 +49,8 @@ describe('eingebetteter Server (Steuerkanal)', () => {
 
   beforeEach(() => {
     base = mkdtempSync(join(tmpdir(), 'pagewise-embedded-'));
-    dataDir = join(base, 'daten');
+    // macOS: `/var` ist ein Symlink auf `/private/var` — der Server meldet den aufgelösten Pfad.
+    dataDir = join(realpathSync(base), 'daten');
     options = {
       env: {},
       port: 0,
