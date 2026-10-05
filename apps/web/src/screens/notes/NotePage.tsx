@@ -301,7 +301,6 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
           <button
             type="button"
             onClick={() => setPinned((value) => !value)}
-            aria-pressed={pinned}
             aria-label={pinned ? e.unpin : e.pin}
             className="mo-press inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
           >

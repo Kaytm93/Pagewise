@@ -29,7 +29,7 @@ describe('Standard-Chat über den Namen „Pagewise“', () => {
     mount(server);
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole('link', { name: 'Standard-Chat öffnen' }));
+    await user.click(await screen.findByRole('link', { name: 'Pagewise – Standard-Chat öffnen' }));
 
     await waitFor(() =>
       expect(window.location.pathname).toMatch(/^\/subjects\/[^/]+\/chats\/[^/]+$/),
@@ -54,7 +54,7 @@ describe('Standard-Chat über den Namen „Pagewise“', () => {
     mount(server);
     await userEvent
       .setup()
-      .click(await screen.findByRole('link', { name: 'Standard-Chat öffnen' }));
+      .click(await screen.findByRole('link', { name: 'Pagewise – Standard-Chat öffnen' }));
     await waitFor(() =>
       expect(window.location.pathname).toBe(
         `/subjects/${server.defaultSubject.id}/chats/${empty.id}`,
@@ -69,7 +69,7 @@ describe('Standard-Chat über den Namen „Pagewise“', () => {
     mount(server);
     await userEvent
       .setup()
-      .click(await screen.findByRole('link', { name: 'Standard-Chat öffnen' }));
+      .click(await screen.findByRole('link', { name: 'Pagewise – Standard-Chat öffnen' }));
     await waitFor(() => expect(server.calls('POST', '/api/chats')).toHaveLength(1));
     await waitFor(() => expect(window.location.pathname).toMatch(/\/chats\/.+/));
     expect(window.location.pathname).not.toContain(used.id);
@@ -118,6 +118,16 @@ describe('Standard-Chat über den Namen „Pagewise“', () => {
     const links = await list.findAllByRole('link', { name: /Standard-Chat|Beispielfach A/ });
     expect(links[0]?.textContent).toContain('Standard-Chat');
     expect(links[1]?.textContent).toContain('Beispielfach A');
+  });
+});
+
+describe('Pagewise-Link: zugänglicher Name enthält den sichtbaren Text', () => {
+  it('enthält den sichtbaren Namen „Pagewise“ im zugänglichen Namen', async () => {
+    const server = new FakeServer('unlocked');
+    mount(server);
+    const link = await screen.findByRole('link', { name: 'Pagewise – Standard-Chat öffnen' });
+    // Label-in-Name: der sichtbare Text „Pagewise“ steckt im zugänglichen Namen.
+    expect(link.textContent).toContain('Pagewise');
   });
 });
 

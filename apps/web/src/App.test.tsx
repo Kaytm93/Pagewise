@@ -359,3 +359,21 @@ describe('Einstellungen', () => {
     expect(server.state).toBe('locked');
   });
 });
+
+describe('Pagewise-Link: zugänglicher Name enthält den sichtbaren Text', () => {
+  it('enthält in Seitenleiste und Schublade den sichtbaren Namen „Pagewise“', async () => {
+    const server = new FakeServer('unlocked');
+    mount(server);
+    const user = userEvent.setup();
+    const link = await screen.findByRole('link', { name: 'Pagewise – Standard-Chat öffnen' });
+    // Label-in-Name: der sichtbare Text „Pagewise“ steckt im zugänglichen Namen.
+    expect(link.textContent).toBe('Pagewise');
+
+    // In der Schublade (schmale Breiten) trägt der Link denselben zugänglichen Namen.
+    await user.click(await screen.findByRole('button', { name: 'Menü öffnen' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Navigation' });
+    expect(
+      within(drawer).getByRole('link', { name: 'Pagewise – Standard-Chat öffnen' }).textContent,
+    ).toBe('Pagewise');
+  });
+});

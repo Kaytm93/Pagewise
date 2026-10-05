@@ -82,7 +82,7 @@ export const de = {
     navigation: 'Navigation',
     subjects: 'Fächer',
     settings: 'Einstellungen',
-    defaultChat: 'Standard-Chat öffnen',
+    defaultChat: 'Pagewise – Standard-Chat öffnen',
     notFoundTitle: 'Diese Seite gibt es nicht',
     notFoundHint: 'Der Link stimmt nicht oder das Fach wurde gelöscht.',
     toHome: 'Zur Startseite',

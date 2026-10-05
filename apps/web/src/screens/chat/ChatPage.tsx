@@ -289,7 +289,9 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
         <button
           type="button"
           onClick={() => setDialog('model')}
-          aria-label={m.chat.modelButton}
+          aria-label={`${m.chat.modelButton}: ${model ? model.label : m.chat.modelNone}${
+            sourceText && model?.source !== 'default' ? ` (${sourceText})` : ''
+          }`}
           className="-ml-2.5 inline-flex min-h-11 max-w-full items-center gap-2 rounded-control px-2.5 text-sm text-ink-secondary hover:bg-paper hover:text-ink"
         >
           <SlidersHorizontal aria-hidden="true" className="size-4 shrink-0" />

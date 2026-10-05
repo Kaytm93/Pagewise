@@ -58,7 +58,9 @@ describe('Chat mit Agent: Auswahl', () => {
     open(server, chatPath(subject.id, chat.id));
     const user = userEvent.setup();
 
-    const chip = await screen.findByRole('button', { name: 'Modell wählen' });
+    const chip = await screen.findByRole('button', {
+      name: 'Modell wählen: Anbieter A · modell-a',
+    });
     expect(chip.textContent).toContain('Anbieter A · modell-a');
     await user.click(chip);
     const dialog = await screen.findByRole('dialog', { name: 'Modell für diesen Chat' });
@@ -71,23 +73,29 @@ describe('Chat mit Agent: Auswahl', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Modell wählen' }).textContent).toContain(
-        'Agent: Mein Zugang',
-      ),
+      expect(
+        screen.getByRole('button', {
+          name: 'Modell wählen: Agent: Mein Zugang (für diesen Chat gewählt)',
+        }).textContent,
+      ).toContain('Agent: Mein Zugang'),
     );
     expect(server.calls('PATCH', `/api/chats/${chat.id}`)[0]?.body).toEqual({
       engineProfileId: engine.id,
     });
 
     // Zurück zu „wie im Fach“ hebt die Wahl auf.
-    await user.click(screen.getByRole('button', { name: 'Modell wählen' }));
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Modell wählen: Agent: Mein Zugang (für diesen Chat gewählt)',
+      }),
+    );
     const again = await screen.findByRole('dialog', { name: 'Modell für diesen Chat' });
     await user.selectOptions(within(again).getByLabelText('Modell'), '');
     await user.click(within(again).getByRole('button', { name: 'Speichern' }));
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Modell wählen' }).textContent).toContain(
-        'Anbieter A · modell-a',
-      ),
+      expect(
+        screen.getByRole('button', { name: 'Modell wählen: Anbieter A · modell-a' }).textContent,
+      ).toContain('Anbieter A · modell-a'),
     );
   });
 
@@ -111,7 +119,9 @@ describe('Chat mit Agent: Auswahl', () => {
     const chat = server.addChat(subject.id);
     open(server, chatPath(subject.id, chat.id));
     expect(await screen.findByText('Noch kein Modell gewählt')).toBeTruthy();
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Modell wählen' }));
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'Modell wählen: Kein Modell' }));
     const dialog = await screen.findByRole('dialog', { name: 'Modell für diesen Chat' });
     expect(within(dialog).queryByText(/Es ist noch kein Modell eingerichtet/)).toBeNull();
     expect(within(dialog).getByRole('option', { name: 'Mein Zugang' })).toBeTruthy();
@@ -123,9 +133,13 @@ describe('Chat mit Agent: Antwort', () => {
     const { server, subject, chat } = setup();
     open(server, chatPath(subject.id, chat.id));
     const user = userEvent.setup();
-    expect((await screen.findByRole('button', { name: 'Modell wählen' })).textContent).toContain(
-      'Agent: Mein Zugang',
-    );
+    expect(
+      (
+        await screen.findByRole('button', {
+          name: 'Modell wählen: Agent: Mein Zugang (für diesen Chat gewählt)',
+        })
+      ).textContent,
+    ).toContain('Agent: Mein Zugang');
     await ask(user, 'Erstelle eine Übersicht');
     await waitFor(() => expect(server.generations.has(chat.id)).toBe(true));
     expect(await screen.findByText('Der Agent arbeitet …')).toBeTruthy();

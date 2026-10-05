@@ -266,9 +266,10 @@ describe('Editor', () => {
     open(server, notePath(subject.id, note.id));
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Anheften' }));
+    // Wechselnder Name ohne aria-pressed: der Name selbst nennt die Wirkung.
     expect(
-      screen.getByRole('button', { name: 'Anheftung lösen' }).getAttribute('aria-pressed'),
-    ).toBe('true');
+      screen.getByRole('button', { name: 'Anheftung lösen' }).hasAttribute('aria-pressed'),
+    ).toBe(false);
     await user.type(screen.getByRole('textbox', { name: 'Stichwörter' }), 'Mol, Test, mol');
     await waitFor(
       () => expect(server.calls('PATCH', `/api/notes/${note.id}`).length).toBeGreaterThan(0),
@@ -539,5 +540,25 @@ describe('Vorlagen im Editor', () => {
       expect(await validateMarkdown(template), key).toEqual([]);
     }
     fireEvent.click(document.body);
+  });
+});
+
+describe('Anheften: zugänglicher Name', () => {
+  it('wechselt zwischen „Anheften“ und „Anheftung lösen“, ohne aria-pressed', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { title: 'Titel' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    const pin = await screen.findByRole('button', { name: 'Anheften' });
+    expect(pin.hasAttribute('aria-pressed')).toBe(false);
+
+    await user.click(pin);
+    const unpin = screen.getByRole('button', { name: 'Anheftung lösen' });
+    expect(unpin.hasAttribute('aria-pressed')).toBe(false);
+
+    await user.click(unpin);
+    expect(screen.getByRole('button', { name: 'Anheften' }).hasAttribute('aria-pressed')).toBe(
+      false,
+    );
   });
 });

@@ -436,9 +436,9 @@ describe('Chat: ohne Modell', () => {
     expect(await screen.findByText('Noch kein Modell gewählt')).toBeTruthy();
     expect((await composer()).disabled).toBe(true);
     expect(screen.getByRole('link', { name: 'Zu den Einstellungen' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Modell wählen' }).textContent).toContain(
-      'Kein Modell',
-    );
+    expect(
+      screen.getByRole('button', { name: 'Modell wählen: Kein Modell' }).textContent,
+    ).toContain('Kein Modell');
   });
 
   it('zeigt im Modell-Dialog ohne Modelle und Agenten einen Weg zu den Einstellungen', async () => {
@@ -448,7 +448,9 @@ describe('Chat: ohne Modell', () => {
     open(server, chatPath(subject.id, chat.id));
     await screen.findByText('Noch kein Modell gewählt');
 
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Modell wählen' }));
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'Modell wählen: Kein Modell' }));
     const dialog = await screen.findByRole('dialog', { name: 'Modell für diesen Chat' });
     expect(within(dialog).getByText(/Es ist noch kein Modell eingerichtet/)).toBeTruthy();
     const link = within(dialog).getByRole('link', { name: 'Zu den Einstellungen' });
@@ -461,7 +463,9 @@ describe('Chat: Modell, Titel, Löschen', () => {
     const { server, subject, chat, provider } = setup();
     open(server, chatPath(subject.id, chat.id));
     const user = userEvent.setup();
-    const chip = await screen.findByRole('button', { name: 'Modell wählen' });
+    const chip = await screen.findByRole('button', {
+      name: 'Modell wählen: Anbieter A · modell-a',
+    });
     expect(chip.textContent).toContain('Anbieter A · modell-a');
 
     await user.click(chip);
@@ -478,9 +482,11 @@ describe('Chat: Modell, Titel, Löschen', () => {
     expect(server.calls('PATCH', `/api/chats/${chat.id}`)[0]?.body).toEqual({
       model: { providerId: provider.id, model: 'modell-b' },
     });
-    expect(screen.getByRole('button', { name: 'Modell wählen' }).textContent).toContain(
-      'Anbieter A · modell-b',
-    );
+    expect(
+      screen.getByRole('button', {
+        name: 'Modell wählen: Anbieter A · modell-b (für diesen Chat gewählt)',
+      }).textContent,
+    ).toContain('Anbieter A · modell-b');
   });
 
   it('benennt den Chat um', async () => {
@@ -698,8 +704,23 @@ describe('Chatliste im Fach', () => {
     const { server, subject, chat, provider } = setup();
     subject.model = { providerId: provider.id, model: 'modell-b' };
     open(server, chatPath(subject.id, chat.id));
-    const chip = await screen.findByRole('button', { name: 'Modell wählen' });
+    const chip = await screen.findByRole('button', {
+      name: 'Modell wählen: Anbieter A · modell-b (vom Fach)',
+    });
     expect(chip.textContent).toContain('Anbieter A · modell-b');
     expect(chip.textContent).toContain('vom Fach');
+  });
+});
+
+describe('Chat: zugängliche Namen enthalten den sichtbaren Text', () => {
+  it('nennt der Modell-Knopf „Modell wählen“ und den sichtbaren Modellnamen', async () => {
+    const { server, subject, chat } = setup();
+    open(server, chatPath(subject.id, chat.id));
+    const chip = await screen.findByRole('button', {
+      name: 'Modell wählen: Anbieter A · modell-a',
+    });
+    // Label-in-Name: der sichtbare Modellname steckt im zugänglichen Namen; das Wort „Modell wählen“ kommt nur aus dem aria-label.
+    expect(chip.textContent).toContain('Anbieter A · modell-a');
+    expect(chip.textContent).not.toContain('Modell wählen');
   });
 });
