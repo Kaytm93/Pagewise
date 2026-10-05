@@ -133,12 +133,15 @@ export function SubjectDialog({ subject, onClose }: { subject?: Subject; onClose
             />
           </div>
         )}
-        {mode === 'catalog' && !subject ? (
-          <>
+        {/* Der Picker bleibt montiert (`hidden` statt Abmelden), damit die Auswahl den Wechsel
+            zwischen Katalog und eigenem Fach überlebt. Beim Zurückwechseln holt sich das Suchfeld
+            den Fokus zurück. */}
+        {!subject ? (
+          <div hidden={mode !== 'catalog'}>
             <Suspense fallback={<LoadingNote />}>
               <TemplatePicker
                 scroll
-                autoFocus
+                autoFocus={mode === 'catalog'}
                 onCustom={(typed) => {
                   setName(typed);
                   setMode('custom');
@@ -158,8 +161,9 @@ export function SubjectDialog({ subject, onClose }: { subject?: Subject; onClose
                 {m.common.cancel}
               </Button>
             </div>
-          </>
-        ) : (
+          </div>
+        ) : null}
+        {(!subject || mode === 'custom') && (
           <form onSubmit={onSubmit} className="space-y-4" noValidate>
             <TextField
               label={m.subjectDialog.name}

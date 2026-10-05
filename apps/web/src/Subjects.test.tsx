@@ -174,6 +174,26 @@ describe('Fächer aus dem Katalog anlegen', () => {
     expect(window.location.pathname).toBe('/');
   });
 
+  it('behält die gewählten Vorlagen, wenn man zum eigenen Fach wechselt und zurück', async () => {
+    const { user, dialog } = await openDialog(new FakeServer('unlocked'));
+    await user.click(within(dialog).getByLabelText(/Beispielfach A/));
+    expect(within(dialog).getByText('1 ausgewählt')).toBeTruthy();
+
+    // Der Katalog bleibt montiert: die Auswahl überlebt den Weg zum eigenen Fach und zurück.
+    await user.click(within(dialog).getByLabelText('Eigenes Fach'));
+    expect(within(dialog).getByLabelText('Name')).toBeTruthy();
+    await user.click(within(dialog).getByLabelText('Aus dem Katalog'));
+    const box = within(dialog).getByLabelText(/Beispielfach A/, {
+      selector: 'input',
+    }) as HTMLInputElement;
+    expect(box.checked).toBe(true);
+    expect(within(dialog).getByText('1 ausgewählt')).toBeTruthy();
+    expect(
+      (within(dialog).getByRole('button', { name: '1 Fach anlegen' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+  });
+
   it('öffnet bei genau einem neuen Fach dessen Seite', async () => {
     const server = new FakeServer('unlocked');
     const { user, dialog } = await openDialog(server);
