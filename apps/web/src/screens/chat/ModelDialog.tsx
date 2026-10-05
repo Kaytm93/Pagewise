@@ -3,6 +3,7 @@ import { format, messages as m } from '../../i18n';
 import { Button } from '../../ui/Button';
 import { SelectField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
+import { Link } from '../../ui/Link';
 import { Modal } from '../../ui/modal';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { commonErrorMessage } from '../auth-errors';
@@ -73,7 +74,12 @@ export function ModelDialog({
   return (
     <Modal title={title} description={lead} onClose={onClose}>
       {options.length === 0 && profiles.length === 0 ? (
-        <p className="text-ink-secondary">{d.none}</p>
+        <div className="space-y-1">
+          <p className="text-ink-secondary">{d.none}</p>
+          <Link to={{ name: 'settings' }} className="inline-flex min-h-11 items-center">
+            {m.chat.openSettings}
+          </Link>
+        </div>
       ) : (
         <form onSubmit={submit} className="space-y-4">
           <SelectField

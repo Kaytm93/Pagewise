@@ -43,6 +43,7 @@ export function useChat(api: Api, chatId: string) {
   const [stopping, setStopping] = useState(false);
   /** Fehlercode, wenn Senden oder Verbinden nicht geklappt hat (kein Fehler einer Antwort). */
   const [problem, setProblem] = useState<string | null>(null);
+  const dismissProblem = useCallback(() => setProblem(null), []);
 
   // Jeder Lauf bekommt eine Nummer; ein neuer Lauf oder das Verlassen der Ansicht macht alte ungültig.
   const runId = useRef(0);
@@ -244,7 +245,7 @@ export function useChat(api: Api, chatId: string) {
     reconnecting,
     stopping,
     problem,
-    dismissProblem: () => setProblem(null),
+    dismissProblem,
     send,
     retry,
     stop,

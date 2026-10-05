@@ -290,6 +290,28 @@ describe('Chat: Antworten', () => {
     expect(screen.getByRole('button', { name: 'Senden' })).toBeTruthy();
   });
 
+  it('nimmt die Fehlermeldung beim Weitertippen und beim erneuten Senden zurück', async () => {
+    const { server, subject, chat } = setup();
+    server.replyOnce('POST', `/api/chats/${chat.id}/messages`, () => json(409, { error: 'busy' }));
+    open(server, chatPath(subject.id, chat.id));
+    const user = userEvent.setup();
+    await ask(user, 'Meine Frage');
+    expect(await screen.findByText('In diesem Chat läuft noch eine Antwort.')).toBeTruthy();
+
+    // Weitertippen im Eingabefeld nimmt die alte Meldung zurück.
+    await user.click(await composer());
+    await user.paste(' und noch mehr');
+    expect(screen.queryByText('In diesem Chat läuft noch eine Antwort.')).toBeNull();
+    expect((await composer()).value).toBe('Meine Frage und noch mehr');
+
+    // Beim nächsten Senden verschwindet sie ebenfalls, auch wenn es wieder schiefgeht.
+    server.replyOnce('POST', `/api/chats/${chat.id}/messages`, () =>
+      json(409, { error: 'nothing_to_retry' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Senden' }));
+    expect(await screen.findByText('Es gibt nichts zu wiederholen.')).toBeTruthy();
+  });
+
   it('meldet einen nicht erreichbaren Server, lädt neu und behält den Entwurf', async () => {
     const { server, subject, chat } = setup();
     open(server, chatPath(subject.id, chat.id));
@@ -390,6 +412,20 @@ describe('Chat: ohne Modell', () => {
     expect(screen.getByRole('button', { name: 'Modell wählen' }).textContent).toContain(
       'Kein Modell',
     );
+  });
+
+  it('zeigt im Modell-Dialog ohne Modelle und Agenten einen Weg zu den Einstellungen', async () => {
+    const { server, subject, chat } = setup({ model: false });
+    // Auch ein Anbieter ohne Modelle (oder ein Anbieter, dessen Abfrage keine nennt) darf keine Sackgasse sein.
+    server.providers = server.providers.map((p) => ({ ...p, models: [] }));
+    open(server, chatPath(subject.id, chat.id));
+    await screen.findByText('Noch kein Modell gewählt');
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Modell wählen' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Modell für diesen Chat' });
+    expect(within(dialog).getByText(/Es ist noch kein Modell eingerichtet/)).toBeTruthy();
+    const link = within(dialog).getByRole('link', { name: 'Zu den Einstellungen' });
+    expect(link.getAttribute('href')).toBe('/settings');
   });
 });
 

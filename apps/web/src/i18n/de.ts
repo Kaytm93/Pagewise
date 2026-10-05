@@ -537,7 +537,7 @@ export const de = {
       inheritSubject: 'Standardmodell',
       inheritWith: '{label} ({name})',
       inheritWithout: '{label} (keines eingerichtet)',
-      none: 'Es ist noch kein Modell eingerichtet. Trag unter Einstellungen einen Anbieter ein.',
+      none: 'Es ist noch kein Modell eingerichtet. Trag unter Einstellungen einen Anbieter mit mindestens einem Modell ein.',
       free: 'kostenlos',
       invalid: 'Dieses Modell gibt es nicht mehr.',
       groupAgents: 'Agenten (Claude Code)',

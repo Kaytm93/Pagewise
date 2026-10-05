@@ -23,6 +23,8 @@ import { ModelDialog } from './ModelDialog';
 import { describeEngine, describeSelection, effectiveModel, effectiveTarget } from './models';
 import { useChat } from './useChat';
 
+const toSettings = { name: 'settings' } as const;
+
 type Dialog = 'rename' | 'delete' | 'model' | null;
 
 /** Wie nah am Ende die Ansicht sein muss, damit sie neuen Text mitverfolgt (in Pixeln). */
@@ -245,6 +247,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
   async function send(text: string): Promise<boolean> {
     pinned.current = true;
     setActionError(null);
+    chat.dismissProblem();
     return chat.send(text);
   }
 
@@ -332,6 +335,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
 
       <div
         ref={watchComposer}
+        onInput={chat.dismissProblem}
         className="sticky bottom-[var(--kb,0px)] z-10 rounded-b-[12px] border-t border-line-warm bg-sheet px-4 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:px-8"
       >
         <div className="mx-auto w-full max-w-[700px]">
@@ -355,7 +359,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
             <div className="mb-3 rounded-box bg-paper px-4 py-3 text-sm">
               <p className="font-medium">{m.chat.noModelTitle}</p>
               <p className="mt-1 text-ink-secondary">{m.chat.noModelHint}</p>
-              <Link to={{ name: 'settings' }} className="mt-1 inline-block">
+              <Link to={toSettings} className="mt-1 inline-block">
                 {m.chat.openSettings}
               </Link>
             </div>
