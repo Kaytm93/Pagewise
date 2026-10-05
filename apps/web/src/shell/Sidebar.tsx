@@ -239,7 +239,15 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             {m.shell.settings}
           </Link>
         </div>
-        {creating && <SubjectDialog onClose={() => setCreating(false)} />}
+        {creating && (
+          <SubjectDialog
+            onClose={() => {
+              // Nach dem Anlegen ist das neue Fach in der Liste: die Schublade macht zu.
+              onNavigate?.();
+              setCreating(false);
+            }}
+          />
+        )}
       </nav>
     </div>
   );

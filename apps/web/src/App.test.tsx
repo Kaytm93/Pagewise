@@ -287,6 +287,27 @@ describe('App-Rahmen', () => {
     expect(window.location.pathname).toMatch(/^\/subjects\//);
     expect(window.location.pathname).not.toBe(`/subjects/${a.id}`);
   });
+
+  it('schließt die Schublade nach dem Anlegen eines Fachs', async () => {
+    const server = new FakeServer('unlocked');
+    mount(server);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Menü öffnen' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Navigation' });
+    await user.click(within(drawer).getByRole('button', { name: 'Fach hinzufügen' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Fach anlegen' });
+    await user.click(within(dialog).getByLabelText('Eigenes Fach'));
+    await user.type(within(dialog).getByLabelText('Name'), 'Beispielfach C');
+    await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+
+    // Die Schublade macht zu, das neue Fach ist angelegt, sichtbar und geöffnet.
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Navigation' })).toBeNull());
+    expect(window.location.pathname).toBe(`/subjects/${server.subjects[0]?.id}`);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    const nav = screen.getByRole('navigation', { name: 'Navigation' });
+    expect(within(nav).getByRole('link', { name: 'Beispielfach C' })).toBeTruthy();
+  });
 });
 
 describe('Einstellungen', () => {
