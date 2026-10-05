@@ -236,20 +236,23 @@
     transform: none;
   }
 
-  :root[data-design="raum"] .lg-slip:hover {
-    transform: none;
-    background-color: var(--paper);
-  }
-
   :root[data-design="raum"] .lg-tape {
     display: none;
   }
 
-  /* Zeilen: Fachkante statt Verschieben des ganzen Blocks */
-  :root[data-design="raum"] .lg-row:hover {
-    background-color: var(--paper);
-    box-shadow: none;
-    transform: translateX(calc(var(--m) * 3px));
+  /* Hover nur mit echter Maus (Muster: lagen.css): Touch bleibt ohne Kleben */
+  @media (hover: hover) {
+    :root[data-design="raum"] .lg-slip:hover {
+      transform: none;
+      background-color: var(--paper);
+    }
+
+    /* Zeilen: Fachkante statt Verschieben des ganzen Blocks */
+    :root[data-design="raum"] .lg-row:hover {
+      background-color: var(--paper);
+      box-shadow: none;
+      transform: translateX(calc(var(--m) * 3px));
+    }
   }
 
   /* ===== Tageslinie auf der Startseite ===== */

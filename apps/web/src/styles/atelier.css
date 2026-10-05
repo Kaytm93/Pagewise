@@ -132,12 +132,15 @@
     transform: none;
   }
 
-  :root[data-design="atelier"] .lg-slip:hover {
-    transform: translateY(calc(var(--m) * -2px));
-    box-shadow:
-      inset 0 1px 0 var(--rim),
-      0 2px 4px rgba(var(--shadow), 0.05),
-      0 18px 40px -16px rgba(var(--shadow), calc(var(--shadow-a) * 1.6));
+  /* Hover nur mit echter Maus (Muster: lagen.css): Touch bleibt ohne Kleben */
+  @media (hover: hover) {
+    :root[data-design="atelier"] .lg-slip:hover {
+      transform: translateY(calc(var(--m) * -2px));
+      box-shadow:
+        inset 0 1px 0 var(--rim),
+        0 2px 4px rgba(var(--shadow), 0.05),
+        0 18px 40px -16px rgba(var(--shadow), calc(var(--shadow-a) * 1.6));
+    }
   }
 
   :root[data-design="atelier"] .lg-tape {
@@ -153,11 +156,18 @@
     display: none;
   }
 
-  :root[data-design="atelier"] .lg-row:focus-visible,
-  :root[data-design="atelier"] .lg-row:hover {
+  :root[data-design="atelier"] .lg-row:focus-visible {
     background-color: color-mix(in srgb, var(--subj) 9%, transparent);
     box-shadow: none;
     transform: translateX(calc(var(--m) * 2px));
+  }
+
+  @media (hover: hover) {
+    :root[data-design="atelier"] .lg-row:hover {
+      background-color: color-mix(in srgb, var(--subj) 9%, transparent);
+      box-shadow: none;
+      transform: translateX(calc(var(--m) * 2px));
+    }
   }
 }
 
