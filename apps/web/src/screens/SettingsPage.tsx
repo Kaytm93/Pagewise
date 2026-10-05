@@ -208,7 +208,7 @@ function ChangePasscode() {
       if (caught instanceof ApiError && caught.code === 'invalid_passcode') {
         setErrors({ current: e.wrongCurrent });
       } else if (caught instanceof ApiError && caught.code === 'invalid_input') {
-        setErrors({ next: caught.details.reason === 'too_long' ? e.tooLong : e.tooShort });
+        setErrors({ next: caught.details.reason === 'passcode_too_long' ? e.tooLong : e.tooShort });
       } else if (caught instanceof ApiError && caught.code === 'rate_limited') {
         setErrors({ form: rateLimitMessage(e.rateLimited, caught) });
       } else {

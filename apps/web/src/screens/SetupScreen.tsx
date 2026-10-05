@@ -22,7 +22,7 @@ function messageFor(error: unknown): Errors {
     case 'invalid_setup_code':
       return { code: s.invalidCode };
     case 'invalid_input':
-      return error.details.reason === 'too_long'
+      return error.details.reason === 'passcode_too_long'
         ? { passcode: s.tooLong }
         : { passcode: s.tooShort };
     case 'already_configured':

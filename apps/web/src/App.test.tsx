@@ -97,6 +97,24 @@ describe('Einrichtung', () => {
     );
     expect(field.getAttribute('type')).toBe('password');
   });
+
+  it('meldet einen zu langen Passcode mit der Meldung für zu lang', async () => {
+    const server = new FakeServer('setup');
+    // So antwortet der Server wirklich: reason „passcode_too_long“ ( routes/auth.ts ).
+    server.replyOnce('POST', '/api/auth/setup', () =>
+      json(400, { error: 'invalid_input', field: 'passcode', reason: 'passcode_too_long' }),
+    );
+    mount(server);
+    const user = userEvent.setup();
+    const zuLang = 'x'.repeat(129);
+
+    await user.type(await screen.findByLabelText('Einrichtungscode'), TEST_SETUP_CODE);
+    await user.type(screen.getByLabelText('Passcode'), zuLang);
+    await user.type(screen.getByLabelText('Passcode wiederholen'), zuLang);
+    await user.click(screen.getByRole('button', { name: 'Einrichten' }));
+
+    expect(await screen.findByText('Der Passcode darf höchstens 128 Zeichen haben.')).toBeTruthy();
+  });
 });
 
 describe('Anmeldung', () => {
@@ -157,6 +175,27 @@ describe('Anmeldung', () => {
     server.state = 'locked';
     await user.click(screen.getByRole('button', { name: 'Passcode ändern' }));
     expect(await screen.findByRole('heading', { name: 'Pagewise entsperren' })).toBeTruthy();
+  });
+
+  it('meldet beim Ändern einen zu langen Passcode mit der Meldung für zu lang', async () => {
+    const server = new FakeServer('unlocked');
+    // So antwortet der Server wirklich: reason „passcode_too_long“ ( routes/auth.ts ).
+    server.replyOnce('POST', '/api/auth/passcode', () =>
+      json(400, { error: 'invalid_input', field: 'next', reason: 'passcode_too_long' }),
+    );
+    window.history.replaceState(null, '', '/settings');
+    mount(server);
+    const user = userEvent.setup();
+    const zuLang = 'x'.repeat(129);
+
+    await user.type(await screen.findByLabelText('Aktueller Passcode'), TEST_PASSCODE);
+    await user.type(screen.getByLabelText('Neuer Passcode'), zuLang);
+    await user.type(screen.getByLabelText('Neuen Passcode wiederholen'), zuLang);
+    await user.click(screen.getByRole('button', { name: 'Passcode ändern' }));
+
+    expect(
+      await screen.findByText('Der neue Passcode darf höchstens 128 Zeichen haben.'),
+    ).toBeTruthy();
   });
 });
 
