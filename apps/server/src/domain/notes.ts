@@ -11,7 +11,7 @@ export interface NoteSummary {
   title: string;
   pinned: boolean;
   tags: string[];
-  /** Der Anfang des Textes ohne Blöcke und Markdown-Zeichen, höchstens {@link EXCERPT_LENGTH} Zeichen. */
+  /** Der Anfang des Textes ohne Blöcke, Formeln, Link-Adressen und Markdown-Zeichen, ohne Wiederholung des Titels, höchstens {@link EXCERPT_LENGTH} Zeichen. */
   excerpt: string;
   sourceChatId: string | null;
   createdAt: number;
@@ -52,15 +52,20 @@ export const EXCERPT_LENGTH = 160;
 /** Wie viel vom Anfang des Textes für den Auszug geladen wird, damit Listen nicht ganze Texte lesen. */
 const HEAD_LENGTH = 800;
 
-/** Auszug: Blöcke und Zeichen der Markdown-Schreibweise weg, Leerraum zusammengezogen. */
-export function excerptOf(markdown: string): string {
-  const text = markdown
+/** Markdown-Schreibweise weg: `[x](y)` → `x`, `[alt](y)` → ``, `$…$`/`$$…$$` → ``, Zeichen wie `#`/`*`/`\` entfernt. */
+const stripMarkdown = (markdown: string): string =>
+  markdown
     .replace(/(`{3,}|~{3,})[\s\S]*?(\1|$)/g, ' ')
     .replace(/\$\$[\s\S]*?\$\$/g, ' ')
+    .replace(/\$(?:[^$\n\\]|\\.|\\\n)+?\$/g, ' ')
+    .replace(/!\[([^\]]*)\]\([^)\n]*\)/g, ' ')
+    .replace(/(?<!!)\[([^\]]*)\]\([^)\n]*\)/g, '$1')
     .replace(/[#>*_`~$|\\]/g, '')
-    .replace(/\[!\w+\]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/\[!\w+\]/g, '');
+
+/** Auszug: Blöcke, Formeln und Link-Adressen weg, Leerraum zusammengezogen. */
+export function excerptOf(markdown: string): string {
+  const text = stripMarkdown(markdown).replace(/\s+/g, ' ').trim();
   const characters = [...text];
   return characters.length > EXCERPT_LENGTH
     ? `${characters
@@ -68,6 +73,20 @@ export function excerptOf(markdown: string): string {
         .join('')
         .trimEnd()}…`
     : text;
+}
+
+/** Einrückung und Betonung um die Überschrift zählen nicht; verglichen wird ohne Groß- und Kleinschreibung. */
+const headingTextOf = (line: string): string =>
+  stripMarkdown(line.replace(/^\s{0,3}#{1,3}\s+/, ''));
+
+/** Auszug ohne Wiederholung des Titels: Eine Überschrift am Anfang, die wie der Titel lautet, bleibt außen vor. */
+export function excerptForTitleOf(title: string, markdown: string): string {
+  const [firstLine = '', ...lines] = markdown.split('\n');
+  const heading = headingTextOf(firstLine);
+  const isHeading = /^\s{0,3}#{1,3}\s+\S/.test(firstLine);
+  const repeats =
+    isHeading && heading !== '' && heading.toLowerCase() === title.trim().toLowerCase();
+  return excerptOf(repeats ? lines.join('\n') : markdown);
 }
 
 function parseTags(raw: string): string[] {
@@ -89,7 +108,7 @@ function summaryOf(row: typeof notes.$inferSelect, head: string): NoteSummary {
     title: row.title,
     pinned: row.pinned,
     tags: parseTags(row.tags),
-    excerpt: excerptOf(head),
+    excerpt: excerptForTitleOf(row.title, head),
     sourceChatId: row.sourceChatId,
     createdAt: row.createdAt.getTime(),
     updatedAt: row.updatedAt.getTime(),

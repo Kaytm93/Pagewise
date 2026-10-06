@@ -85,6 +85,39 @@ describe('Hefteinträge', () => {
       expect(entry?.excerpt).toBe('Überschrift Erster Satz hier. Danach.');
     });
 
+    it('lässt Formeln weg, ersetzt Links durch ihren Text und wiederholt die erste Überschrift nicht', async () => {
+      const text = [
+        '# Quadratische Funktionen',
+        '',
+        'Die Formel $$a \\mid b$$ und $x^2$ zeigen den Fall,',
+        'siehe [Aufgabenblatt](https://example.com/aufgaben).',
+      ].join('\n');
+      await create({ title: 'Quadratische Funktionen', markdown: text });
+      const [entry] = await list(`subjectId=${subjectId}`);
+      expect(entry?.excerpt).toBe('Die Formel und zeigen den Fall, siehe Aufgabenblatt.');
+    });
+
+    it('fasst Bilder und Formeln als leer auf, Links auch am Anfang und Ende nur mit ihrem Text', async () => {
+      const text = [
+        '[Erste](https://example.com/eins) mit ![Bild](https://example.com/bild.png) und $a$ plus',
+        '',
+        '',
+        '$$b \\mid c$$',
+        '',
+        'und [Letzte](https://example.com/zwei)',
+      ].join('\n');
+      await create({ markdown: text });
+      const [entry] = await list(`subjectId=${subjectId}`);
+      expect(entry?.excerpt).toBe('Erste mit und plus und Letzte');
+    });
+
+    it('gleicht die erste Überschrift auch ohne Groß und Klein und mit Betonung mit dem Titel', async () => {
+      const text = '# **Stoffmenge**\n\nn = m / M';
+      await create({ title: 'stoffmenge', markdown: text });
+      const [entry] = await list(`subjectId=${subjectId}`);
+      expect(entry?.excerpt).toBe('n = m / M');
+    });
+
     it('speichert den Text unverändert, auch Markup und Skripte (bereinigt wird beim Anzeigen)', async () => {
       const hostile =
         '<script>alert(1)</script> <img src=x onerror=alert(1)> [x](javascript:alert(1))';
