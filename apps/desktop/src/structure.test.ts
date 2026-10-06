@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 const src = dirname(fileURLToPath(import.meta.url));
 const read = (path: string) => readFileSync(join(src, path), 'utf8');
 const main = read('main.ts');
+const build = read(join('..', 'scripts', 'build.ts'));
 
 function sources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -116,6 +117,28 @@ describe('Hüllen-Seiten (eigene strenge CSP)', () => {
 
   it('gibt es mindestens die Startseite', () => {
     expect(pages.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('die Startseite bekommt ihr Skript gebündelt und liest die Texte nur aus i18n.ts', () => {
+    expect(build).toContain("starting: join(root, 'src', 'starting.ts')");
+    expect(build).toMatch(
+      /renameSync\(join\(dist, 'starting\.cjs'\), join\(dist, 'shell', 'starting\.js'\)\)/,
+    );
+    const script = read('starting.ts');
+    const texts = read('i18n.ts');
+    expect(script).toContain("from './i18n'");
+    // Auswahl der Stufen, ohne die Texte zu wiederholen:
+    expect(script).toMatch(/state === 'starting'|state === 'stopped'|state === 'failed'/);
+    for (const text of [
+      'Pagewise startet',
+      'Pagewise startet neu',
+      'Pagewise ist ausgeschaltet',
+      'Pagewise läuft nicht',
+      'Der Server konnte nicht gestartet werden.',
+    ]) {
+      expect(script, text).not.toContain(text);
+      expect(texts, text).toContain(text);
+    }
   });
 
   it('haben eine CSP ohne unsafe-inline und unsafe-eval, ohne Inline-Skript und ohne style-Attribut', () => {

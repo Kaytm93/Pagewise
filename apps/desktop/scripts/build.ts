@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bundleServer } from '@pagewise/server/bundle';
@@ -36,7 +36,12 @@ if (!args.includes('--skip-web')) {
 }
 
 await build({
-  entryPoints: { main: join(root, 'src', 'main.ts'), preload: join(root, 'src', 'preload.ts') },
+  entryPoints: {
+    main: join(root, 'src', 'main.ts'),
+    preload: join(root, 'src', 'preload.ts'),
+    // Startseite der Hülle: gebündelt, damit sie die Texte aus `i18n.ts` bekommt (statt hartem Text).
+    starting: join(root, 'src', 'starting.ts'),
+  },
   outdir: dist,
   outExtension: { '.js': '.cjs' },
   bundle: true,
@@ -50,6 +55,7 @@ await build({
 });
 
 cpSync(join(root, 'src', 'shell'), join(dist, 'shell'), { recursive: true });
+renameSync(join(dist, 'starting.cjs'), join(dist, 'shell', 'starting.js'));
 mkdirSync(join(dist, 'assets'), { recursive: true });
 for (const file of ['trayTemplate.png', 'trayTemplate@2x.png']) {
   cpSync(join(root, 'assets', file), join(dist, 'assets', file));

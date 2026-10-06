@@ -60,6 +60,26 @@ export const de = {
     startTimeout: 'Der Server hat sich nach 20 Sekunden nicht gemeldet.',
     unexpected: 'Der Server konnte nicht gestartet werden.',
   },
+  startingPage: {
+    title: 'Pagewise',
+    starting: {
+      title: 'Pagewise startet',
+      message: 'Der Server startet. Einen Moment bitte …',
+    },
+    restarting: {
+      title: 'Pagewise startet neu',
+      message: 'Der Server startet gerade neu. Einen Moment bitte …',
+    },
+    stopped: {
+      title: 'Pagewise ist ausgeschaltet',
+      message:
+        'Der Server ist gestoppt. Zum erneuten Starten „Server neu starten“ im Menü „Pagewise“ oder im Menüleisten-Symbol wählen.',
+    },
+    failed: {
+      title: 'Pagewise läuft nicht',
+      fallback: 'Der Server konnte nicht gestartet werden.',
+    },
+  },
   dialogs: {
     startFailedTitle: 'Pagewise startet nicht',
     ok: 'OK',

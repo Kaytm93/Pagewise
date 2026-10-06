@@ -680,6 +680,7 @@ if (smokeTest) {
           snapshot.failure?.message ?? m.failures.unexpected,
         );
       } else if (mainWindow && !mainWindow.isDestroyed()) {
+        // 'starting', 'restarting', 'stopped': die Startseite wählt den Text nach dem Zustand (`starting.ts`).
         loadStartingPage(mainWindow);
       }
     });
