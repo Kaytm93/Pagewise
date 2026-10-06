@@ -1,4 +1,4 @@
-import { Eye, EyeOff } from 'lucide-react';
+import { ChevronDown, Eye, EyeOff } from 'lucide-react';
 import {
   type InputHTMLAttributes,
   type ReactNode,
@@ -132,15 +132,24 @@ export function SelectField({
       <label htmlFor={id} className={hideLabel ? 'sr-only' : 'block text-sm font-medium text-ink'}>
         {label}
       </label>
-      <select
-        id={id}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy || undefined}
-        className={`${inputClass} ${hideLabel ? '' : 'mt-1.5'}`}
-        {...select}
-      >
-        {children}
-      </select>
+      {/* Ohne appearance-none rendert WebKit eine 25 px hohe Systemliste und ignoriert min-h-11. */}
+      <div className={`relative ${hideLabel ? '' : 'mt-1.5'}`}>
+        <select
+          id={id}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy || undefined}
+          className={`${inputClass} appearance-none pr-10`}
+          {...select}
+        >
+          {children}
+        </select>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
+        >
+          <ChevronDown className="size-5 text-ink-muted" />
+        </div>
+      </div>
       {hint && (
         <p id={hintId} className="mt-1.5 text-sm text-ink-muted">
           {hint}
