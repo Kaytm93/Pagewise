@@ -1,5 +1,5 @@
 import { ArrowLeft, Pin, PinOff, Trash2 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
 import type { Note } from '../../api/types';
 import { format, messages as m } from '../../i18n';
@@ -55,6 +55,7 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
+  const titleField = useRef<HTMLTextAreaElement>(null);
 
   // Der neueste Stand für das Speichern, unabhängig vom Rendern (auch beim Verlassen der Seite).
   const latest = useRef({ title, markdown, pinned, tagsText });
@@ -175,6 +176,28 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
     document.title = `${name} · ${subject.name} · ${m.app.name}`;
   }, [phase, note, title, findSubject, subjectId]);
 
+  // Titelfeld: einzeiliges Textarea mit wachsender Höhe (Auto-Höhe), damit lange Titel
+  // umbrechen statt mittendrin abgeschnitten zu werden (notes#03). Die Zeilenzahl läuft als
+  // CSSOM-Variable ins CSS (CSP: nie ein Inline-Stil-Attribut); jsdom misst null, dort bleibt
+  // es eine Zeile.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: nur Titeländerungen ändern die Höhe
+  useLayoutEffect(() => {
+    const element = titleField.current;
+    if (!element) return;
+    const adjust = () => {
+      element.style.setProperty('--note-title-lines', '1');
+      // clientHeight = eine Zeile + Innenabstand (py-1 = 8 px); der Rahmen zählt nicht hinein.
+      const proZeile = element.clientHeight - 8;
+      if (proZeile <= 0) return;
+      const mehr = Math.ceil((element.scrollHeight - element.clientHeight) / proZeile);
+      element.style.setProperty('--note-title-lines', String(1 + Math.max(0, mehr)));
+    };
+    adjust();
+    return () => {
+      element.style.removeProperty('--note-title-lines');
+    };
+  }, [title]);
+
   const subject = findSubject(subjectId);
   if (phase === 'not-found') return <NotFoundPage />;
   if (phase === 'loading') {
@@ -267,15 +290,23 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
         <label htmlFor="note-title" className="sr-only">
           {e.title}
         </label>
-        <input
+        <textarea
           id="note-title"
+          ref={titleField}
+          rows={1}
           value={title}
           onChange={(event) => setTitle(event.target.value)}
+          onKeyDown={(event) => {
+            // Enter erzeugt keinen Zeilenumbruch im Titel (Titel bleiben einzeilig im Bestand);
+            // bestehende Zeilenumbrüche im Bestand bleiben sichtbar, neu eingegebene werden verhindert.
+            if (event.key === 'Enter') event.preventDefault();
+          }}
           maxLength={120}
           autoComplete="off"
+          spellCheck={false}
           placeholder={e.title}
           aria-invalid={titleInvalid || undefined}
-          className="w-full rounded-control border border-transparent bg-transparent px-1 py-1 font-heading text-[clamp(28px,4.4vw,44px)] leading-tight tracking-[-0.03em] text-ink placeholder:text-ink-muted aria-invalid:border-danger hover:border-line-warm focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none aria-invalid:focus:border-danger aria-invalid:focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--danger)_22%,transparent)]"
+          className="[--note-title-lh:1.15] h-[calc(var(--note-title-lines,1)*var(--note-title-lh)*1em+0.5rem+2px)] w-full resize-none overflow-hidden rounded-control border border-transparent bg-transparent px-1 py-1 font-heading text-[clamp(28px,4.4vw,44px)] leading-[var(--note-title-lh)] tracking-[-0.03em] text-ink placeholder:text-ink-muted aria-invalid:border-danger hover:border-line-warm focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none aria-invalid:focus:border-danger aria-invalid:focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--danger)_22%,transparent)]"
         />
       </div>
 

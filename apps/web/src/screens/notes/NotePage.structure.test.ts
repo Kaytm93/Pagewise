@@ -69,7 +69,10 @@ describe('Eingabefelder haben mindestens 16 px Schrift (notes#17, iOS-Auto-Zoom)
 
   it('das Markdown-Textfeld des Editors nutzt text-base (die frühere 15-px-Stelle)', () => {
     const quelle = read('screens/notes/NotePage.tsx');
-    const textfeld = quelle.match(/<textarea\b[\s\S]*?\/>/)?.[0] ?? '';
+    // Das Markdown-Feld (nicht das neue Titel-Textarea): das Element, das id="note-text" trägt.
+    const pos = quelle.indexOf('id="note-text"');
+    const start = quelle.lastIndexOf('<textarea', pos);
+    const textfeld = quelle.slice(start, start + 1600);
     expect(textfeld).toContain('text-base');
     expect(textfeld).not.toContain('0.9375rem');
   });
@@ -94,7 +97,7 @@ describe('Eingabefelder haben den gemeinsamen Fokus-Hof (notes#08)', () => {
     const quelle = read('screens/notes/NotePage.tsx');
     for (const id of ['note-title', 'note-tags', 'note-text']) {
       const feld = quelle.split(`id="${id}"`)[1] ?? '';
-      expect(feld.slice(0, 800), id).toContain(FOKUS);
+      expect(feld.slice(0, 1200), id).toContain(FOKUS);
     }
   });
 
@@ -108,6 +111,46 @@ describe('Eingabefelder haben den gemeinsamen Fokus-Hof (notes#08)', () => {
   it('Titel markiert Fehler sichtbar in Rahmenfarbe (aria-invalid → danger)', () => {
     const quelle = read('screens/notes/NotePage.tsx');
     const titel = quelle.split('id="note-title"')[1] ?? '';
-    expect(titel.slice(0, 800)).toContain('aria-invalid:border-danger');
+    expect(titel.slice(0, 1100)).toContain('aria-invalid:border-danger');
+  });
+});
+
+/*
+ * Titelfeld des Editors (notes#03): eine einzeilige Textarea mit Auto-Höhe statt eines input, damit
+ * lange Titel (bis 120 Zeichen) umbrechen statt mittendrin abgeschnitten zu werden. Die Höhe läuft
+ * über eine CSSOM-Variable (setProperty('--note-title-lines', …)) — die strenge CSP verbietet
+ * Inline-Stil-Attribute; jsdom kann Höhe nicht messen, den echten Umbrauch misst der Echtbrowser
+ * (pw/agents/m4-t006).
+ */
+describe('Editor-Titel: mehrzeilig statt abgeschnitten (notes#03)', () => {
+  /** Das Titelfeld (Textarea) aus dem Quelltext schneiden, nicht das Markdown-Textfeld. */
+  function titelfeld() {
+    const quelle = read('screens/notes/NotePage.tsx');
+    const pos = quelle.indexOf('id="note-title"');
+    const start = quelle.lastIndexOf('<textarea', pos);
+    return quelle.slice(start, start + 2200);
+  }
+
+  it('das Titelfeld ist eine einzeilige Textarea mit Auto-Höhe, Enter ohne Zeilenumbruch', () => {
+    const element = titelfeld();
+    expect(element).toContain('id="note-title"');
+    expect(element).toContain('rows={1}');
+    // Auto-Höhe über die CSSOM-Variable, gesetzt per setProperty (kein Inline-Stil-Attribut, CSP)
+    expect(element).toContain('--note-title-lines');
+    expect(element).toContain('resize-none');
+    expect(element).toContain('overflow-hidden');
+    // Enter verhindert den Zeilenumbruch im Titel
+    expect(element).toContain("event.key === 'Enter'");
+    expect(element).toContain('event.preventDefault()');
+    // maxLength 120 bleibt
+    expect(element).toContain('maxLength={120}');
+    // Kein hartes Clippen mehr (M3-T028): kein truncate/ellipsis am Titel
+    expect(element).not.toMatch(/truncate|text-ellipsis/);
+  });
+
+  it('die Höhe wird per CSSOM-Variable gesetzt, nie über ein Inline-Stil-Attribut (CSP)', () => {
+    const quelle = read('screens/notes/NotePage.tsx');
+    expect(quelle).toContain("setProperty('--note-title-lines'");
+    expect(quelle).not.toMatch(/style=\{/);
   });
 });

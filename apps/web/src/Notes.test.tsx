@@ -263,6 +263,31 @@ describe('Editor', () => {
     expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(0);
   });
 
+  it('Titelfeld: Enter erzeugt keinen Zeilenumbruch und 120 Zeichen bleiben erlaubt (notes#03)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { title: 'Titel' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    const title = (await screen.findByRole('textbox', { name: 'Titel' })) as HTMLTextAreaElement;
+    expect(title.tagName).toBe('TEXTAREA');
+    expect(title.getAttribute('rows')).toBe('1');
+
+    // Enter fügt keinen Zeilenumbruch ein (Auto-Höhe wäre sonst dauerhaft zweizeilig)
+    await user.clear(title);
+    await user.type(title, 'Erste Zeile');
+    await user.keyboard('{Enter}');
+    await user.type(title, 'Zweite Zeile');
+    expect(title.value).toBe('Erste ZeileZweite Zeile');
+    expect(title.value).not.toContain('\n');
+
+    // maxLength 120 bleibt bestehen
+    expect(title.getAttribute('maxlength')).toBe('120');
+
+    // Bestehende Zeilenumbrüche im Bestand werden nicht heimlich geändert (Autospeicher unverändert)
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(0);
+    expect(server.notes[0]?.title).toBe('Titel');
+  });
+
   it('heftet an, setzt Stichwörter und speichert beides', async () => {
     const { server, subject } = setup();
     const note = server.addNote(subject.id, { title: 'Titel' });
