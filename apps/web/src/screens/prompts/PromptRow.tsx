@@ -64,8 +64,8 @@ export function PromptRow({
   }
 
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="min-w-0">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div className="min-w-0 min-w-52 flex-1">
         <p className="font-medium">{m.prompts.layers[layer]}</p>
         <p className="text-sm text-ink-secondary">{m.prompts.layerLead[layer]}</p>
         {failed ? (

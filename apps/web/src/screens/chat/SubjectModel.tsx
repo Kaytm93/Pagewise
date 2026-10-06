@@ -27,7 +27,7 @@ export function SubjectModel({ subject }: { subject: Subject }) {
         {m.subject.model}
       </h2>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0">
+        <div className="min-w-0 min-w-52 flex-1">
           <p className="break-words">{summary}</p>
           <p className="mt-0.5 text-sm text-ink-muted">{m.subject.modelLead}</p>
         </div>
