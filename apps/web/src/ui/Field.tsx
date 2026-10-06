@@ -208,7 +208,7 @@ export function CheckField({ label, hint, checked, onChange }: CheckFieldProps) 
     <label className="flex min-h-11 cursor-pointer items-start gap-3 py-1.5">
       <input
         type="checkbox"
-        className="mt-0.5 size-5 shrink-0 accent-primary"
+        className="size-6 shrink-0 accent-primary"
         checked={checked}
         aria-describedby={hint ? hintId : undefined}
         onChange={(event) => onChange(event.target.checked)}
