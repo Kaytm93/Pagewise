@@ -338,7 +338,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
       <div
         ref={watchComposer}
         onInput={chat.dismissProblem}
-        className="sticky bottom-[var(--kb,0px)] z-10 rounded-b-[12px] border-t border-line-warm bg-sheet px-4 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:px-8"
+        className="sticky bottom-[var(--kb,0px)] z-10 rounded-b-[12px] border-t border-line-warm bg-sheet px-4 pt-3.5 pb-3.5 sm:px-8"
       >
         <div className="mx-auto w-full max-w-[700px]">
           {chat.reconnecting && (

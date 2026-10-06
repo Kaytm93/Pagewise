@@ -50,6 +50,13 @@ describe('Tastatur', () => {
     expect(read('main.tsx')).toContain('startKeyboardInset()');
   });
 
+  it('misst die Safe-Area unten im Chat nicht doppelt (die Hülle endet schon über dem Rand)', () => {
+    const chat = read('screens/chat/ChatPage.tsx');
+    // Die Composer-Hülle trägt einen einfachen festen Innenabstand, kein env(safe-area-inset-bottom) mehr.
+    expect(chat).toContain('pb-3.5 sm:px-8');
+    expect(chat).not.toContain('env(safe-area-inset-bottom)');
+  });
+
   it('nutzt weder interactive-widget noch die VirtualKeyboard-API', () => {
     for (const file of [
       '../index.html',
