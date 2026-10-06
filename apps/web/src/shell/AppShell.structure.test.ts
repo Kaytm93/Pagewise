@@ -9,6 +9,16 @@ import { describe, expect, it } from 'vitest';
  * Quelltext und nagelt fest, dass main#main die Klasse trägt.
  */
 
+/*
+ * Überschriften-Gliederung der Hülle: Im DOM liegt die Seitenleiste vor dem Inhalt; ihr Abschnittstitel
+ * „Fächer“ ist darum ein Absatz (role="presentation") und keine Überschrift, damit die H1 der Ansicht die
+ * erste Überschrift des Dokuments bleibt (Befund a11y-keyboard #2). Zusätzlich nagt dieser Test fest:
+ * - genau eine H1 je Ansicht, die erste Überschrift des Dokuments;
+ * - keine übersprungene Ebene (jede folgende Überschrift steigt höchstens um eine Stufe);
+ * - die Ansichts-H1 trägt eine stabile ID als Sprungziel (Chat: #chat-title).
+ * Für Screenreader gilt: die Auszeichnung von Quelltext ist hier Struktur, nicht Verhalten.
+ */
+
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
 
@@ -56,5 +66,57 @@ describe('Menü-Knopf und gekürzte Namen', () => {
     const spans = sidebar.match(/<span[^>]*className="truncate"[^>]*>/g) ?? [];
     expect(spans.length).toBe(2);
     for (const span of spans) expect(span).toContain('title=');
+  });
+});
+
+/*
+ * Überschriftenfolge (DoD): Der Abschnittstitel „Fächer“ der Seitenleiste ist ein Absatz und keine
+ * Überschrift, weil die Seitenleiste im DOM vor dem Inhalt liegt — sonst stünde H2 vor H1. Die H1 der
+ * Ansicht ist die erste und einzige Überschrift der obersten Ebene; darunter wird keine Ebene übersprungen.
+ */
+describe('Überschriftenfolge der Hülle', () => {
+  const FILE_WITH_H1: Record<string, string> = {
+    HomePage: 'screens/HomePage.tsx',
+    SubjectPage: 'screens/SubjectPage.tsx',
+    ChatPage: 'screens/chat/ChatPage.tsx',
+    NotePage: 'screens/notes/NotePage.tsx',
+    SettingsPage: 'screens/SettingsPage.tsx',
+    NotFoundPage: 'screens/NotFoundPage.tsx',
+    TimetablePage: 'planning/TimetablePage.tsx',
+    ExamsPage: 'planning/ExamsPage.tsx',
+  };
+
+  it('die Seitenleiste hat keine Überschrift mehr (Abschnittstitel „Fächer“ ist ein Absatz)', () => {
+    const sidebar = read('shell/Sidebar.tsx');
+    expect(sidebar).not.toMatch(/<h[1-6][\s>]/);
+    const label = sidebar.match(/id="subjects-heading"[\s\S]{0,200}?{m\.shell\.subjects}/);
+    expect(label).not.toBeNull();
+    expect(label?.[0]).toContain('role="presentation"');
+  });
+
+  it('jede Ansichts-H1 ist ein Sprungziel (stabile ID)', () => {
+    expect(read('screens/chat/ChatPage.tsx')).toMatch(/<h1[\s\S]*?id="chat-title"/);
+  });
+
+  it('Markdown-Antworten staffeln Überschriften ab H2 (kein Sprung unter der Ansichts-H1)', () => {
+    const markdown = read('screens/chat/Markdown.tsx');
+    expect(markdown).toContain('h1: ({ children }) => <h2');
+    expect(markdown).not.toMatch(/h1: \(\{ children \}\) => <h1[\s>]/);
+  });
+
+  it('die Folge der Ebenen in jeder Ansicht steigt ohne Sprung (Quelltextfolge je Datei)', () => {
+    for (const file of Object.values(FILE_WITH_H1)) {
+      const source = read(file);
+      const levels = [...source.matchAll(/<h([1-6])[\s>]/g)].map((match) => Number(match[1]));
+      let lowest = 1;
+      for (const level of levels) {
+        if (level <= lowest) {
+          lowest = level;
+          continue;
+        }
+        expect(level - lowest).toBeLessThanOrEqual(1);
+        lowest = level;
+      }
+    }
   });
 });

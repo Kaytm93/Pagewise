@@ -264,7 +264,10 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
           {group?.name ?? subject.name}
         </Link>
         <div className="flex items-start justify-between gap-2">
-          <h1 className="min-w-0 py-1.5 font-heading text-[21px] break-words tracking-[-0.2px]">
+          <h1
+            id="chat-title"
+            className="min-w-0 py-1.5 font-heading text-[21px] break-words tracking-[-0.2px]"
+          >
             {title}
           </h1>
           <div className="-mr-2 flex shrink-0">

@@ -161,6 +161,7 @@ function InlineMath({ latex, display }: { latex: string; display: boolean }) {
  * in einer Modellantwort könnte Daten an eine fremde Adresse schicken, die CSP sperrt das ohnehin.
  */
 const components: Components = {
+  // Überschriften staffeln ab H2: unter der H1 der Ansicht (Chat-Titel) springt keine Ebene.
   p: ({ children }) => <p className="my-[0.9em] first:mt-0 last:mb-0">{children}</p>,
   h1: ({ children }) => <h2 className="mt-6 mb-2 font-heading text-xl first:mt-0">{children}</h2>,
   h2: ({ children }) => <h3 className="mt-6 mb-2 font-heading text-lg first:mt-0">{children}</h3>,

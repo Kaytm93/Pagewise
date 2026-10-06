@@ -213,9 +213,15 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             </li>
           </ul>
 
-          <h2 className="px-3.5 pt-3 pb-1 font-sans text-[12.5px] font-medium tracking-[0.06em] text-ink-muted uppercase">
+          {/* Abschnittstitel, keine Überschrift: im DOM liegt die Seitenleiste vor dem Inhalt,
+              ein H2 hier stünde darum vor der H1 der Ansicht (Befund a11y-keyboard #2). */}
+          <p
+            id="subjects-heading"
+            role="presentation"
+            className="px-3.5 pt-3 pb-1 font-sans text-[12.5px] font-medium tracking-[0.06em] text-ink-muted uppercase"
+          >
             {m.shell.subjects}
-          </h2>
+          </p>
           <ul className="space-y-0.5">{subjects.map(row)}</ul>
           {subjects.length === 0 && (
             <p className="rounded-box bg-paper px-3 py-3 text-sm text-ink-secondary">
