@@ -399,3 +399,18 @@
     transform: translateX(calc(var(--m) * -104%));
   }
 }
+
+/*
+ * Aufklapp-Pfeil der Agent-Aktivität (chat-render#06): <summary> ist ein Knopf (inline-flex), der
+ * Standardpfeil (display: list-item, ::marker) fällt dadurch weg. Der Zustand steht also als sichtbares
+ * Symbol im Text: Chevron nach rechts (zu) und nach unten (offen). Gedreht wird nur per transform, der
+ * Zustand hängt am open-Attribut des details; der Übergang läuft über --t-*.
+ */
+summary .mo-arrow {
+  color: currentColor;
+  transition: transform var(--t-med) var(--spring-snap);
+}
+
+details[open] > summary .mo-arrow {
+  transform: rotate(90deg);
+}

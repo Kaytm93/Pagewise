@@ -1,4 +1,5 @@
-import { Check, X } from 'lucide-react';
+import { Check, ChevronRight, X } from 'lucide-react';
+import { useState } from 'react';
 import type { ActivityEntry } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 
@@ -59,6 +60,7 @@ function Steps({ steps }: { steps: ActivityEntry[] }) {
  * hat“. Es sind nur Werkzeug und Ziel zu sehen, nie Inhalte.
  */
 export function AgentActivity({ steps, live }: { steps: ActivityEntry[]; live: boolean }) {
+  const [open, setOpen] = useState(false);
   if (steps.length === 0) return null;
   if (live) {
     return (
@@ -68,9 +70,16 @@ export function AgentActivity({ steps, live }: { steps: ActivityEntry[]; live: b
     );
   }
   return (
-    <details className="mt-3 text-sm text-ink-secondary">
+    <details
+      className="mt-3 text-sm text-ink-secondary"
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
       <summary className="inline-flex min-h-11 cursor-pointer items-center text-ink-muted hover:text-ink">
-        {format(m.chat.agent.summary, { count: steps.length })}
+        <span>{format(m.chat.agent.summary, { count: steps.length })}</span>
+        <span className="sr-only">
+          {open ? m.chat.agent.detailsHide : m.chat.agent.detailsShow}
+        </span>
+        <ChevronRight aria-hidden="true" className="mo-arrow ml-1 size-4 shrink-0" />
       </summary>
       <div className="pb-2">
         <Steps steps={steps} />

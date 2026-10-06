@@ -582,6 +582,8 @@ export const de = {
       stepError: 'fehlgeschlagen',
       files: 'Dateien',
       download: '{name} herunterladen ({size})',
+      detailsShow: 'Details anzeigen',
+      detailsHide: 'Details verbergen',
       tools: {
         Read: 'Gelesen',
         Write: 'Geschrieben',
