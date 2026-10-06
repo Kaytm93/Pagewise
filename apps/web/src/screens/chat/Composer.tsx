@@ -36,6 +36,8 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
   const [draft, setDraft] = useState(() => drafts.get(chatId) ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Neuester Entwurf, auch wenn eine still laufende Übertragung (Senden) ihn schon längst nicht mehr sieht. */
+  const latest = useRef(draft);
   const field = useRef<HTMLTextAreaElement>(null);
   const hintId = useId();
   const fine = hasFinePointer();
@@ -50,6 +52,7 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
   }, [draft]);
 
   function update(text: string) {
+    latest.current = text;
     setDraft(text);
     setError(null);
     if (text === '') drafts.delete(chatId);
@@ -64,9 +67,12 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
       return;
     }
     setBusy(true);
-    const accepted = await onSend(draft);
+    const sent = draft;
+    const accepted = await onSend(sent);
     setBusy(false);
-    if (accepted) update('');
+    // Nur leeren, wenn der Nutzer inzwischen nicht schon weitergetippt hat: Der Zettel, den eine
+    // Übertragung zurückliest, ist beim Eintreffen der Annahme oft schon veraltet.
+    if (accepted && latest.current === sent) update('');
     field.current?.focus();
   }
 

@@ -108,6 +108,55 @@ describe('Chat: Antworten', () => {
     expect(screen.getByRole('status').textContent).toBe('Die Antwort ist fertig.');
   });
 
+  it('leert beim Senden nur den gesendeten Text und behält Weitergetipptes', async () => {
+    const { server, subject, chat } = setup();
+    // Langsames Netz: die Annahme der Nachricht (erstes Stromereignis) wird zurückgehalten,
+    // bis der Test freigibt. So bleibt Zeit, während des Sendens weiterzutippen.
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const delayedFetch: typeof fetch = async (input, init) => {
+      const response = await server.fetch(input, init);
+      if (init?.method === 'POST' && String(input) === `/api/chats/${chat.id}/messages`) {
+        await gate;
+      }
+      return response;
+    };
+    window.history.replaceState(null, '', chatPath(subject.id, chat.id));
+    render(<App client={new ApiClient({ fetch: delayedFetch })} />);
+    const user = userEvent.setup();
+
+    const field = await composer();
+    await user.click(field);
+    await user.paste('Erste Frage');
+    await user.click(screen.getByRole('button', { name: 'Senden' }));
+    expect(server.calls('POST', `/api/chats/${chat.id}/messages`)[0]?.body).toEqual({
+      content: 'Erste Frage',
+    });
+
+    // Die Nachricht ist unterwegs, der Server hat sie noch nicht angenommen: weitertippen.
+    await user.click(field);
+    await user.type(field, ' und schon die naechste Zeile');
+    expect(field.value).toBe('Erste Frage und schon die naechste Zeile');
+
+    // Jetzt nimmt der Server die Nachricht an.
+    await act(async () => {
+      release();
+    });
+    expect(await screen.findByText('Erste Frage', { selector: 'p' })).toBeTruthy();
+    // Der gesendete Text wäre weg, der neu getippte Teil bleibt im Feld stehen.
+    expect(field.value).toBe('Erste Frage und schon die naechste Zeile');
+
+    // Die Antwort läuft danach ganz normal zu Ende.
+    act(() => {
+      server.generation(chat.id).delta('Und die Antwort.');
+      server.generation(chat.id).finish();
+    });
+    expect(await screen.findByText('Und die Antwort.')).toBeTruthy();
+    expect(field.value).toBe('Erste Frage und schon die naechste Zeile');
+  });
+
   it('stoppt eine laufende Antwort und lässt den bisherigen Text stehen', async () => {
     const { server, subject, chat } = setup();
     open(server, chatPath(subject.id, chat.id));
