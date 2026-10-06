@@ -382,7 +382,7 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
             maxLength={MAX_CHARACTERS}
             spellCheck
             aria-describedby="note-text-hint"
-            className="min-h-[24rem] w-full resize-y rounded-box border border-control-edge bg-sheet p-4 font-mono text-[0.9375rem] leading-relaxed text-ink focus:border-accent focus:outline-none lg:min-h-[32rem]"
+            className="min-h-[24rem] w-full resize-y rounded-box border border-control-edge bg-sheet p-4 font-mono text-base leading-relaxed text-ink focus:border-accent focus:outline-none lg:min-h-[32rem]"
           />
           <p id="note-text-hint" className="mt-1 text-sm text-ink-muted">
             {e.textHint}
