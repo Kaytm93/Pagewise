@@ -250,7 +250,7 @@ export function TemplatePicker({
                           <input
                             id={id}
                             type="checkbox"
-                            className="size-5 shrink-0 accent-primary"
+                            className="size-6 shrink-0 accent-primary"
                             disabled={isTaken || busy}
                             checked={isTaken || chosen.has(idOf(template))}
                             onChange={(event) => toggleTemplate(template, event.target.checked)}

@@ -96,7 +96,7 @@ export function ProviderStep({
                       id={`preset-${id}`}
                       type="radio"
                       name="preset"
-                      className="mt-0.5 size-5 accent-primary"
+                      className="mt-0.5 size-6 accent-primary"
                       checked={preset === id}
                       onChange={() => setPreset(id)}
                     />
