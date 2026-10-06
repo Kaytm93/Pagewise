@@ -1,3 +1,4 @@
+import { CircleCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { PresetId, Provider, ProviderPreset, TestOutcome } from '../../api/types';
 import { format, messages as m } from '../../i18n';
@@ -127,12 +128,20 @@ export function ProviderStep({
           <p className="font-medium">
             {format(m.onboarding.provider.createdAs, { name: shown.name })}
           </p>
-          <p
-            role="status"
-            className={`mt-1 text-sm ${outcome && !outcome.ok ? 'text-danger' : 'text-ink-secondary'}`}
-          >
-            {testing ? m.providers.form.testing : outcome ? testMessage(outcome) : ''}
-          </p>
+          {outcome &&
+            (outcome.ok ? (
+              <p role="status" className="mt-1 flex items-start gap-1.5 text-sm text-ink-secondary">
+                <CircleCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                <span>{testMessage(outcome)}</span>
+              </p>
+            ) : (
+              <FieldError>{testMessage(outcome)}</FieldError>
+            ))}
+          {testing && (
+            <p role="status" className="mt-1 text-sm text-ink-secondary">
+              {m.providers.form.testing}
+            </p>
+          )}
           {testError && <FieldError>{testError}</FieldError>}
           <div className="mt-3 flex flex-wrap gap-2">
             <Button variant="secondary" busy={testing} onClick={() => void test(created)}>

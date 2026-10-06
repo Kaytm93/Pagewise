@@ -278,7 +278,12 @@ describe('Onboarding: Schritt „Anbieter“', () => {
     await user.click(screen.getByRole('button', { name: 'Anlegen und testen' }));
 
     expect(await screen.findByText('„OpenRouter“ ist angelegt.')).toBeTruthy();
-    expect(await screen.findByText('Verbindung steht (42 ms).')).toBeTruthy();
+    const ok = await screen.findByText('Verbindung steht (42 ms).');
+    // Erfolg: Häkchen-Symbol und Rolle status.
+    const okLine = ok.closest('p');
+    expect(okLine).toBeTruthy();
+    expect(okLine?.getAttribute('role')).toBe('status');
+    expect(okLine?.querySelector('svg[aria-hidden="true"]')).toBeTruthy();
     expect(server.calls('POST', '/api/providers')[0]?.body).toMatchObject({
       name: 'OpenRouter',
       preset: 'openrouter',
@@ -302,14 +307,22 @@ describe('Onboarding: Schritt „Anbieter“', () => {
 
     await user.type(screen.getByLabelText(/API-Schlüssel/), KEY);
     await user.click(screen.getByRole('button', { name: 'Anlegen und testen' }));
-    expect(await screen.findByText('Der Anbieter lehnt den Schlüssel ab.')).toBeTruthy();
-    // Angelegt ist er trotzdem, der Test ist nur eine Auskunft.
+    const failed = await screen.findByText('Der Anbieter lehnt den Schlüssel ab.');
+    // Fehler: Rolle alert (wie FieldError, nicht status) mit Ausrufezeichen-Symbol.
+    const failedLine = failed.closest('p');
+    expect(failedLine).toBeTruthy();
+    expect(failedLine?.getAttribute('role')).toBe('alert');
+    expect(failedLine?.querySelector('svg[aria-hidden="true"]')).toBeTruthy();
     expect(screen.getByText('„OpenRouter“ ist angelegt.')).toBeTruthy();
 
     server.testOutcome = { ok: true, latencyMs: 7, modelCount: 3 };
     await user.click(screen.getByRole('button', { name: 'Erneut testen' }));
-    expect(await screen.findByText('Verbindung steht (7 ms), 3 Modelle verfügbar.')).toBeTruthy();
-    expect(screen.queryByText('Der Anbieter lehnt den Schlüssel ab.')).toBeNull();
+    const ok2 = await screen.findByText('Verbindung steht (7 ms), 3 Modelle verfügbar.');
+    // Erfolg danach: Rolle status mit Häkchen-Symbol, Fehlerzeile weg.
+    const ok2Line = ok2.closest('p');
+    expect(ok2Line?.getAttribute('role')).toBe('status');
+    expect(ok2Line?.querySelector('svg[aria-hidden="true"]')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
     expect(server.calls('POST', `/api/providers/${server.providers[0]?.id}/test`)).toHaveLength(2);
   });
 
