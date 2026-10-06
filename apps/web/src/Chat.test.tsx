@@ -201,6 +201,26 @@ describe('Chat: Antworten', () => {
     expect(server.calls('POST', `/api/chats/${chat.id}/stop`)).toHaveLength(2);
   });
 
+  it('gibt nach dem Stopp den Fokus an das Textfeld zurück', async () => {
+    const { server, subject, chat } = setup();
+    open(server, chatPath(subject.id, chat.id));
+    const user = userEvent.setup();
+    await ask(user, 'Erkläre etwas Langes');
+    await waitFor(() => expect(server.generations.has(chat.id)).toBe(true));
+    act(() => server.generation(chat.id).delta('Zuerst das Wichtigste'));
+    await screen.findByText('Zuerst das Wichtigste');
+
+    // Tastaturszenario aus dem Befund: der Stop-Knopf hat den Fokus, Enter stoppt die Antwort.
+    const stop = screen.getByRole('button', { name: 'Antwort stoppen' });
+    stop.focus();
+    expect(document.activeElement).toBe(stop);
+    await user.keyboard('{Enter}');
+    expect(await screen.findByText('Antwort gestoppt.')).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Senden' })).toBeTruthy());
+    // Der Fokus sitzt wieder im Eingabebereich (wie nach dem Senden), statt auf BODY zu landen.
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Nachricht' }));
+  });
+
   it('zeigt Fehler als Text zum Code, behält den Teiltext und wiederholt die Antwort', async () => {
     const { server, subject, chat } = setup();
     open(server, chatPath(subject.id, chat.id));

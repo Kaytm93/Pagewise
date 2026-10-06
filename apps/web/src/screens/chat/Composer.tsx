@@ -39,6 +39,9 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
   /** Neuester Entwurf, auch wenn eine still laufende Übertragung (Senden) ihn schon längst nicht mehr sieht. */
   const latest = useRef(draft);
   const field = useRef<HTMLTextAreaElement>(null);
+  /** Stop-Knopf: nur wenn er selbst den Fokus hatte, gibt der Composer ihn nach dem Stopp zurück. */
+  const stop = useRef<HTMLButtonElement>(null);
+  const returnFocus = useRef(false);
   const hintId = useId();
   const fine = hasFinePointer();
 
@@ -84,6 +87,18 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
     }
   }
 
+  // Der Stop-Knopf verschwindet beim Stopp; damit der Fokus nicht auf BODY fällt, merkt der Composer
+  // hier (auch für Tastatur und Screenreader), wer ihn hatte, und gibt ihn wie nach dem Senden zurück.
+  function markStopFocus() {
+    returnFocus.current = document.activeElement === stop.current;
+  }
+
+  useLayoutEffect(() => {
+    if (running || !returnFocus.current) return;
+    returnFocus.current = false;
+    field.current?.focus();
+  }, [running]);
+
   const buttonBase =
     'mo-press inline-flex size-11 shrink-0 items-center justify-center rounded-[12px] disabled:cursor-not-allowed disabled:opacity-50';
 
@@ -111,7 +126,9 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
         {running ? (
           <button
             type="button"
+            ref={stop}
             onClick={onStop}
+            onFocus={markStopFocus}
             disabled={stopping}
             aria-label={stopping ? m.chat.stopping : m.chat.stop}
             className={`${buttonBase} border border-control-edge bg-sheet text-ink hover:bg-paper`}
