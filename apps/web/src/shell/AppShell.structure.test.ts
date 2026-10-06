@@ -26,3 +26,35 @@ describe('Sprunglink-Ziel liegt nicht unter der Kopfzeile', () => {
     expect(shell).toContain('href="#main"');
   });
 });
+
+/*
+ * Kopfzeile mobil: neben einem langen Fach-/Gruppennamen darf der Menü-Knopf nicht schrumpfen
+ * (Befund: 22–26 px breit statt 44 px) und gekürzte Namen müssen den vollen Text als title tragen.
+ * Die 44 px im Echtbrowser misst das Browsermess-Skript (jsdom kann Layout nicht messen).
+ */
+describe('Menü-Knopf und gekürzte Namen', () => {
+  const headerOf = () => {
+    const shell = read('shell/AppShell.tsx');
+    const header = shell.match(/<header[\s\S]*?<\/header>/);
+    expect(header).not.toBeNull();
+    return header?.[0] ?? '';
+  };
+
+  it('der Menü-Knopf behält seine 44 px (shrink-0 neben langem Titel)', () => {
+    const button = headerOf().match(/<button[\s\S]*?<\/button>/);
+    expect(button).not.toBeNull();
+    expect(button?.[0]).toContain('size-11');
+    expect(button?.[0]).toContain('shrink-0');
+  });
+
+  it('der gekürzte Kopfzeilen-Titel trägt title', () => {
+    expect(headerOf()).toContain('title={title}');
+  });
+
+  it('gekürzte Fach- und Gruppennamen in der Seitenleiste tragen title', () => {
+    const sidebar = read('shell/Sidebar.tsx');
+    const spans = sidebar.match(/<span[^>]*className="truncate"[^>]*>/g) ?? [];
+    expect(spans.length).toBe(2);
+    for (const span of spans) expect(span).toContain('title=');
+  });
+});

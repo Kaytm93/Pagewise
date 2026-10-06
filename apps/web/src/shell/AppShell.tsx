@@ -173,11 +173,13 @@ function Shell() {
               onClick={() => setDrawerOpen(true)}
               aria-label={m.common.openMenu}
               aria-expanded={drawerOpen}
-              className="mo-press inline-flex size-11 items-center justify-center rounded-[12px] text-ink hover:bg-paper"
+              className="mo-press inline-flex size-11 shrink-0 items-center justify-center rounded-[12px] text-ink hover:bg-paper"
             >
               <Menu aria-hidden="true" className="size-5" />
             </button>
-            <p className="truncate font-heading text-xl tracking-[-0.2px]">{title}</p>
+            <p title={title} className="truncate font-heading text-xl tracking-[-0.2px]">
+              {title}
+            </p>
           </div>
         </header>
 

@@ -59,7 +59,9 @@ function SubjectRow({
           ) : (
             <SubjectIcon icon={subject.icon} className="size-[18px] shrink-0" />
           )}
-          <span className="truncate">{subject.name}</span>
+          <span title={subject.name} className="truncate">
+            {subject.name}
+          </span>
           {subject.kind !== 'default' && <span aria-hidden="true" className="lg-dot ml-auto" />}
         </Link>
         {subject.groups.length > 0 && (
@@ -93,7 +95,9 @@ function SubjectRow({
                   aria-current={groupActive ? 'page' : undefined}
                   className={`${rowBase} ${groupActive ? rowActive : ''} text-sm`}
                 >
-                  <span className="truncate">{group.name}</span>
+                  <span title={group.name} className="truncate">
+                    {group.name}
+                  </span>
                 </Link>
               </li>
             );
