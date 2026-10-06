@@ -133,6 +133,7 @@ function render(view, force) {
 
   const status = el('p', 'status', view.message ?? '');
   status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
   children.push(status);
   children.push(el('p', 'note', view.awakeNote));
 

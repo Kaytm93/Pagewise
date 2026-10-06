@@ -50,7 +50,7 @@ h2 {
   margin: 1rem 0;
 }
 button {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 0.9rem;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -83,7 +83,7 @@ label {
 }
 input {
   width: 100%;
-  min-height: 36px;
+  min-height: 44px;
   margin-bottom: 0.5rem;
   padding: 0 0.6rem;
   border: 1px solid var(--line);

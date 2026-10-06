@@ -237,6 +237,24 @@ describe('Verbindungsfenster und Preload', () => {
     expect(page).toContain('textContent');
   });
 
+  it('nur die Statuszeile meldet sich: der Seitencontainer trägt kein aria-live', () => {
+    const page = read('shell/connect/connect.html');
+    expect(page).toContain('<main id="app">');
+    expect(page).not.toMatch(/<main[^>]*aria-live/);
+    const script = stripComments(read('shell/connect/connect.js'));
+    expect(script).toMatch(/setAttribute\(\s*['"]role['"],\s*['"]status['"]\s*\)/);
+    expect(script).toMatch(/setAttribute\(\s*['"]aria-live['"],\s*['"]polite['"]\s*\)/);
+  });
+
+  it('Knöpfe und Eingabe des Verbindungsfensters sind mindestens 44 px hoch', () => {
+    const css = read('shell/connect/connect.css');
+    for (const selector of ['button {', 'input {']) {
+      const block = css.slice(css.indexOf(selector), css.indexOf('}', css.indexOf(selector)));
+      expect(block, selector).toMatch(/min-height:\s*(4[4-9]|[5-9]\d|1\d{2,})px/);
+    }
+    expect(css).not.toMatch(/min-height:\s*36px/);
+  });
+
   it('das Verbindungsfenster hat die Hüllen-Optionen mit eigenem Preload und lässt keine Navigation zu', () => {
     const window = read('connect-window.ts');
     expect(window).toContain('buildShellWindowOptions(');
