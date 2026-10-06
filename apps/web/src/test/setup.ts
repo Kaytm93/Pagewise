@@ -9,3 +9,6 @@ configure({ asyncUtilTimeout: 5000 });
 afterEach(() => {
   if (typeof document !== 'undefined') cleanup();
 });
+
+// jsdom kann nicht scrollen; ohne diesen stillen Ersatz meldet jeder Seitenwechsel „Not implemented“.
+if (typeof window !== 'undefined') window.scrollTo = () => {};

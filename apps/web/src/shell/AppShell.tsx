@@ -4,7 +4,7 @@ import { messages as m } from '../i18n';
 import { ExamsPage } from '../planning/ExamsPage';
 import { PlannerProvider } from '../planning/PlannerProvider';
 import { TimetablePage } from '../planning/TimetablePage';
-import { pathFor, type Route, useRoute } from '../router';
+import { pageKey, type Route, useRoute } from '../router';
 import { DefaultChatPage } from '../screens/chat/DefaultChatPage';
 import { HomePage } from '../screens/HomePage';
 import { NotFoundPage } from '../screens/NotFoundPage';
@@ -93,14 +93,8 @@ function useRouteColor(route: Route): string | undefined {
 }
 
 /**
- * Schlüssel der Seite: ändert er sich, wird sie neu aufgebaut und das Blatt neu aufgelegt. Der Reiter in einem Fach
- * gehört nicht dazu, sonst ginge beim Wechsel zwischen Chats und Hefteinträgen der Fokus verloren.
+ * Wie viele Blätter unter dem aktuellen liegen: Start und Einstellungen 1, Fach 2, Chat 3.
  */
-function pageKey(route: Route): string {
-  return pathFor(route.name === 'subject' ? { ...route, tab: undefined } : route);
-}
-
-/** Wie viele Blätter unter dem aktuellen liegen: Start und Einstellungen 1, Fach 2, Chat 3. */
 function depthOf(route: Route): 1 | 2 | 3 {
   if (route.name === 'chat' || route.name === 'note') return 3;
   if (route.name === 'subject' || route.name === 'default-chat') return 2;
@@ -127,12 +121,29 @@ function Shell() {
   const color = useRouteColor(route);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const app = useRef<HTMLDivElement>(null);
+  // Schlüssel der Seite, auf der die Schublade geöffnet wurde (null: zu).
+  const drawerPageKey = useRef<string | null>(null);
 
   useEffect(() => (app.current ? startParallax(app.current) : undefined), []);
 
   useEffect(() => {
     document.title = title === m.app.name ? m.app.name : `${title} · ${m.app.name}`;
   }, [title]);
+
+  // Die Schublade gibt den Fokus beim Schließen an ihren Öffner zurück. Schließt sie durch einen
+  // Seitenwechsel, gehört der Fokus auf den neuen Inhalt; dieser Effekt läuft nach dem Aufräumen des
+  // Drawers und setzt ihn darum zurück. Bei Escape oder Streichung aufs Blatt bleibt die Rückgabe.
+  useEffect(() => {
+    if (drawerOpen) {
+      drawerPageKey.current = pageKey(route);
+      return;
+    }
+    const before = drawerPageKey.current;
+    drawerPageKey.current = null;
+    if (before !== null && before !== pageKey(route)) {
+      document.getElementById('main')?.focus({ preventScroll: true });
+    }
+  }, [drawerOpen, route]);
 
   return (
     <div

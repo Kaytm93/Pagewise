@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { ApiClient } from './api/client';
 import { FakeServer, json, TEST_CSRF, TEST_PASSCODE, TEST_SETUP_CODE } from './test/fake-server';
@@ -213,6 +213,22 @@ describe('App-Rahmen', () => {
     return { server, a, view };
   }
 
+  it('scrollt beim Fachwechsel nach oben und legt den Fokus auf den Inhalt', async () => {
+    const { server } = mountWithSubjects();
+    const user = userEvent.setup();
+    const nav = await screen.findByRole('navigation', { name: 'Navigation' });
+    await user.click(within(nav).getByRole('link', { name: 'Beispielfach A' }));
+
+    const scrollTo = vi.spyOn(window, 'scrollTo');
+    await user.click(within(nav).getByRole('link', { name: 'Beispielfach B' }));
+
+    expect(window.location.pathname).toBe(`/subjects/${server.subjects[1]?.id}`);
+    expect(await screen.findByRole('heading', { name: 'Beispielfach B' })).toBeTruthy();
+    expect(scrollTo).toHaveBeenCalledWith(0, 0);
+    expect(document.activeElement).toBe(document.getElementById('main'));
+    scrollTo.mockRestore();
+  });
+
   it('listet die Fächer auf der Startseite mit Angaben', async () => {
     mountWithSubjects();
     const heading = await screen.findByRole('heading', { name: 'Deine Fächer' });
@@ -286,6 +302,19 @@ describe('App-Rahmen', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(window.location.pathname).toMatch(/^\/subjects\//);
     expect(window.location.pathname).not.toBe(`/subjects/${a.id}`);
+  });
+
+  it('legt nach dem Fachwechsel aus der Schublade den Fokus auf den Inhalt', async () => {
+    mountWithSubjects();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Menü öffnen' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Navigation' });
+    await user.click(within(drawer).getByRole('link', { name: 'Beispielfach B' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    // Die Schublade gibt den Fokus erst an ihren Öffner zurück; da sie durch den Seitenwechsel
+    // geschlossen wurde, liegt er am Ende auf dem Hauptbereich.
+    expect(document.activeElement).toBe(document.getElementById('main'));
   });
 
   it('schließt die Schublade nach dem Anlegen eines Fachs', async () => {

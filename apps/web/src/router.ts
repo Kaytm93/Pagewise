@@ -74,11 +74,29 @@ export function pathFor(route: Route): string {
 
 const NAVIGATE_EVENT = 'pagewise:navigate';
 
+/**
+ * Schlüssel der Seite: ändert er sich, ist es ein echter Seitenwechsel. Der Reiter in einem Fach gehört nicht dazu
+ * (Wechsel zwischen „Chats“ und „Hefteinträgen“ bleibt dieselbe Seite), sonst ginge beim Reiterwechsel der Fokus.
+ */
+export function pageKey(route: Route): string {
+  return pathFor(route.name === 'subject' ? { ...route, tab: undefined } : route);
+}
+
 export function navigate(to: Route | string, options: { replace?: boolean } = {}): void {
   const path = typeof to === 'string' ? to : pathFor(to);
+  // Neuer Seitenwechsel (per Link oder navigate()): das neue Blatt beginnt oben und der Inhalt bekommt den Fokus
+  // (Tastatur- und Screenreader-Nutzer starten sonst mitten in der alten Scrollposition). Reiner Reiterwechsel im
+  // Fach bleibt dieselbe Seite: nichts tun. Wichtig ist die Reihenfolge: erst die Chronik ändern, dann nach oben
+  // springen — der Browser speichert die Scrollposition des alten Eintrags beim Wechsel, und Zurück soll sie
+  // wiedergeben (Browserverhalten, hier wird nichts angetastet).
+  const samePage = pageKey(parseRoute(path)) === pageKey(parseRoute(window.location.pathname));
   if (path === window.location.pathname) return;
   if (options.replace) window.history.replaceState(null, '', path);
   else window.history.pushState(null, '', path);
+  if (!samePage) {
+    window.scrollTo(0, 0);
+    document.getElementById('main')?.focus({ preventScroll: true });
+  }
   window.dispatchEvent(new Event(NAVIGATE_EVENT));
 }
 
