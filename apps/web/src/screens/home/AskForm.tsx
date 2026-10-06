@@ -51,7 +51,7 @@ export function AskForm() {
           enterKeyHint="send"
           onChange={(event) => setText(event.target.value)}
           placeholder={m.home.askPlaceholder}
-          className="min-h-[54px] min-w-0 flex-1 bg-transparent px-1 text-[19px] text-ink outline-none placeholder:text-ink-muted"
+          className="min-h-[54px] min-w-0 flex-1 overflow-hidden bg-transparent px-1 text-[19px] text-ink text-ellipsis outline-none placeholder:text-ink-muted"
         />
         <button
           type="submit"

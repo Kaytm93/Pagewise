@@ -117,7 +117,7 @@ export const de = {
     title: 'Deine Fächer',
     heading: 'Womit fangen wir an?',
     askLabel: 'Frage an den Standard-Chat',
-    askPlaceholder: 'Frag im Standard-Chat, was du willst …',
+    askPlaceholder: 'Frag, was du willst …',
     askSend: 'Frage senden',
     askFailed: 'Die Frage konnte nicht gesendet werden. Bitte versuch es noch einmal.',
     or: 'oder',
