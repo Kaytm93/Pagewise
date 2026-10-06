@@ -361,7 +361,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
             <div className="mb-3 rounded-box bg-paper px-4 py-3 text-sm">
               <p className="font-medium">{m.chat.noModelTitle}</p>
               <p className="mt-1 text-ink-secondary">{m.chat.noModelHint}</p>
-              <Link to={toSettings} className="mt-1 inline-block">
+              <Link to={toSettings} className="mt-1 inline-flex min-h-11 items-center">
                 {m.chat.openSettings}
               </Link>
             </div>

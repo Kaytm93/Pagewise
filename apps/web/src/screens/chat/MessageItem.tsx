@@ -148,7 +148,7 @@ export const MessageItem = memo(function MessageItem({
         <div className="mt-3 rounded-box bg-paper px-4 py-3 text-sm">
           <p className="font-medium text-danger">{errorText(message.errorCode, engineKind)}</p>
           {message.errorCode && NEEDS_SETTINGS.has(message.errorCode) && (
-            <Link to={{ name: 'settings' }} className="mt-1 inline-block">
+            <Link to={{ name: 'settings' }} className="mt-1 inline-flex min-h-11 items-center">
               {m.chat.openSettings}
             </Link>
           )}

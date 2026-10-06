@@ -272,9 +272,12 @@ describe('App-Rahmen', () => {
     window.history.replaceState(null, '', '/subjects/gibt-es-nicht');
     mount(server);
     expect(await screen.findByRole('heading', { name: 'Diese Seite gibt es nicht' })).toBeTruthy();
+    // Der Tab-Titel nennt die Seite, statt nur den App-Namen zu zeigen.
+    expect(document.title).toBe('Seite nicht gefunden · Pagewise');
     await userEvent.click(screen.getByRole('link', { name: 'Zur Startseite' }));
     expect(await screen.findByRole('heading', { name: 'Noch keine Fächer' })).toBeTruthy();
     expect(window.location.pathname).toBe('/');
+    expect(document.title).toBe('Pagewise');
   });
 
   it('öffnet auf dem Handy die Schublade und schließt sie mit Escape', async () => {

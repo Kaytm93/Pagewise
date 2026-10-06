@@ -72,15 +72,18 @@ function Page({ route }: { route: Route }) {
 function useTitle(route: Route): string {
   const { findSubject } = useWorkspace();
   if (route.name === 'settings') return m.settings.title;
+  if (route.name === 'not-found') return m.shell.notFoundPageTitle;
   if (route.name === 'timetable') return m.planning.timetable.title;
   if (route.name === 'exams') return m.planning.exams.title;
   if (route.name === 'chat' || route.name === 'note') {
-    return findSubject(route.subjectId)?.name ?? m.app.name;
+    // Gibt es das Fach nicht, zeigen diese Seiten „Diese Seite gibt es nicht“.
+    return findSubject(route.subjectId)?.name ?? m.shell.notFoundPageTitle;
   }
   if (route.name === 'subject') {
     const subject = findSubject(route.subjectId);
-    const group = subject?.groups.find((entry) => entry.id === route.groupId);
-    return group?.name ?? subject?.name ?? m.app.name;
+    if (!subject) return m.shell.notFoundPageTitle;
+    const group = subject.groups.find((entry) => entry.id === route.groupId);
+    return group?.name ?? subject.name;
   }
   return m.app.name;
 }

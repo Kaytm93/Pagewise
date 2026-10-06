@@ -9,7 +9,7 @@ export function NotFoundPage() {
         {m.shell.notFoundTitle}
       </h1>
       <p className="mt-3 text-ink-secondary">{m.shell.notFoundHint}</p>
-      <Link to={{ name: 'home' }} className="mt-6 inline-block">
+      <Link to={{ name: 'home' }} className="mt-6 inline-flex min-h-11 items-center">
         {m.shell.toHome}
       </Link>
     </Sheet>

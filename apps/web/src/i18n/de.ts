@@ -85,6 +85,7 @@ export const de = {
     defaultChat: 'Pagewise – Standard-Chat öffnen',
     notFoundTitle: 'Diese Seite gibt es nicht',
     notFoundHint: 'Der Link stimmt nicht oder das Fach wurde gelöscht.',
+    notFoundPageTitle: 'Seite nicht gefunden',
     toHome: 'Zur Startseite',
     addSubject: 'Fach hinzufügen',
     reload: 'Neu laden',
