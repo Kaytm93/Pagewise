@@ -257,6 +257,9 @@ describe('Editor', () => {
     await user.click(screen.getByRole('button', { name: 'Speichern' }));
     expect(await screen.findByText('Der Titel braucht 1 bis 120 Zeichen.')).toBeTruthy();
     expect(title.getAttribute('aria-invalid')).toBe('true');
+    // Leerer Titel bleibt sichtbar: Platzhalter aus i18n statt leere Fläche (notes#11)
+    expect(title.getAttribute('placeholder')).toBe('Titel');
+    expect(screen.getByPlaceholderText('Titel')).toBe(title);
     expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(0);
   });
 

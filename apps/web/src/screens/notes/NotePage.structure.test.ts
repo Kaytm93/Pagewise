@@ -80,3 +80,34 @@ describe('Eingabefelder haben mindestens 16 px Schrift (notes#17, iOS-Auto-Zoom)
     }
   });
 });
+
+/*
+ * Fokus einheitlich wie in ui/Field.tsx (notes#08): Eingabefelder tragen nicht nur den Randwechsel,
+ * sondern den 3-px-Hof (Akzentfarbe, 22 % Mischung) — jsdom kann Schatten nicht zeichnen, das
+ * nagelt die Klassen fest; die Sichtbarkeit in allen Richtungen und Helligkeiten misst der
+ * Echtbrowser (pw/agents/m3-t018).
+ */
+describe('Eingabefelder haben den gemeinsamen Fokus-Hof (notes#08)', () => {
+  const FOKUS = 'focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)]';
+
+  it('Editor: Titel, Stichwörter und Text tragen den Hof wie Field.tsx', () => {
+    const quelle = read('screens/notes/NotePage.tsx');
+    for (const id of ['note-title', 'note-tags', 'note-text']) {
+      const feld = quelle.split(`id="${id}"`)[1] ?? '';
+      expect(feld.slice(0, 800), id).toContain(FOKUS);
+    }
+  });
+
+  it('Suche in der Liste trägt den Hof wie Field.tsx', () => {
+    const quelle = read('screens/notes/NoteList.tsx');
+    const suche = quelle.match(/<input\b[\s\S]*?\/>/)?.[0] ?? '';
+    expect(suche).toContain('type="search"');
+    expect(suche).toContain(FOKUS);
+  });
+
+  it('Titel markiert Fehler sichtbar in Rahmenfarbe (aria-invalid → danger)', () => {
+    const quelle = read('screens/notes/NotePage.tsx');
+    const titel = quelle.split('id="note-title"')[1] ?? '';
+    expect(titel.slice(0, 800)).toContain('aria-invalid:border-danger');
+  });
+});
