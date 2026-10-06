@@ -139,6 +139,49 @@ describe('Research Blue (siehe docs/decisions.md, D-008)', () => {
   });
 });
 
+// Graph-Raster (M4-T030): es trägt Information (Skala zwischen den Teilstrichen) und braucht darum
+// mindestens 3 : 1 gegen jede Fläche (WCAG 1.4.11) — dezenter als die Achsen, aber deutlich sichtbar.
+describe('Graph-Raster', () => {
+  const grid = (tokens: Tokens) => toHex(tokens['--grid-line'] as string, tokens);
+
+  it.each([
+    ['hell', light],
+    ['dunkel', { ...light, ...dark }],
+  ])('hebt sich im %s Modus von jeder Fläche mit mindestens 3 : 1 ab', (_n, tokens) => {
+    for (const surface of surfaces) {
+      expect(
+        contrast(grid(tokens), toHex(tokens[surface] as string, tokens)),
+      ).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('bleibt gegen das Blatt deutlich ruhiger als die Achsen (zweiter Ton)', () => {
+    for (const [sheet, axisInk] of [
+      ['--sheet', '--ink-secondary'],
+      ['--paper', '--ink-secondary'],
+    ] as const) {
+      expect(contrast(grid(light), toHex(light[sheet] as string, light))).toBeLessThan(
+        contrast(toHex(light[axisInk] as string, light), toHex(light[sheet] as string, light)),
+      );
+      expect(contrast(grid(dark), toHex(dark[sheet] as string, dark))).toBeLessThan(
+        contrast(toHex(dark[axisInk] as string, dark), toHex(dark[sheet] as string, dark)),
+      );
+    }
+  });
+
+  it('hat ein eigenes Token und teilt sich keins mit Trennlinien', () => {
+    expect(light['--grid-line']).toBeDefined();
+    expect(light['--grid-line']).not.toBe(light['--line-warm']);
+    expect(dark['--grid-line']).not.toBe(dark['--line-warm']);
+    const blocks = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), 'blocks.css'),
+      'utf8',
+    );
+    expect(blocks).toMatch(/\.pg-grid\s*\{[^}]*stroke:\s*var\(--grid-line\)/);
+    expect(blocks).not.toMatch(/\.pg-grid\s*\{[^}]*line-warm/);
+  });
+});
+
 /** Fachfarben: Wert je Nummer, hell und dunkel. */
 function subjectColors(opener: (n: number) => string): string[] {
   return Array.from({ length: 8 }, (_, n) => toHex(block(css, opener(n))['--subj'] as string));

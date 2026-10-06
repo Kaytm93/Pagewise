@@ -31,6 +31,9 @@
   --color-error-ink: #b42318;
   /* Rand von Eingabefeldern: Linen Border ist für Bedienelemente zu schwach (unter 3 : 1) */
   --color-edge-stone: #858490;
+  /* Graph-Raster: trägt Information (Skala zwischen den Teilstrichen) und braucht darum
+     mindestens 3 : 1 gegen jede Fläche — dezenter als die Achsen, aber deutlich sichtbar */
+  --color-grid-stone: #8a8478;
 
   /* Palette, dunkel (abgeleitet, warme Graphit-Töne statt reinem Schwarz) */
   --color-night-workspace: #151514;
@@ -85,6 +88,7 @@
 
   --primary: var(--color-graphite);
   --on-primary: #ffffff;
+  --grid-line: var(--color-grid-stone);
 
   --accent: var(--color-research-blue);
   --link: var(--color-link-text);
@@ -129,6 +133,7 @@
 
   --primary: var(--color-night-ink);
   --on-primary: var(--color-night-canvas);
+  --grid-line: #7a7772;
 
   --accent: var(--color-night-link);
   --link: var(--color-night-link);
@@ -171,6 +176,7 @@
 
     --primary: var(--color-night-ink);
     --on-primary: var(--color-night-canvas);
+    --grid-line: #7a7772;
 
     --accent: var(--color-night-link);
     --link: var(--color-night-link);
@@ -209,6 +215,7 @@
   --color-ink-disabled: var(--ink-disabled);
   --color-primary: var(--primary);
   --color-on-primary: var(--on-primary);
+  --color-grid-line: var(--grid-line);
   --color-accent: var(--accent);
   --color-link: var(--link);
   --color-danger: var(--danger);

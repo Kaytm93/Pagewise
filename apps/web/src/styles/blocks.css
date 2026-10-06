@@ -36,8 +36,10 @@
   }
 
   /* Graph */
+  /* Raster: eigenes Token — es trägt Information (Skala zwischen den Teilstrichen) und braucht
+     mindestens 3 : 1 gegen jede Fläche; dezenter als die Achsen, aber deutlich sichtbar */
   .pg-grid {
-    stroke: var(--line-warm);
+    stroke: var(--grid-line);
     stroke-width: 1;
     fill: none;
   }
