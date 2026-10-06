@@ -40,7 +40,7 @@ export function ColorPicker({
               htmlFor={`${name}-${color}`}
               className="mo-press flex size-11 cursor-pointer items-center justify-center rounded-full border border-line-warm peer-checked:ring-2 peer-checked:ring-ink peer-checked:ring-offset-2 peer-checked:ring-offset-sheet peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent"
             >
-              <span className="flex size-7 items-center justify-center rounded-full bg-subj text-white">
+              <span className="flex size-7 items-center justify-center rounded-full bg-subj text-on-subj">
                 {value === color && <Check aria-hidden="true" className="size-4" />}
               </span>
               <span className="sr-only">{names[color]}</span>

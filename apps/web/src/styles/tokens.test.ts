@@ -210,4 +210,28 @@ describe('Fachfarben (D-043)', () => {
       }
     },
   );
+
+  // M4-T012: das Häkchen der Farbauswahl (`--on-subj`) steht auf der Fachfarbe und braucht als
+  // Bediensymbol mindestens 3 : 1 gegen jede der acht Farben (WCAG 1.4.11), hell und dunkel.
+  it.each([
+    ['hell', subjectsLight, light],
+    ['dunkel', subjectsDark, { ...light, ...dark }],
+  ])(
+    'trägt das Häkchen (`--on-subj`) im %s Modus auf jeder Fachfarbe mit mindestens 3 : 1',
+    (_n, colors, tokens) => {
+      const on = toHex(tokens['--on-subj'] as string, tokens);
+      for (const color of colors) {
+        expect(contrast(on, color)).toBeGreaterThanOrEqual(3);
+      }
+    },
+  );
+
+  it('häkelt in der Farbauswahl über das Token und nicht über festes Weiß', () => {
+    const picker = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), '..', 'ui', 'ColorPicker.tsx'),
+      'utf8',
+    );
+    expect(picker).toMatch(/bg-subj\s+text-on-subj/);
+    expect(picker).not.toMatch(/text-white/);
+  });
 });

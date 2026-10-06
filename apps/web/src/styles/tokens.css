@@ -114,6 +114,9 @@
   /* Fachfarbe: nur für Flächen und Linien, nie als Textfarbe. Ohne Fach ein neutraler Ton. */
   --subj: #8a8478;
   --subj-glow: 12%;
+  /* Symbolfarbe auf der Fachfarbe (Häkchen der Farbauswahl): je Modus so dunkel bzw. hell,
+     dass sie auf jeder der acht Fachfarben mindestens 3 : 1 erreicht */
+  --on-subj: #ffffff;
 }
 
 :root[data-theme="dark"] {
@@ -156,6 +159,7 @@
   --grain: url("../assets/grain-light.svg");
   --subj: #8f897d;
   --subj-glow: 11%;
+  --on-subj: #2a2a28;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -199,6 +203,7 @@
     --grain: url("../assets/grain-light.svg");
     --subj: #8f897d;
     --subj-glow: 11%;
+    --on-subj: #2a2a28;
   }
 }
 
@@ -224,6 +229,7 @@
   --color-sheet: var(--sheet);
   --color-slip: var(--slip);
   --color-subj: var(--subj);
+  --color-on-subj: var(--on-subj);
 }
 
 /*
