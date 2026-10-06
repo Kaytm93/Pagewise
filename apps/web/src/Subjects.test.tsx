@@ -404,6 +404,33 @@ describe('Untergruppen', () => {
     ).toBeTruthy();
   });
 
+  it('bricht die Meta-Zeile um und hält die Ghost-Knöpfe einzeilig (Klassen)', async () => {
+    // jsdom kann Layout nicht messen; der Echtbrowser-Test prüft scrollWidth (siehe Task-Bericht).
+    const server = new FakeServer('unlocked');
+    const subject = server.addSubject('Beispielfach A', {
+      teacher: 'Beispiel-Lehrkraft-mit-sehr-langem-Namen',
+      hoursPerWeek: 3,
+    });
+    window.history.replaceState(null, '', `/subjects/${subject.id}`);
+    mount(server);
+
+    await screen.findByRole('heading', { name: 'Beispielfach A' });
+    const meta = screen.getByText('Beispiel-Lehrkraft-mit-sehr-langem-Namen · 3 Std. pro Woche');
+    expect(meta.className).toContain('break-words');
+
+    const addGroup = within(screen.getByRole('region', { name: 'Untergruppen' })).getByRole(
+      'button',
+      { name: 'Untergruppe hinzufügen' },
+    );
+    expect(addGroup.className).toContain('whitespace-nowrap');
+    expect(addGroup.className).toContain('shrink-0');
+
+    const examsRegion = await screen.findByRole('region', { name: 'Anstehende Tests' });
+    const addExam = within(examsRegion).getByRole('button', { name: 'Test eintragen' });
+    expect(addExam.className).toContain('whitespace-nowrap');
+    expect(addExam.className).toContain('shrink-0');
+  });
+
   it('meldet einen doppelten Namen im selben Fach', async () => {
     const server = new FakeServer('unlocked');
     const subject = open(server);

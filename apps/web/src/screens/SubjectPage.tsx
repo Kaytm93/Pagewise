@@ -66,7 +66,7 @@ export function SubjectPage({
           <h1 className="mo-rise font-heading text-[clamp(40px,6.4vw,64px)] leading-none tracking-[-0.035em] text-balance break-words">
             {group ? group.name : subject.name}
           </h1>
-          {meta && <p className="mo-rise mo-i-1 mt-3 text-ink-muted">{meta}</p>}
+          {meta && <p className="mo-rise mo-i-1 mt-3 text-ink-muted break-words">{meta}</p>}
         </div>
       </div>
       {(group || !builtin) && (
@@ -82,11 +82,15 @@ export function SubjectPage({
 
       {!group && (
         <section className="mt-10 border-t border-line-warm pt-6" aria-labelledby="groups-heading">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <h2 id="groups-heading" className={sectionTitle}>
               {m.subject.groups}
             </h2>
-            <Button variant="ghost" className="-mr-3" onClick={() => setDialog({ type: 'group' })}>
+            <Button
+              variant="ghost"
+              className="-mr-3 shrink-0 whitespace-nowrap"
+              onClick={() => setDialog({ type: 'group' })}
+            >
               <Plus aria-hidden="true" className="size-4" />
               {m.subject.addGroup}
             </Button>

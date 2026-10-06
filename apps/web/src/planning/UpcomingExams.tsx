@@ -27,11 +27,15 @@ export function UpcomingExams({ subjectId }: { subjectId: string }) {
       className="mt-10 border-t border-line-warm pt-6"
       aria-labelledby="subject-exams-heading"
     >
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 id="subject-exams-heading" className={sectionTitle}>
           {t.title}
         </h2>
-        <Button variant="ghost" className="-mr-3" onClick={() => setAdding({})}>
+        <Button
+          variant="ghost"
+          className="-mr-3 shrink-0 whitespace-nowrap"
+          onClick={() => setAdding({})}
+        >
           <Plus aria-hidden="true" className="size-4" />
           {t.add}
         </Button>
