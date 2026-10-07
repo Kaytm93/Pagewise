@@ -138,6 +138,7 @@
 
   /* ===== Ordner: Rücken (p1), Papierkanten (p2), davor das Blatt ===== */
   :root[data-design="raum"] .lg-stack {
+    --stack-space: 26px;
     margin: 12px 12px 14px 26px;
   }
 

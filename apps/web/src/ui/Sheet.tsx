@@ -23,8 +23,14 @@ export function Sheet({
   width?: Width;
   flush?: boolean;
 }) {
-  // Mindesthöhe: das Blatt reicht auch bei wenig Inhalt bis fast zum unteren Rand.
-  const minHeight = 'min-h-[calc(100dvh-7rem)] md:min-h-[calc(100dvh-4.75rem)]';
+  // Mindesthöhe: das Blatt reicht auch bei wenig Inhalt genau bis an den unteren Rand, ohne dass die
+  // Seite scrollt. Abgezogen werden (AppShell.tsx): Kopfzeile 56 px plus Safe-Area oben, Innenabstand
+  // des Inhalts 4 px, unten max(28 px, Safe-Area unten); dazu der Stapelrand der Gestaltung
+  // (--stack-space, raum.css 12 + 14 px; lagen/atelier 0). Ab „md“ ohne Kopfzeile: oben und unten
+  // je 14 px (md:py-3.5) plus Stapelrand.
+  const minHeight =
+    'min-h-[calc(100dvh-3.75rem-env(safe-area-inset-top)-max(1.75rem,env(safe-area-inset-bottom))-var(--stack-space,0px))] ' +
+    'md:min-h-[calc(100dvh-1.75rem-var(--stack-space,0px))]';
   if (flush) {
     return <div className={`lg-sheet flex flex-col ${minHeight} ${className}`}>{children}</div>;
   }
