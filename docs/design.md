@@ -16,6 +16,8 @@ Pagewise ist ein Heft: Der Schreibtisch trägt Fensterlicht und Papierkörnung, 
 
 Was bleibt (Identität aus Abschnitt 10 des Pflichtenhefts): warme, papierartige Flächen, Graphit als Bedienfarbe, Instrument Sans und Inter (selbst gehostet), Research Blue nur für Links und kleine Akzente, warme Graphit-Töne im Dunkelmodus. Kein Neon, kein „KI-Look“.
 
+Rahmen und Startfläche folgen der **gewählten** Darstellung, nicht nur dem Gerät: `index.html` hält drei `theme-color`-Metas (media-Zweige für Gerät hell/dunkel, dazu eine ohne media), die `public/boot.js` vor dem ersten Anstrich und `ui/theme.ts` beim Umschalten auf die Flächenfarbe setzt (`THEME_COLORS`: Eggshell `#fdfcfb`, Night Canvas `#191918` — die Flächen sind in allen drei Richtungen gleich). Das Manifest nennt dieselben Werte, dunkel als `color_scheme_dark` (W3C-Standard; Chrome setzt es um, Safari ignoriert es).
+
 ## Dateien
 
 | Datei | Inhalt |
@@ -23,7 +25,7 @@ Was bleibt (Identität aus Abschnitt 10 des Pflichtenhefts): warme, papierartige
 | `apps/web/src/styles/tokens.css` | Palette, semantische Tokens hell und dunkel, die acht Fachfarben |
 | `apps/web/src/styles/motion.css` | Bewegungssystem: `--m`, Dauern, Federn, Effektstufen, Keyframes, Hilfsklassen `mo-*` |
 | `apps/web/src/styles/lagen.css` | Hülle: Schreibtisch, Heftrücken, Blattstapel, Blatt, Zettel, Washi, Zeilen, Umschalter |
-| `apps/web/src/ui/fx.ts`, `public/boot.js` | Effektstufe lesen, setzen, folgen; `boot.js` setzt Darstellung und Stufe vor dem ersten Anstrich |
+| `apps/web/src/ui/fx.ts`, `public/boot.js` | Effektstufe lesen, setzen, folgen; `boot.js` setzt Darstellung, Stufe und `theme-color` vor dem ersten Anstrich |
 | `apps/web/src/ui/Sheet.tsx` | Das Blatt (`prose`, `wide`, `flush` für den Chat) |
 | `apps/web/src/shell/AppShell.tsx` | Schreibtisch, Seitenleiste, Blattstapel, Tiefe je Ansicht |
 | `apps/web/src/ui/subject-color.ts`, `ColorPicker.tsx` | Fachfarbe (Nummer 0 bis 7) als Attribut `data-subj`, Auswahl im Fach-Dialog |

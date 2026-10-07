@@ -14,6 +14,7 @@ const manifest = JSON.parse(read('public/manifest.webmanifest').toString('utf8')
   display: string;
   background_color: string;
   theme_color: string;
+  color_scheme_dark?: { background_color: string; theme_color: string };
   icons: { src: string; sizes: string; type: string; purpose: string }[];
 };
 const html = read('index.html').toString('utf8');
@@ -40,6 +41,19 @@ describe('Web-App-Manifest', () => {
     expect(manifest.background_color).toBe('#fdfcfb');
     expect(manifest.theme_color).toBe('#fdfcfb');
     expect(html).toContain('content="#fdfcfb"');
+  });
+
+  it('nennt dieselben Flächenwerte für dunkel (Startfläche und Leiste folgen der Darstellung)', () => {
+    // color_scheme_dark: Standard-Mitglied des W3C-Manifests („themeable members“); Chrome setzt es um,
+    // Safari/WebKit ignoriert es (kein Rückschritt). Night Canvas wie das dunkle theme-color in index.html.
+    expect(manifest.color_scheme_dark).toEqual({
+      background_color: '#191918',
+      theme_color: '#191918',
+    });
+    // index.html hält die drei theme-color-Metas zusammen: beide media-Zweige plus die ohne media,
+    // die boot.js/ui/theme.ts auf die gespeicherte Wahl setzt.
+    expect(html).toContain('content="#191918"');
+    expect(html.match(/<meta name="theme-color"/g)?.length).toBe(3);
   });
 
   it('verweist nur auf Icons, die es gibt und die so groß sind wie angegeben', () => {

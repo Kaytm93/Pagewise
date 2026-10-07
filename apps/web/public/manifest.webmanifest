@@ -11,6 +11,10 @@
   "orientation": "any",
   "background_color": "#fdfcfb",
   "theme_color": "#fdfcfb",
+  "color_scheme_dark": {
+    "background_color": "#191918",
+    "theme_color": "#191918"
+  },
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

@@ -9,6 +9,7 @@
   var level;
   var reduced;
   var design;
+  var colors = { light: '#fdfcfb', dark: '#191918' };
   try {
     store.theme = window.localStorage.getItem('pagewise.theme');
     store.fx = window.localStorage.getItem('pagewise.fx');
@@ -18,6 +19,15 @@
   }
   if (store.theme === 'light' || store.theme === 'dark')
     root.setAttribute('data-theme', store.theme);
+  var theme =
+    store.theme === 'light' || store.theme === 'dark'
+      ? store.theme
+      : typeof window.matchMedia === 'function' &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light';
+  var meta = root.parentNode.querySelector('meta[name="theme-color"]:not([media])');
+  if (meta) meta.setAttribute('content', colors[theme]);
   design = store.design;
   if (design !== 'raum' && design !== 'lagen' && design !== 'atelier') design = 'raum';
   root.setAttribute('data-design', design);
