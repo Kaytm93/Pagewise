@@ -1,12 +1,12 @@
 # Abnahme Mac-App
 
-Stand: 5. Oktober 2026. **Nicht abgenommen.** Die Mac-App gilt erst als abgenommen, wenn Kay die Spalte „Kay prüft“ abgehakt hat. Der Agent läuft unter Linux: Er kann keine `.app` signieren oder auf macOS starten und schreibt deshalb nie „funktioniert“ ohne Test. Entscheidungen: [D-050](decisions.md) (Electron), [D-051](decisions.md) (Server bündelbar).
+Stand: 5. Oktober 2026. **Nicht abgenommen.** Die Mac-App gilt erst als abgenommen, wenn der Maintainer die Spalte „Maintainer prüft“ abgehakt hat. Der Agent läuft unter Linux: Er kann keine `.app` signieren oder auf macOS starten und schreibt deshalb nie „funktioniert“ ohne Test. Entscheidungen: [D-050](decisions.md) (Electron), [D-051](decisions.md) (Server bündelbar).
 
-Legende: **Agent getestet** = Test oder Lauf im Container (Befehl genannt). **Kay prüft** = nur am Mac möglich, mit konkretem Schritt.
+Legende: **Agent getestet** = Test oder Lauf im Container (Befehl genannt). **Maintainer prüft** = nur am Mac möglich, mit konkretem Schritt.
 
 ## M0 Spike (Electron mit gebündeltem Server)
 
-| Punkt | Agent getestet | Kay prüft |
+| Punkt | Agent getestet | Maintainer prüft |
 | --- | --- | --- |
 | Electron 44.5.1 startet im Container (Linux, Xvfb) | ja: Chromium 152.0.7977.130, Node 24.21.0; headless mit `--ozone-platform=headless` stürzt ab (SIGSEGV), Xvfb geht | – |
 | Server als `utilityProcess` aus dem Bundle, Umgebung nur Allowlist | ja (Linux x64): `better-sqlite3` 13 lädt seine Binärdatei, `ready`, `status`, `stop` über IPC, Exit 0 | `darwin-arm64.node` unter Electron auf dem Mac: App starten, Fenster zeigt die Anmeldung |
@@ -20,7 +20,7 @@ Legende: **Agent getestet** = Test oder Lauf im Container (Befehl genannt). **Ka
 
 ## M1 Server bündelbar
 
-| Punkt | Agent getestet | Kay prüft |
+| Punkt | Agent getestet | Maintainer prüft |
 | --- | --- | --- |
 | Bundle läuft aus fremdem Ordner, `/api/health`, Einrichtung, Anmeldung, Vorlagen, Fach, Standard-Prompt | ja: `pnpm --filter @pagewise/server test` (`bundle.test.ts`) | – |
 | `PAGEWISE_RESOURCES_DIR`, Portkonflikt, Instanzsperre, geordnetes Beenden | ja: `server.test.ts`, `bundle.test.ts`, `instance-lock.test.ts` | – |
@@ -29,7 +29,7 @@ Legende: **Agent getestet** = Test oder Lauf im Container (Befehl genannt). **Ka
 
 ## P iPad und iPhone robuster ([D-052](decisions.md))
 
-| Punkt | Agent getestet | Kay prüft |
+| Punkt | Agent getestet | Maintainer prüft |
 | --- | --- | --- |
 | Service Worker: 3 s (Seite), 1,5 s (`boot.js`), Rückfall auf die gemerkte Fassung, späte Netzantwort aktualisiert den Speicher, 502 bis 504, Vorabspeichern | ja: `pnpm --filter @pagewise/web test` (`pwa/sw.test.ts`, simuliertes hängendes Netz mit Fake-Zeit); im echten Chromium mit Server, der nie antwortet: Seite nach 4,5 s | iPhone: Mac in den Ruhezustand schicken (Apfelmenü), Tailscale bleibt verbunden, Pagewise auf dem Home-Bildschirm öffnen: die Oberfläche erscheint nach wenigen Sekunden samt Hinweis, kein weißer Bildschirm |
 | Banner „Mac nicht erreichbar“ erscheint und verschwindet, Ansichten und Entwürfe bleiben | ja: `Connection.test.tsx`, `connection/monitor.test.ts` (Abstände 2, 5, 10, 30 s, alle Anlässe), Echtbrowser: Banner sichtbar, 0 CSP-Verstöße, 0 Konsolenmeldungen | iPad: in einem Chat etwas tippen (nicht senden), Mac schlafen schicken, zurück in die App wechseln: Banner, Entwurf bleibt; Mac aufwecken: Banner verschwindet von selbst, spätestens nach „Erneut versuchen“ |
@@ -42,7 +42,7 @@ Legende: **Agent getestet** = Test oder Lauf im Container (Befehl genannt). **Ka
 
 Alle Punkte mit „ja“ unter Linux: `pnpm --filter @pagewise/desktop test` (112 Tests) und, für „im echten Electron“, ein Lauf unter Xvfb mit dem gebauten Stand (`pnpm --filter @pagewise/desktop smoke` für den Rauchtest).
 
-| Punkt | Agent getestet | Kay prüft |
+| Punkt | Agent getestet | Maintainer prüft |
 | --- | --- | --- |
 | Fenster ohne Adressleiste, lädt `http://127.0.0.1:3000` | ja, im echten Electron (Linux) | Mac: Pagewise öffnen, kein Adressfeld, Titel „Pagewise“ |
 | Sicherheitsoptionen (Kontext getrennt, Sandkasten, kein Node, kein Preload, kein `webview`) | ja: festgenagelt im Test und am laufenden Fenster gemessen | – |
@@ -68,9 +68,9 @@ Alle Punkte mit „ja“ unter Linux: `pnpm --filter @pagewise/desktop test` (11
 
 ## M3 Tailscale und „Mit iPhone und iPad verbinden“ ([D-054](decisions.md))
 
-„Agent getestet“ heißt: `pnpm --filter @pagewise/desktop test` (Parser und Zustände gegen Fixtures nach den Quelltexten von Tailscale, Aktionen mit Ersatz für `execFile`) und ein Lauf im echten Electron unter Xvfb mit einem **Fake-`tailscale`** (Skript mit Zustandsdatei, nicht das echte Programm). Echte Tailscale-Läufe kann nur Kay am Mac prüfen.
+„Agent getestet“ heißt: `pnpm --filter @pagewise/desktop test` (Parser und Zustände gegen Fixtures nach den Quelltexten von Tailscale, Aktionen mit Ersatz für `execFile`) und ein Lauf im echten Electron unter Xvfb mit einem **Fake-`tailscale`** (Skript mit Zustandsdatei, nicht das echte Programm). Echte Tailscale-Läufe kann nur der Maintainer am Mac prüfen.
 
-| Punkt | Agent getestet | Kay prüft |
+| Punkt | Agent getestet | Maintainer prüft |
 | --- | --- | --- |
 | Verbindungsfenster öffnet über Hilfe → „Mit iPhone und iPad verbinden …“ (und aus dem Menüleisten-Symbol) | ja, im echten Electron (Menüpunkt ausgelöst) | Mac: beides probieren, Fenster erscheint vorn |
 | Fenster hat keine Verbindung zu Node, nur feste Funktionen; Navigation und `window.open` gesperrt; keine CSP-Verstöße | ja, im echten Electron gemessen | – |
@@ -89,9 +89,9 @@ Alle Punkte mit „ja“ unter Linux: `pnpm --filter @pagewise/desktop test` (11
 
 ## M4 Bauen und Verteilen, Stufe 1 ([D-055](decisions.md), Stufe 2: [D-056](decisions.md))
 
-„Agent getestet“ heißt hier: unter Linux (Packen für `darwin-arm64` und `linux-x64`, Aufbau des Pakets, Rauchtest der gepackten Linux-App, Repo-Tests). Alles, was `codesign`, `ditto` oder den Start auf macOS braucht, läuft erst in der macOS-CI und bei Kay.
+„Agent getestet“ heißt hier: unter Linux (Packen für `darwin-arm64` und `linux-x64`, Aufbau des Pakets, Rauchtest der gepackten Linux-App, Repo-Tests). Alles, was `codesign`, `ditto` oder den Start auf macOS braucht, läuft erst in der macOS-CI und beim Maintainer.
 
-| Punkt | Agent getestet | Kay prüft |
+| Punkt | Agent getestet | Maintainer prüft |
 | --- | --- | --- |
 | `pnpm app:mac` baut und installiert nach `~/Applications` | Argumente, Zielordner, Abbruch außerhalb von macOS, kein Shell-Aufruf (`tests/app-mac.test.mjs`); Packen für `darwin-arm64` unter Linux (Aufbau von `Pagewise.app` mit `Info.plist`, Ressourcen, Lizenzen); am Mac gemessen: `codesign --verify --deep --strict --verbose=2 ~/Applications/Pagewise.app` meldet „valid on disk“, „satisfies its Designated Requirement“, Exit 0; `xattr -l ~/Applications/Pagewise.app` bleibt ohne Ausgabe (keine Quarantäne-Markierung) | Mac: `pnpm install && pnpm app:mac`; am Ende steht „Installiert: …“ und `codesign --verify` meldet keinen Fehler; `open ~/Applications/Pagewise.app` startet die App, ohne dass macOS blockiert (`xattr -l ~/Applications/Pagewise.app` zeigt kein `com.apple.quarantine`) |
 | Läuft Pagewise schon, bricht das Skript ab, statt die App zu überschreiben | nein (`pgrep -x Pagewise`, nur auf dem Mac) | Mac: Pagewise starten, `pnpm app:mac`: Abbruch mit Hinweis; Pagewise beenden, Befehl wiederholen: klappt |
@@ -101,5 +101,5 @@ Alle Punkte mit „ja“ unter Linux: `pnpm --filter @pagewise/desktop test` (11
 | Lizenzhinweise in der App | ja: `licenses.test.ts` (128 Pakete, nichts Unfreies, Schriften mit OFL-Text), `Resources/licenses/` im gepackten Paket; am Mac gemessen: `ls ~/Applications/Pagewise.app/Contents/Resources/licenses` zeigt `Electron-LICENSE`, `LICENSES.chromium.html`, `THIRD-PARTY-LICENSES.txt` | – |
 | Deutsche Zugriffsfragen im Paket, App fragt nie nach Kamera, Mikrofon, Bluetooth | `Info.plist` gelesen, Test am Quelltext; Ablehnung aller Berechtigungen im echten Electron (M2) | Mac: Systemeinstellungen → Datenschutz & Sicherheit → Kamera/Mikrofon: Pagewise taucht dort nicht auf, auch nicht nach der Nutzung |
 | Größe der App | rund 325 MB entpackt (`darwin-arm64`, gepackt unter Linux), Zip aus der CI 134 653 167 Byte; am Mac gemessen: `du -sh ~/Applications/Pagewise.app` = 323 MB | – |
-| Stufe 2 (Entwicklerzertifikat, Notarisierung, DMG) | nur Entscheidungsvorlage, **nichts eingerichtet** | Kay entscheidet nach D-056 (Alter, 99 USD pro Jahr, Bedarf); bis dahin nichts zu tun |
+| Stufe 2 (Entwicklerzertifikat, Notarisierung, DMG) | nur Entscheidungsvorlage, **nichts eingerichtet** | Der Maintainer entscheidet nach D-056 (Alter, 99 USD pro Jahr, Bedarf); bis dahin nichts zu tun |
 

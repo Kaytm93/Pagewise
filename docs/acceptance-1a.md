@@ -7,8 +7,8 @@ Stand: 3. Oktober 2026. Eine Phase gilt erst als abgenommen, wenn die berührten
 | Kriterium | Stand | Beleg |
 | --- | --- | --- |
 | Frische Installation startet leer | belegt | Lauf mit leerem Datenverzeichnis: Einrichtung nötig, Profil leer, keine Fächer, keine Anbieter, keine Chats |
-| Nutzbar über Tailscale per HTTPS auf iPad und iPhone | **offen, Test durch Kay** | Anleitung in [self-hosting.md](self-hosting.md), Quellen und Grenzen in D-030 |
-| Installierbar als Web-App | Technik belegt, **Installation offen, Test durch Kay** | Manifest, Icons, Service Worker in Chromium geprüft (D-029); „Zum Home-Bildschirm“ prüft Kay |
+| Nutzbar über Tailscale per HTTPS auf iPad und iPhone | **offen, Test durch den Maintainer** | Anleitung in [self-hosting.md](self-hosting.md), Quellen und Grenzen in D-030 |
+| Installierbar als Web-App | Technik belegt, **Installation offen, Test durch den Maintainer** | Manifest, Icons, Service Worker in Chromium geprüft (D-029); „Zum Home-Bildschirm“ prüft der Maintainer |
 | Chats bleiben in ihrem Fach | belegt | Server-Tests und Lauf: ein Chat in Fach A erscheint nicht in Fach B; die Oberfläche zeigt einen Chat unter dem falschen Fach als „nicht gefunden“ (D-028) |
 | Zweiter Anbieter ohne Codeänderung | belegt | Zwei Anbieter über die Oberfläche beziehungsweise API angelegt, Standard- und Ausweichmodell aus verschiedenen Anbietern gewählt |
 | Nach einem Nutzungslauf zeigt `git status` keine neuen Dateien | belegt | Lauf mit Einrichtung, Fächern, Anbietern und Chat: `git status` leer, außer den ignorierten Ordnern `node_modules` und `dist` nichts im Repo |
@@ -31,12 +31,12 @@ Legende: **erfüllt** = umgesetzt und getestet, **später** = gehört zu einer s
 | 12.2 Secrets nie als Kommandozeilen-Argument | erfüllt | Es gibt noch keinen Subprozess; Regel gilt für 1e (agent-cli.md) |
 | 12.2 Backup/Export ohne Secrets | erfüllt für Sicherungen, Export **später** | Sicherungen vor Migrationen enthalten nur die Datenbank, Schlüssel liegen nicht darin |
 | 12.3 Passcode nur als Hash (Argon2id oder scrypt) | erfüllt | scrypt (D-020) |
-| 12.3 Cookie HttpOnly, Secure, SameSite=Strict | erfüllt, `Secure` hinter Proxy **ungeprüft** | `Secure` folgt `X-Forwarded-Proto` (D-030), Test durch Kay |
+| 12.3 Cookie HttpOnly, Secure, SameSite=Strict | erfüllt, `Secure` hinter Proxy **ungeprüft** | `Secure` folgt `X-Forwarded-Proto` (D-030), Test durch den Maintainer |
 | 12.3 CSRF-Schutz | erfüllt | D-021 |
 | 12.3 Strikte CORS-Regeln | **neu erfüllt** | Fremde Herkunft wird abgelehnt, keine `Access-Control-*`-Header (D-031) |
 | 12.3 Rate-Limit mit Sperre | erfüllt | D-021, auch für „Alles löschen“ |
 | 12.3 Security-Header inkl. CSP | erfüllt | D-023 |
-| 12.3 Nur Loopback, nur Tailscale Serve, kein Funnel | erfüllt | D-006, D-013, D-030; Praxistest durch Kay |
+| 12.3 Nur Loopback, nur Tailscale Serve, kein Funnel | erfüllt | D-006, D-013, D-030; Praxistest durch den Maintainer |
 | 12.4 Markdown ohne rohes HTML, kein `eval` | erfüllt | D-028, Test gegen feindliches Markdown |
 | 12.4 SVG und HTML bereinigen (DOMPurify) | **später** (1b) | Hefteintrags-Blöcke |
 | 12.4 PDF-Rendering ohne Netzwerk | **später** (1d) | |
