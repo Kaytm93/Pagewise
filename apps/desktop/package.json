@@ -20,7 +20,7 @@
     "@electron/packager": "20.3.0",
     "@pagewise/server": "workspace:*",
     "@types/node": "^22.0.0",
-    "electron": "44.5.1",
+    "electron": "44.7.0",
     "esbuild": "^0.28.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
