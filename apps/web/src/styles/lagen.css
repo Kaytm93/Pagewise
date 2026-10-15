@@ -13,6 +13,10 @@
     position: relative;
     isolation: isolate;
     min-height: 100dvh;
+    /* Schiefe Deko (transform) darf die Seite nicht breiter machen (M4-T035): an der App-Fläche klemmen.
+       Die festen Hintergrundflächen hängen an position: fixed und bleiben unberührt; sichtbar gezeichnet
+       wird dadurch nur außerhalb des Fensters weniger. */
+    overflow: clip;
     --glow: color-mix(in srgb, var(--subj) var(--subj-glow), transparent);
     transition: --glow var(--t-slow) var(--ease);
   }
@@ -117,6 +121,9 @@
       transform var(--t-slow) var(--spring),
       opacity var(--t-med) ease;
     pointer-events: none;
+    /* Die gedrehte eigene Zeichnung (Rahmen, Fläche) bleibt innerhalb der Blattfläche — die Schiefe
+       darf die Box nicht vergrößern und die Seite nicht breiter machen (M4-T035). */
+    overflow: clip;
   }
 
   .lg-ply.lg-p2 {
