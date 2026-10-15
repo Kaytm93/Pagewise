@@ -230,15 +230,23 @@ const components: Components = {
         {children}
       </code>
     ),
+  // Tabelle: fester Satz gleichbleibender Spalten (table-fixed) innerhalb des scrollenden Rahmens. Lange Wörter
+  // brechen in der Zelle (overflow-wrap:anywhere), statt die Spalte zu verbreitern und Nachbarspalten zu quetschen.
   table: ({ children }) => (
     <div className="my-4 overflow-x-auto">
-      <table className="w-full border-collapse text-sm">{children}</table>
+      <table className="w-full table-fixed border-collapse text-sm">{children}</table>
     </div>
   ),
   th: ({ children }) => (
-    <th className="border-b border-line-warm px-3 py-2 text-left font-medium">{children}</th>
+    <th className="max-w-0 min-w-0 border-b border-line-warm px-3 py-2 text-left font-medium wrap-anywhere">
+      {children}
+    </th>
   ),
-  td: ({ children }) => <td className="border-b border-line px-3 py-2 align-top">{children}</td>,
+  td: ({ children }) => (
+    <td className="max-w-0 min-w-0 border-b border-line px-3 py-2 align-top wrap-anywhere">
+      {children}
+    </td>
+  ),
   img: ({ alt }) => (
     <span className="text-ink-muted">
       {alt ? format(m.chat.imageOmitted, { alt }) : m.chat.imageOmittedNoAlt}
