@@ -93,7 +93,7 @@ export const MessageItem = memo(function MessageItem({
   if (message.role === 'user') {
     return (
       <article className="flex justify-end">
-        <h3 className="sr-only">{m.chat.you}</h3>
+        <h2 className="sr-only">{m.chat.you}</h2>
         <p className="max-w-[84%] rounded-[14px_14px_4px_14px] border border-line-warm bg-paper px-4 py-3 text-[1.0313rem] leading-relaxed break-words whitespace-pre-wrap">
           {message.content}
         </p>
@@ -114,7 +114,9 @@ export const MessageItem = memo(function MessageItem({
 
   return (
     <article aria-busy={live || undefined}>
-      <h3 className="sr-only">{m.chat.answer}</h3>
+      {/* Je Nachricht eine H2: Zwischen der H1 der Ansicht und den Nachrichten liegt kein H2-Bereich,
+          darum wäre eine tiefere Ebene ein Sprung. Markdown staffelt darunter ab H2 (gleiche Ebene erlaubt). */}
+      <h2 className="sr-only">{m.chat.answer}</h2>
       {!byAgent && <ToolNotes steps={message.activity} />}
       {hasText && <Markdown text={message.content} final={!live} />}
       {hasText && live && (
