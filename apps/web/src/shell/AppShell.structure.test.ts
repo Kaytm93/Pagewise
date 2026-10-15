@@ -119,4 +119,31 @@ describe('Überschriftenfolge der Hülle', () => {
       }
     }
   });
+
+  /*
+   * Fehlergrenze um die ganze Oberfläche (Befund shell-home#01): Scheitert die Seitenleiste oder die
+   * Kopfzeile beim Darstellen (z. B. Fach ohne groups-Array), darf der Bildschirm nicht weiß bleiben.
+   * Die zweite Grenze hängt in App.tsx um den ganzen Rahmen; die Grenze um die Ansicht bleibt an ihrer
+   * Stelle in AppShell.tsx.
+   */
+  describe('Fehlergrenze um die ganze Oberfläche', () => {
+    it('App.tsx hängt eine Vollbild-Grenze um den Rahmen (RootBoundary)', () => {
+      const app = read('App.tsx');
+      expect(app).toContain('<ErrorBoundary resetKey="root" fullscreen>');
+      expect(app).toContain('<RootBoundary />');
+    });
+
+    it('AppShell.tsx behält die Grenze um die Ansicht (resetKey aus der Adresse)', () => {
+      const shell = read('shell/AppShell.tsx');
+      expect(shell).toContain('<ErrorBoundary resetKey={pageKey(route)}>');
+      expect(shell).toContain('<Page route={route} />');
+    });
+
+    it('die Vollbild-Variante der Grenze bleibt ohne Bewegung (nur Stellklassen)', () => {
+      const boundary = read('shell/ErrorBoundary.tsx');
+      const fullscreen = boundary.match(/fullscreen[\s\S]*?'contents'/);
+      expect(fullscreen).not.toBeNull();
+      expect(fullscreen?.[0]).not.toMatch(/\banimate-|duration-|transition-/);
+    });
+  });
 });

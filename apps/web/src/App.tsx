@@ -7,6 +7,7 @@ import { Onboarding } from './screens/Onboarding';
 import { SetupScreen } from './screens/SetupScreen';
 import { SessionProvider, useSession } from './session/SessionProvider';
 import { AppShell } from './shell/AppShell';
+import { ErrorBoundary } from './shell/ErrorBoundary';
 import { useWorkspace, WorkspaceProvider } from './workspace/WorkspaceProvider';
 
 /** Beim ersten Start führt der Assistent durch die Einrichtung, danach öffnet die App. */
@@ -36,6 +37,20 @@ function Gate() {
   }
 }
 
+/**
+ * Rahmen samt Fehlergrenze für die ganze Oberfläche: Scheitert die Seitenleiste, die Kopfzeile oder
+ * eine Zustands-Hülle beim Darstellen (z. B. neue API-Daten in einem alten Tab), bleibt der Bildschirm
+ * nicht weiß, sondern zeigt einen Hinweis mit „Neu laden“. Die Grenze hängt innerhalb der Zustands-Hüllen,
+ * damit ein späterer Rückfallort (Anmelde-/Verbindungsschirm) möglich bleibt.
+ */
+function RootBoundary() {
+  return (
+    <ErrorBoundary resetKey="root" fullscreen>
+      <Frame />
+    </ErrorBoundary>
+  );
+}
+
 /** Gate samt Hinweis „Mac nicht erreichbar“. Beim ersten Laden zeigt der Vollbild-Hinweis dasselbe, dort kein Banner. */
 function Frame() {
   const { status } = useSession();
@@ -51,7 +66,7 @@ export function App({ client }: { client: ApiClient }) {
   return (
     <ConnectionProvider client={client}>
       <SessionProvider client={client}>
-        <Frame />
+        <RootBoundary />
       </SessionProvider>
     </ConnectionProvider>
   );

@@ -71,4 +71,25 @@ describe('ErrorBoundary', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'weiter' }));
     expect(screen.getByText('Wieder da')).toBeTruthy();
   });
+
+  it('stellt die Vollbild-Variante ohne Blatt dar und bietet Neuladen an', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const reload = vi.fn();
+    vi.stubGlobal('location', { ...window.location, reload });
+    try {
+      render(
+        <ErrorBoundary resetKey="root" fullscreen>
+          <Broken message="kaputt" />
+        </ErrorBoundary>,
+      );
+      const alert = screen.getByRole('alert');
+      expect(alert.textContent).toContain('Hier ist etwas schiefgegangen');
+      // jsdom kann Layout nicht messen (min-h-dvh): das prüft das Browsermess-Skript.
+      expect(alert.className).toContain('min-h-dvh');
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Neu laden' }));
+      expect(reload).toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

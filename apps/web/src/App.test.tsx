@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { ApiClient } from './api/client';
+import type { Subject } from './api/types';
 import { FakeServer, json, TEST_CSRF, TEST_PASSCODE, TEST_SETUP_CODE } from './test/fake-server';
 
 function mount(server: FakeServer) {
@@ -339,6 +340,29 @@ describe('App-Rahmen', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     const nav = screen.getByRole('navigation', { name: 'Navigation' });
     expect(within(nav).getByRole('link', { name: 'Beispielfach C' })).toBeTruthy();
+  });
+
+  it('zeigt bei fehlerhaften Fachdaten den Vollbild-Hinweis statt eines weißen Bildschirms', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const reload = vi.fn();
+    vi.stubGlobal('location', { ...window.location, reload });
+    try {
+      const server = new FakeServer('unlocked');
+      // Daten im neuen, unbekannten Format (Server-Update bei offenem Tab): das Fach hat kein groups-Array.
+      server.addSubject('Beispielfach A', { groups: null } as unknown as Partial<Subject>);
+      mount(server);
+
+      // Die Grenze um die ganze Oberfläche greift: Hinweis mit „Neu laden“, keine halbe Shell.
+      const alert = await screen.findByRole('alert');
+      expect(alert.textContent).toContain('Hier ist etwas schiefgegangen');
+      expect(within(alert).getByRole('button', { name: 'Neu laden' })).toBeTruthy();
+      expect(screen.queryByRole('navigation')).toBeNull();
+      await userEvent.click(within(alert).getByRole('button', { name: 'Neu laden' }));
+      expect(reload).toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+      consoleError.mockRestore();
+    }
   });
 });
 

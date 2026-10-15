@@ -12,6 +12,8 @@ interface Props {
   children: ReactNode;
   /** Wechselt der Wert (z. B. die Adresse), wird der Fehler zurückgesetzt. */
   resetKey: string;
+  /** `true`: Der Hinweis steht zentriert für sich auf leerem Grund — Grenze um die ganze Oberfläche. */
+  fullscreen?: boolean;
 }
 
 interface State {
@@ -44,16 +46,28 @@ export class ErrorBoundary extends Component<Props, State> {
   override render(): ReactNode {
     if (!this.state.failed) return this.props.children;
     const stale = isStaleBundle(this.state.error);
-    return (
-      <div role="alert" className="mx-auto max-w-xl lg-sheet p-6">
-        <h1 className="font-heading text-xl">
-          {stale ? m.shell.updatedTitle : m.shell.crashTitle}
-        </h1>
-        <p className="mt-2 text-ink-secondary">{stale ? m.shell.updatedHint : m.shell.crashHint}</p>
-        <Button variant="primary" className="mt-4" onClick={() => window.location.reload()}>
-          {m.shell.reload}
-        </Button>
+    const card = (
+      <div
+        role="alert"
+        className={
+          this.props.fullscreen
+            ? 'flex min-h-dvh items-center justify-center px-4 py-6'
+            : 'mx-auto max-w-xl lg-sheet p-6'
+        }
+      >
+        <div className={this.props.fullscreen ? 'w-full max-w-xl text-center' : 'contents'}>
+          <h1 className="font-heading text-xl">
+            {stale ? m.shell.updatedTitle : m.shell.crashTitle}
+          </h1>
+          <p className="mt-2 text-ink-secondary">
+            {stale ? m.shell.updatedHint : m.shell.crashHint}
+          </p>
+          <Button variant="primary" className="mt-4" onClick={() => window.location.reload()}>
+            {m.shell.reload}
+          </Button>
+        </div>
       </div>
     );
+    return this.props.fullscreen ? <div className="min-h-dvh bg-canvas">{card}</div> : card;
   }
 }
