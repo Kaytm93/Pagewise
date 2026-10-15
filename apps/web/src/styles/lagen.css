@@ -414,3 +414,26 @@ summary .mo-arrow {
 details[open] > summary .mo-arrow {
   transform: rotate(90deg);
 }
+
+/*
+ * Hinweis „Mac nicht erreichbar“ (M4-T008): steht im Dokumentfluss oberhalb der Kopfzeile und schiebt
+ * sie nach unten, statt sie zu überdecken. Er bleibt beim Scrollen am oberen Rand hängen, die Kopfzeile
+ * hält unter ihm (top: var(--cb-h, 0px), gesetzt in ConnectionBanner.tsx). Fläche wie das Blatt
+ * (Tokens, keine festen Farben). Das Pfeil-Symbol (pointer-events) ist außerhalb der Karte unwirksam.
+ */
+.cb-h {
+  position: sticky;
+  top: 0;
+  pointer-events: none;
+}
+
+.cb-h > [role="status"] {
+  pointer-events: auto;
+  border: 1px solid var(--line-warm);
+  border-radius: var(--radius-control);
+  background-color: var(--sheet);
+  box-shadow:
+    inset 0 1px 0 var(--rim),
+    0 1px 2px rgba(var(--shadow), 0.1),
+    0 8px 18px -6px rgba(var(--shadow), var(--shadow-a));
+}

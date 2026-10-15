@@ -169,7 +169,7 @@ function Shell() {
       </aside>
 
       <div className="flex min-h-dvh min-w-0 flex-col">
-        <header className="sticky top-0 z-30 bg-desk pt-[env(safe-area-inset-top)] md:hidden">
+        <header className="sticky top-[var(--cb-h,0px)] z-30 bg-desk pt-[env(safe-area-inset-top)] md:hidden">
           <div className="flex h-14 items-center gap-1 pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]">
             <button
               type="button"

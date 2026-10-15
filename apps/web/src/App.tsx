@@ -18,10 +18,11 @@ function WorkspaceGate() {
 
 function Gate() {
   const { status, reload } = useSession();
+  // Beim ersten Laden (und nur dann) zeigt der Vollbild-Hinweis selbst, ob der Mac erreichbar ist.
+  if (status === 'loading' || status === 'unreachable') {
+    return <ConnectionScreen state={status} onRetry={() => void reload()} />;
+  }
   switch (status) {
-    case 'loading':
-    case 'unreachable':
-      return <ConnectionScreen state={status} onRetry={() => void reload()} />;
     case 'setup':
       return <SetupScreen />;
     case 'locked':
@@ -42,6 +43,9 @@ function Gate() {
  * eine Zustands-Hülle beim Darstellen (z. B. neue API-Daten in einem alten Tab), bleibt der Bildschirm
  * nicht weiß, sondern zeigt einen Hinweis mit „Neu laden“. Die Grenze hängt innerhalb der Zustands-Hüllen,
  * damit ein späterer Rückfallort (Anmelde-/Verbindungsschirm) möglich bleibt.
+ *
+ * Der Banner „Mac nicht erreichbar“ steht hier vor dem Gate, damit er Platz im Dokumentfluss bekommt:
+ * Er liegt oberhalb der Kopfzeile und schiebt sie nach unten, statt sie zu überdecken (M4-T008).
  */
 function RootBoundary() {
   return (
@@ -56,8 +60,8 @@ function Frame() {
   const { status } = useSession();
   return (
     <>
-      <Gate />
       {status !== 'loading' && status !== 'unreachable' && <ConnectionBanner />}
+      <Gate />
     </>
   );
 }

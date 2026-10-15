@@ -36,6 +36,14 @@ describe('Verbindungs-Banner (Mac nicht erreichbar)', () => {
     expect(banner.textContent).toContain(BANNER);
     expect(banner.getAttribute('role')).toBe('status');
     expect(banner.getAttribute('aria-live')).toBe('polite');
+    // Der Banner-Container nimmt Platz im Dokumentfluss ein und liegt im DOM vor der Kopfzeile,
+    // damit er sie nach unten schiebt statt sie zu überdecken (M4-T008). Dass `cb-h` im Echtbrowser
+    // sticky steht und beim Scrollen hängt, kann jsdom nicht messen — das zeigt die Browsermessung.
+    expect(banner.parentElement?.classList.contains('cb-h')).toBe(true);
+    expect(
+      (banner.parentElement as HTMLElement).compareDocumentPosition(screen.getByRole('banner')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     // Die geladene Ansicht bleibt, nichts wird durch ein Vollbild ersetzt.
     expect(screen.getByRole('heading', { name: 'Noch keine Fächer' })).toBe(heading);
 
