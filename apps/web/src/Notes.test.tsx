@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
+import { createApi } from './api/api';
 import { ApiClient } from './api/client';
 import { FakeServer } from './test/fake-server';
 
@@ -199,6 +200,20 @@ describe('Liste der Hefteinträge', () => {
     expect(await screen.findByText('Eintrag 2')).toBeTruthy();
     // „Eintrag 2“, „Eintrag 20“ bis „Eintrag 29“ und „Eintrag 200“
     expect(list.getAllByRole('listitem')).toHaveLength(12);
+  });
+
+  it('liefert die Liste samt Kürzungs-Hinweis direkt über api.notes (M4-T036)', async () => {
+    const { server, subject } = setup();
+    for (let i = 0; i < 201; i += 1) {
+      server.addNote(subject.id, { title: `Eintrag ${i}`, updatedAt: Date.now() - i * 1000 });
+    }
+    const api = createApi(new ApiClient({ fetch: server.fetch }));
+    const list = await api.notes(subject.id, null);
+    expect(list.notes).toHaveLength(200);
+    expect(list.truncated).toBe(true);
+    const suche = await api.notes(subject.id, null, 'Eintrag 2');
+    expect(suche.notes).toHaveLength(12);
+    expect(suche.truncated).toBe(false);
   });
 });
 

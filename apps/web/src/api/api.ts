@@ -16,8 +16,8 @@ import type {
   ModelSettings,
   Note,
   NoteInput,
+  NoteList,
   NotePatch,
-  NoteSummary,
   Profile,
   ProfilePatch,
   PromptPreview,
@@ -215,11 +215,12 @@ export function createApi(client: ApiClient) {
     deleteExam: (id: string) => client.request<void>('DELETE', `/api/exams/${id}`),
 
     // Hefteinträge. `groupId: null` meint „Allgemein“ (ohne Untergruppe), wie bei den Chats.
-    async notes(subjectId: string, groupId: string | null, query = ''): Promise<NoteSummary[]> {
+    /** Liste eines Fachs/einer Untergruppe; `truncated` sagt, ob der Server mehr hat, als gezeigt wird. */
+    notes(subjectId: string, groupId: string | null, query = ''): Promise<NoteList> {
       const params = new URLSearchParams({ subjectId });
       if (groupId) params.set('groupId', groupId);
       if (query.trim() !== '') params.set('q', query.trim());
-      return (await client.request<{ notes: NoteSummary[] }>('GET', `/api/notes?${params}`)).notes;
+      return client.request<NoteList>('GET', `/api/notes?${params}`);
     },
     note: (id: string) => client.request<Note>('GET', `/api/notes/${id}`),
     createNote: (input: NoteInput) => client.request<Note>('POST', '/api/notes', input),

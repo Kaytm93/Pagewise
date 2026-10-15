@@ -1,6 +1,6 @@
 import { Pin, Plus, Search, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { NoteList as NoteListPayload, NoteSummary } from '../../api/types';
+import type { NoteSummary } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { navigate } from '../../router';
 import { useSession } from '../../session/SessionProvider';
@@ -10,15 +10,6 @@ import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
 import { listRow } from '../../ui/styles';
 import { formatWhen } from '../chat/when';
-
-/** Anfrage-Parameter der Liste: Fach, Untergruppe und die Suche (getrimmt, nur wenn nicht leer). */
-function paramsOf(subjectId: string, groupId: string | null, query: string): string {
-  const params = new URLSearchParams({ subjectId });
-  if (groupId) params.set('groupId', groupId);
-  const needle = query.trim();
-  if (needle !== '') params.set('q', needle);
-  return params.toString();
-}
 
 /**
  * Hefteinträge eines Fachs oder einer Untergruppe mit Suche und „Neuer Hefteintrag“. Wie die Chats bleiben
@@ -41,10 +32,8 @@ export function NoteList({ subjectId, groupId }: { subjectId: string; groupId: s
     // Beim Tippen kurz warten, damit nicht jeder Buchstabe eine Anfrage auslöst.
     const timer = setTimeout(
       () => {
-        // Umschlag selbst entpacken (`api.notes` wirft `truncated` weg): eine Abweichung im Bericht
-        // zu M4-T015, weil `api.ts` nicht zu den Dateien dieses Tasks gehört.
-        api.client
-          .request<NoteListPayload>('GET', `/api/notes?${paramsOf(subjectId, groupId, query)}`)
+        api
+          .notes(subjectId, groupId, query)
           .then((list) => {
             if (!cancelled) setNotes(list.notes);
             if (!cancelled) setTruncated(list.truncated);
