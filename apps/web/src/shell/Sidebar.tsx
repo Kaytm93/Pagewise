@@ -64,7 +64,7 @@ function SubjectRow({
           </span>
           {subject.kind !== 'default' && <span aria-hidden="true" className="lg-dot ml-auto" />}
         </Link>
-        {subject.groups.length > 0 && (
+        {subject.groups.length > 0 ? (
           <button
             type="button"
             onClick={onToggle}
@@ -78,6 +78,10 @@ function SubjectRow({
               className={`size-4 transition-transform duration-[var(--t-med)] ease-[var(--spring-snap)] ${expanded ? 'rotate-90' : ''}`}
             />
           </button>
+        ) : (
+          /* Ohne Untergruppen bleibt die Pfeilspalte als gleicher Platz reserviert (M4-T001), damit der
+             Fachpunkt (lg-dot, hängt am rechten Rand des Links) in allen Zeilen in einer Spalte steht. */
+          <span aria-hidden="true" className="size-11 shrink-0" />
         )}
       </div>
       {expanded && subject.groups.length > 0 && (

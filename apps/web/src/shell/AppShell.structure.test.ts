@@ -70,6 +70,44 @@ describe('Menü-Knopf und gekürzte Namen', () => {
 });
 
 /*
+ * Fachpunkte in fester Spalte (M4-T001): Der Fachpunkt (.lg-dot mit ml-auto) hängt am rechten Rand des
+ * Fach-Links. Stand früher der Pfeil-Knopf (44 px) nur bei Fächern mit Untergruppen daneben, rutschte
+ * der Punkt in den übrigen Zeilen 44 px nach rechts. Die Pfeil-Spalte muss es darum in JEDER Fachzeile
+ * geben: mit Untergruppen der echte Knopf, sonst ein gleich großer, nicht klickbarer Platzhalter.
+ * jsdom kann Positionen nicht messen; die Punkt-Mitte (±1 px, 6 Richtungs/Hell-Dunkel-Kombinationen)
+ * misst das Skript pw/agents/m4-t001/messung.mjs im Echtbrowser (Chromium + WebKit).
+ */
+describe('Fachpunkte der Seitenleiste in fester Spalte', () => {
+  const rowOf = () => {
+    const sidebar = read('shell/Sidebar.tsx');
+    const row = sidebar.match(/<div className="flex items-center">[\s\S]*?<\/div>/);
+    expect(row).not.toBeNull();
+    return row?.[0] ?? '';
+  };
+
+  it('der Fachpunkt hängt weiterhin am rechten Rand des Fach-Links', () => {
+    expect(rowOf()).toContain('lg-dot ml-auto');
+  });
+
+  it('die Pfeil-Spalte ist an jede Fachzeile gebunden (Knopf oder Platzhalter, sonst kein Punkt-Versatz)', () => {
+    const row = rowOf();
+    // Bedingung mit Else-Zweig statt && (ohne Else entfiele die Spalte ja wieder)
+    expect(row).toMatch(/subject\.groups\.length > 0 \? \(/);
+    expect(row).not.toMatch(/subject\.groups\.length > 0 && \(/);
+    // Beide Zweige reservieren dieselbe 44-px-Fläche (size-11) und geben sie nicht her (shrink-0)
+    expect(row.match(/size-11 shrink-0/g)).toHaveLength(2);
+  });
+
+  it('der Platzhalter ohne Untergruppen ist nicht klickbar und ohne Inhalt', () => {
+    const row = rowOf();
+    expect(row).toMatch(/aria-hidden="true" className="size-11 shrink-0"/);
+    expect(row).toMatch(
+      /\)\s*:\s*\(\s*\/\*[\s\S]*?<span aria-hidden="true" className="size-11 shrink-0" \/>/,
+    );
+  });
+});
+
+/*
  * Überschriftenfolge (DoD): Der Abschnittstitel „Fächer“ der Seitenleiste ist ein Absatz und keine
  * Überschrift, weil die Seitenleiste im DOM vor dem Inhalt liegt — sonst stünde H2 vor H1. Die H1 der
  * Ansicht ist die erste und einzige Überschrift der obersten Ebene; darunter wird keine Ebene übersprungen.
