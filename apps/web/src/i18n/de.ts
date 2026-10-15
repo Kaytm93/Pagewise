@@ -306,6 +306,7 @@ export const de = {
     emptyHint:
       'Hier erscheinen die Hefteinträge dieser Ansicht. Lege einen neuen an oder speichere eine Antwort aus einem Chat.',
     noResults: 'Nichts gefunden.',
+    truncatedHint: 'Es werden die neuesten 200 Einträge gezeigt. Ältere findest du über die Suche.',
     pinned: 'Angeheftet',
     fromChat: 'Aus einem Chat',
     deleteNamed: 'Hefteintrag „{name}“ löschen',

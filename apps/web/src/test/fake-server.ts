@@ -942,7 +942,7 @@ export class FakeServer {
       if (!subjectId) return json(400, { error: 'invalid_input', field: 'subjectId' });
       const groupId = params.get('groupId');
       const needle = (params.get('q') ?? '').toLowerCase();
-      const list = this.notes
+      const hits = this.notes
         .filter(
           (note) =>
             note.subjectId === subjectId &&
@@ -951,12 +951,13 @@ export class FakeServer {
               note.title.toLowerCase().includes(needle) ||
               note.markdown.toLowerCase().includes(needle)),
         )
-        .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
-        .map((note) => {
-          const { markdown: _text, ...summary } = this.withExcerpt(note);
-          return summary;
-        });
-      return json(200, { notes: list });
+        .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
+      // Wie der echte Server: höchstens 200, `truncated` sagt, ob es mehr gibt.
+      const list = hits.slice(0, 200).map((note) => {
+        const { markdown: _text, ...summary } = this.withExcerpt(note);
+        return summary;
+      });
+      return json(200, { notes: list, truncated: hits.length > 200 });
     }
     if (route === '/api/notes' && method === 'POST') {
       const title = String(data.title ?? '').trim();

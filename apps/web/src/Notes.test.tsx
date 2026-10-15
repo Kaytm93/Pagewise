@@ -49,6 +49,8 @@ afterEach(() => {
 
 const NOT_FOUND = /gibt es nicht/i;
 
+const HINT = /Es werden die neuesten 200 Einträge gezeigt/;
+
 const notesPath = (subjectId: string) => `/subjects/${subjectId}/notes`;
 const notePath = (subjectId: string, noteId: string) => `/subjects/${subjectId}/notes/${noteId}`;
 
@@ -174,6 +176,29 @@ describe('Liste der Hefteinträge', () => {
     );
     open(server, notesPath(subject.id));
     expect(await screen.findByText('Die Hefteinträge konnten nicht geladen werden.')).toBeTruthy();
+  });
+
+  it('weist auf die Neuesten-200-Kürzung hin, wenn der Server mehr hat (M4-T015)', async () => {
+    const { server, subject } = setup();
+    for (let i = 0; i < 201; i += 1) {
+      server.addNote(subject.id, { title: `Eintrag ${i}`, updatedAt: Date.now() - i * 1000 });
+    }
+    open(server, notesPath(subject.id));
+    // Hinweis da, sobald die Liste steht; darüber genau 200 Zeilen
+    expect(await screen.findByText(HINT)).toBeTruthy();
+    const list = within(screen.getByRole('region', { name: 'Hefteinträge' }));
+    expect(list.getAllByRole('listitem')).toHaveLength(200);
+    expect(screen.getByRole('status').textContent).toContain('neuesten 200');
+    // Nach der Suche mit wenigen Treffern entfällt der Hinweis wieder
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Hefteinträge durchsuchen' }),
+      'Eintrag 2',
+    );
+    await waitFor(() => expect(screen.queryByText(HINT)).toBeNull());
+    expect(await screen.findByText('Eintrag 2')).toBeTruthy();
+    // „Eintrag 2“, „Eintrag 20“ bis „Eintrag 29“ und „Eintrag 200“
+    expect(list.getAllByRole('listitem')).toHaveLength(12);
   });
 });
 

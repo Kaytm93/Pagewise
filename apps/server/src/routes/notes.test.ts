@@ -16,6 +16,11 @@ interface Note {
   sourceChatId: string | null;
 }
 
+interface NoteList {
+  notes: Note[];
+  truncated: boolean;
+}
+
 describe('Hefteinträge', () => {
   let harness: Harness;
   let session: Session;
@@ -268,6 +273,23 @@ describe('Hefteinträge', () => {
         .values(Array.from({ length: 250 }, (_, i) => ({ subjectId, title: `n${i}` })))
         .run();
       expect((await list(`subjectId=${subjectId}`)).length).toBe(200);
+    });
+
+    it('meldet mit `truncated`, wenn es mehr Einträge gibt, als gezeigt werden', async () => {
+      harness.services.database.db
+        .insert(notes)
+        .values(Array.from({ length: 201 }, (_, i) => ({ subjectId, title: `n${i}` })))
+        .run();
+      const full = (await session.call('GET', `/api/notes?subjectId=${subjectId}`))
+        .body as unknown as NoteList;
+      expect(full.notes.length).toBe(200);
+      expect(full.truncated).toBe(true);
+      // Suchtreffer unter der Grenze sind nicht gekürzt
+      await create({ title: 'Stoffmenge', markdown: 'n = m / M' });
+      const searched = (await session.call('GET', `/api/notes?subjectId=${subjectId}&q=stoff`))
+        .body as unknown as NoteList;
+      expect(searched.notes.map((n) => n.title)).toEqual(['Stoffmenge']);
+      expect(searched.truncated).toBe(false);
     });
   });
 

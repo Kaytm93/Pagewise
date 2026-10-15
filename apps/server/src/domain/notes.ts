@@ -125,14 +125,20 @@ const escapeLike = (value: string) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
 /**
  * Die Einträge einer Ansicht: eines Fachs ohne Untergruppe (`groupId` ist `null`, „Allgemein“) oder einer
  * Untergruppe, wie bei den Chats. Angeheftete zuerst, dann nach letzter Änderung. Mit `query` nur Einträge, in
- * deren Titel oder Text die Eingabe vorkommt (ohne Groß- und Kleinschreibung).
+ * deren Titel oder Text die Eingabe vorkommt (ohne Groß- und Kleinschreibung). Gekürzt auf die neuesten
+ * {@link LIST_LIMIT}; `truncated` sagt, ob es mehr gibt.
  */
+export interface NoteListResult {
+  notes: NoteSummary[];
+  truncated: boolean;
+}
+
 export function listNotes(
   db: Db,
   subjectId: string,
   groupId: string | null,
   query?: string,
-): NoteSummary[] {
+): NoteListResult {
   const scope = and(
     eq(notes.subjectId, subjectId),
     groupId === null ? isNull(notes.groupId) : eq(notes.groupId, groupId),
@@ -145,14 +151,17 @@ export function listNotes(
         sql`${notes.markdown} like ${pattern} escape '\\'`,
       )
     : undefined;
-  return db
+  const rows = db
     .select({ row: notes, head: sql<string>`substr(${notes.markdown}, 1, ${HEAD_LENGTH})` })
     .from(notes)
     .where(match ? and(scope, match) : scope)
     .orderBy(desc(notes.pinned), desc(notes.updatedAt), desc(notes.createdAt))
-    .limit(LIST_LIMIT)
-    .all()
-    .map(({ row, head }) => summaryOf(row, head));
+    .limit(LIST_LIMIT + 1)
+    .all();
+  return {
+    notes: rows.slice(0, LIST_LIMIT).map(({ row, head }) => summaryOf(row, head)),
+    truncated: rows.length > LIST_LIMIT,
+  };
 }
 
 export function getNote(db: Db, id: string): NoteView | null {

@@ -111,7 +111,8 @@ export function noteRoutes(db: Db, fallbackTitle: string): Hono<AppEnv> {
       );
     }
     const { subjectId, groupId, q } = parsed.data;
-    return c.json({ notes: listNotes(db, subjectId, groupId ?? null, q) });
+    const { notes, truncated } = listNotes(db, subjectId, groupId ?? null, q);
+    return c.json({ notes, truncated });
   });
 
   app.post('/notes', async (c) => {

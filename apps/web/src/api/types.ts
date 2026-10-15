@@ -327,6 +327,12 @@ export interface NoteSummary {
   updatedAt: number;
 }
 
+/** Antwort von `GET /api/notes`: die gekürzte Liste und ob es mehr gibt, als gezeigt werden. */
+export interface NoteList {
+  notes: NoteSummary[];
+  truncated: boolean;
+}
+
 export interface Note extends NoteSummary {
   markdown: string;
 }

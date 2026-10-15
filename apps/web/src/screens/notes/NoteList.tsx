@@ -1,6 +1,6 @@
 import { Pin, Plus, Search, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { NoteSummary } from '../../api/types';
+import type { NoteList as NoteListPayload, NoteSummary } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { navigate } from '../../router';
 import { useSession } from '../../session/SessionProvider';
@@ -11,6 +11,15 @@ import { Link } from '../../ui/Link';
 import { listRow } from '../../ui/styles';
 import { formatWhen } from '../chat/when';
 
+/** Anfrage-Parameter der Liste: Fach, Untergruppe und die Suche (getrimmt, nur wenn nicht leer). */
+function paramsOf(subjectId: string, groupId: string | null, query: string): string {
+  const params = new URLSearchParams({ subjectId });
+  if (groupId) params.set('groupId', groupId);
+  const needle = query.trim();
+  if (needle !== '') params.set('q', needle);
+  return params.toString();
+}
+
 /**
  * Hefteinträge eines Fachs oder einer Untergruppe mit Suche und „Neuer Hefteintrag“. Wie die Chats bleiben
  * sie immer in ihrem Fach. Die Suche läuft auf dem Server (Titel und Text) und nur innerhalb dieser Ansicht.
@@ -18,6 +27,7 @@ import { formatWhen } from '../chat/when';
 export function NoteList({ subjectId, groupId }: { subjectId: string; groupId: string | null }) {
   const { api } = useSession();
   const [notes, setNotes] = useState<NoteSummary[] | null>(null);
+  const [truncated, setTruncated] = useState(false);
   const [failed, setFailed] = useState(false);
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
@@ -31,13 +41,19 @@ export function NoteList({ subjectId, groupId }: { subjectId: string; groupId: s
     // Beim Tippen kurz warten, damit nicht jeder Buchstabe eine Anfrage auslöst.
     const timer = setTimeout(
       () => {
-        api
-          .notes(subjectId, groupId, query)
+        // Umschlag selbst entpacken (`api.notes` wirft `truncated` weg): eine Abweichung im Bericht
+        // zu M4-T015, weil `api.ts` nicht zu den Dateien dieses Tasks gehört.
+        api.client
+          .request<NoteListPayload>('GET', `/api/notes?${paramsOf(subjectId, groupId, query)}`)
           .then((list) => {
-            if (!cancelled) setNotes(list);
+            if (!cancelled) setNotes(list.notes);
+            if (!cancelled) setTruncated(list.truncated);
           })
           .catch(() => {
-            if (!cancelled) setFailed(true);
+            if (!cancelled) {
+              setFailed(true);
+              setTruncated(false);
+            }
           });
       },
       query === '' ? 0 : 250,
@@ -116,6 +132,11 @@ export function NoteList({ subjectId, groupId }: { subjectId: string; groupId: s
             </div>
           ))}
         </div>
+      )}
+      {notes && notes.length > 0 && truncated && (
+        <p role="status" className="mt-3 text-sm text-ink-secondary">
+          {m.notes.truncatedHint}
+        </p>
       )}
       {notes && notes.length === 0 && !searching && (
         <div className="mt-3 rounded-box bg-paper p-4">
