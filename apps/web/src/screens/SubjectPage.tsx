@@ -61,9 +61,14 @@ export function SubjectPage({
           {subject.name}
         </Link>
       )}
-      <div className="relative mt-6 flex items-start justify-between gap-4 pr-24 md:pr-40">
+      <div className="relative mt-6 flex items-start justify-between gap-4 pr-[88px] md:pr-40">
         <div className="min-w-0">
-          <h1 className="mo-rise font-heading text-[clamp(40px,6.4vw,64px)] leading-none tracking-[-0.035em] text-balance break-words">
+          {/* subject#06: kleiner einsteigen, damit übliche Fächer einzeilig bleiben; lange Wörter trennt
+              `hyphens-auto` mit Trennstrich (Sprache „de“ kommt von <html lang="de">) statt mitten im Wort zu brechen. */}
+          <h1
+            lang="de"
+            className="mo-rise font-heading hyphens-auto text-[clamp(28px,8vw,34px)] leading-none tracking-[-0.035em] text-balance break-words md:text-[clamp(28px,3.9vw,48px)]"
+          >
             {group ? group.name : subject.name}
           </h1>
           {meta && <p className="mo-rise mo-i-1 mt-3 text-ink-muted break-words">{meta}</p>}
