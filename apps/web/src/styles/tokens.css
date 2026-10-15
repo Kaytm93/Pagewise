@@ -22,7 +22,9 @@
   --color-linen-border: #e4ded3;
   --color-graphite: #2e2e2e;
   --color-charcoal-copy: #454545;
-  --color-quiet-gray: #6a6972;
+  /* Abdunkelt (M4-T013): #6a6972 erreichte auf der körnigen Worst-Case-Fläche rgb(229, 227, 225)
+     unter „Fach hinzufügen“ (Lagen, hell) nur 4,23 : 1; #63626b misst dort 4,70 : 1. */
+  --color-quiet-gray: #63626b;
   --color-disabled-ash: #a8a8a8;
   --color-research-blue: #207dff;
   /* Dunkleres Blau für Text-Links im hellen Modus: #207dff erreicht als Text keine 4,5 : 1 */

@@ -71,6 +71,14 @@ describe.each([
     }
   }
 
+  it('--ink-muted bleibt die leiseste lesbare Tinte (Tonfolge zu --ink-secondary)', () => {
+    for (const surface of surfaces) {
+      expect(contrast(color('--ink-muted'), color(surface))).toBeLessThan(
+        contrast(color('--ink-secondary'), color(surface)),
+      );
+    }
+  });
+
   it('Text auf der primären Fläche erreicht mindestens 4,5 : 1', () => {
     expect(contrast(color('--on-primary'), color('--primary'))).toBeGreaterThanOrEqual(4.5);
   });
@@ -86,6 +94,23 @@ describe.each([
       expect(contrast(color('--accent'), color(surface))).toBeGreaterThanOrEqual(3);
       expect(contrast(color('--primary'), color(surface))).toBeGreaterThanOrEqual(3);
     }
+  });
+});
+
+// M4-T013: die dunkelste reale Fläche unter grauem Text ist die Papierkörnung unter dem
+// „Fach hinzufügen“-Knopf (Lagen, hell, Startseite, im Browser gemessen: rgb(229, 227, 225) als
+// 20-Prozent-Perzentil). --ink-muted lag dort vor der Abdunkelung bei 4,23 : 1 (#6a6972).
+describe('Graue Tinte auf der realen Körnungsfläche (Worst-Case M4-T013, nur hell)', () => {
+  const koernung = '#e5e3e1';
+
+  it('--ink-muted erreicht auf der Körnung mindestens 4,5 : 1', () => {
+    expect(contrast(toHex(light['--ink-muted'] as string), koernung)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('bleibt die leiseste lesbare Tinte: dunkler Text bleibt deutlich dunkler', () => {
+    expect(contrast(toHex(light['--ink-muted'] as string), koernung)).toBeLessThan(
+      contrast(toHex(light['--ink-secondary'] as string), koernung),
+    );
   });
 });
 
