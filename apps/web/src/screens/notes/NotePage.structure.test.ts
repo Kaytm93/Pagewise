@@ -154,3 +154,59 @@ describe('Editor-Titel: mehrzeilig statt abgeschnitten (notes#03)', () => {
     expect(quelle).not.toMatch(/style=\{/);
   });
 });
+
+/*
+ * Werkzeug-Kopf des Editors (M4-T007, notes#13): Stichwörter und Einfügen-Leiste stehen als ein
+ * <details> zusammen und sind ab Werk zu, damit das Textfeld auf niedrigen Bildschirmen (iPhone quer
+ * 844×390, mac-min 800×560) sofort im ersten Bildschirm beginnt. Ob die Oberkante wirklich oberhalb
+ * der halben Höhe liegt, kann jsdom nicht messen — das belegt die Browsermessung (pw/agents/m4-t007).
+ */
+describe('Editor-Kopf: Werkzeuge einklappbar, ab Werk zu (M4-T007)', () => {
+  function kopf() {
+    const quelle = read('screens/notes/NotePage.tsx');
+    const start = quelle.indexOf('<details');
+    return quelle.slice(start, quelle.indexOf('</details>', start));
+  }
+
+  it('Stichwörter und Einfügen liegen in einem details mit summary als Bedienfläche', () => {
+    const block = kopf();
+    expect(block).toContain('id="note-kopf"');
+    expect(block).toContain('<summary');
+    expect(block).toContain('id="note-tags"');
+    expect(block).toContain('role="toolbar"');
+    // Zusammenfassung nennt beide Teile (i18n-Text, Stichwortzahl)
+    expect(block).toContain('m.notes.editor.toolsShow');
+    expect(block).toContain('m.notes.editor.toolsHide');
+    // Bedienfläche mindestens 44 px
+    expect(block).toContain('min-h-11');
+  });
+
+  it('der Zustand hängt nativ am details: kein aria-expanded, kein style-Attribut (CSP)', () => {
+    const block = kopf();
+    expect(block).not.toContain('aria-expanded');
+    expect(block).not.toMatch(/style=\{/);
+    expect(block).toContain('onToggle=');
+  });
+
+  it('das Textfeld liegt außerhalb des Aufklappers (bleibt beim Zuklappen sichtbar)', () => {
+    const quelle = read('screens/notes/NotePage.tsx');
+    const kopfEnde = quelle.indexOf('</details>');
+    const textfeld = quelle.indexOf('id="note-text"');
+    expect(kopfEnde).toBeGreaterThan(-1);
+    expect(textfeld).toBeGreaterThan(kopfEnde);
+  });
+
+  it('der Ansichts-Umschalter sitzt in der Aktionszeile, direkt nach dem Aufklapper folgt das Raster', () => {
+    const quelle = read('screens/notes/NotePage.tsx');
+    const aktionen = quelle.indexOf('ml-auto');
+    const umschalter = quelle.indexOf('e.editorView');
+    expect(aktionen).toBeGreaterThan(-1);
+    expect(umschalter).toBeGreaterThan(aktionen);
+    // Keine eigene Umschalter-Zeile mehr zwischen Aufklapper und Textfeld-Raster (notes#13).
+    const nachKopf = quelle.slice(
+      quelle.indexOf('</details>') + '</details>'.length,
+      quelle.indexOf('<div className="mt-3 grid'),
+    );
+    expect(nachKopf.trim()).toBe('');
+  });
+});

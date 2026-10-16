@@ -338,6 +338,8 @@ describe('Editor', () => {
     expect(
       screen.getByRole('button', { name: 'Anheftung lösen' }).hasAttribute('aria-pressed'),
     ).toBe(false);
+    // Stichwörter liegen im eingeklappten Werkzeug-Kopf (M4-T007): erst aufklappen.
+    await user.click(screen.getByText('Stichwörter und Einfügen (0)'));
     await user.type(screen.getByRole('textbox', { name: 'Stichwörter' }), 'Mol, Test, mol');
     await waitFor(
       () => expect(server.calls('PATCH', `/api/notes/${note.id}`).length).toBeGreaterThan(0),
@@ -351,6 +353,57 @@ describe('Editor', () => {
         timeout: 4000,
       },
     );
+  });
+
+  it('klärt Stichwörter und Einfügen zusammen auf und zu, Textfeld bleibt offen (M4-T007, notes#13)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, {
+      title: 'Titel',
+      markdown: 'Steht schon drin',
+      tags: ['Eins', 'Zwei'],
+    });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+
+    // Zu (ab Werk): Zusammenfassung nennt die Stichwortzahl, der bestehende Text bleibt sichtbar.
+    const kopf = await screen.findByText('Stichwörter und Einfügen (2)');
+    const details = kopf.closest('details');
+    expect(details?.hasAttribute('open')).toBe(false);
+    expect(await screen.findByRole('textbox', { name: 'Text (Markdown)' })).toBeTruthy();
+
+    // Auf: beides steht offen unter dem Zusammenfang, das Attribut meldet den Zustand nativ.
+    await user.click(kopf);
+    expect(details?.hasAttribute('open')).toBe(true);
+    expect(screen.getByRole('textbox', { name: 'Stichwörter' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Formel' })).toBeTruthy();
+    expect(
+      screen.getByText('Stichwörter und Einfügen schließen').hasAttribute('aria-expanded'),
+    ).toBe(false);
+
+    // Durchreichen prüfen: Vorlage an der Schreibmarke (hier: Textende) einfügen und Stichwort ändern.
+    const text = screen.getByRole('textbox', { name: 'Text (Markdown)' }) as HTMLTextAreaElement;
+    text.setSelectionRange(text.value.length, text.value.length);
+    await user.click(screen.getByRole('button', { name: 'Merksatz' }));
+    expect(text.value.startsWith('Steht schon drin')).toBe(true);
+    const stichfeld = screen.getByRole('textbox', { name: 'Stichwörter' }) as HTMLInputElement;
+    await user.clear(stichfeld);
+    await user.type(stichfeld, 'Eins, Zwei, Drei');
+    await waitFor(() => expect(server.notes[0]?.tags).toEqual(['Eins', 'Zwei', 'Drei']), {
+      timeout: 4000,
+    });
+
+    // Zu: der Zustand hängt nativ am Attribut, die Zahl in der Zusammenfassung folgt der Eingabe.
+    // jsdom blendet den Inhalt eines geschlossenen details nicht aus (bekannt, Muster Planner-Test
+    // „eingeklappt, aber vorhanden") — dass er im Echtbrowser wirklich verschwindet, belegt die
+    // Browsermessung (pw/agents/m4-t007).
+    await user.click(screen.getByText('Stichwörter und Einfügen schließen'));
+    expect(details?.hasAttribute('open')).toBe(false);
+    expect(
+      within(details as HTMLElement).getByRole('textbox', { name: 'Stichwörter' }),
+    ).toBeTruthy();
+    expect(within(details as HTMLElement).getByRole('button', { name: 'Merksatz' })).toBeTruthy();
+    expect(screen.getByText('Stichwörter und Einfügen (3)')).toBeTruthy();
+    expect(server.notes[0]?.tags).toEqual(['Eins', 'Zwei', 'Drei']);
   });
 
   it('meldet einen fehlgeschlagenen Speichervorgang, ohne die Eingabe zu verlieren', async () => {

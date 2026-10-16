@@ -339,6 +339,8 @@ export const de = {
       loadFailed: 'Der Hefteintrag konnte nicht geladen werden.',
       tags: 'Stichwörter',
       tagsHint: 'Mit Komma getrennt, bis zu 10.',
+      toolsShow: 'Stichwörter und Einfügen ({count})',
+      toolsHide: 'Stichwörter und Einfügen schließen',
       fromChat: 'Aus dem Chat',
       invalidTitle: 'Der Titel braucht 1 bis 120 Zeichen.',
       tooLong: 'Der Text ist zu lang (höchstens 100.000 Zeichen).',

@@ -1,5 +1,5 @@
-import { ArrowLeft, Pin, PinOff, Trash2 } from 'lucide-react';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ArrowLeft, ChevronDown, Pin, PinOff, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
 import type { Note } from '../../api/types';
 import { format, messages as m } from '../../i18n';
@@ -52,6 +52,11 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
   const [tagsText, setTagsText] = useState('');
   const [saving, setSaving] = useState<Saving>('saved');
   const [view, setView] = useState<View>('write');
+  // Werkzeuge (Stichwörter + Einfügen) stehen ab Werk zu (notes#13): so beginnt das Textfeld auch
+  // auf niedrigen Bildschirmen (iPhone quer, mac-min) im ersten Bildschirm. jsdom meldet „open“
+  // nativ über das details-Attribut; die echte Oberkante misst der Echtbrowser (pw/agents/m4-t007).
+  const [werkzeugeOffen, setWerkzeugeOffen] = useState(false);
+  const stichwoerter = useMemo(() => parseTags(tagsText), [tagsText]);
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
@@ -327,6 +332,20 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
           </Link>
         )}
         <div className="ml-auto flex items-center">
+          {/* Ansichts-Umschalter nur unter 1024 px (M4-T007, notes#13): er gehört zum Kopf und darf
+              keine eigene Zeile vor dem Textfeld belegen — auf iPhone quer füllte er mit der
+              Einfügen-Leiste den ersten Bildschirm, das Textfeld begann erst bei y≈594 von 390 px. */}
+          <div className="mr-1 lg:hidden">
+            <Segmented
+              legend={e.editorView}
+              options={[
+                { value: 'write', label: e.write },
+                { value: 'preview', label: e.preview },
+              ]}
+              value={view}
+              onChange={setView}
+            />
+          </div>
           <Button variant="ghost" onClick={() => void save()} disabled={saving === 'saving'}>
             {e.save}
           </Button>
@@ -354,54 +373,66 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
       </div>
       {actionError && <FieldError>{actionError}</FieldError>}
 
-      <div className="mt-3">
-        <label htmlFor="note-tags" className="block text-sm font-medium text-ink">
-          {e.tags}
-        </label>
-        <input
-          id="note-tags"
-          value={tagsText}
-          onChange={(event) => setTagsText(event.target.value)}
-          autoComplete="off"
-          aria-describedby="note-tags-hint"
-          className="mt-1.5 min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink transition-shadow duration-[var(--t-med)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none"
-        />
-        <p id="note-tags-hint" className="mt-1 text-sm text-ink-muted">
-          {e.tagsHint}
-        </p>
-      </div>
-
-      <div
-        role="toolbar"
-        aria-label={e.insert}
-        className="mt-5 flex flex-wrap items-center gap-1.5"
+      {/* Werkzeuge (Stichwörter + Einfügen) als ein Aufklapper, ab Werk zu (notes#13): Das Textfeld
+          beginnt auf niedrigen Bildschirmen (iPhone quer, mac-min) sofort im ersten Bildschirm. Das
+          Muster stammt aus der Agent-Aktivität (M3-T020); der Zustand hängt allein am open-Attribut
+          (kein aria-expanded am summary, Biome), der Pfeil dreht per transform an --m (Lagen-CSS). */}
+      <details
+        id="note-kopf"
+        className="mt-2"
+        open={werkzeugeOffen}
+        onToggle={(event) => setWerkzeugeOffen(event.currentTarget.open)}
       >
-        <span className="mr-1 text-sm font-medium text-ink-muted">{e.insert}:</span>
-        {TEMPLATE_KEYS.map((key) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => insert(key)}
-            className="mo-press inline-flex min-h-11 items-center rounded-pill border border-line-warm px-3.5 text-sm text-ink-secondary hover:bg-paper hover:text-ink"
+        <summary className="mo-press -mx-1 inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-control px-1 text-sm text-ink-muted hover:text-ink">
+          <span>
+            {werkzeugeOffen
+              ? format(m.notes.editor.toolsHide, { count: stichwoerter.length })
+              : format(m.notes.editor.toolsShow, { count: stichwoerter.length })}
+          </span>
+          <ChevronDown
+            aria-hidden="true"
+            className="mo-arrow size-4 shrink-0 transition-transform duration-[var(--t-med)] ease-[var(--spring-snap)]"
+          />
+        </summary>
+        <div className="pt-3">
+          <div>
+            <label htmlFor="note-tags" className="block text-sm font-medium text-ink">
+              {e.tags}
+            </label>
+            <input
+              id="note-tags"
+              value={tagsText}
+              onChange={(event) => setTagsText(event.target.value)}
+              autoComplete="off"
+              aria-describedby="note-tags-hint"
+              className="mt-1.5 min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink transition-shadow duration-[var(--t-med)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none"
+            />
+            <p id="note-tags-hint" className="mt-1 text-sm text-ink-muted">
+              {e.tagsHint}
+            </p>
+          </div>
+
+          <div
+            role="toolbar"
+            aria-label={e.insert}
+            className="mt-5 flex flex-wrap items-center gap-1.5"
           >
-            {m.notes.insertItems[key]}
-          </button>
-        ))}
-      </div>
+            <span className="mr-1 text-sm font-medium text-ink-muted">{e.insert}:</span>
+            {TEMPLATE_KEYS.map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => insert(key)}
+                className="mo-press inline-flex min-h-11 items-center rounded-pill border border-line-warm px-3.5 text-sm text-ink-secondary hover:bg-paper hover:text-ink"
+              >
+                {m.notes.insertItems[key]}
+              </button>
+            ))}
+          </div>
+        </div>
+      </details>
 
-      <div className="mt-4 lg:hidden">
-        <Segmented
-          legend={e.editorView}
-          options={[
-            { value: 'write', label: e.write },
-            { value: 'preview', label: e.preview },
-          ]}
-          value={view}
-          onChange={setView}
-        />
-      </div>
-
-      <div className="mt-4 grid gap-6 lg:grid-cols-2">
+      <div className="mt-3 grid gap-6 lg:grid-cols-2">
         <div className={view === 'write' ? 'block' : 'hidden lg:block'}>
           <label htmlFor="note-text" className="sr-only">
             {e.text}

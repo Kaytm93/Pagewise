@@ -422,6 +422,12 @@ details[open] > summary .mo-arrow {
   transform: rotate(90deg);
 }
 
+/* Werkzeuge im Hefteintrag (notes#13): der Chevron zeigt nach unten (zu) und dreht nach oben (offen).
+   Eigener Selektor, damit der Dreh-Sinn des Agent-Aufklappers oben unberührt bleibt. */
+#note-kopf[open] > summary .mo-arrow {
+  transform: rotate(180deg);
+}
+
 /*
  * Hinweis „Mac nicht erreichbar“ (M4-T008): steht im Dokumentfluss oberhalb der Kopfzeile und schiebt
  * sie nach unten, statt sie zu überdecken. Er bleibt beim Scrollen am oberen Rand hängen, die Kopfzeile
