@@ -1,3 +1,4 @@
+import { stat } from 'node:fs/promises';
 import { basename, isAbsolute, normalize } from 'node:path';
 import { eq } from 'drizzle-orm';
 import type { Db } from '../db/client';
@@ -6,11 +7,36 @@ import { settings } from '../db/schema';
 const KEY = 'agent.cliPath';
 const MAX_LENGTH = 1024;
 
+/** Warum ein Pfad abgelehnt wurde (`invalid_input`, Feld `path`); `null` meint: schon das Format war unzulässig. */
+export type CliPathCheckFailure = 'not_found' | 'not_executable' | null;
+
+/** Ergebnis der Prüfung eines von Hand eingetragenen Pfads. */
+export type CliPathCheck = { ok: true; path: string } | { ok: false; reason: CliPathCheckFailure };
+
 /**
  * Prüft einen von Hand eingetragenen Pfad zu „claude“. Er ist eine Einstellung der angemeldeten Person und wird
  * später als Programm gestartet. Damit eine gestohlene Sitzung daraus keinen beliebigen Programmstart macht, gilt:
- * absolut, ohne Umwege (`..`), ohne Steuerzeichen, und die Datei heißt `claude`. Gibt den bereinigten Pfad zurück oder `null`.
+ * absolut, ohne Umwege (`..`), ohne Steuerzeichen, und die Datei heißt `claude`. Die Datei muss außerdem vorhanden
+ * und ausführbar sein, damit „Pfad gespeichert.“ nie einen Pfad bestätigt, mit dem der Agent sicher scheitert.
+ * Gibt das Prüfergebnis mit bereinigtem Pfad oder Grund zurück.
  * (Über die Umgebungsvariable `PAGEWISE_CLAUDE_PATH` setzt der Besitzer den Pfad ohne diese Einschränkung.)
+ */
+export async function checkCliPath(input: string): Promise<CliPathCheck> {
+  const path = validateCliPath(input);
+  if (path === null) return { ok: false, reason: null };
+  try {
+    const info = await stat(path);
+    // Das Ausführungsbit für irgendjemanden genügt: der Server startet das Programm mit den Rechten seines Kontos.
+    if (!info.isFile() || !(info.mode & 0o111)) return { ok: false, reason: 'not_executable' };
+  } catch {
+    return { ok: false, reason: 'not_found' };
+  }
+  return { ok: true, path };
+}
+
+/**
+ * Prüft das Format eines Pfads zu „claude“ (absolut, ohne `..`, Dateiname `claude`) ohne Blick auf das
+ * Dateisystem. Gibt den bereinigten Pfad zurück oder `null`.
  */
 export function validateCliPath(input: string): string | null {
   const trimmed = input.trim();

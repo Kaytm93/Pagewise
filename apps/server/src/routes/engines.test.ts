@@ -107,6 +107,35 @@ describe('Agent-CLI: Zugänge und Erkennung', () => {
       expect(harness.services.cliPath.get()).toBeNull();
     });
 
+    it('lehnt einen Pfad, den es nicht gibt, mit Grund ab', async () => {
+      const reply = await session.call('PUT', '/api/engines/cli-path', {
+        path: '/nichts/echtes/claude',
+      });
+      expect(reply.status).toBe(400);
+      expect(reply.body).toEqual({
+        error: 'invalid_input',
+        field: 'path',
+        reason: 'not_found',
+      });
+      expect(harness.services.cliPath.get()).toBeNull();
+    });
+
+    it('lehnt eine vorhandene Datei ohne Ausführungsrecht mit Grund ab', async () => {
+      const dir = join(harness.services.paths.root, '..', 'ohne-rechte');
+      mkdirSync(dir, { recursive: true });
+      const file = join(dir, 'claude');
+      writeFileSync(file, '#!/bin/sh\n');
+      chmodSync(file, 0o644);
+      const reply = await session.call('PUT', '/api/engines/cli-path', { path: file });
+      expect(reply.status).toBe(400);
+      expect(reply.body).toEqual({
+        error: 'invalid_input',
+        field: 'path',
+        reason: 'not_executable',
+      });
+      expect(harness.services.cliPath.get()).toBeNull();
+    });
+
     it('lehnt fremde Felder und falsche Typen ab', async () => {
       for (const body of [
         {},

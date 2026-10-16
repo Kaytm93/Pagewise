@@ -1,7 +1,7 @@
 import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { validateCliPath } from '../agents/cli-path';
+import { checkCliPath } from '../agents/cli-path';
 import type { CliStatus } from '../agents/detect';
 import {
   ENGINE_KINDS,
@@ -110,14 +110,23 @@ export function engineRoutes(
   );
 
   // Pfad zu „claude“ von Hand eintragen (eine aus Finder oder Anmeldung gestartete App hat nur einen knappen PATH).
-  // `null` entfernt ihn. Der Pfad muss absolut sein und die Datei „claude“ heißen (siehe `validateCliPath`).
+  // `null` entfernt ihn. Der Pfad muss absolut sein, die Datei „claude“ heißen und vorhanden und ausführbar sein
+  // (siehe `checkCliPath`); andernfalls wird er mit Grund abgelehnt, statt ihn irreführend zu bestätigen.
   app.put('/engines/cli-path', async (c) => {
     const body = await readJson(c, CliPathBody);
     if (!body.ok) return body.response;
     let path: string | null = null;
     if (body.data.path !== null) {
-      path = validateCliPath(body.data.path);
-      if (path === null) return c.json({ error: 'invalid_input', field: 'path' }, 400);
+      const check = await checkCliPath(body.data.path);
+      if (!check.ok) {
+        return c.json(
+          check.reason === null
+            ? { error: 'invalid_input', field: 'path' }
+            : { error: 'invalid_input', field: 'path', reason: check.reason },
+          400,
+        );
+      }
+      path = check.path;
     }
     services.cliPath.set(path);
     return c.json({ cli: cliView(await services.cli.status(true), services.cliPath.get()) });

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
 import { ApiClient } from './api/client';
-import { FakeServer } from './test/fake-server';
+import { FakeServer, json } from './test/fake-server';
 
 // Fake-Schlüssel werden zur Laufzeit zusammengesetzt, damit der Secret-Scan den Quelltext nicht trifft.
 const TOKEN = ['beispiel', 'token', 'abcdefghijklmnop'].join('-');
@@ -113,6 +113,58 @@ describe('Einstellungen: Agent-CLI', () => {
       expect(
         (view.getByLabelText('Pfad zu claude (nur wenn nötig)') as HTMLInputElement).value,
       ).toBe('');
+    });
+
+    it('meldet einen Pfad, den es auf dem Server-Rechner nicht gibt, statt „Pfad gespeichert.“', async () => {
+      const server = new FakeServer('unlocked');
+      server.cli = {
+        state: 'missing',
+        path: null,
+        version: null,
+        skipped: [],
+        configuredPath: null,
+      };
+      server.replyOnce('PUT', '/api/engines/cli-path', () =>
+        json(400, { error: 'invalid_input', field: 'path', reason: 'not_found' }),
+      );
+      openSettings(server);
+      const view = await section();
+      const user = userEvent.setup();
+      await user.type(
+        await view.findByLabelText('Pfad zu claude (nur wenn nötig)'),
+        '/nichts/echtes/claude',
+      );
+      await user.click(view.getByRole('button', { name: 'Pfad speichern' }));
+      expect(
+        await view.findByText('Den Pfad gibt es auf dem Rechner des Servers nicht.'),
+      ).toBeTruthy();
+      expect(view.queryByText('Pfad gespeichert.')).toBeNull();
+    });
+
+    it('meldet einen Pfad, der nicht ausführbar ist, statt „Pfad gespeichert.“', async () => {
+      const server = new FakeServer('unlocked');
+      server.cli = {
+        state: 'missing',
+        path: null,
+        version: null,
+        skipped: [],
+        configuredPath: null,
+      };
+      server.replyOnce('PUT', '/api/engines/cli-path', () =>
+        json(400, { error: 'invalid_input', field: 'path', reason: 'not_executable' }),
+      );
+      openSettings(server);
+      const view = await section();
+      const user = userEvent.setup();
+      await user.type(
+        await view.findByLabelText('Pfad zu claude (nur wenn nötig)'),
+        '/opt/beispiel/claude',
+      );
+      await user.click(view.getByRole('button', { name: 'Pfad speichern' }));
+      expect(
+        await view.findByText('Die Datei liegt dort, ist aber nicht ausführbar.'),
+      ).toBeTruthy();
+      expect(view.queryByText('Pfad gespeichert.')).toBeNull();
     });
 
     it('zeigt einen eingetragenen Pfad beim Öffnen und meldet einen ungültigen am Feld', async () => {

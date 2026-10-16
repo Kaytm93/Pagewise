@@ -895,6 +895,8 @@ export const de = {
       pathSaving: 'Speichere …',
       pathClear: 'Pfad entfernen',
       pathInvalid: 'Das ist kein gültiger Pfad. Er muss mit „/“ beginnen und auf „claude“ enden.',
+      pathNotFound: 'Den Pfad gibt es auf dem Rechner des Servers nicht.',
+      pathNotExecutable: 'Die Datei liegt dort, ist aber nicht ausführbar.',
       pathSaved: 'Pfad gespeichert.',
     },
     profiles: {

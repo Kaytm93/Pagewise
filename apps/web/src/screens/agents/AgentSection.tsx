@@ -65,7 +65,11 @@ function CliBlock() {
     } catch (caught) {
       setPathError(
         caught instanceof ApiError && caught.code === 'invalid_input'
-          ? t.pathInvalid
+          ? caught.details.reason === 'not_found'
+            ? t.pathNotFound
+            : caught.details.reason === 'not_executable'
+              ? t.pathNotExecutable
+              : t.pathInvalid
           : commonErrorMessage(caught),
       );
     } finally {
