@@ -1,8 +1,8 @@
 import { Pin, Plus, Search, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { NoteSummary } from '../../api/types';
 import { format, messages as m } from '../../i18n';
-import { navigate } from '../../router';
+import { navigate, pageKey } from '../../router';
 import { useSession } from '../../session/SessionProvider';
 import { Button } from '../../ui/Button';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
@@ -25,6 +25,22 @@ export function NoteList({ subjectId, groupId }: { subjectId: string; groupId: s
   const [deleting, setDeleting] = useState<NoteSummary | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Rückkehr aus dem Editor (M4-T017): Die Liste nimmt den Fokus, wenn der Rückweg sie dazu aufruft
+  // (Schlüssel gilt je Fach; Suche und normales Laden fokussieren nicht). Fokus ohne Bildlauf — der
+  // steht schon beim Reiter (scrollIntoView in der Fachseite); das Muster ist main#main in der Hülle.
+  const listeRef = useRef<HTMLUListElement | null>(null);
+  const listenRuf = `pagewise.ul-focus.${pageKey({
+    name: 'subject',
+    subjectId,
+    groupId,
+    tab: 'notes',
+  })}`;
+  useLayoutEffect(() => {
+    if (notes === null) return;
+    if (window.sessionStorage.getItem(listenRuf) !== '1') return;
+    window.sessionStorage.removeItem(listenRuf);
+    listeRef.current?.focus({ preventScroll: true });
+  }, [notes, listenRuf]);
 
   useEffect(() => {
     let cancelled = false;
@@ -139,7 +155,12 @@ export function NoteList({ subjectId, groupId }: { subjectId: string; groupId: s
         </p>
       )}
       {notes && notes.length > 0 && (
-        <ul className="mt-3 divide-y divide-line-warm border-y border-line-warm">
+        <ul
+          ref={listeRef}
+          id="hefte-eintraege-liste"
+          tabIndex={-1}
+          className="mt-3 divide-y divide-line-warm border-y border-line-warm outline-none"
+        >
           {notes.map((note) => (
             <li key={note.id} className="flex items-center">
               <Link to={{ name: 'note', subjectId, noteId: note.id }} className={listRow}>

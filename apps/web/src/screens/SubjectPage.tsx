@@ -1,9 +1,9 @@
 import { ArrowLeft, Pencil, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Group } from '../api/types';
 import { format, messages as m } from '../i18n';
 import { UpcomingExams } from '../planning/UpcomingExams';
-import { navigate } from '../router';
+import { navigate, pageKey } from '../router';
 import { Button } from '../ui/Button';
 import { Link } from '../ui/Link';
 import { Sheet } from '../ui/Sheet';
@@ -33,6 +33,32 @@ export function SubjectPage({
 }) {
   const { findSubject } = useWorkspace();
   const [dialog, setDialog] = useState<Dialog>(null);
+  // Rückweg aus dem Hefteintrags-Editor (M4-T017): NotePage markiert beim Verlassen seinen Chronik-Eintrag
+  // als „kehrt zu den Hefteinträgen zurück“; hier wird die Markierung aufgesucht. Nur dieser eine Rückweg
+  // bekommt die Liste in den Blick — kein anderes Zurück (Seitenleiste, Zurück-Knopf des Browsers).
+  const zielSchluessel = pageKey({ name: 'subject', subjectId, groupId, tab: 'notes' });
+  const absprung = `pagewise.rueck.${zielSchluessel}`;
+  const listenRuf = `pagewise.ul-focus.${zielSchluessel}`;
+  const zielRef = useRef<HTMLElement | null>(null);
+  const rueckkehrZiel = useRef(false);
+  // Vor dem Bildlauf nach oben (router.ts, M4-T004): Markierung aufnehmen, wenn der Editor gerade die
+  // Liste als Rückweg gewählt hat.
+  useLayoutEffect(() => {
+    if (sessionStorage.getItem(absprung) !== 'notes') return;
+    sessionStorage.removeItem(absprung);
+    rueckkehrZiel.current = true;
+  }, [absprung]);
+  // Nach dem Bildlauf nach oben (router.ts, M4-T004): Reiter „Hefteinträge“ in den Blick holen. Die
+  // Liste nimmt den Fokus selbst (NoteList liest den Ruf, sobald sie steht); verwaiste Rufe aus einem
+  // anderen Reiter räumt SubjectPage hier ab, solange das Hefteintrags-Panel nicht offen ist.
+  useEffect(() => {
+    if (!rueckkehrZiel.current) return;
+    zielRef.current?.scrollIntoView({ block: 'nearest' });
+    const panelOffen = document.querySelector('[aria-label="Hefteinträge"]') !== null;
+    if (window.sessionStorage.getItem(listenRuf) === '1' && !panelOffen) {
+      window.sessionStorage.removeItem(listenRuf);
+    }
+  });
   const subject = findSubject(subjectId);
   const group = groupId ? subject?.groups.find((entry) => entry.id === groupId) : undefined;
   if (!subject || (groupId && !group)) return <NotFoundPage />;
@@ -152,7 +178,11 @@ export function SubjectPage({
 
       {!group && !builtin && <UpcomingExams subjectId={subject.id} />}
 
-      <section className="mt-10 border-t border-line-warm pt-6">
+      <section
+        ref={zielRef}
+        id="hefte-eintraege-bereich"
+        className="mt-10 border-t border-line-warm pt-6 scroll-mt-20"
+      >
         <Tabs
           label={m.notes.tabs}
           tabs={[

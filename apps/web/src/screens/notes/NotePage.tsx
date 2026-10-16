@@ -3,7 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { ApiError } from '../../api/client';
 import type { Note } from '../../api/types';
 import { format, messages as m } from '../../i18n';
-import { navigate } from '../../router';
+import { navigate, pageKey } from '../../router';
 import { useSession } from '../../session/SessionProvider';
 import { Button } from '../../ui/Button';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
@@ -247,6 +247,15 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
     groupId: group?.id ?? null,
     tab: 'notes',
   } as const;
+  // Rückweg zur Hefteintrags-Liste (M4-T017): Der Chronik-Eintrag der Fachseite wird als „kehrt zu den
+  // Hefteinträgen zurück“ markiert; zugleich bekommt die Liste den Ruf, den Fokus zu übernehmen, sobald
+  // sie steht. SubjectPage nimmt die Markierung vor dem Bildlauf nach oben auf (router.ts, M4-T004) und
+  // holt den Reiter „Hefteinträge“ in den Blick. Nur die beiden Rückwege des Editors markieren.
+  const zurueckMarkieren = () => {
+    const ziel = pageKey({ name: 'subject', subjectId, groupId: group?.id ?? null, tab: 'notes' });
+    window.sessionStorage.setItem(`pagewise.rueck.${ziel}`, 'notes');
+    window.sessionStorage.setItem(`pagewise.ul-focus.${ziel}`, '1');
+  };
   const titleInvalid = title.trim() === '' || [...title.trim()].length > 120;
   const e = m.notes.editor;
 
@@ -282,6 +291,7 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
       }
     }
     dirty.current = false;
+    zurueckMarkieren();
     navigate(backTo);
   }
 
@@ -301,6 +311,7 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
       <h1 className="sr-only">{title.trim() === '' ? m.notes.untitled : title.trim()}</h1>
       <Link
         to={backTo}
+        onClick={zurueckMarkieren}
         className="mo-press mt-2 inline-flex min-h-11 items-center gap-1.5 text-sm"
         aria-label={`${e.back}: ${group?.name ?? subject.name}`}
       >
