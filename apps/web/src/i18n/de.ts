@@ -498,6 +498,7 @@ export const de = {
         'Automatische Prüfung: Diese Blöcke in deiner letzten Antwort ließen sich nicht zeichnen.',
       item: '- {kind} {n}: {text} ({code}{detail})',
       outro: 'Bitte gib die Antwort noch einmal vollständig aus und korrigiere nur diese Blöcke.',
+      hinweis: 'Automatisch von Pagewise gesendet',
     },
     imageOmitted: 'Bild ausgelassen: {alt}',
     imageOmittedNoAlt: 'Bild ausgelassen',

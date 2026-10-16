@@ -91,9 +91,21 @@ export const MessageItem = memo(function MessageItem({
   }
 
   if (message.role === 'user') {
+    // Eine automatisch gesendete Korrektur wird als solche gekennzeichnet (M4-T026): kurzer Hinweis aus
+    // den Texten über der Blase, damit sie nicht wie eine gewöhnliche Nachricht der Nutzerin aussieht.
+    const korrektur = message.content.startsWith(m.chat.autoFix.prefix);
     return (
-      <article className="flex justify-end">
+      <article className="flex flex-col items-end">
         <h2 className="sr-only">{m.chat.you}</h2>
+        {korrektur && (
+          <p
+            role="note"
+            data-autofix-hinweis="true"
+            className="mb-1 max-w-[84%] text-meta text-ink-muted"
+          >
+            {m.chat.autoFix.hinweis}
+          </p>
+        )}
         <p className="max-w-[84%] rounded-[14px_14px_4px_14px] border border-line-warm bg-paper px-4 py-3 text-[1.0313rem] leading-relaxed break-words whitespace-pre-wrap">
           {message.content}
         </p>
