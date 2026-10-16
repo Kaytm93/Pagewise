@@ -8,15 +8,18 @@
  * bewegen sich. Die Parallaxe des Lichts (--px, --py) setzt ui/parallax.ts, nur mit Maus und nur in Stufe „Voll“.
  */
 
+/* Die Parallaxe setzt ui/parallax.ts per CSSOM auf .lg-app; gelesen wird sie erst im
+   .lg-app::after und in den Keyframes raum-breathe. Pseudo-Elemente erben registrierte
+   Eigenschaften nur mit inherits: true (M4-T018, Muster: --glow in motion.css). */
 @property --px {
   syntax: "<number>";
-  inherits: false;
+  inherits: true;
   initial-value: 0;
 }
 
 @property --py {
   syntax: "<number>";
-  inherits: false;
+  inherits: true;
   initial-value: 0;
 }
 
@@ -32,7 +35,6 @@
   --heft-shadow:
     0 38px 48px -28px rgba(60, 40, 15, 0.5), 0 16px 22px -14px rgba(60, 40, 15, 0.32),
     0 2px 3px rgba(60, 40, 15, 0.2);
-  --win: color-mix(in srgb, var(--subj) 12%, var(--light));
 }
 
 :root[data-design="raum"][data-theme="dark"] {
@@ -64,6 +66,13 @@
 }
 
 @layer components {
+  /* Fensterlicht in der Fachfarbe: --win gehört an .lg-app (Muster: --glow in lagen.css), damit
+     var(--subj) die Fachfarbe des offenen Faches ist und nicht der neutrale Ton der Wurzel (M4-T018).
+     Ohne Übergang definiert — Farbwechsel beim Fachwechsel bleiben sofortig (S-DEC-01 offen). */
+  :root[data-design="raum"] .lg-app {
+    --win: color-mix(in srgb, var(--subj) 12%, var(--light));
+  }
+
   /* ===== Schreibtisch: Verlauf von oben nach unten, Körnung, Wandlicht in der Fachfarbe ===== */
   :root[data-design="raum"] .lg-app::before {
     background:
