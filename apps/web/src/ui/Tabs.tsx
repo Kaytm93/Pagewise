@@ -77,15 +77,27 @@ export function Tabs<T extends string>({
           );
         })}
       </div>
-      <div
-        role="tabpanel"
-        id={`${idOf(value)}-panel`}
-        aria-labelledby={`${idOf(value)}-tab`}
-        tabIndex={-1}
-        className="outline-none"
-      >
-        {panel}
-      </div>
+      {/* Alle Panels bleiben im Baum und klappen mit dem hidden-Attribut zu (gleiche Lage wie in der
+          Seitenleiste, F-073): jedes aria-controls zeigt dauerhaft auf ein vorhandenes Ziel, auch das
+          der nicht gewählten Reiter. Der Inhalt gehört dem gewählten Reiter und wird dort eingesetzt;
+          das Umschalten mountet ihn neu, wie bisher. Kein Autor-Stil greift hier auf display ein
+          (nur outline-none), darum gilt das UA-Versteck sicher. */}
+      {tabs.map((tab) => {
+        const selected = tab.value === value;
+        return (
+          <div
+            key={tab.value}
+            role="tabpanel"
+            id={`${idOf(tab.value)}-panel`}
+            aria-labelledby={`${idOf(tab.value)}-tab`}
+            hidden={!selected}
+            tabIndex={-1}
+            className="outline-none"
+          >
+            {selected ? panel : null}
+          </div>
+        );
+      })}
     </div>
   );
 }
