@@ -193,7 +193,7 @@ export const MessageItem = memo(function MessageItem({
             (noteState.status === 'saved' ? (
               <Link
                 to={{ name: 'note', subjectId: saveNote.subjectId, noteId: noteState.id }}
-                className="inline-flex min-h-11 items-center gap-1.5 px-3 text-sm"
+                className="inline-flex min-h-11 items-center gap-2 px-3"
               >
                 <Check aria-hidden="true" className="size-4" />
                 {m.notes.openSaved}
