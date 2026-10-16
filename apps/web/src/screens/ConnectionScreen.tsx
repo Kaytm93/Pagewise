@@ -44,13 +44,16 @@ export function ConnectionScreen({
   }, [retrying]);
 
   if (busy && !retrying) {
+    // Dieselbe Richtungshülle wie der Fehlerzustand (AuthLayout ohne Karte): Die Grundfläche
+    // (.lg-app mit Verlauf/Körnung der Richtung) steht schon beim Prüfen und springt beim
+    // Übergang zur Anmeldung nicht. (auth.json#4)
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-workspace px-4">
+      <AuthLayout>
         <p role="status" className="flex items-center gap-2 text-ink-secondary">
           <Loader2 aria-hidden="true" className="size-4 animate-spin" />
           {m.connection.loading}
         </p>
-      </main>
+      </AuthLayout>
     );
   }
   return (

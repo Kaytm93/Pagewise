@@ -99,4 +99,20 @@ describe('Verbindung: „Erneut versuchen“ behält den Fokus, ohne zu flackern
     const retry = screen.getByRole('button', { name: 'Erneut versuchen' });
     expect(document.activeElement).toBe(retry);
   });
+
+  it('zeigt den Ladezustand in derselben Richtungshülle wie den Fehlerzustand', () => {
+    // Beim Übergang Verbindung → Anmeldung darf die Grundfläche nicht springen: Lade- und
+    // Fehlerzustand teilen sich .lg-app (auth.json#4), im Browser gemessen.
+    const { unmount } = render(<ConnectionScreen state="loading" onRetry={() => {}} />);
+    expect(document.querySelector('.lg-app')).not.toBeNull();
+    const loadingMain = document.querySelector('.lg-app main');
+    expect(screen.getByRole('status').textContent).toBe('Verbindung wird geprüft …');
+    expect(loadingMain?.className).not.toContain('bg-workspace');
+    const loadingClasses = loadingMain?.className;
+    unmount();
+
+    render(<ConnectionScreen state="unreachable" onRetry={() => {}} />);
+    const errorMain = document.querySelector('.lg-app main');
+    expect(errorMain?.className).toBe(loadingClasses);
+  });
 });

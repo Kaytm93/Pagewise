@@ -7,7 +7,8 @@ export function AuthLayout({
   lead,
   children,
 }: {
-  title: string;
+  /** Ohne Titel (z. B. Ladezustand) bleibt die Karte leer; Überschrift entfällt dann. */
+  title?: string;
   lead?: string;
   children: ReactNode;
 }) {
@@ -19,7 +20,11 @@ export function AuthLayout({
             {m.app.name}
           </p>
           <div className="lg-sheet p-6 sm:p-8">
-            <h1 className="font-heading text-3xl tracking-tight text-ink sm:text-title">{title}</h1>
+            {title && (
+              <h1 className="font-heading text-3xl tracking-tight text-ink sm:text-title">
+                {title}
+              </h1>
+            )}
             {lead && <p className="mt-3 text-ink-secondary">{lead}</p>}
             <div className="mt-6">{children}</div>
           </div>
