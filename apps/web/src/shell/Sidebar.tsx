@@ -7,7 +7,7 @@ import {
   Plus,
   Settings,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { Subject } from '../api/types';
 import { messages as m } from '../i18n';
 import { type Route, useRoute } from '../router';
@@ -23,8 +23,18 @@ const rowBase =
   'lg-nav-item flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-[10px] border border-transparent pr-3 pl-3.5 text-ink-secondary no-underline';
 const rowActive = 'font-medium text-ink';
 
+// Aufgeklappte Fächer der Leiste — bewusst außerhalb der Komponente (F-073): Die Schublade mountet
+// die Leiste bei jedem Öffnen neu (AppShell), ein lokaler Zustand würde darum beim Schließen kippen.
+// Das aktive Fach kommt hinzu, sobald eine Leisten-Instanz es sieht; zugeklappt wird nur per Knopf.
+let openGroups = new Set<string>();
+
 function isActive(route: Route, subjectId: string, groupId: string | null): boolean {
   return route.name === 'subject' && route.subjectId === subjectId && route.groupId === groupId;
+}
+
+/** Hebt das Aufklappen eines Fachs über die Instanz hinaus (Schublade aus/ein). */
+function addOpenGroup(id: string) {
+  openGroups = new Set(openGroups).add(id);
 }
 
 /** Ein Fach als Zeile, aufklappbar zu den Untergruppen. Das eingebaute Fach „Standard“ bekommt ein eigenes Symbol. */
@@ -41,7 +51,7 @@ function SubjectRow({
   onToggle: () => void;
   onNavigate?: () => void;
 }) {
-  const panelId = `groups-${subject.id}`;
+  const panelId = useId();
   const active = isActive(route, subject.id, null);
   const inChat = (route.name === 'chat' || route.name === 'note') && route.subjectId === subject.id;
   return (
@@ -67,6 +77,7 @@ function SubjectRow({
         {subject.groups.length > 0 ? (
           <button
             type="button"
+            id={`${panelId}-knopf`}
             onClick={onToggle}
             aria-expanded={expanded}
             aria-controls={panelId}
@@ -84,30 +95,33 @@ function SubjectRow({
           <span aria-hidden="true" className="size-11 shrink-0" />
         )}
       </div>
-      {expanded && subject.groups.length > 0 && (
-        <ul
-          id={panelId}
-          className="mt-0.5 ml-[1.625rem] space-y-0.5 border-l border-line-warm pl-2"
-        >
-          {subject.groups.map((group) => {
-            const groupActive = isActive(route, subject.id, group.id);
-            return (
-              <li key={group.id}>
-                <Link
-                  to={{ name: 'subject', subjectId: subject.id, groupId: group.id }}
-                  onClick={onNavigate}
-                  aria-current={groupActive ? 'page' : undefined}
-                  className={`${rowBase} ${groupActive ? rowActive : ''} text-sm`}
-                >
-                  <span title={group.name} className="truncate">
-                    {group.name}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {/* Das Panel bleibt im Baum und klappt mit dem hidden-Attribut zu (F-073): aria-controls zeigt
+          dauerhaft auf ein vorhandenes Ziel, und Wer-hier-was-Listen treffen die Untergruppen. Kein
+          Autor-Stil färbt hier auf display ein (UL ohne lg-*), darum greift das UA-Versteck sicher. */}
+      <ul
+        id={panelId}
+        aria-labelledby={`${panelId}-knopf`}
+        hidden={!expanded}
+        className="mt-0.5 ml-[1.625rem] space-y-0.5 border-l border-line-warm pl-2"
+      >
+        {subject.groups.map((group) => {
+          const groupActive = isActive(route, subject.id, group.id);
+          return (
+            <li key={group.id}>
+              <Link
+                to={{ name: 'subject', subjectId: subject.id, groupId: group.id }}
+                onClick={onNavigate}
+                aria-current={groupActive ? 'page' : undefined}
+                className={`${rowBase} ${groupActive ? rowActive : ''} text-sm`}
+              >
+                <span title={group.name} className="truncate">
+                  {group.name}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </li>
   );
 }
@@ -124,21 +138,25 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       ? route.subjectId
       : null;
   const [creating, setCreating] = useState(false);
-  const [open, setOpen] = useState<Set<string>>(
-    () => new Set(activeSubjectId ? [activeSubjectId] : []),
-  );
+  const [open, setOpen] = useState<Set<string>>(() => {
+    // Frisch gemountete Leiste (Schublade): der gemerkte Zustand bleibt; das aktive Fach liegt offen,
+    // der nachfolgende Effekt holt es nach, wenn diese Instanz es zuerst sieht.
+    return new Set(activeSubjectId ? [...openGroups, activeSubjectId] : openGroups);
+  });
 
-  // Das aktive Fach ist immer aufgeklappt, auch nach einem Sprung über einen Link.
+  // Das aktive Fach ist immer aufgeklappt, auch nach einem Sprung über einen Link — und es bleibt
+  // über das Ende der Instanz hinaus gemerkt (Schublade schließen und wieder öffnen, F-073).
   useEffect(() => {
-    if (activeSubjectId) setOpen((current) => new Set(current).add(activeSubjectId));
+    if (activeSubjectId) addOpenGroup(activeSubjectId);
   }, [activeSubjectId]);
 
   function toggle(id: string) {
-    setOpen((current) => {
-      const next = new Set(current);
-      if (!next.delete(id)) next.add(id);
-      return next;
-    });
+    // Nächsten Zustand aus dem aktuellen berechnen (kein Nebeneffekt im Updater: Updater können
+    // doppelt laufen, z. B. im StrictMode der Entwicklung).
+    const next = new Set(open);
+    if (!next.delete(id)) next.add(id);
+    openGroups = next;
+    setOpen(next);
   }
 
   const row = (subject: Subject) => (
