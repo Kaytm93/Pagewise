@@ -71,7 +71,7 @@ export const MessageItem = memo(function MessageItem({
   onRetryViaApi,
   saveNote,
 }: Props) {
-  const { copied, copy } = useCopy();
+  const { copyState, copy } = useCopy();
   const [noteState, setNoteState] = useState<
     | { status: 'idle' }
     | { status: 'saving' }
@@ -161,18 +161,31 @@ export const MessageItem = memo(function MessageItem({
       {!live && (
         <div className="mt-2 -ml-3 flex flex-wrap items-center gap-x-1 text-meta text-ink-muted">
           {hasText && (
-            <button
-              type="button"
-              onClick={() => void copy(message.content)}
-              aria-label={m.chat.copy}
-              className="inline-flex size-11 items-center justify-center rounded-control hover:bg-paper hover:text-ink"
-            >
-              {copied ? (
-                <Check aria-hidden="true" className="size-4" />
-              ) : (
-                <Copy aria-hidden="true" className="size-4" />
-              )}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => void copy(message.content)}
+                aria-label={m.chat.copy}
+                className="inline-flex size-11 items-center justify-center rounded-control hover:bg-paper hover:text-ink"
+              >
+                {copyState === 'copied' ? (
+                  <Check aria-hidden="true" className="size-4" />
+                ) : (
+                  <Copy aria-hidden="true" className="size-4" />
+                )}
+              </button>
+              {/* Eine kleine Live-Region je Kopieren-Kontext (nie am ganzen Container): Erfolg
+                  meldet sich unsichtbar, der Fehler steht sichtbar im Knopfreihen, damit auch
+                  sehende Nutzerinnen erfahren, warum nichts in der Zwischenablage landete. */}
+              <span aria-live="polite" className="contents">
+                {copyState === 'copied' && <span className="sr-only">{m.chat.copied}</span>}
+                {copyState === 'failed' && (
+                  <span role="status" className="px-3 text-danger">
+                    {m.chat.copyFailed}
+                  </span>
+                )}
+              </span>
+            </>
           )}
           {hasText &&
             saveNote &&

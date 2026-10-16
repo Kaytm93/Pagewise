@@ -489,6 +489,7 @@ export const de = {
     retryViaApi: 'Mit API-Modell erneut',
     copy: 'Antwort kopieren',
     copied: 'Kopiert',
+    copyFailed: 'Kopieren nicht möglich',
     copyCode: 'Code kopieren',
     autoFix: {
       prefix: 'Automatische Prüfung:',

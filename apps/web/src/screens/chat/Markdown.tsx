@@ -34,7 +34,7 @@ function textOf(node: ReactNode): string {
 }
 
 function CodeBlock({ children }: { children?: ReactNode }) {
-  const { copied, copy } = useCopy();
+  const { copyState, copy } = useCopy();
   const code = textOf(children).replace(/\n$/, '');
   return (
     <div className="group relative my-4">
@@ -47,12 +47,22 @@ function CodeBlock({ children }: { children?: ReactNode }) {
         aria-label={m.chat.copyCode}
         className="absolute top-1 right-1 inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-sheet hover:text-ink"
       >
-        {copied ? (
+        {copyState === 'copied' ? (
           <Check aria-hidden="true" className="size-4" />
         ) : (
           <Copy aria-hidden="true" className="size-4" />
         )}
       </button>
+      {/* Live-Region nur für das Kopieren dieses Blocks: Erfolg unsichtbar, der Fehler steht
+          im Blockfluss (kein Überlappen des Codes), sonst erführe man den Fehlschlag nicht. */}
+      <span aria-live="polite" className="contents">
+        {copyState === 'copied' && <span className="sr-only">{m.chat.copied}</span>}
+        {copyState === 'failed' && (
+          <span role="status" className="mt-2 block text-sm text-danger">
+            {m.chat.copyFailed}
+          </span>
+        )}
+      </span>
     </div>
   );
 }
