@@ -210,3 +210,51 @@ describe('Editor-Kopf: Werkzeuge einklappbar, ab Werk zu (M4-T007)', () => {
     expect(nachKopf.trim()).toBe('');
   });
 });
+
+/*
+ * Stichwörter zeigen ihre Grenzen (M4-T016, notes#09): Der Dauertext nennt beide Grenzen (10 ×
+ * 30 Zeichen, wie der Server in routes/notes.ts per Zod verlangt), Übermaß wird über aria-invalid
+ * + Grenz-Meldung sichtbar gemacht und beim Verlassen des Feldes sichtbar abgeglichen. Feld und
+ * Meldung tragen mindestens 16 px Schrift (iOS-Safari zoomt kleinere Felder beim Fokussieren,
+ * notes#17) und hängen zusammen (aria-describedby).
+ */
+describe('Stichwörter: Grenzen sichtbar, Abgleich beim Verlassen (M4-T016, notes#09)', () => {
+  function stichwortbereich() {
+    const quelle = read('screens/notes/NotePage.tsx');
+    const start = quelle.indexOf('id="note-tags"');
+    return quelle.slice(quelle.lastIndexOf('<input', start), quelle.indexOf('</div>', start));
+  }
+
+  it('der Dauertext nennt beide Grenzen wie die Server-Validierung (10 × 30 Zeichen)', () => {
+    const hinweis = read('i18n/de.ts');
+    expect(hinweis).toContain(
+      "tagsHint: 'Mit Komma getrennt. Bis zu 10 Stichwörter, je höchstens 30 Zeichen.',",
+    );
+    expect(hinweis).toContain("tagsLimit: 'Überzähliges fällt beim Verlassen des Feldes weg.',");
+    // Feld und Meldung sind verbunden (Screenreader hört die Meldung mit).
+    const bereich = stichwortbereich();
+    expect(bereich).toContain('note-tags-hint');
+    expect(bereich).toContain('note-tags-limit');
+  });
+
+  it('das Feld trägt 16-px-Schrift und der Abgleich hängt am Verlassen des Feldes', () => {
+    const bereich = stichwortbereich();
+    // Die 16-px-Regel für Eingabefelder (notes#17) nagelt die DATEIEN-Schleife oben schon fest;
+    // hier steht der Abgleich selbst: blur + Grenz-Meldung über aria-invalid.
+    expect(bereich).toContain('text-base');
+    expect(bereich).toContain('onBlur={stichwoerterAnpassen}');
+    expect(bereich).toContain('aria-invalid={stichwoerterZuViel');
+  });
+
+  it('kein style-Attribut im Stichwortbereich (CSP), Grenz-Rahmen über aria-invalid-Klassen', () => {
+    const bereich = stichwortbereich();
+    expect(bereich).not.toMatch(/style=\{/);
+    expect(bereich).toContain('aria-invalid:border-danger');
+  });
+
+  it('die Zahl in der Zusammenfassung zählt die gespeicherten Stichwörter (nach dem Abgleich)', () => {
+    const quelle = read('screens/notes/NotePage.tsx');
+    expect(quelle).toContain('format(m.notes.editor.toolsShow, { count: stichwoerter.length })');
+    expect(quelle).toContain('format(m.notes.editor.toolsHide, { count: stichwoerter.length })');
+  });
+});

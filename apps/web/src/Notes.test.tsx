@@ -406,6 +406,84 @@ describe('Editor', () => {
     expect(server.notes[0]?.tags).toEqual(['Eins', 'Zwei', 'Drei']);
   });
 
+  it('nennt die Stichwort-Grenzen und gleicht beim Verlassen sichtbar ab (notes#09)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { title: 'Titel' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    await user.click(await screen.findByText('Stichwörter und Einfügen (0)'));
+    const stichfeld = screen.getByRole('textbox', { name: 'Stichwörter' }) as HTMLInputElement;
+
+    // Der Dauertext nennt beide Grenzen (Auftrag: „Bis zu 10 Stichwörter, je höchstens 30 Zeichen“).
+    expect(
+      screen.getByText('Mit Komma getrennt. Bis zu 10 Stichwörter, je höchstens 30 Zeichen.'),
+    ).toBeTruthy();
+
+    // Innerhalb der Grenzen: keine Grenz-Meldung.
+    await user.type(stichfeld, 'Eins, Zwei');
+    expect(screen.queryByText('Überzähliges fällt beim Verlassen des Feldes weg.')).toBeNull();
+
+    // Über der Grenze: die Meldung erscheint schon beim Schreiben, das Feld meldet die Grenze.
+    await user.type(stichfeld, ', Drei, Vier, Fünf, Sechs, Sieben, Acht, Neun, Zehn, Elf');
+    expect(screen.getByText('Überzähliges fällt beim Verlassen des Feldes weg.')).toBeTruthy();
+    expect(stichfeld.getAttribute('aria-invalid')).toBe('true');
+
+    // Verlassen: das Feld zeigt genau das, was gespeichert wird — elf Eingaben, zehn Stichwörter.
+    await user.tab();
+    expect(stichfeld.value).toBe('Eins, Zwei, Drei, Vier, Fünf, Sechs, Sieben, Acht, Neun, Zehn');
+    expect(screen.queryByText('Überzähliges fällt beim Verlassen des Feldes weg.')).toBeNull();
+    expect(stichfeld.getAttribute('aria-invalid')).toBeNull();
+  });
+
+  it('passt beim Verlassen zu lange und doppelte Stichwörter sichtbar an (notes#09)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { title: 'Titel' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    await user.click(await screen.findByText('Stichwörter und Einfügen (0)'));
+    const stichfeld = screen.getByRole('textbox', { name: 'Stichwörter' }) as HTMLInputElement;
+
+    // 31 Zeichen: die Grenz-Meldung erscheint beim Schreiben, das 31. Zeichen fällt beim Verlassen weg.
+    const lang = `${'a'.repeat(30)}X`;
+    await user.type(stichfeld, `${lang}, Mol, mol`);
+    expect(screen.getByText('Überzähliges fällt beim Verlassen des Feldes weg.')).toBeTruthy();
+    await user.tab();
+    expect(stichfeld.value).toBe(`${'a'.repeat(30)}, Mol`);
+    expect(screen.queryByText('Überzähliges fällt beim Verlassen des Feldes weg.')).toBeNull();
+
+    // Gespeichert ist genau das sichtbar Abgeglichene.
+    await waitFor(
+      () => expect(server.calls('PATCH', `/api/notes/${note.id}`).length).toBeGreaterThan(0),
+      {
+        timeout: 4000,
+      },
+    );
+    expect(server.notes[0]?.tags).toEqual(['a'.repeat(30), 'Mol']);
+  });
+
+  it('schickt durch den Abgleich beim Verlassen nichts Neues (Autospeicher unverändert)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { title: 'Titel', tags: ['Eins', 'Zwei'] });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    await user.click(await screen.findByText('Stichwörter und Einfügen (2)'));
+    const stichfeld = screen.getByRole('textbox', { name: 'Stichwörter' }) as HTMLInputElement;
+    expect(stichfeld.value).toBe('Eins, Zwei');
+
+    // Verlassen ohne Änderung: kein Speichern.
+    await user.tab();
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(0);
+
+    // Nur die Form ändert sich (Leerraum am Ende): der Abgleich rückt sie zurecht, gespeichert
+    // wird trotzdem nicht — die Stichwörter sind unverändert.
+    await user.type(stichfeld, ' ');
+    await user.tab();
+    expect(stichfeld.value).toBe('Eins, Zwei');
+    expect(screen.getByText('Gespeichert')).toBeTruthy();
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(0);
+    expect(server.notes[0]?.tags).toEqual(['Eins', 'Zwei']);
+  });
+
   it('meldet einen fehlgeschlagenen Speichervorgang, ohne die Eingabe zu verlieren', async () => {
     const { server, subject } = setup();
     const note = server.addNote(subject.id, { markdown: '' });

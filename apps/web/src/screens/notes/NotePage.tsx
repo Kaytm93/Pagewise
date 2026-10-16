@@ -57,6 +57,23 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
   // nativ über das details-Attribut; die echte Oberkante misst der Echtbrowser (pw/agents/m4-t007).
   const [werkzeugeOffen, setWerkzeugeOffen] = useState(false);
   const stichwoerter = useMemo(() => parseTags(tagsText), [tagsText]);
+  // Grenzen des Stichwortfelds sichtbar machen (notes#09): Überzähliges wird beim Speichern still
+  // gekürzt — die Eingabe meldet die Grenze schon beim Schreiben, beim Verlassen des Feldes steht
+  // drin, was gespeichert wird (10 × 30 Zeichen, ohne Doppelte). Rein visuell: der Autospeicher
+  // vergleicht selbst und schickt durch den Abgleich nichts Neues.
+  const stichwortTeile = tagsText
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part !== '');
+  const stichwoerterZuViel =
+    stichwortTeile.length > 10 ||
+    stichwortTeile.some((part) => part.length > 30) ||
+    stichwoerter.length < stichwortTeile.length;
+  const stichwoerterAnpassen = () => {
+    const gespeichert = parseTags(tagsText).join(', ');
+    if (tagsText === gespeichert) return;
+    setTagsText(gespeichert);
+  };
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
@@ -403,13 +420,22 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
               id="note-tags"
               value={tagsText}
               onChange={(event) => setTagsText(event.target.value)}
+              onBlur={stichwoerterAnpassen}
               autoComplete="off"
-              aria-describedby="note-tags-hint"
-              className="mt-1.5 min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink transition-shadow duration-[var(--t-med)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none"
+              aria-invalid={stichwoerterZuViel || undefined}
+              aria-describedby={
+                stichwoerterZuViel ? 'note-tags-hint note-tags-limit' : 'note-tags-hint'
+              }
+              className="mt-1.5 min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink transition-shadow duration-[var(--t-med)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none aria-invalid:border-danger aria-invalid:focus:border-danger aria-invalid:focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--danger)_22%,transparent)]"
             />
             <p id="note-tags-hint" className="mt-1 text-sm text-ink-muted">
               {e.tagsHint}
             </p>
+            {stichwoerterZuViel && (
+              <p id="note-tags-limit" role="status" className="mt-1 text-sm text-danger">
+                {e.tagsLimit}
+              </p>
+            )}
           </div>
 
           <div
