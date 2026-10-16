@@ -11,6 +11,7 @@ import { NotFoundPage } from '../screens/NotFoundPage';
 import { SettingsPage } from '../screens/SettingsPage';
 import { SubjectPage } from '../screens/SubjectPage';
 import { startParallax } from '../ui/parallax';
+import { Sheet } from '../ui/Sheet';
 import { subjectColorAttr } from '../ui/subject-color';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { Drawer } from './Drawer';
@@ -43,9 +44,11 @@ function Page({ route }: { route: Route }) {
       return (
         <Suspense
           fallback={
-            <p role="status" className="mx-auto max-w-3xl px-4 py-8 text-ink-secondary">
-              {m.notes.editor.loading}
-            </p>
+            <Sheet width="wide">
+              <p role="status" className="text-ink-secondary">
+                {m.notes.editor.loading}
+              </p>
+            </Sheet>
           }
         >
           <NotePage key={route.noteId} subjectId={route.subjectId} noteId={route.noteId} />
@@ -55,9 +58,11 @@ function Page({ route }: { route: Route }) {
       return (
         <Suspense
           fallback={
-            <p role="status" className="mx-auto max-w-3xl px-4 py-8 text-ink-secondary">
-              {m.chat.loading}
-            </p>
+            <Sheet flush>
+              <p role="status" className="text-ink-secondary">
+                {m.chat.loading}
+              </p>
+            </Sheet>
           }
         >
           <ChatPage key={route.chatId} subjectId={route.subjectId} chatId={route.chatId} />
