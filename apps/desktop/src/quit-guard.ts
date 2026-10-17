@@ -22,3 +22,19 @@ export function describeQuit(status: QuitStatus | null): { needsConfirm: boolean
     detail: [...lines, m.dialogs.quitDetailBase].join('\n\n'),
   };
 }
+
+/** Text der Rückfrage vor dem Neustart für ein Update: was dabei unterbrochen wird und was danach passiert. */
+export function describeRestart(status: QuitStatus | null): string {
+  const lines: string[] = [];
+  if (status && status.activeChats > 0) {
+    lines.push(
+      status.activeChats === 1
+        ? m.dialogs.quitRunningOne
+        : format(m.dialogs.quitRunningMany, { count: status.activeChats }),
+    );
+  }
+  if (status && status.sessions > 0) {
+    lines.push(format(m.dialogs.quitSessions, { count: status.sessions }));
+  }
+  return [...lines, m.update.restartDialog.detail].join('\n\n');
+}

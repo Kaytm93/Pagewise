@@ -16,6 +16,13 @@ describe('IPC mit Hüllen-Fenstern', () => {
       openTailscale: 'pagewise:connect:open-tailscale',
       openAdmin: 'pagewise:connect:open-admin',
       openDownload: 'pagewise:connect:open-download',
+      getUpdateView: 'pagewise:update:get-view',
+      checkUpdate: 'pagewise:update:check',
+      startUpdate: 'pagewise:update:start',
+      cancelUpdate: 'pagewise:update:cancel',
+      restartForUpdate: 'pagewise:update:restart',
+      setUpdateAutoCheck: 'pagewise:update:set-auto-check',
+      showUpdateLog: 'pagewise:update:show-log',
     });
   });
 

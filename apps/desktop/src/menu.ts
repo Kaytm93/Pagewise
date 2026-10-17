@@ -19,14 +19,24 @@ export interface MenuActions {
   resetPasscode(): void;
   openDocs(): void;
   restartServer(): void;
+  checkForUpdates(): void;
   quit(): void;
 }
+
+/** Beschriftung des Menüpunkts für Updates: Er zeigt, ob es etwas Neues gibt oder gerade etwas läuft. */
+export type UpdateLabelKey =
+  | 'checkForUpdates'
+  | 'updateAvailable'
+  | 'updateWorking'
+  | 'updateReady'
+  | 'updateFailed';
 
 export interface MenuState {
   keepAwake: boolean;
   openAtLogin: boolean;
   loginSupported: boolean;
   setupPending: boolean;
+  updateLabel: UpdateLabelKey;
 }
 
 /** Tastenkürzel der App. Ein Test hält sie fest. */
@@ -54,6 +64,7 @@ export function buildMenuTemplate(
     label: m.app.name,
     submenu: [
       { role: 'about', label: m.menu.about },
+      { label: m.menu[state.updateLabel], click: () => actions.checkForUpdates() },
       { type: 'separator' },
       {
         label: m.menu.settings,

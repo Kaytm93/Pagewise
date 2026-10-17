@@ -37,6 +37,7 @@ describe('Einstellungen der Hülle', () => {
       zoomLevel: 1,
       keepAwake: false,
       tailscaleServe: false,
+      checkUpdatesOnStart: false,
     });
     expect(statSync(file).mode & 0o777).toBe(0o600);
     expect(readFileSync(file, 'utf8').endsWith('\n')).toBe(true);
@@ -62,6 +63,7 @@ describe('Einstellungen der Hülle', () => {
       zoomLevel: ZOOM_MAX,
       keepAwake: true,
       tailscaleServe: false,
+      checkUpdatesOnStart: false,
     });
     expect(parseSettings({ zoomLevel: -99 }).zoomLevel).toBe(ZOOM_MIN);
     expect(parseSettings({ zoomLevel: Number.NaN }).zoomLevel).toBe(0);
@@ -82,11 +84,20 @@ describe('Einstellungen der Hülle', () => {
     const store = new SettingsStore(file);
     store.update({ keepAwake: false, ...({ geheim: 'x' } as object) });
     expect(Object.keys(JSON.parse(readFileSync(file, 'utf8'))).sort()).toEqual([
+      'checkUpdatesOnStart',
       'keepAwake',
       'tailscaleServe',
       'windowBounds',
       'zoomLevel',
     ]);
+  });
+
+  it('sucht nur nach Updates, wenn die Person es ausdrücklich eingeschaltet hat', () => {
+    expect(DEFAULT_SETTINGS.checkUpdatesOnStart).toBe(false);
+    expect(parseSettings({ checkUpdatesOnStart: 'ja' }).checkUpdatesOnStart).toBe(false);
+    const store = new SettingsStore(file);
+    store.update({ checkUpdatesOnStart: true });
+    expect(new SettingsStore(file).read().checkUpdatesOnStart).toBe(true);
   });
 
   it('übersteht einen nicht beschreibbaren Ort', () => {

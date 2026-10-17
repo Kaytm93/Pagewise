@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeQuit } from './quit-guard';
+import { describeQuit, describeRestart } from './quit-guard';
 
 describe('Beenden', () => {
   it('fragt nicht nach, wenn niemand angemeldet ist und nichts läuft (oder der Server nicht antwortet)', () => {
@@ -26,5 +26,23 @@ describe('Beenden', () => {
     const { detail } = describeQuit({ activeChats: 1, sessions: 1 });
     expect(detail).toContain('iPhone und iPad');
     expect(detail).toContain('Cmd+W');
+  });
+});
+
+describe('Neustart für ein Update', () => {
+  it('nennt laufende Antworten und Anmeldungen und erklärt den Ablauf', () => {
+    const detail = describeRestart({ activeChats: 2, sessions: 1 });
+    expect(detail).toContain('2 Antworten laufen noch');
+    expect(detail).toContain('Angemeldet: 1');
+    expect(detail).toContain('startet von selbst wieder');
+    expect(detail).toContain('iPhone und iPad');
+  });
+
+  it('erklärt den Ablauf auch ohne Server oder ohne laufende Antworten', () => {
+    for (const status of [null, { activeChats: 0, sessions: 0 }]) {
+      const detail = describeRestart(status);
+      expect(detail).toContain('startet von selbst wieder');
+      expect(detail).not.toContain('Antwort');
+    }
   });
 });

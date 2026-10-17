@@ -39,6 +39,11 @@ export const de = {
     resetPasscode: 'Passcode zurücksetzen …',
     docs: 'Anleitung öffnen',
     restartServer: 'Server neu starten',
+    checkForUpdates: 'Nach Updates suchen …',
+    updateAvailable: 'Update verfügbar …',
+    updateWorking: 'Update wird vorbereitet …',
+    updateReady: 'Update bereit: neu starten …',
+    updateFailed: 'Update gescheitert …',
   },
   tray: {
     tooltip: 'Pagewise',
@@ -46,6 +51,124 @@ export const de = {
     copyAddress: 'Tailscale-Adresse kopieren',
     noAddress: 'Tailscale-Adresse (noch nicht eingerichtet)',
     quit: 'Pagewise beenden',
+  },
+  update: {
+    windowTitle: 'Nach Updates suchen',
+    title: 'Pagewise aktualisieren',
+    intro:
+      'Pagewise holt die neueste Fassung von GitHub, baut sie auf diesem Mac, prüft sie und ersetzt dann die App. Deine Daten bleiben dabei unberührt. Es passiert nie etwas ohne deinen Klick.',
+    installedLabel: 'Installiert',
+    newLabel: 'Neu',
+    versionUnknown: 'unbekannt',
+    localChanges: 'mit lokalen Änderungen gebaut',
+    changesLabel: 'Was neu ist',
+    moreChanges: 'und {count} weitere',
+    changesUnknown: 'Die Änderungen werden nach dem Herunterladen angezeigt.',
+    stepsLabel: 'Fortschritt',
+    detailsLabel: 'Ausgabe',
+    autoCheck: 'Beim Start nach Updates suchen',
+    autoCheckNote:
+      'Dann fragt Pagewise beim Start kurz bei GitHub nach. Installiert wird auch dann nie von selbst.',
+    untouched: 'Die installierte App und deine Daten sind unverändert.',
+    stages: {
+      idle: {
+        title: 'Pagewise aktualisieren',
+        body: 'Prüfe, ob es eine neuere Fassung gibt.',
+      },
+      checking: {
+        title: 'Suche nach Updates …',
+        body: 'Pagewise fragt bei GitHub nach der neuesten Fassung.',
+      },
+      'up-to-date': {
+        title: 'Pagewise ist auf dem neuesten Stand',
+        body: 'Zuletzt geprüft: {time} Uhr.',
+      },
+      available: {
+        title: 'Ein Update ist verfügbar',
+        body: 'Pagewise holt die neue Fassung, baut sie auf diesem Mac und prüft sie. Das dauert einige Minuten. Du kannst Pagewise währenddessen weiter benutzen und dieses Fenster schließen.',
+      },
+      working: {
+        title: 'Update wird vorbereitet',
+        body: 'Das dauert einige Minuten. Pagewise bleibt solange benutzbar, die laufende App wird erst am Ende ersetzt.',
+      },
+      ready: {
+        title: 'Das Update ist bereit',
+        body: 'Die neue Fassung ist gebaut und geprüft. Zum Installieren startet Pagewise neu. iPhone und iPad sind dabei kurz nicht verbunden.',
+      },
+      failed: {
+        title: 'Das Update ist gescheitert',
+        body: '',
+      },
+      unsupported: {
+        title: 'Updates sind hier nicht möglich',
+        body: '',
+      },
+    },
+    steps: {
+      fetch: 'Neue Fassung holen',
+      install: 'Pakete installieren',
+      build: 'App bauen',
+      verify: 'App prüfen',
+    },
+    stepOf: 'Schritt {current} von {total}',
+    actions: {
+      check: 'Nach Updates suchen',
+      recheck: 'Erneut prüfen',
+      start: 'Jetzt aktualisieren',
+      cancel: 'Abbrechen',
+      restart: 'Neu starten und aktualisieren',
+      'retry-check': 'Erneut versuchen',
+      'retry-start': 'Erneut versuchen',
+      'show-log': 'Protokoll zeigen',
+    },
+    results: {
+      cancelled: 'Abgebrochen.',
+      restarting: 'Pagewise startet neu …',
+    },
+    unsupported: {
+      platform: 'Updates in der App gibt es nur auf dem Mac.',
+      dev: 'Das ist eine Entwicklungsfassung (mit Electron aus dem Quelltext gestartet). Sie ersetzt sich nicht selbst: Hole die neue Fassung im Quelltext-Ordner mit „git pull“ und starte sie neu.',
+      bundle: 'Die App liegt nicht in einem normalen App-Paket und kann sich nicht ersetzen.',
+      translocated:
+        'macOS hat die App in einen geschützten Bereich verschoben („App Translocation“). Ziehe Pagewise einmal in den Ordner „Programme“ oder in „~/Applications“ und öffne sie von dort.',
+      'not-writable':
+        'Pagewise darf den Ordner, in dem die App liegt, nicht ändern. Verschiebe die App nach „~/Applications“ (in deinen Benutzerordner) oder aktualisiere im Terminal mit „pnpm app:mac“.',
+    },
+    errors: {
+      unsupported: 'Auf diesem System ist kein Update möglich.',
+      'no-git':
+        'Git wurde nicht gefunden. Installiere die Entwicklerwerkzeuge von Apple (im Terminal „xcode-select --install“) und versuche es noch einmal.',
+      'no-tools':
+        'Node.js oder pnpm wurden nicht gefunden. Baue Pagewise einmal im Terminal mit „pnpm app:mac“ neu: Danach merkt sich die App die Werkzeuge.',
+      network:
+        'GitHub ist gerade nicht erreichbar. Prüfe die Internetverbindung und versuche es noch einmal.',
+      'git-failed': 'Git konnte die neue Fassung nicht holen. Die Ausgabe zeigt, woran es lag.',
+      'install-failed':
+        'Die Pakete ließen sich nicht installieren. Die Ausgabe zeigt, woran es lag.',
+      'build-failed': 'Das Bauen der App ist gescheitert. Die Ausgabe zeigt, woran es lag.',
+      'verify-failed': 'Die gebaute App hat die Prüfung nicht bestanden.',
+      'smoke-failed': 'Die neue App startet nicht richtig (Rauchtest fehlgeschlagen).',
+      'disk-space': 'Es ist zu wenig Speicherplatz frei: Das Bauen braucht rund 2 GB.',
+      cancelled: 'Abgebrochen.',
+      'not-ready':
+        'Die vorbereitete Fassung gibt es nicht mehr. Bereite das Update noch einmal vor.',
+      'handoff-failed': 'Der Austausch ließ sich nicht starten.',
+    },
+    restartDialog: {
+      title: 'Pagewise jetzt neu starten?',
+      detail:
+        'Pagewise beendet sich, setzt die neue Fassung ein und startet von selbst wieder. Das dauert etwa eine halbe Minute. In dieser Zeit erreichen iPhone und iPad Pagewise nicht.',
+      confirm: 'Neu starten und aktualisieren',
+    },
+    done: {
+      title: 'Pagewise wurde aktualisiert',
+      failedTitle: 'Das Update ließ sich nicht einsetzen',
+      failedDetail: 'Die bisherige App läuft weiter. Grund: {reason}',
+    },
+    availableNotice: {
+      title: 'Update für Pagewise verfügbar',
+      body: 'Klicke hier, um es zu installieren.',
+    },
   },
   server: {
     stopped: 'Server gestoppt',

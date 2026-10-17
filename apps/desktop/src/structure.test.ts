@@ -213,13 +213,18 @@ describe('Verbindungsfenster und Preload', () => {
   });
 
   it('jeder Kanal des Preloads hat einen Handler, der den Absender prüft', () => {
-    const window = read('connect-window.ts');
-    expect(window).toContain('isTrustedSender(event.senderFrame?.url');
-    expect(window).toContain('event.sender === this.window.webContents');
+    const windows = [read('connect-window.ts'), read('update-window.ts')];
+    for (const window of windows) {
+      expect(window).toContain('isTrustedSender(event.senderFrame?.url');
+      expect(window).toContain('event.sender === this.window.webContents');
+    }
     for (const channel of preload.matchAll(/CHANNELS\.(\w+)/g)) {
       const name = channel[1] ?? '';
       if (name === 'getStatus') continue;
-      expect(window, name).toContain(`CHANNELS.${name}`);
+      expect(
+        windows.some((window) => window.includes(`CHANNELS.${name}`)),
+        name,
+      ).toBe(true);
     }
   });
 
@@ -324,5 +329,158 @@ describe('Packen und Verteilen (Stufe 1)', () => {
     expect(code).not.toMatch(/osxSign\s*:|osxNotarize\s*:/);
     expect(code).not.toMatch(/process\.env\.(APPLE|CSC|NOTARY)/);
     expect(code).not.toMatch(/dangerously|skip-permissions/);
+  });
+});
+
+describe('Updates (D-057)', () => {
+  const updateSources = all.filter(
+    (f) =>
+      /[\\/]update[\\/]/.test(f.path) &&
+      f.path.endsWith('.ts') &&
+      !f.path.endsWith('test-support.ts'),
+  );
+  const page = read('shell/update/update.js');
+  const pageHtml = read('shell/update/update.html');
+  const css = read('shell/update/update.css');
+  const updateWindow = read('update-window.ts');
+
+  it('führt Programme nie über eine Shell aus und baut keine Befehle aus Text', () => {
+    expect(updateSources.length).toBeGreaterThan(0);
+    for (const { path, text } of [
+      ...updateSources,
+      { path: 'update-window.ts', text: updateWindow },
+    ]) {
+      const code = stripComments(text);
+      expect(code, path).not.toMatch(
+        /shell:\s*true|(?<![.\w])exec\(|execSync\(|execFileSync\(|spawnSync\(/,
+      );
+      expect(code, path).not.toMatch(/['"`](?:\/bin\/)?(?:ba|z)?sh['"`]/);
+      expect(code, path).not.toMatch(/\bsh -c|bash -c|zsh -c|-ilc/);
+    }
+    // Der einzige `spawn` der App für den Helfer: Argumentliste, losgelöst, ohne Ausgabe, mit eigener Umgebung.
+    const spawns = [
+      ...stripComments(main).matchAll(/spawn\(spec\.command, spec\.args, \{([\s\S]*?)\}\)/g),
+    ];
+    expect(spawns).toHaveLength(1);
+    const options = spawns[0]?.[1] ?? '';
+    expect(options).toContain('env: spec.env');
+    expect(options).toContain('detached: true');
+    expect(options).toContain("stdio: 'ignore'");
+    expect(options).not.toContain('shell');
+  });
+
+  it('nennt die Quelle nur über die Konstanten aus config.ts, nirgends sonst eine Adresse', () => {
+    const config = read('config.ts');
+    expect(config).toContain("UPDATE_REPO_URL = 'https://github.com/Kaytm93/Pagewise.git'");
+    expect(config).toContain("UPDATE_BRANCH = 'main'");
+    expect(stripComments(main)).toMatch(/repoUrl: UPDATE_REPO_URL,\s*branch: UPDATE_BRANCH,/);
+    for (const { path, text } of updateSources) {
+      expect(stripComments(text), path).not.toMatch(/https?:\/\/(?!example\.org)/);
+    }
+  });
+
+  it('gibt den Update-Programmen nie die ganze Umgebung der App', () => {
+    for (const { path, text } of updateSources) {
+      expect(stripComments(text), path).not.toMatch(/process\.env/);
+    }
+    expect(stripComments(main)).toMatch(/source: process\.env,\s*home: app\.getPath\('home'\)/);
+  });
+
+  it('läuft nur auf Klick: Auch das Nachsehen beim Start hängt an einer Einstellung, die aus ist', () => {
+    const settings = read('settings-store.ts');
+    expect(settings).toMatch(/checkUpdatesOnStart: false/);
+    const body = main.slice(main.indexOf('async function autoCheckForUpdates'));
+    expect(body.slice(0, 200)).toContain('checkUpdatesOnStart');
+    // Installiert wird nur über `restart` nach Rückfrage, nie aus dem Nachsehen heraus.
+    const controller = read('update/controller.ts');
+    const check = controller.slice(
+      controller.indexOf('async check('),
+      controller.indexOf('private applyCheck'),
+    );
+    expect(check).not.toMatch(/prepare|handoff|spawnDetached|quit\(/);
+  });
+
+  it('fragt vor dem Neustart nach und beendet die App erst nach dem Start des Helfers', () => {
+    const controller = stripComments(read('update/controller.ts'));
+    const restart = controller.slice(
+      controller.indexOf('async restart('),
+      controller.indexOf('// --- Sonstiges'),
+    );
+    const confirm = restart.indexOf('confirmRestart');
+    const handoff = restart.indexOf('handoff(');
+    const spawn = restart.indexOf('spawnDetached');
+    const quit = restart.indexOf('this.deps.quit()');
+    expect(confirm).toBeGreaterThan(-1);
+    expect(confirm).toBeLessThan(handoff);
+    expect(handoff).toBeLessThan(spawn);
+    expect(spawn).toBeLessThan(quit);
+  });
+
+  it('die Seite baut alles mit textContent und createElement, nie aus Text mit Markup', () => {
+    const code = stripComments(page);
+    expect(code).not.toMatch(
+      /innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\(|new Function|\.style\b|setAttribute\(\s*['"]style|\.cssText/,
+    );
+    expect(code).toContain('textContent');
+    expect(code).toContain('replaceChildren');
+  });
+
+  it('die Seite hat eine strenge CSP, kein Inline-Skript und keine Inline-Styles', () => {
+    const csp = /Content-Security-Policy"\s+content="([^"]+)"/.exec(pageHtml)?.[1] ?? '';
+    expect(csp).toContain("default-src 'none'");
+    expect(csp).toContain("script-src 'self'");
+    expect(csp).not.toMatch(/unsafe-inline|unsafe-eval|\*/);
+    expect(pageHtml).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>|\sstyle="|<style[\s>]/);
+  });
+
+  it('nur die Statuszeile meldet sich, der Seitencontainer nicht', () => {
+    expect(pageHtml).not.toMatch(/<main[^>]*aria-live/);
+    expect(stripComments(page)).toMatch(
+      /setAttribute\(\s*['"]aria-live['"],\s*['"]polite['"]\s*\)/,
+    );
+  });
+
+  it('Knöpfe und Kästchen sind groß genug (44 px, Kästchen 24 px)', () => {
+    const block = (selector: string) =>
+      css.slice(css.indexOf(selector), css.indexOf('}', css.indexOf(selector)));
+    expect(block('button {')).toMatch(/min-height:\s*(4[4-9]|[5-9]\d|1\d{2,})px/);
+    expect(block('.option {')).toMatch(/min-height:\s*(4[4-9]|[5-9]\d|1\d{2,})px/);
+    expect(block('.option input {')).toMatch(/width:\s*24px/);
+  });
+
+  it('das Fenster hat die Hüllen-Optionen und lässt keine Navigation zu', () => {
+    expect(updateWindow).toContain('buildShellWindowOptions(');
+    expect(updateWindow).toMatch(/will-navigate', \(event\) => event\.preventDefault\(\)/);
+    expect(updateWindow).toMatch(/setWindowOpenHandler\(\(\) => \(\{ action: 'deny' \}\)\)/);
+  });
+
+  it('die Seite kann nichts vorgeben: Der Preload reicht nur einen Wahrheitswert weiter', () => {
+    const preload = read('preload.ts');
+    for (const fn of [
+      'checkUpdate',
+      'startUpdate',
+      'cancelUpdate',
+      'restartForUpdate',
+      'showUpdateLog',
+    ]) {
+      expect(preload, fn).toMatch(new RegExp(`${fn}: \\(\\): Promise<unknown> =>`));
+    }
+    expect(preload).toMatch(/setUpdateAutoCheck: \(enabled: boolean\)/);
+    expect(updateWindow).toContain('enabled === true');
+  });
+
+  it('der Helfer wird aus dem Arbeitsordner gestartet, nicht aus der App, die er ersetzt', () => {
+    const service = read('update/service.ts');
+    expect(service).toContain("join(paths.repo, 'scripts', 'apply-update.mjs')");
+  });
+
+  it('der Knopf der Oberfläche und die Hülle meinen dieselbe Adresse und die Hülle fängt sie ab', () => {
+    const web = readFileSync(join(src, '..', '..', 'web', 'src', 'ui', 'desktop-app.ts'), 'utf8');
+    const path = /DESKTOP_UPDATE_PATH = '([^']+)'/.exec(web)?.[1];
+    expect(path).toBe('/__pagewise/update');
+    expect(read('config.ts')).toContain(`UPDATE_PATH = '${path}'`);
+    const code = stripComments(main);
+    expect(code).toMatch(/decision\.action === 'update'\) showUpdates\(\)/g);
+    expect([...code.matchAll(/decision\.action === 'update'/g)]).toHaveLength(2);
   });
 });

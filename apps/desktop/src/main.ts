@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -29,13 +30,16 @@ import {
   TAILSCALE_ADMIN_MACHINES_URL,
   TAILSCALE_APP_PATH,
   TAILSCALE_DOWNLOAD_URL,
+  UPDATE_BRANCH,
+  UPDATE_DIRNAME,
+  UPDATE_REPO_URL,
   WINDOW_DATA_DIRNAME,
 } from './config';
 import { ConnectController } from './connect-controller';
 import { ConnectWindow, connectWindowDir } from './connect-window';
 import { uniqueDownloadPath } from './downloads';
 import { ERASE_DATA_TYPES, ERASE_PATH, isEraseSuccess } from './erase-hook';
-import { messages as m } from './i18n';
+import { format, messages as m } from './i18n';
 import { CHANNELS, isTrustedSender } from './ipc';
 import { KeepAwake } from './keep-awake';
 import { type LoginItemApi, readLoginItem, setOpenAtLogin, shouldStartHidden } from './login-item';
@@ -43,7 +47,7 @@ import { buildMenuTemplate, type MenuActions } from './menu';
 import { decideNavigation, decideWindowOpen, routeUrl } from './navigation';
 import { installPermissionPolicy } from './permissions';
 import { applyPrivacySwitches } from './privacy';
-import { describeQuit } from './quit-guard';
+import { describeQuit, describeRestart } from './quit-guard';
 import { buildServerEnv } from './server-env';
 import { fitBounds, SettingsStore, ZOOM_MAX, ZOOM_MIN } from './settings-store';
 import { buildDesktopStatus, type DesktopStatus } from './status';
@@ -52,6 +56,13 @@ import { realExec } from './tailscale/cli';
 import type { Inspection } from './tailscale/service';
 import { TailscaleService } from './tailscale/service';
 import { buildTrayMenuTemplate } from './tray-menu';
+import { parseBuildInfoText, shortCommit } from './update/build-info';
+import { UpdateController } from './update/controller';
+import { realUpdateFs } from './update/fs';
+import { spawnRunner } from './update/runner';
+import { UpdateService, updatePaths } from './update/service';
+import { updateMenuKey } from './update/view';
+import { UpdateWindow } from './update-window';
 import { buildWindowOptions } from './window-options';
 
 // Hauptprozess der Mac-App. Die Logik steckt in kleinen, einzeln getesteten Modulen; diese Datei verdrahtet sie
@@ -247,6 +258,7 @@ function createMainWindow(): BrowserWindow {
     if (decision.action === 'allow') return;
     event.preventDefault();
     if (decision.action === 'external') void shell.openExternal(decision.url);
+    else if (decision.action === 'update') showUpdates();
   };
   contents.on('will-navigate', (event) => guard(event, event.url));
   contents.on('will-redirect', (event) => guard(event, event.url));
@@ -256,6 +268,7 @@ function createMainWindow(): BrowserWindow {
     if (decision.action === 'external') void shell.openExternal(decision.url);
     else if (decision.action === 'download') contents.downloadURL(decision.url);
     else if (decision.action === 'navigate') void win.loadURL(decision.url);
+    else if (decision.action === 'update') showUpdates();
     return { action: 'deny' };
   });
 
@@ -437,6 +450,127 @@ const connectWindow = new ConnectWindow(
   () => mainWindow,
 );
 
+// --- Updates (D-057) -------------------------------------------------------------------------------
+// Nach Updates sucht die App nur auf Klick (oder beim Start, wenn die Person es eingeschaltet hat) und installiert nie
+// von selbst. Die Quelle ist eine feste Adresse (`config.ts`). Gebaut wird auf diesem Mac, ersetzt wird die App erst,
+// wenn sie beendet ist, und zwar vom Helfer `scripts/apply-update.mjs` (siehe `update/service.ts`).
+
+const updateFs = realUpdateFs();
+const buildInfo = parseBuildInfoText(
+  updateFs.readText(join(process.resourcesPath, 'build-info.json')),
+);
+const updateService = new UpdateService({
+  runner: spawnRunner(),
+  fs: updateFs,
+  source: process.env,
+  home: app.getPath('home'),
+  platform: process.platform,
+  arch: process.arch === 'x64' ? 'x64' : 'arm64',
+  isPackaged: app.isPackaged,
+  execPath: process.execPath,
+  buildInfo,
+  // Arbeitsordner im Cache von macOS (wegwerfbar, nicht Teil von Sicherungen); es gibt Updates nur auf dem Mac.
+  paths: updatePaths(join(app.getPath('home'), 'Library', 'Caches', UPDATE_DIRNAME)),
+  repoUrl: UPDATE_REPO_URL,
+  branch: UPDATE_BRANCH,
+});
+
+const updateController = new UpdateController({
+  service: updateService,
+  settings: {
+    autoCheck: () => store.read().checkUpdatesOnStart,
+    setAutoCheck: (enabled) => {
+      store.update({ checkUpdatesOnStart: enabled });
+    },
+  },
+  runningStatus: async () =>
+    supervisor.getSnapshot().state === 'running' ? supervisor.serverStatus() : null,
+  confirmRestart: async (status) => {
+    const parent = updateWindow.parentWindow();
+    const options = {
+      type: 'warning' as const,
+      message: m.update.restartDialog.title,
+      detail: describeRestart(status),
+      buttons: [m.update.restartDialog.confirm, m.dialogs.cancel],
+      defaultId: 1,
+      cancelId: 1,
+    };
+    const result = parent
+      ? await dialog.showMessageBox(parent, options)
+      : await dialog.showMessageBox(options);
+    return result.response === 0;
+  },
+  spawnDetached: async (spec) => {
+    // Ohne Shell, mit Argumentliste und knapper Umgebung; der Helfer überlebt das Beenden dieser App.
+    const child = spawn(spec.command, spec.args, {
+      env: spec.env,
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    await new Promise<void>((resolve, reject) => {
+      child.once('spawn', () => resolve());
+      child.once('error', reject);
+    });
+    child.unref();
+  },
+  quit: () => {
+    quitting = true;
+    app.quit();
+  },
+  revealLog: (path) => shell.showItemInFolder(path),
+  pid: process.pid,
+  changed: () => rebuildMenus(),
+});
+
+const updateWindow = new UpdateWindow(
+  updateController,
+  { shellDir, preload: join(__dirname, 'preload.cjs') },
+  () => mainWindow,
+);
+
+/** Öffnet das Update-Fenster; ein erstes Nachsehen startet von selbst, solange noch nichts geprüft wurde. */
+function showUpdates(): void {
+  updateWindow.show();
+  if (updateController.stage === 'idle') void updateController.check('manual');
+}
+
+let notifiedUpdate: string | null = null;
+
+/** Nachsehen im Hintergrund (nur wenn eingeschaltet). Meldet ein Update einmal pro Fassung, installiert nichts. */
+async function autoCheckForUpdates(): Promise<void> {
+  if (smokeTest || !store.read().checkUpdatesOnStart) return;
+  if (updateController.stage !== 'idle' && updateController.stage !== 'up-to-date') return;
+  await updateController.check('auto');
+  const view = updateController.getView();
+  const commit = view.facts.find((fact) => fact.label === m.update.newLabel)?.value ?? null;
+  if (updateController.updatePending && commit !== notifiedUpdate) {
+    notifiedUpdate = commit;
+    const note = new Notification({
+      title: m.update.availableNotice.title,
+      body: m.update.availableNotice.body,
+    });
+    note.on('click', () => showUpdates());
+    note.show();
+  }
+}
+
+/** Nach dem Neustart: Hat der Helfer die neue Fassung eingesetzt (oder nicht), sagt die App es einmal. */
+function announceUpdateResult(): void {
+  const result = updateController.consumeResult();
+  if (!result) return;
+  if (result.ok) {
+    new Notification({ title: m.update.done.title, body: result.message }).show();
+  } else {
+    void dialog.showMessageBox({
+      type: 'warning',
+      message: m.update.done.failedTitle,
+      detail: format(m.update.done.failedDetail, { reason: result.message }),
+      buttons: [m.dialogs.ok],
+    });
+  }
+}
+
 /**
  * Liest den Zustand von Tailscale (für das Menüleisten-Symbol), warnt einmal pro Start, wenn Funnel an ist, und stellt
  * eine früher von der App eingerichtete Freigabe wieder her (idempotent). Eine Freigabe, die die Person nie eingerichtet
@@ -496,6 +630,7 @@ const actions: MenuActions & { copyAddress(): void; openWindow(): void } = {
   resetPasscode: () => void resetPasscode(),
   openDocs: () => void shell.openExternal(DOCS_URL),
   restartServer: () => void supervisor.restart(),
+  checkForUpdates: () => showUpdates(),
   quit: () => void confirmQuit(),
   copyAddress: () => {
     if (tailscale.view?.address) clipboard.writeText(tailscale.view.address);
@@ -513,6 +648,7 @@ function rebuildMenus(): void {
         openAtLogin: login.enabled,
         loginSupported: login.supported,
         setupPending: lastServerStatus?.setupPending ?? false,
+        updateLabel: updateMenuKey(updateController.stage),
       }),
     ),
   );
@@ -522,6 +658,7 @@ function rebuildMenus(): void {
         server: supervisor.getSnapshot(),
         keepAwake: settings.keepAwake,
         address: tailscale.view?.address ?? null,
+        updateLabel: updateMenuKey(updateController.stage),
       }),
     ),
   );
@@ -583,6 +720,8 @@ function installEraseHook(): void {
 let startHidden = false;
 
 async function smoke(): Promise<void> {
+  // Der Rauchtest läuft auch neben einer laufenden Pagewise (Update): kein zweites Symbol im Dock.
+  app.dock?.hide();
   let ok = false;
   let reason = 'unbekannt';
   try {
@@ -660,6 +799,15 @@ if (smokeTest) {
     installEraseHook();
 
     startHidden = shouldStartHidden(readLoginItem(loginApi, process.platform), process.argv);
+    const version = shortCommit(buildInfo.commit);
+    if (version) {
+      app.setAboutPanelOptions({
+        applicationName: APP_NAME,
+        applicationVersion: version,
+        version: buildInfo.builtAt?.slice(0, 10) ?? '',
+        copyright: 'MIT-Lizenz',
+      });
+    }
     createTray();
     supervisor.onChange((snapshot) => {
       rebuildMenus();
@@ -689,6 +837,10 @@ if (smokeTest) {
     rebuildMenus();
     void refreshTailscale();
     setInterval(() => void refreshTailscale(), 60_000).unref();
+    announceUpdateResult();
+    // Erst nach dem Start nachsehen, damit nichts den Start bremst; danach alle sechs Stunden.
+    setTimeout(() => void autoCheckForUpdates(), 20_000).unref();
+    setInterval(() => void autoCheckForUpdates(), 6 * 3_600_000).unref();
     // Laufende Antworten halten den Mac wach, auch bei ausgeschaltetem Schalter.
     setInterval(() => void refreshServerStatus(), 5_000).unref();
   });

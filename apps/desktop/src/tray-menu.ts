@@ -1,6 +1,6 @@
 import type { MenuItemConstructorOptions } from 'electron';
 import { messages as m } from './i18n';
-import { serverLabel } from './menu';
+import { serverLabel, type UpdateLabelKey } from './menu';
 import type { SupervisorSnapshot } from './supervisor';
 
 export interface TrayActions {
@@ -9,6 +9,7 @@ export interface TrayActions {
   copyAddress(): void;
   showConnect(): void;
   restartServer(): void;
+  checkForUpdates(): void;
   quit(): void;
 }
 
@@ -17,6 +18,7 @@ export interface TrayState {
   keepAwake: boolean;
   /** Adresse im Tailnet (`https://…ts.net`), wenn bekannt. */
   address: string | null;
+  updateLabel: UpdateLabelKey;
 }
 
 /** Menü des Menüleisten-Symbols: Serverstatus, Fenster öffnen, Mac wach halten, Adresse kopieren, Beenden. */
@@ -45,6 +47,7 @@ export function buildTrayMenuTemplate(
       ? { label: m.tray.copyAddress, click: () => actions.copyAddress() }
       : { label: m.tray.noAddress, click: () => actions.showConnect() },
     { label: m.menu.connect, click: () => actions.showConnect() },
+    { label: m.menu[state.updateLabel], click: () => actions.checkForUpdates() },
     { type: 'separator' },
     { label: m.tray.quit, click: () => actions.quit() },
   ];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ROUTES } from './config';
+import { ROUTES, UPDATE_PATH } from './config';
 import { decideNavigation, decideWindowOpen, isKnownRoute, routeUrl } from './navigation';
 
 const ORIGIN = 'http://127.0.0.1:3000';
@@ -84,5 +84,21 @@ describe('Bekannte Routen', () => {
     expect(routeUrl(ORIGIN, '/chat')).toBe('http://127.0.0.1:3000/chat');
     expect(() => routeUrl(ORIGIN, '/api/data/erase')).toThrow('Unbekannte Route');
     expect(() => routeUrl(ORIGIN, '//example.org')).toThrow();
+  });
+});
+
+describe('Knopf „Nach Updates suchen“ der Oberfläche (D-057)', () => {
+  it('öffnet das Update-Fenster, statt etwas zu laden', () => {
+    expect(decideNavigation(`${ORIGIN}${UPDATE_PATH}`, ORIGIN)).toEqual({ action: 'update' });
+    expect(decideNavigation(`${ORIGIN}${UPDATE_PATH}?x=1#y`, ORIGIN)).toEqual({ action: 'update' });
+    expect(decideWindowOpen(`${ORIGIN}${UPDATE_PATH}`, ORIGIN)).toEqual({ action: 'update' });
+  });
+
+  it('gilt nur für die eigene Herkunft und genau diesen Pfad', () => {
+    expect(decideNavigation(`https://example.org${UPDATE_PATH}`, ORIGIN)).toMatchObject({
+      action: 'external',
+    });
+    expect(decideNavigation(`${ORIGIN}${UPDATE_PATH}/x`, ORIGIN)).toEqual({ action: 'allow' });
+    expect(decideNavigation(`${ORIGIN}/x${UPDATE_PATH}`, ORIGIN)).toEqual({ action: 'allow' });
   });
 });

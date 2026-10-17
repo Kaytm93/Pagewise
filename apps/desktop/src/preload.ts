@@ -19,5 +19,14 @@ contextBridge.exposeInMainWorld(
     openAdmin: (kind: 'dns' | 'machines'): Promise<unknown> =>
       ipcRenderer.invoke(CHANNELS.openAdmin, kind === 'machines' ? 'machines' : 'dns'),
     openDownload: (): Promise<unknown> => ipcRenderer.invoke(CHANNELS.openDownload),
+    // Update-Fenster: dieselbe Regel. Keine Adresse, kein Befehl, kein Pfad kommt von der Seite.
+    getUpdateView: (): Promise<unknown> => ipcRenderer.invoke(CHANNELS.getUpdateView),
+    checkUpdate: (): Promise<unknown> => ipcRenderer.invoke(CHANNELS.checkUpdate),
+    startUpdate: (): Promise<unknown> => ipcRenderer.invoke(CHANNELS.startUpdate),
+    cancelUpdate: (): Promise<unknown> => ipcRenderer.invoke(CHANNELS.cancelUpdate),
+    restartForUpdate: (): Promise<unknown> => ipcRenderer.invoke(CHANNELS.restartForUpdate),
+    setUpdateAutoCheck: (enabled: boolean): Promise<unknown> =>
+      ipcRenderer.invoke(CHANNELS.setUpdateAutoCheck, enabled === true),
+    showUpdateLog: (): Promise<unknown> => ipcRenderer.invoke(CHANNELS.showUpdateLog),
   }),
 );

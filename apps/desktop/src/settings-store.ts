@@ -10,6 +10,8 @@ export interface DesktopSettings {
   keepAwake: boolean;
   /** Die Person hat die Freigabe über Tailscale Serve mit der App eingerichtet: Die App prüft sie beim Start. */
   tailscaleServe: boolean;
+  /** Beim Start kurz bei GitHub nachfragen, ob es eine neuere Fassung gibt (Voreinstellung aus, D-057). */
+  checkUpdatesOnStart: boolean;
 }
 
 export const DEFAULT_SETTINGS: DesktopSettings = {
@@ -17,6 +19,7 @@ export const DEFAULT_SETTINGS: DesktopSettings = {
   zoomLevel: 0,
   keepAwake: true,
   tailscaleServe: false,
+  checkUpdatesOnStart: false,
 };
 
 export const ZOOM_MIN = -3;
@@ -51,6 +54,10 @@ export function parseSettings(raw: unknown): DesktopSettings {
       typeof value.tailscaleServe === 'boolean'
         ? value.tailscaleServe
         : DEFAULT_SETTINGS.tailscaleServe,
+    checkUpdatesOnStart:
+      typeof value.checkUpdatesOnStart === 'boolean'
+        ? value.checkUpdatesOnStart
+        : DEFAULT_SETTINGS.checkUpdatesOnStart,
   };
 }
 

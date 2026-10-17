@@ -10,6 +10,7 @@ function actions(): TrayActions {
     copyAddress: vi.fn(),
     showConnect: vi.fn(),
     restartServer: vi.fn(),
+    checkForUpdates: vi.fn(),
     quit: vi.fn(),
   };
 }
@@ -24,6 +25,7 @@ describe('Menü des Menüleisten-Symbols', () => {
       server: RUNNING,
       keepAwake: true,
       address: 'https://beispiel.tailnet.ts.net',
+      updateLabel: 'checkForUpdates',
     });
     expect(labels(menu)).toEqual([
       'Server läuft (Port 3000)',
@@ -33,6 +35,7 @@ describe('Menü des Menüleisten-Symbols', () => {
       '—',
       'Tailscale-Adresse kopieren',
       'Mit iPhone und iPad verbinden …',
+      'Nach Updates suchen …',
       '—',
       'Pagewise beenden',
     ]);
@@ -45,16 +48,19 @@ describe('Menü des Menüleisten-Symbols', () => {
       server: RUNNING,
       keepAwake: false,
       address: 'https://x.ts.net',
+      updateLabel: 'checkForUpdates',
     });
     const by = (label: string) => menu.find((i) => i.label === label);
     click(by('Pagewise öffnen'));
     click(by('Tailscale-Adresse kopieren'));
     click(by('Mit iPhone und iPad verbinden …'));
+    click(by('Nach Updates suchen …'));
     click(by('Pagewise beenden'));
     click(by('Mac wach halten'), { checked: true });
     expect(a.openWindow).toHaveBeenCalledTimes(1);
     expect(a.copyAddress).toHaveBeenCalledTimes(1);
     expect(a.showConnect).toHaveBeenCalledTimes(1);
+    expect(a.checkForUpdates).toHaveBeenCalledTimes(1);
     expect(a.quit).toHaveBeenCalledTimes(1);
     expect(a.setKeepAwake).toHaveBeenCalledWith(true);
     expect(by('Mac wach halten')).toMatchObject({ type: 'checkbox', checked: false });
@@ -62,7 +68,12 @@ describe('Menü des Menüleisten-Symbols', () => {
 
   it('bietet ohne bekannte Adresse den Weg zum Einrichten an, statt zu kopieren', () => {
     const a = actions();
-    const menu = buildTrayMenuTemplate(a, { server: RUNNING, keepAwake: true, address: null });
+    const menu = buildTrayMenuTemplate(a, {
+      server: RUNNING,
+      keepAwake: true,
+      address: null,
+      updateLabel: 'checkForUpdates',
+    });
     expect(labels(menu)).not.toContain('Tailscale-Adresse kopieren');
     click(menu.find((i) => i.label === 'Tailscale-Adresse (noch nicht eingerichtet)'));
     expect(a.showConnect).toHaveBeenCalledTimes(1);
@@ -83,6 +94,7 @@ describe('Menü des Menüleisten-Symbols', () => {
       },
       keepAwake: true,
       address: null,
+      updateLabel: 'checkForUpdates',
     });
     expect(labels(menu).slice(0, 3)).toEqual([
       'Server läuft nicht',
@@ -91,5 +103,23 @@ describe('Menü des Menüleisten-Symbols', () => {
     ]);
     click(menu[2]);
     expect(a.restartServer).toHaveBeenCalledTimes(1);
+  });
+
+  it('zeigt am Menüpunkt für Updates, ob es etwas Neues gibt oder gerade etwas läuft', () => {
+    for (const [key, label] of [
+      ['updateAvailable', 'Update verfügbar …'],
+      ['updateWorking', 'Update wird vorbereitet …'],
+      ['updateReady', 'Update bereit: neu starten …'],
+      ['updateFailed', 'Update gescheitert …'],
+    ] as const) {
+      const menu = buildTrayMenuTemplate(actions(), {
+        server: RUNNING,
+        keepAwake: true,
+        address: null,
+        updateLabel: key,
+      });
+      expect(labels(menu)).toContain(label);
+      expect(labels(menu)).not.toContain('Nach Updates suchen …');
+    }
   });
 });

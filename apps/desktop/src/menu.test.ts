@@ -25,6 +25,7 @@ function actions(): MenuActions {
     resetPasscode: vi.fn(),
     openDocs: vi.fn(),
     restartServer: vi.fn(),
+    checkForUpdates: vi.fn(),
     quit: vi.fn(),
   };
 }
@@ -33,6 +34,7 @@ const STATE: MenuState = {
   openAtLogin: false,
   loginSupported: true,
   setupPending: false,
+  updateLabel: 'checkForUpdates',
 };
 
 const items = (menu: MenuItemConstructorOptions): MenuItemConstructorOptions[] =>
@@ -53,6 +55,26 @@ describe('Menü', () => {
       'Fenster',
       'Hilfe',
     ]);
+  });
+
+  it('bietet im Pagewise-Menü „Nach Updates suchen …“ gleich unter „Über Pagewise“ an', () => {
+    const a = actions();
+    const menu = buildMenuTemplate(a, STATE);
+    const app = menu[0] as MenuItemConstructorOptions;
+    expect(
+      items(app)
+        .map((item) => item.label ?? '—')
+        .slice(0, 3),
+    ).toEqual(['Über Pagewise', 'Nach Updates suchen …', '—']);
+    click(find(app, 'Nach Updates suchen …'));
+    expect(a.checkForUpdates).toHaveBeenCalledTimes(1);
+  });
+
+  it('zeigt im Menü, ob ein Update bereitliegt', () => {
+    const menu = buildMenuTemplate(actions(), { ...STATE, updateLabel: 'updateReady' });
+    const app = menu[0] as MenuItemConstructorOptions;
+    expect(find(app, 'Update bereit: neu starten …')).toBeDefined();
+    expect(find(app, 'Nach Updates suchen …')).toBeUndefined();
   });
 
   it('hält die Tastenkürzel fest', () => {

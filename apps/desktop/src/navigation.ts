@@ -1,4 +1,4 @@
-import { type KnownRoute, ROUTES } from './config';
+import { type KnownRoute, ROUTES, UPDATE_PATH } from './config';
 
 /** Was mit einer Navigation oder einem neuen Fenster im Hauptfenster geschehen soll. */
 export type NavigationDecision =
@@ -10,6 +10,8 @@ export type NavigationDecision =
   | { action: 'download'; url: string }
   /** Eine Seite der eigenen Oberfläche, die in diesem Fenster geöffnet wird. */
   | { action: 'navigate'; url: string }
+  /** Der Knopf „Nach Updates suchen“ der Oberfläche: im Fenster nichts laden, das Update-Fenster öffnen. */
+  | { action: 'update' }
   | { action: 'deny' };
 
 function parse(url: string): URL | null {
@@ -24,7 +26,9 @@ function parse(url: string): URL | null {
 export function decideNavigation(url: string, origin: string): NavigationDecision {
   const parsed = parse(url);
   if (!parsed) return { action: 'deny' };
-  if (parsed.origin === origin) return { action: 'allow' };
+  if (parsed.origin === origin) {
+    return parsed.pathname === UPDATE_PATH ? { action: 'update' } : { action: 'allow' };
+  }
   if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
     return { action: 'external', url: parsed.href };
   }
@@ -36,6 +40,7 @@ export function decideWindowOpen(url: string, origin: string): NavigationDecisio
   const parsed = parse(url);
   if (!parsed) return { action: 'deny' };
   if (parsed.origin === origin) {
+    if (parsed.pathname === UPDATE_PATH) return { action: 'update' };
     return parsed.pathname.startsWith('/api/')
       ? { action: 'download', url: parsed.href }
       : { action: 'navigate', url: parsed.href };
