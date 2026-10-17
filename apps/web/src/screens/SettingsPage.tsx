@@ -5,6 +5,7 @@ import { useSession } from '../session/SessionProvider';
 import { readAutoFix, saveAutoFix } from '../ui/autofix';
 import { Button } from '../ui/Button';
 import { type Design, readDesign, saveDesign } from '../ui/design';
+import { isDesktopApp, openDesktopUpdate } from '../ui/desktop-app';
 import { CheckField, PasscodeField } from '../ui/Field';
 import { FieldError } from '../ui/FieldError';
 import { type FxPreference, readFx, saveFx } from '../ui/fx';
@@ -257,6 +258,21 @@ function ChangePasscode() {
   );
 }
 
+/** Nur in der Mac-App: öffnet das Update-Fenster der App (D-057). In jedem anderen Browser erscheint nichts. */
+function DesktopAppSection() {
+  if (!isDesktopApp()) return null;
+  return (
+    <Section title={m.settings.app.title} lead={m.settings.app.lead}>
+      <div className="max-w-xl">
+        <p className="text-sm text-ink-secondary">{m.settings.app.updateHelp}</p>
+        <Button variant="secondary" className="mt-4" onClick={openDesktopUpdate}>
+          {m.settings.app.updateOpen}
+        </Button>
+      </div>
+    </Section>
+  );
+}
+
 function EraseAll() {
   const [open, setOpen] = useState(false);
   return (
@@ -281,6 +297,7 @@ export function SettingsPage() {
         {m.settings.title}
       </h1>
       <div className="mt-8">
+        <DesktopAppSection />
         <Section title={m.settings.appearance.title} lead={m.settings.appearance.lead}>
           <ThemeChoice />
           <DesignChoice />

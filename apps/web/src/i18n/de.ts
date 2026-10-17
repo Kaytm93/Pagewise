@@ -1023,6 +1023,13 @@ export const de = {
   },
   settings: {
     title: 'Einstellungen',
+    app: {
+      title: 'Pagewise-App',
+      lead: 'Diese Seite läuft in der Mac-App von Pagewise. Hier hältst du die App auf dem neuesten Stand.',
+      updateOpen: 'Nach Updates suchen …',
+      updateHelp:
+        'Pagewise holt die neueste Fassung von GitHub, baut sie auf diesem Mac und startet danach neu. Es passiert nichts ohne deinen Klick, deine Daten bleiben unberührt.',
+    },
     tools: {
       title: 'Stundenplan und Tests für die KI',
       lead: 'Die KI kann deinen Stundenplan und deine Tests nachschlagen, zum Beispiel für „Wann schreibe ich den nächsten Test?“.',
