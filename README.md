@@ -40,7 +40,7 @@ Auf dem Mac gibt es eine echte App, die sich selbst baut und in `~/Applications`
 pnpm app:mac
 ```
 
-Mehr dazu, auch zur fertigen App aus der CI und zur Warnung von macOS, in [docs/self-hosting.md](docs/self-hosting.md).
+Danach aktualisierst du die App in der App selbst: Menü **Pagewise → Nach Updates suchen …** (oder Einstellungen → „Pagewise-App“). Mehr dazu, auch zur fertigen App aus der CI und zur Warnung von macOS, in [docs/self-hosting.md](docs/self-hosting.md).
 
 Der Server bindet ausschließlich an die lokale Adresse. Den Zugriff von anderen Geräten richtest du über Tailscale Serve ein, siehe [docs/self-hosting.md](docs/self-hosting.md).
 
