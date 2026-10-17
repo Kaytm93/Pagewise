@@ -1,6 +1,8 @@
 // Seite „Mit iPhone und iPad verbinden“. Sie bekommt vom Hauptprozess ein fertiges Objekt (Texte stehen schon darin)
 // und baut daraus die Anzeige, ausschließlich mit textContent und createElement(NS): kein innerHTML, kein Inline-Style.
-// Der Preload legt nur feste Funktionen in `window.pagewise` (siehe preload.ts).
+// Gleiche Ansichten zeichnen neu ohne Austausch; bei echten Änderungen wird der Baum neu gebaut, dabei bleiben
+// Fokus und der getippte Rechnername erhalten (siehe render). Der Preload legt nur feste Funktionen in
+// `window.pagewise` (siehe preload.ts).
 const api = window.pagewise;
 const root = document.getElementById('app');
 const QR_PATH = /^[MhvzHVZ0-9 .-]*$/;
@@ -52,8 +54,9 @@ async function run(action) {
   working = true;
   try {
     const result = await action();
-    // Aktionen ohne neue Ansicht (Browser öffnen) liefern nichts: dann bleibt alles stehen.
-    if (result) render(result, true);
+    // Aktionen ohne neue Ansicht (Browser öffnen) liefern nichts: dann bleibt alles stehen. render()
+    // zeigt ohnehin nur echte Änderungen an und erhält dabei Fokus und Eingaben.
+    if (result) render(result);
   } catch {
     // Der Hauptprozess hat abgelehnt oder ist weg: nichts anzeigen, nichts raten.
   } finally {
@@ -61,10 +64,42 @@ async function run(action) {
   }
 }
 
-function render(view, force) {
+/** Wohin gehört der Fokus zurück? Eingabefeld über seiner Kennung, Knöpfe über ihrem Text. */
+function focusKey(node) {
+  if (!node || !root.contains(node)) return null;
+  if (node.id === 'hostname') return 'hostname';
+  if (node.tagName === 'BUTTON') return `button:${node.textContent}`;
+  return null;
+}
+
+function findByKey(key) {
+  if (key === 'hostname') return root.querySelector('#hostname');
+  if (key?.startsWith('button:')) {
+    const label = key.slice('button:'.length);
+    const match = [...root.querySelectorAll('button')].find(
+      (button) => button.textContent === label,
+    );
+    return match ?? null;
+  }
+  return null;
+}
+
+function render(view) {
   const json = JSON.stringify(view);
-  if (!force && json === lastJson) return;
+  if (json === lastJson) return;
   lastJson = json;
+
+  // Vor dem Neubau sichern, was der Nutzer gerade hat: den Fokus und den Stand des Rechnernamen-Felds
+  // (getippter Text schlägt den Vorschlag). Danach wiederherstellen, siehe unten.
+  const key = focusKey(document.activeElement);
+  const previousInput = root.querySelector('#hostname');
+  const typed = previousInput
+    ? {
+        value: previousInput.value,
+        start: previousInput.selectionStart,
+        end: previousInput.selectionEnd,
+      }
+    : null;
 
   const children = [];
   children.push(el('h1', '', view.texts.title));
@@ -137,17 +172,26 @@ function render(view, force) {
   children.push(status);
   children.push(el('p', 'note', view.awakeNote));
 
+  // Getippten Stand des Felds bewahren (Vorschlag darf nicht über getippten Text siegen): Wert und
+  // Markierung vor dem Einhängen setzen, sie bleiben am Knoten. Der Fokus gehört erst auf den
+  // eingehängten Baum (vorher ist der Knoten nicht fokussierbar); beides passiert in derselben
+  // Aufgabe, der Zwischenstand „BODY“ wird nie sichtbar.
+  const form = children.find((node) => node.tagName === 'FORM' && node.querySelector('#hostname'));
+  if (form) {
+    const field = form.querySelector('#hostname');
+    if (typed && typed.value !== '') {
+      field.value = typed.value;
+      field.setSelectionRange(typed.start, typed.end);
+    }
+  }
   root.replaceChildren(...children);
+  findByKey(key)?.focus();
 }
 
 async function refresh() {
-  if (
-    working ||
-    (root.contains(document.activeElement) && document.activeElement?.tagName === 'INPUT')
-  )
-    return;
+  if (working) return;
   try {
-    render(await api.getView(), false);
+    render(await api.getView());
   } catch {
     // siehe oben
   }

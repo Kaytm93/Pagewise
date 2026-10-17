@@ -237,6 +237,22 @@ describe('Verbindungsfenster und Preload', () => {
     expect(page).toContain('textContent');
   });
 
+  it('baut nur bei echten Änderungen neu und holt Fokus und getippten Namen zurück', () => {
+    const page = read('shell/connect/connect.js');
+    // Kein erzwungener Baumtausch mehr: Aktion und Refresh gehen durch denselben Abgleich.
+    expect(page).toContain('function render(view)');
+    expect(page).not.toMatch(/render\([^)]*,\s*(?:true|force)\s*\)/);
+    // Fokus-Marke sichern und nach dem Einhängen zurückholen (erst der eingehängte Knoten ist fokussierbar).
+    expect(page).toContain('focusKey(document.activeElement)');
+    const mount = page.indexOf('root.replaceChildren');
+    const restore = page.indexOf('?.focus()');
+    expect(mount).toBeGreaterThan(-1);
+    expect(restore).toBeGreaterThan(mount);
+    // Getippter Text überlebt den Neubau: gespeichert und statt des Vorschlags eingesetzt.
+    expect(page).toContain('typed.value');
+    expect(page).toContain('setSelectionRange');
+  });
+
   it('nur die Statuszeile meldet sich: der Seitencontainer trägt kein aria-live', () => {
     const page = read('shell/connect/connect.html');
     expect(page).toContain('<main id="app">');
