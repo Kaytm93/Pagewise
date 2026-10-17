@@ -12,6 +12,7 @@ import { type FxPreference, readFx, saveFx } from '../ui/fx';
 import { Segmented } from '../ui/Segmented';
 import { Sheet } from '../ui/Sheet';
 import { readTheme, saveTheme, type ThemePreference } from '../ui/theme';
+import { useDesign } from '../ui/useDesign';
 import { AgentSection } from './agents/AgentSection';
 import { commonErrorMessage, rateLimitMessage } from './auth-errors';
 import { EraseDialog } from './EraseDialog';
@@ -20,7 +21,7 @@ import { ProvidersSection } from './providers/ProvidersSection';
 
 function Section({ title, lead, children }: { title: string; lead?: string; children: ReactNode }) {
   return (
-    <section className="border-t border-line py-8 first:border-t-0 first:pt-0">
+    <section className="lg-set-sec border-t border-line py-8 first:border-t-0 first:pt-0">
       <h2 className="font-heading text-xl">{title}</h2>
       {lead && <p className="mt-1 text-ink-secondary">{lead}</p>}
       <div className="mt-5">{children}</div>
@@ -34,7 +35,7 @@ const THEMES: { value: ThemePreference; label: string }[] = [
   { value: 'dark', label: m.settings.appearance.dark },
 ];
 
-function ThemeChoice() {
+function ThemeChoice({ segClassName }: { segClassName?: string }) {
   const [theme, setTheme] = useState<ThemePreference>(() => readTheme());
 
   function choose(value: ThemePreference) {
@@ -48,6 +49,7 @@ function ThemeChoice() {
       options={THEMES}
       value={theme}
       onChange={choose}
+      className={segClassName}
     />
   );
 }
@@ -59,7 +61,7 @@ const DESIGN_CHOICES: { value: Design; label: string }[] = [
 ];
 
 /** Designrichtung: wie die Oberfläche aufgebaut ist (Ordner, Heft oder Atelier). Gilt nur in diesem Browser. */
-function DesignChoice() {
+function DesignChoice({ segClassName }: { segClassName?: string }) {
   const [design, setDesign] = useState<Design>(() => readDesign());
   const d = m.settings.appearance.design;
 
@@ -72,7 +74,13 @@ function DesignChoice() {
     <div className="mt-8">
       <h3 className="font-heading text-lg">{d.title}</h3>
       <p className="mt-1 mb-4 max-w-[52ch] text-sm text-ink-muted">{d.lead}</p>
-      <Segmented legend={d.title} options={DESIGN_CHOICES} value={design} onChange={choose} />
+      <Segmented
+        legend={d.title}
+        options={DESIGN_CHOICES}
+        value={design}
+        onChange={choose}
+        className={segClassName}
+      />
       <p className="mt-3 max-w-[52ch] text-sm text-ink-secondary">{d.help[design]}</p>
     </div>
   );
@@ -86,9 +94,10 @@ const EFFECTS: { value: FxPreference; label: string }[] = [
 ];
 
 /** Wie viel sich bewegt (Effektstufe): „Automatisch“ folgt dem Gerät, sonst gilt die Wahl. */
-function EffectsChoice() {
+function EffectsChoice({ lagen, segClassName }: { lagen: boolean; segClassName?: string }) {
   const [effects, setEffects] = useState<FxPreference>(() => readFx());
   const e = m.settings.appearance.effects;
+  const fx = m.settings.appearance.fx;
 
   function choose(value: FxPreference) {
     setEffects(value);
@@ -99,8 +108,27 @@ function EffectsChoice() {
     <div className="mt-8">
       <h3 className="font-heading text-lg">{e.title}</h3>
       <p className="mt-1 mb-4 max-w-[52ch] text-sm text-ink-muted">{e.lead}</p>
-      <Segmented legend={e.title} options={EFFECTS} value={effects} onChange={choose} />
+      <Segmented
+        legend={e.title}
+        options={EFFECTS}
+        value={effects}
+        onChange={choose}
+        className={segClassName}
+      />
       <p className="mt-3 max-w-[52ch] text-sm text-ink-secondary">{e.help[effects]}</p>
+      {lagen && (
+        <ul className="lg-fx-list">
+          <li>
+            <b>{fx.full.label}</b> {fx.full.text}
+          </li>
+          <li>
+            <b>{fx.reduced.label}</b> {fx.reduced.text}
+          </li>
+          <li>
+            <b>{fx.off.label}</b> {fx.off.text}
+          </li>
+        </ul>
+      )}
     </div>
   );
 }
@@ -290,18 +318,21 @@ function EraseAll() {
 export function SettingsPage() {
   const { logout } = useSession();
   const [leaving, setLeaving] = useState(false);
+  const lagen = useDesign() === 'lagen';
+  const segClassName = lagen ? 'lg-seg-wide' : undefined;
 
   return (
     <Sheet>
+      {lagen && <p className="lg-kicker">{m.settings.kicker}</p>}
       <h1 className="font-heading text-3xl tracking-tight text-balance sm:text-title">
         {m.settings.title}
       </h1>
-      <div className="mt-8">
+      <div className="lg-settings mt-8">
         <DesktopAppSection />
         <Section title={m.settings.appearance.title} lead={m.settings.appearance.lead}>
-          <ThemeChoice />
-          <DesignChoice />
-          <EffectsChoice />
+          <ThemeChoice segClassName={segClassName} />
+          <DesignChoice segClassName={segClassName} />
+          <EffectsChoice lagen={lagen} segClassName={segClassName} />
         </Section>
         <Section title={m.settings.answers.title} lead={m.settings.answers.lead}>
           <AutoFixChoice />

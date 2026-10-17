@@ -1046,6 +1046,7 @@ export const de = {
   },
   settings: {
     title: 'Einstellungen',
+    kicker: 'Pagewise',
     app: {
       title: 'Pagewise-App',
       lead: 'Diese Seite läuft in der Mac-App von Pagewise. Hier hältst du die App auf dem neuesten Stand.',
@@ -1101,6 +1102,20 @@ export const de = {
           full: 'Blätter legen sich auf, Listen blenden gestaffelt ein, Schaltflächen federn.',
           reduced: 'Nur kurze Überblendungen, nichts verschiebt oder dreht sich.',
           off: 'Keine Bewegung.',
+        },
+      },
+      fx: {
+        full: {
+          label: 'Voll.',
+          text: 'Blattwechsel, Federn, gestaffeltes Einblenden.',
+        },
+        reduced: {
+          label: 'Reduziert.',
+          text: 'Nur kurze Überblendungen, keine Wege.',
+        },
+        off: {
+          label: 'Aus.',
+          text: 'Keine Bewegung. Zustände zeigen sich als Text und Symbol.',
         },
       },
     },

@@ -15,11 +15,13 @@ export function Segmented<T extends string>({
   options,
   value,
   onChange,
+  className = '',
 }: {
   legend: string;
   options: Option<T>[];
   value: T;
   onChange: (value: T) => void;
+  className?: string;
 }) {
   const name = useId();
   const root = useRef<HTMLFieldSetElement>(null);
@@ -34,7 +36,7 @@ export function Segmented<T extends string>({
   }, [options.length, index]);
 
   return (
-    <fieldset ref={root} className="lg-seg m-0 min-w-0">
+    <fieldset ref={root} className={`lg-seg m-0 min-w-0 ${className}`}>
       <legend className="sr-only">{legend}</legend>
       {options.map((option) => (
         <label
