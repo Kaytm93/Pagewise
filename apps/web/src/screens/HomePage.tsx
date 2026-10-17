@@ -9,8 +9,11 @@ import { Link } from '../ui/Link';
 import { Sheet } from '../ui/Sheet';
 import { SubjectIcon } from '../ui/SubjectIcon';
 import { subjectColorAttr } from '../ui/subject-color';
+import { useDesign } from '../ui/useDesign';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { AskForm } from './home/AskForm';
+import { RecentChats } from './lagen/RecentChats';
+import { StartGrid } from './lagen/StartGrid';
 import { SubjectDialog } from './SubjectDialog';
 import { groupCount, subjectMeta } from './subject-meta';
 
@@ -22,6 +25,7 @@ const dateFormat = new Intl.DateTimeFormat('de-DE', {
 
 export function HomePage() {
   const { subjects } = useWorkspace();
+  const design = useDesign() ?? 'raum';
   const [creating, setCreating] = useState(false);
   const dialog = creating && <SubjectDialog onClose={() => setCreating(false)} />;
 
@@ -64,8 +68,17 @@ export function HomePage() {
         </p>
       </div>
 
-      <DayLine />
-      <NextUp />
+      {design === 'lagen' ? (
+        <>
+          <StartGrid />
+          <RecentChats />
+        </>
+      ) : (
+        <>
+          <DayLine />
+          <NextUp />
+        </>
+      )}
 
       <section className="mo-rise mo-i-4 mt-12" aria-labelledby="home-subjects">
         <h2

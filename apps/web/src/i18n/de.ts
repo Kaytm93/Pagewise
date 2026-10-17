@@ -255,6 +255,18 @@ export const de = {
       minutesLeft: 'noch {minutes} Min.',
       done: 'vorbei',
     },
+    /** Startseite in der Richtung „Lagen“: Stundenliste, Zettel und „Zuletzt genutzt“. */
+    startGrid: {
+      now: 'Jetzt',
+      minutesLeft: 'noch {minutes} Minuten',
+      done: 'vorbei',
+      openSubject: 'Fach öffnen',
+      examHeading: '{kind} {subject}',
+      topicsOne: '1 Thema',
+      topicsMany: '{count} Themen',
+      moreTopics: 'und {count} weitere',
+      recent: 'Zuletzt genutzt',
+    },
     subjectExams: {
       title: 'Anstehende Tests',
       add: 'Test eintragen',
