@@ -7,7 +7,7 @@ import {
   Plus,
   Settings,
 } from 'lucide-react';
-import { type Ref, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { type Ref, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { Subject } from '../api/types';
 import { messages as m } from '../i18n';
 import { type Route, useRoute } from '../router';
@@ -15,6 +15,7 @@ import { SubjectDialog } from '../screens/SubjectDialog';
 import { Link } from '../ui/Link';
 import { SubjectIcon } from '../ui/SubjectIcon';
 import { subjectColorAttr } from '../ui/subject-color';
+import { useDesign } from '../ui/useDesign';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 
 // Ein Eintrag der Leiste. Der gewählte (aria-current) wird in lagen.css zum aufgelegten Streifen mit Balken
@@ -22,6 +23,10 @@ import { useWorkspace } from '../workspace/WorkspaceProvider';
 const rowBase =
   'lg-nav-item flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-[10px] border border-transparent pr-3 pl-3.5 text-ink-secondary no-underline';
 const rowActive = 'font-medium text-ink';
+
+// Der Eintrag, hinter dem der Streifen liegt (M1-T4): die gewählte Seite oder — im Chat — das Fach,
+// in dem er steht. Ohne Treffer (etwa Einstellungen in der festen Leiste) bleibt der Streifen unsichtbar.
+const markerZiel = '.lg-nav-item[aria-current="page"], .lg-nav-item[data-current="true"]';
 
 // Aufgeklappte Fächer der Leiste — bewusst außerhalb der Komponente (F-073): Die Schublade mountet
 // die Leiste bei jedem Öffnen neu (AppShell), ein lokaler Zustand würde darum beim Schließen kippen.
@@ -136,6 +141,7 @@ function SubjectRow({
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { subjects, defaultSubject } = useWorkspace();
   const route = useRoute();
+  const lagen = useDesign() === 'lagen';
   const activeSubjectId =
     route.name === 'subject' || route.name === 'chat' || route.name === 'note'
       ? route.subjectId
@@ -150,9 +156,44 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   // (shell-home#09), das erneute Rendern einer Instanz mit demselben Eintrag stört den Bildlauf nicht.
   const scrolledFor = useRef<string | null>(null);
   const listeRef = useRef<HTMLDivElement | null>(null);
+  // Der eine Streifen hinter dem aktiven Eintrag (M1-T4). Er liegt im Scrollbereich der Liste, damit
+  // er beim Scrollen mitwandert, und bekommt Versatz und Maße als CSS-Variablen (kein style-Attribut).
+  const markerRef = useRef<HTMLSpanElement | null>(null);
   // Das DOM des aktiven Eintrags hängt am Fach („Standard“ ist immer da), nicht an der Route;
   // das umschließende <li> trägt es, damit Link (ohne ref-Prop) unberührt bleibt.
   const aktiveRef = useRef<HTMLLIElement | null>(null);
+
+  /**
+   * Streifen auf den aktiven Eintrag legen. Gemessen wird gegen die Liste (Versatz plus Scrollstand),
+   * damit `translateY` im Inhalt der Liste gilt und der Streifen beim Scrollen von selbst folgt.
+   * Ein eingeklappter oder ausgeblendeter Eintrag hat keine Höhe und zählt darum nicht.
+   */
+  const messeStreifen = useCallback(() => {
+    const liste = listeRef.current;
+    const marker = markerRef.current;
+    if (!liste || !marker) return;
+    let ziel: HTMLElement | null = null;
+    for (const kandidat of liste.querySelectorAll<HTMLElement>(markerZiel)) {
+      if (kandidat.getBoundingClientRect().height > 0) {
+        ziel = kandidat;
+        break;
+      }
+    }
+    if (!ziel) {
+      marker.style.setProperty('--lg-marker-o', '0');
+      return;
+    }
+    const listeRect = liste.getBoundingClientRect();
+    const zielRect = ziel.getBoundingClientRect();
+    marker.style.setProperty(
+      '--lg-marker-y',
+      `${zielRect.top - listeRect.top + liste.scrollTop}px`,
+    );
+    marker.style.setProperty('--lg-marker-h', `${zielRect.height}px`);
+    marker.style.setProperty('--lg-marker-x', `${zielRect.left - listeRect.left}px`);
+    marker.style.setProperty('--lg-marker-w', `${zielRect.width}px`);
+    marker.style.setProperty('--lg-marker-o', '1');
+  }, []);
 
   // Das aktive Fach ist immer aufgeklappt, auch nach einem Sprung über einen Link — und es bleibt
   // über das Ende der Instanz hinaus gemerkt (Schublade schließen und wieder öffnen, F-073).
@@ -172,6 +213,45 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     scrolledFor.current = schlüssel;
     if (ziel.scrollIntoView) ziel.scrollIntoView({ block: 'nearest' });
   }, [activeSubjectId, route.name]);
+
+  // Der Streifen folgt Ansicht, Aufklappzustand und Fächerliste: nach jedem Rendern neu messen (die
+  // Werte ändern sich nur, wenn sich das Layout ändert). Erst nach dem ersten Anstrich wird der
+  // Übergang freigegeben — die Schublade hängt die Leiste neu ein, der Streifen soll dort sofort
+  // richtig stehen statt von oben einzufahren.
+  useLayoutEffect(() => {
+    if (!lagen) return;
+    messeStreifen();
+    const marker = markerRef.current;
+    if (!marker || marker.dataset.ready === 'true') return;
+    let zweiter = 0;
+    const erster = requestAnimationFrame(() => {
+      zweiter = requestAnimationFrame(() => {
+        marker.dataset.ready = 'true';
+      });
+    });
+    return () => {
+      cancelAnimationFrame(erster);
+      cancelAnimationFrame(zweiter);
+    };
+  });
+
+  // Scrollen und Größenänderungen der Leiste (Fenster, Schublade) verschieben den aktiven Eintrag.
+  useEffect(() => {
+    if (!lagen) return;
+    const liste = listeRef.current;
+    if (!liste) return;
+    const messen = () => messeStreifen();
+    liste.addEventListener('scroll', messen, { passive: true });
+    window.addEventListener('resize', messen);
+    const observer =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => messeStreifen());
+    observer?.observe(liste);
+    return () => {
+      liste.removeEventListener('scroll', messen);
+      window.removeEventListener('resize', messen);
+      observer?.disconnect();
+    };
+  }, [lagen, messeStreifen]);
 
   function toggle(id: string) {
     // Nächsten Zustand aus dem aktuellen berechnen (kein Nebeneffekt im Updater: Updater können
@@ -214,6 +294,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </div>
 
         <div ref={listeRef} className="lg-liste flex-1 overflow-y-auto pr-3 pl-2 pb-4">
+          {lagen && <span ref={markerRef} aria-hidden="true" className="lg-nav-marker" />}
           <ul className="space-y-0.5 pb-3">
             <li className="flex items-center">
               <Link

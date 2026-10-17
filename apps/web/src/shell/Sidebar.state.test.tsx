@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../App';
 import { ApiClient } from '../api/client';
 import { FakeServer } from '../test/fake-server';
@@ -139,4 +139,127 @@ describe('Seitenleiste: Aufklapp-Zustand bleibt, IDs sind eindeutig (F-073)', ()
     pruefeZieleUndIds('Schublade', schublade);
     pruefeZieleUndIds('feste Leiste neben Schublade', feste2);
   });
+});
+
+/*
+ * M1-T4: In „Lagen“ liegt ein einziger Streifen hinter dem aktiven Eintrag, statt dass jeder Eintrag
+ * seinen eigenen Hintergrund mitbringt. jsdom hat kein Layout; dieser Abschnitt misst darum mit einer
+ * festen Rechteck-Attrappe: Der Streifen hängt im Scrollbereich der Liste, ist dekorativ, übernimmt
+ * Versatz und Maße des aktiven Eintrags, bleibt ohne aktiven Eintrag unsichtbar im DOM und existiert
+ * in „Raum“, „Atelier“ und ohne Richtung gar nicht. Das Gleiten selbst (nur transform/opacity, kein
+ * Layout-Sprung) gehört in den Echtbrowser.
+ */
+
+function rechteck(top: number, left: number, width: number, height: number): DOMRect {
+  return {
+    top,
+    left,
+    width,
+    height,
+    x: left,
+    y: top,
+    right: left + width,
+    bottom: top + height,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
+
+/** Layout-Attrappe: hohe Liste, „Start“ oben, das Fach darunter — alles andere ohne Fläche. */
+function messeLayout(fach: string) {
+  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+    if (this.classList.contains('lg-liste')) return rechteck(0, 0, 240, 480);
+    if (this.classList.contains('lg-nav-item')) {
+      const text = this.textContent ?? '';
+      if (text.includes(fach)) return rechteck(120, 8, 156, 44);
+      if (text.includes('Start')) return rechteck(10, 8, 200, 44);
+    }
+    return rechteck(0, 0, 0, 0);
+  });
+}
+
+function richtung(design: 'lagen' | 'raum' | 'atelier' | null) {
+  if (design) document.documentElement.setAttribute('data-design', design);
+  else document.documentElement.removeAttribute('data-design');
+}
+
+function streifen(nav: HTMLElement): HTMLElement | null {
+  return nav.querySelector<HTMLElement>('.lg-nav-marker');
+}
+
+describe('Seitenleiste in „Lagen“: ein Streifen hinter dem aktiven Eintrag (M1-T4)', () => {
+  afterEach(() => {
+    document.documentElement.removeAttribute('data-design');
+    vi.restoreAllMocks();
+  });
+
+  it('liegt als ein dekorativer Streifen im Scrollbereich der Liste', async () => {
+    richtung('lagen');
+    const server = new FakeServer('unlocked');
+    server.addSubject('Beispielfach Chemie');
+    mount(server);
+
+    const nav = (await screen.findByRole('navigation', { name: 'Navigation' })) as HTMLElement;
+    const marker = streifen(nav);
+    expect(marker).not.toBeNull();
+    expect(marker?.getAttribute('aria-hidden')).toBe('true');
+    expect(marker?.parentElement?.classList.contains('lg-liste')).toBe(true);
+    expect(nav.querySelectorAll('.lg-nav-marker')).toHaveLength(1);
+  });
+
+  it('übernimmt Versatz, Höhe und Breite des aktiven Eintrags und folgt dem Wechsel', async () => {
+    richtung('lagen');
+    const server = new FakeServer('unlocked');
+    const fach = server.addSubject('Beispielfach Chemie');
+    messeLayout(fach.name);
+    mount(server);
+    const user = userEvent.setup();
+
+    const nav = (await screen.findByRole('navigation', { name: 'Navigation' })) as HTMLElement;
+    const marker = streifen(nav);
+    expect(marker).not.toBeNull();
+    await waitFor(() => expect(marker?.style.getPropertyValue('--lg-marker-y')).toBe('10px'));
+    expect(marker?.style.getPropertyValue('--lg-marker-h')).toBe('44px');
+    expect(marker?.style.getPropertyValue('--lg-marker-w')).toBe('200px');
+    expect(marker?.style.getPropertyValue('--lg-marker-o')).toBe('1');
+
+    // Wechsel auf das Fach: der Streifen zieht mit (Versatz und Breite des Eintrags).
+    await user.click(within(nav).getByRole('link', { name: fach.name }));
+    await waitFor(() =>
+      expect(streifen(nav)?.style.getPropertyValue('--lg-marker-y')).toBe('120px'),
+    );
+    expect(streifen(nav)?.style.getPropertyValue('--lg-marker-w')).toBe('156px');
+    expect(streifen(nav)?.style.getPropertyValue('--lg-marker-o')).toBe('1');
+  });
+
+  it('bleibt ohne aktiven Eintrag im DOM und unsichtbar', async () => {
+    richtung('lagen');
+    const server = new FakeServer('unlocked');
+    server.addSubject('Beispielfach Chemie');
+    messeLayout('Beispielfach Chemie');
+    mount(server);
+    const user = userEvent.setup();
+
+    const nav = (await screen.findByRole('navigation', { name: 'Navigation' })) as HTMLElement;
+    const marker = streifen(nav);
+    expect(marker).not.toBeNull();
+
+    // Einstellungen liegen in der festen Leiste unterhalb der Liste: kein aktiver Eintrag in der Liste.
+    const einstellungen = within(nav).getAllByRole('link', { name: 'Einstellungen' });
+    await user.click(einstellungen[einstellungen.length - 1] as HTMLElement);
+    await waitFor(() => expect(marker?.style.getPropertyValue('--lg-marker-o')).toBe('0'));
+    expect(streifen(nav)).toBe(marker);
+  });
+
+  it.each(['raum', 'atelier', null] as const)(
+    'in %s gibt es keinen Streifen (Leiste unverändert)',
+    async (design) => {
+      richtung(design);
+      const server = new FakeServer('unlocked');
+      server.addSubject('Beispielfach Chemie');
+      mount(server);
+
+      const nav = (await screen.findByRole('navigation', { name: 'Navigation' })) as HTMLElement;
+      expect(streifen(nav)).toBeNull();
+    },
+  );
 });

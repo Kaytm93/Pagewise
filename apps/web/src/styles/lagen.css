@@ -844,3 +844,55 @@ details[open] > summary .mo-arrow {
   box-shadow: none;
   resize: none;
 }
+
+/* ===== Streifen hinter dem aktiven Eintrag der Leiste (M1-T4) =====
+ *
+ * Nur in „Lagen“: Ein einziger Streifen liegt hinter allen Einträgen und gleitet beim Wechsel zum
+ * aktiven. Er steht im Scrollbereich der Liste und wandert darum beim Scrollen mit. Versatz, Höhe und
+ * Breite stehen als Variablen am Element (Sidebar.tsx setzt sie über style.setProperty); bewegt wird
+ * ausschließlich `transform: translateY(…)` und `opacity` — Höhe und Breite bleiben dabei fest.
+ */
+:root[data-design="lagen"] .lg-liste {
+  position: relative;
+}
+
+:root[data-design="lagen"] .lg-nav-marker {
+  position: absolute;
+  top: 0;
+  left: var(--lg-marker-x, 0px);
+  width: var(--lg-marker-w, 0px);
+  height: var(--lg-marker-h, 0px);
+  border: 1px solid var(--line-warm);
+  border-radius: 10px;
+  background-color: var(--sheet);
+  box-shadow:
+    inset 0 1px 0 var(--rim),
+    0 1px 2px rgba(var(--shadow), 0.1),
+    0 4px 10px -4px rgba(var(--shadow), calc(var(--shadow-a) * 0.9));
+  opacity: var(--lg-marker-o, 0);
+  transform: translateY(var(--lg-marker-y, 0px));
+  pointer-events: none;
+}
+
+/* Der Übergang gilt erst nach dem ersten Messen: Beim ersten Anzeigen (Schublade) steht der Streifen
+   sofort an seinem Platz, statt von oben einzufahren. */
+:root[data-design="lagen"] .lg-nav-marker[data-ready="true"] {
+  transition:
+    transform var(--t-med) var(--spring),
+    opacity var(--t-med) var(--spring);
+}
+
+/* Ohne Bewegung: kein Weg, kein Überblenden — der Streifen steht sichtbar an seinem Platz. */
+:root[data-design="lagen"].fx-off .lg-nav-marker[data-ready="true"],
+:root[data-design="lagen"].fx-reduced .lg-nav-marker[data-ready="true"] {
+  transition: none;
+}
+
+/* Der aktive Eintrag behält Balken und Fachfarbe, gibt Fläche, Rand und Schatten aber an den Streifen ab. */
+:root[data-design="lagen"] .lg-nav-item[aria-current="page"],
+:root[data-design="lagen"] .lg-nav-item[data-current="true"] {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  animation: none;
+}
