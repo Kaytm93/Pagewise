@@ -1,8 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { packager } from '@electron/packager';
+import { collectBuildInfo, realGit } from './build-info';
 
 /**
  * Packt `Pagewise.app` (Stufe 1, D-053): lokal gebaut, ohne Developer-ID-Signatur und ohne Notarisierung.
@@ -95,6 +96,17 @@ for (const [from, to] of [
   if (!source) throw new Error(`${from} von Electron und Chromium fehlt (Lizenzhinweis).`);
   copyFileSync(source, join(licenseDir, to));
 }
+
+// Aus welchem Commit und mit welchen Werkzeugen gebaut wurde: Das braucht das Update in der App (D-057). Die Datei
+// liegt nur in dieser App auf diesem Mac, nie im Repository. Sie muss vor der Signatur ins Paket.
+const buildInfo = collectBuildInfo({
+  git: realGit(resolve(root, '..', '..')),
+  env: process.env,
+  execPath: process.execPath,
+  arch,
+  now: new Date(),
+});
+writeFileSync(join(resources, 'build-info.json'), `${JSON.stringify(buildInfo, null, 2)}\n`);
 
 if (platform === 'darwin') {
   if (process.platform === 'darwin') {
