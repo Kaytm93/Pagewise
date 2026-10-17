@@ -12,10 +12,14 @@ function remember(key: string, svg: string): string {
   return svg;
 }
 
-async function draw(kind: SvgBlockKind, source: string): Promise<string> {
+async function draw(
+  kind: SvgBlockKind,
+  source: string,
+  sheetWidth?: number | null,
+): Promise<string> {
   if (kind === 'graph') {
     const { renderGraph } = await import('@pagewise/render/graph');
-    return renderGraph(source);
+    return renderGraph(source, sheetWidth);
   }
   if (kind === 'abc') {
     const { renderAbc } = await import('@pagewise/render/abc-dom');
@@ -36,14 +40,18 @@ async function draw(kind: SvgBlockKind, source: string): Promise<string> {
  * Bereinigung (`sanitizeSvg`), auch die eigenen Zeichnungen. Die Bibliotheken werden erst geladen, wenn ein
  * Block der Art vorkommt. Wirft `RenderError` mit einem festen Code.
  */
-export async function renderBlock(kind: SvgBlockKind, source: string): Promise<string> {
-  const key = `${kind}\u0000${source}`;
+export async function renderBlock(
+  kind: SvgBlockKind,
+  source: string,
+  sheetWidth?: number | null,
+): Promise<string> {
+  const key = `${kind}\u0000${source}\u0000${kind === 'graph' ? (sheetWidth ?? '') : ''}`;
   const hit = cache.get(key);
   if (hit !== undefined) return hit;
   const { sanitizeSvg } = await import('@pagewise/render/sanitize');
   const { RenderError: Failure } = await import('@pagewise/render');
   try {
-    return remember(key, sanitizeSvg(await draw(kind, source)));
+    return remember(key, sanitizeSvg(await draw(kind, source, sheetWidth)));
   } catch (error) {
     throw error instanceof Failure ? error : new Failure('render_failed');
   }

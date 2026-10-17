@@ -8,10 +8,10 @@ export { niceTicks, renderGraphSvg } from './plot';
 export { type GraphSpec, parseGraphSpec } from './spec';
 
 /** Zeichnet den Inhalt eines ` ```graph `-Blocks. Wirft `RenderError`. */
-export function renderGraph(source: string): string {
+export function renderGraph(source: string, sheetWidth?: number | null): string {
   const spec = parseGraphSpec(source);
   if (!spec.ok) throw spec.error;
-  return renderGraphSvg(spec.value);
+  return renderGraphSvg(spec.value, sheetWidth);
 }
 
 /** Prüft einen ` ```graph `-Block, ohne zu zeichnen. `null`, wenn er in Ordnung ist. */
