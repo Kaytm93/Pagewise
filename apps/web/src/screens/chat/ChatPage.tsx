@@ -193,19 +193,23 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
 
   if (state.phase === 'loading') {
     return (
-      <p role="status" className="mx-auto max-w-3xl px-4 py-8 text-ink-secondary">
-        {m.chat.loading}
-      </p>
+      <Sheet flush>
+        <p role="status" className="text-ink-secondary">
+          {m.chat.loading}
+        </p>
+      </Sheet>
     );
   }
   if (state.phase === 'error' || !state.chat) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4 px-4 py-8">
-        <p className="text-ink-secondary">{m.chat.loadFailed}</p>
-        <Button variant="secondary" onClick={() => void chat.reload()}>
-          {m.common.retry}
-        </Button>
-      </div>
+      <Sheet flush>
+        <div className="mx-auto max-w-3xl space-y-4 px-4 py-8">
+          <p className="text-ink-secondary">{m.chat.loadFailed}</p>
+          <Button variant="secondary" onClick={() => void chat.reload()}>
+            {m.common.retry}
+          </Button>
+        </div>
+      </Sheet>
     );
   }
   if (state.chat.subjectId !== subjectId) return <NotFoundPage />;
