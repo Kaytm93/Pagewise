@@ -114,6 +114,37 @@ describe('Graue Tinte auf der realen Körnungsfläche (Worst-Case M4-T013, nur h
   });
 });
 
+// M4-T033: der Beleg „Sekundärtext in Atelier hell 2,19 : 1“ ist ein Messartefakt: In Atelier ist
+// die Blattfläche transparent (atelier.css, `.lg-sheet { background-color: transparent }`), die
+// Prüfer-Messung (M3-T025, computed Style) rechnete diese Fläche rgba(0,0,0,0) als Schwarz —
+// #454545 gegen Schwarz ergibt exakt 2,19 : 1, das Fehlerrot #b42318 exakt 3,19 : 1.
+// Im Echtbrowser gemalte Fläche selbst gemessen (Text per CSSOM transparent schalten, Pixel hinter
+// jedem Textrechteck abtasten; Chromium + WebKit, mac + iphone-hoch, hell + dunkel, Daten in
+// shots/M4-T033/data/): die dunkelste Fläche unter Sekundärtext liegt oben unter dem Fachlicht bei
+// rgb(235, 226, 212), --ink-secondary misst dort 7,47 : 1 (p20, beide Browser), die
+// Anbieter-Meldung selbst 8,27 : 1; im Dunkeln liegt alles über 7 : 1. Der Test nagelt den echten
+// Worst-Case fest, damit künftige Token-Änderungen die Grenze hier nicht unterschreiten.
+describe('Graue Tinte auf der Atelier-Fachlichtfläche (Worst-Case M4-T033, nur hell)', () => {
+  const fachlicht = '#ebe2d4';
+
+  it('--ink-secondary erreicht auf dem Fachlicht mindestens 4,5 : 1', () => {
+    expect(contrast(toHex(light['--ink-secondary'] as string), fachlicht)).toBeGreaterThanOrEqual(
+      4.5,
+    );
+  });
+
+  it('--ink-muted bleibt dort lesbar (gemessen: 4,72 : 1) und die leiseste Tinte', () => {
+    expect(contrast(toHex(light['--ink-muted'] as string), fachlicht)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(toHex(light['--ink-muted'] as string), fachlicht)).toBeLessThan(
+      contrast(toHex(light['--ink-secondary'] as string), fachlicht),
+    );
+  });
+
+  it('die Anbieter-Meldung im Fehlerfall (--danger) bleibt dort lesbar (gemessen: 5,74 : 1)', () => {
+    expect(contrast(toHex(light['--danger'] as string), fachlicht)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
 describe('Token-Namen', () => {
   it('kein Utility-Token in `@theme inline` heißt wie ein Palettenwert in `@theme`', () => {
     // Doppelte Namen ergeben einen Zirkelbezug (--control-edge → --color-… → --control-edge),
