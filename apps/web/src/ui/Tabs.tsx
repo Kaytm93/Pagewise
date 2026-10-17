@@ -15,12 +15,15 @@ export function Tabs<T extends string>({
   value,
   onChange,
   panel,
+  className = '',
 }: {
   label: string;
   tabs: Tab<T>[];
   value: T;
   onChange: (value: T) => void;
   panel: React.ReactNode;
+  /** Zusätzliche Klasse für die Reiterleiste (nur Darstellung, etwa das Heftregister in „Lagen“). */
+  className?: string;
 }) {
   const base = useId();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -49,7 +52,11 @@ export function Tabs<T extends string>({
 
   return (
     <div>
-      <div role="tablist" aria-label={label} className="flex gap-1 border-b border-line-warm">
+      <div
+        role="tablist"
+        aria-label={label}
+        className={`flex gap-1 border-b border-line-warm ${className}`.trim()}
+      >
         {tabs.map((tab, index) => {
           const selected = tab.value === value;
           return (

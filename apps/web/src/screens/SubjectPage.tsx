@@ -10,10 +10,12 @@ import { Sheet } from '../ui/Sheet';
 import { SubjectIcon } from '../ui/SubjectIcon';
 import { listRow, sectionTitle } from '../ui/styles';
 import { Tabs } from '../ui/Tabs';
+import { useDesign } from '../ui/useDesign';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { ChatList } from './chat/ChatList';
 import { SubjectModel } from './chat/SubjectModel';
 import { GroupDialog } from './GroupDialog';
+import { SubjectHead } from './lagen/SubjectHead';
 import { NotFoundPage } from './NotFoundPage';
 import { NoteList } from './notes/NoteList';
 import { PromptRow } from './prompts/PromptRow';
@@ -32,6 +34,8 @@ export function SubjectPage({
   tab?: 'notes';
 }) {
   const { findSubject } = useWorkspace();
+  const design = useDesign();
+  const lagen = design === 'lagen';
   const [dialog, setDialog] = useState<Dialog>(null);
   // Rückweg aus dem Hefteintrags-Editor (M4-T017): NotePage markiert beim Verlassen seinen Chronik-Eintrag
   // als „kehrt zu den Hefteinträgen zurück“; hier wird die Markierung aufgesucht. Nur dieser eine Rückweg
@@ -70,13 +74,17 @@ export function SubjectPage({
 
   return (
     <Sheet width="wide">
-      <span aria-hidden="true" className="lg-tape top-5 left-5 [--r:-1.8deg] md:left-11" />
-      {!builtin && (
-        <SubjectIcon
-          icon={subject.icon}
-          strokeWidth={0.4}
-          className="lg-motif top-8 right-5 size-[84px] opacity-80 md:right-12 md:size-[132px]"
-        />
+      {!lagen && (
+        <>
+          <span aria-hidden="true" className="lg-tape top-5 left-5 [--r:-1.8deg] md:left-11" />
+          {!builtin && (
+            <SubjectIcon
+              icon={subject.icon}
+              strokeWidth={0.4}
+              className="lg-motif top-8 right-5 size-[84px] opacity-80 md:right-12 md:size-[132px]"
+            />
+          )}
+        </>
       )}
       {group && (
         <Link
@@ -87,28 +95,38 @@ export function SubjectPage({
           {subject.name}
         </Link>
       )}
-      <div className="relative mt-6 flex items-start justify-between gap-4 pr-[88px] md:pr-40">
-        <div className="min-w-0">
-          {/* subject#06: kleiner einsteigen, damit übliche Fächer einzeilig bleiben; lange Wörter trennt
-              `hyphens-auto` mit Trennstrich (Sprache „de“ kommt von <html lang="de">) statt mitten im Wort zu brechen. */}
-          <h1
-            lang="de"
-            className="mo-rise font-heading hyphens-auto text-[clamp(28px,8vw,34px)] leading-none tracking-[-0.035em] text-balance break-words md:text-[clamp(28px,3.9vw,48px)]"
-          >
-            {group ? group.name : subject.name}
-          </h1>
-          {meta && <p className="mo-rise mo-i-1 mt-3 text-ink-muted break-words">{meta}</p>}
-        </div>
-      </div>
-      {(group || !builtin) && (
-        <Button
-          variant="secondary"
-          className="mt-5"
-          onClick={() => setDialog(group ? { type: 'group', group } : { type: 'subject' })}
-        >
-          <Pencil aria-hidden="true" className="size-4" />
-          {m.common.edit}
-        </Button>
+      {lagen ? (
+        <SubjectHead
+          subject={subject}
+          group={group}
+          onEdit={() => setDialog(group ? { type: 'group', group } : { type: 'subject' })}
+        />
+      ) : (
+        <>
+          <div className="relative mt-6 flex items-start justify-between gap-4 pr-[88px] md:pr-40">
+            <div className="min-w-0">
+              {/* subject#06: kleiner einsteigen, damit übliche Fächer einzeilig bleiben; lange Wörter trennt
+                  `hyphens-auto` mit Trennstrich (Sprache „de“ kommt von <html lang="de">) statt mitten im Wort zu brechen. */}
+              <h1
+                lang="de"
+                className="mo-rise font-heading hyphens-auto text-[clamp(28px,8vw,34px)] leading-none tracking-[-0.035em] text-balance break-words md:text-[clamp(28px,3.9vw,48px)]"
+              >
+                {group ? group.name : subject.name}
+              </h1>
+              {meta && <p className="mo-rise mo-i-1 mt-3 text-ink-muted break-words">{meta}</p>}
+            </div>
+          </div>
+          {(group || !builtin) && (
+            <Button
+              variant="secondary"
+              className="mt-5"
+              onClick={() => setDialog(group ? { type: 'group', group } : { type: 'subject' })}
+            >
+              <Pencil aria-hidden="true" className="size-4" />
+              {m.common.edit}
+            </Button>
+          )}
+        </>
       )}
 
       {!group && (
@@ -185,6 +203,7 @@ export function SubjectPage({
       >
         <Tabs
           label={m.notes.tabs}
+          className={lagen ? 'lg-register' : undefined}
           tabs={[
             { value: 'chats', label: m.notes.chats },
             { value: 'notes', label: m.notes.notes },
