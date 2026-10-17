@@ -2,6 +2,7 @@ import { Check, ChevronRight, X } from 'lucide-react';
 import { useState } from 'react';
 import type { ActivityEntry } from '../../api/types';
 import { format, messages as m } from '../../i18n';
+import { useDesign } from '../../ui/useDesign';
 
 function toolLabel(tool: string): string {
   const labels = m.chat.agent.tools as Record<string, string>;
@@ -13,9 +14,11 @@ function stepText(step: ActivityEntry): string {
   return step.target ? `${label}: ${step.target}` : label;
 }
 
-function StateMark({ state }: { state: ActivityEntry['state'] }) {
+function StateMark({ state, lagen }: { state: ActivityEntry['state']; lagen: boolean }) {
   if (state === 'running') {
-    return (
+    return lagen ? (
+      <span aria-hidden="true" className="lg-tool-dot" data-state="running" />
+    ) : (
       <span
         aria-hidden="true"
         className="inline-block size-2 shrink-0 animate-pulse rounded-pill bg-ink-muted"
@@ -23,10 +26,13 @@ function StateMark({ state }: { state: ActivityEntry['state'] }) {
     );
   }
   const Icon = state === 'error' ? X : Check;
+  const mark = state === 'error' ? 'lg-tool-cross' : 'lg-tool-check';
   return (
     <Icon
       aria-hidden="true"
-      className={`size-3.5 shrink-0 ${state === 'error' ? 'text-danger' : 'text-ink-muted'}`}
+      className={`size-3.5 shrink-0 ${state === 'error' ? 'text-danger' : 'text-ink-muted'}${
+        lagen ? ` ${mark}` : ''
+      }`}
     />
   );
 }
@@ -41,12 +47,15 @@ const stateName = (state: ActivityEntry['state']): string =>
 /** Wie viele Schritte während der Arbeit sichtbar bleiben (die neuesten). */
 const LIVE_VISIBLE = 4;
 
-function Steps({ steps }: { steps: ActivityEntry[] }) {
+function Steps({ steps, lagen }: { steps: ActivityEntry[]; lagen: boolean }) {
   return (
     <ol aria-label={m.chat.agent.steps} className="space-y-1 text-sm text-ink-secondary">
       {steps.map((step) => (
-        <li key={step.id} className="flex min-w-0 items-center gap-2">
-          <StateMark state={step.state} />
+        <li
+          key={step.id}
+          className={`flex min-w-0 items-center gap-2${lagen ? ' lg-tool-row' : ''}`}
+        >
+          <StateMark state={step.state} lagen={lagen} />
           <span className="min-w-0 break-all">{stepText(step)}</span>
           <span className="sr-only">{stateName(step.state)}</span>
         </li>
@@ -61,11 +70,13 @@ function Steps({ steps }: { steps: ActivityEntry[] }) {
  */
 export function AgentActivity({ steps, live }: { steps: ActivityEntry[]; live: boolean }) {
   const [open, setOpen] = useState(false);
+  const lagen = useDesign() === 'lagen';
   if (steps.length === 0) return null;
   if (live) {
     return (
       <div className="mt-3">
-        <Steps steps={steps.slice(-LIVE_VISIBLE)} />
+        {/* In „Lagen“ bleibt jeder Schritt stehen; die anderen Richtungen zeigen die neuesten vier. */}
+        <Steps steps={lagen ? steps : steps.slice(-LIVE_VISIBLE)} lagen={lagen} />
       </div>
     );
   }
@@ -82,7 +93,7 @@ export function AgentActivity({ steps, live }: { steps: ActivityEntry[]; live: b
         <ChevronRight aria-hidden="true" className="mo-arrow ml-1 size-4 shrink-0" />
       </summary>
       <div className="pb-2">
-        <Steps steps={steps} />
+        <Steps steps={steps} lagen={lagen} />
       </div>
     </details>
   );

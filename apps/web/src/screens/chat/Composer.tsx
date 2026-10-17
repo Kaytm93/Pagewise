@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { format, messages as m } from '../../i18n';
 import { FieldError } from '../../ui/FieldError';
+import { useDesign } from '../../ui/useDesign';
 
 /** Gleiche Grenze wie auf dem Server (`MESSAGE_MAX_CHARACTERS`). */
 export const MESSAGE_MAX_CHARACTERS = 50_000;
@@ -44,6 +45,7 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
   const returnFocus = useRef(false);
   const hintId = useId();
   const fine = hasFinePointer();
+  const lagen = useDesign() === 'lagen';
 
   // Das Feld wächst mit dem Text. Die Höhe setzt das Skript über das CSSOM (siehe D-023).
   // biome-ignore lint/correctness/useExhaustiveDependencies: `draft` löst die neue Messung aus
@@ -100,11 +102,12 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
   }, [running]);
 
   const buttonBase =
-    'mo-press inline-flex size-11 shrink-0 items-center justify-center rounded-[12px] disabled:cursor-not-allowed disabled:opacity-50';
+    'mo-press inline-flex size-11 shrink-0 items-center justify-center disabled:cursor-not-allowed disabled:opacity-50';
+  const buttonShape = lagen ? 'rounded-full' : 'rounded-[12px]';
 
   return (
     <form onSubmit={submit}>
-      <div className="flex items-end gap-2">
+      <div className={lagen ? 'lg-composer-field' : 'flex items-end gap-2'}>
         <label htmlFor={`${hintId}-field`} className="sr-only">
           {m.chat.composerLabel}
         </label>
@@ -121,7 +124,11 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
           aria-invalid={error ? true : undefined}
           onChange={(event) => update(event.target.value)}
           onKeyDown={onKeyDown}
-          className="max-h-48 min-h-11 min-w-0 flex-1 resize-none rounded-[16px] border border-control-edge bg-sheet px-4 py-2.5 text-[1.0313rem] leading-snug text-ink shadow-[0_1px_2px_rgba(var(--shadow),0.08)] transition-shadow duration-[var(--t-med)] placeholder:text-ink-muted focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none disabled:opacity-60"
+          className={
+            lagen
+              ? 'lg-composer-input min-w-0 flex-1 resize-none text-[1.0313rem] leading-snug text-ink placeholder:text-ink-muted disabled:opacity-60'
+              : 'max-h-48 min-h-11 min-w-0 flex-1 resize-none rounded-[16px] border border-control-edge bg-sheet px-4 py-2.5 text-[1.0313rem] leading-snug text-ink shadow-[0_1px_2px_rgba(var(--shadow),0.08)] transition-shadow duration-[var(--t-med)] placeholder:text-ink-muted focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none disabled:opacity-60'
+          }
         />
         {running ? (
           <button
@@ -131,7 +138,7 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
             onFocus={markStopFocus}
             disabled={stopping}
             aria-label={stopping ? m.chat.stopping : m.chat.stop}
-            className={`${buttonBase} border border-control-edge bg-sheet text-ink hover:bg-paper`}
+            className={`${buttonBase} ${buttonShape} border border-control-edge bg-sheet text-ink hover:bg-paper`}
           >
             <Square aria-hidden="true" className="size-4 fill-current" />
           </button>
@@ -140,7 +147,7 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
             type="submit"
             disabled={disabled || busy || draft.trim() === ''}
             aria-label={m.chat.send}
-            className={`${buttonBase} lg-btn-primary bg-primary text-on-primary hover:opacity-90`}
+            className={`${buttonBase} ${buttonShape} lg-btn-primary bg-primary text-on-primary hover:opacity-90`}
           >
             <ArrowUp aria-hidden="true" className="size-5" />
           </button>

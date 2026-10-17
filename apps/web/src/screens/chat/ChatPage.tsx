@@ -12,10 +12,12 @@ import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
 import { Modal } from '../../ui/modal';
 import { Sheet } from '../../ui/Sheet';
+import { useDesign } from '../../ui/useDesign';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { commonErrorMessage } from '../auth-errors';
 import { NotFoundPage } from '../NotFoundPage';
 import { autoFixRequest, mayContainBlocks } from './autofix';
+import { ChatHead } from './ChatHead';
 import { Composer } from './Composer';
 import { takeQueuedSend } from './default-chat';
 import { MessageItem } from './MessageItem';
@@ -110,6 +112,8 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
   const { findSubject, providers, modelSettings, engines } = useWorkspace();
   const chat = useChat(api, chatId);
   const { state } = chat;
+  const design = useDesign();
+  const lagen = design === 'lagen';
   const [dialog, setDialog] = useState<Dialog>(null);
   const [announcement, setAnnouncement] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
@@ -256,58 +260,75 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
   }
 
   const sourceText = model ? m.chat.source[model.source] : null;
+  const modelLabel = model ? model.label : m.chat.modelNone;
+  const modelSource = sourceText && model?.source !== 'default' ? sourceText : null;
+  const modelAriaLabel = `${m.chat.modelButton}: ${modelLabel}${modelSource ? ` (${modelSource})` : ''}`;
   const inheritedName =
     describeEngine(engines.profiles, subject.engineProfileId) ??
     describeSelection(providers, subject.model ?? modelSettings.default);
 
   return (
     <Sheet flush>
-      <header className="border-b border-line-warm px-4 py-3 sm:px-8 md:pl-10">
-        <Link to={backTo} className="mo-press inline-flex min-h-11 items-center gap-1.5 text-sm">
-          <ArrowLeft aria-hidden="true" className="size-4" />
-          {group?.name ?? subject.name}
-        </Link>
-        <div className="flex items-start justify-between gap-2">
-          <h1
-            id="chat-title"
-            className="min-w-0 py-1.5 font-heading text-[21px] break-words tracking-[-0.2px]"
-          >
-            {title}
-          </h1>
-          <div className="-mr-2 flex shrink-0">
-            <button
-              type="button"
-              onClick={() => setDialog('rename')}
-              aria-label={m.chat.rename}
-              className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+      {lagen ? (
+        <ChatHead
+          title={title}
+          backTo={backTo}
+          backName={group?.name ?? subject.name}
+          modelLabel={modelLabel}
+          modelAriaLabel={modelAriaLabel}
+          modelSource={modelSource}
+          onModel={() => setDialog('model')}
+          onRename={() => setDialog('rename')}
+          onDelete={() => setDialog('delete')}
+        />
+      ) : (
+        <header className="border-b border-line-warm px-4 py-3 sm:px-8 md:pl-10">
+          <Link to={backTo} className="mo-press inline-flex min-h-11 items-center gap-1.5 text-sm">
+            <ArrowLeft aria-hidden="true" className="size-4" />
+            {group?.name ?? subject.name}
+          </Link>
+          <div className="flex items-start justify-between gap-2">
+            <h1
+              id="chat-title"
+              className="min-w-0 py-1.5 font-heading text-[21px] break-words tracking-[-0.2px]"
             >
-              <Pencil aria-hidden="true" className="size-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setDialog('delete')}
-              aria-label={m.chat.delete}
-              className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
-            >
-              <Trash2 aria-hidden="true" className="size-4" />
-            </button>
+              {title}
+            </h1>
+            <div className="-mr-2 flex shrink-0">
+              <button
+                type="button"
+                onClick={() => setDialog('rename')}
+                aria-label={m.chat.rename}
+                className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+              >
+                <Pencil aria-hidden="true" className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setDialog('delete')}
+                aria-label={m.chat.delete}
+                className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+              >
+                <Trash2 aria-hidden="true" className="size-4" />
+              </button>
+            </div>
           </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setDialog('model')}
-          aria-label={`${m.chat.modelButton}: ${model ? model.label : m.chat.modelNone}${
-            sourceText && model?.source !== 'default' ? ` (${sourceText})` : ''
-          }`}
-          className="-ml-2.5 inline-flex min-h-11 max-w-full items-center gap-2 rounded-control px-2.5 text-sm text-ink-secondary hover:bg-paper hover:text-ink"
-        >
-          <SlidersHorizontal aria-hidden="true" className="size-4 shrink-0" />
-          <span className="truncate">{model ? model.label : m.chat.modelNone}</span>
-          {sourceText && model?.source !== 'default' && (
-            <span className="hidden shrink-0 text-meta text-ink-muted sm:inline">{sourceText}</span>
-          )}
-        </button>
-      </header>
+          <button
+            type="button"
+            onClick={() => setDialog('model')}
+            aria-label={modelAriaLabel}
+            className="-ml-2.5 inline-flex min-h-11 max-w-full items-center gap-2 rounded-control px-2.5 text-sm text-ink-secondary hover:bg-paper hover:text-ink"
+          >
+            <SlidersHorizontal aria-hidden="true" className="size-4 shrink-0" />
+            <span className="truncate">{modelLabel}</span>
+            {modelSource && (
+              <span className="hidden shrink-0 text-meta text-ink-muted sm:inline">
+                {modelSource}
+              </span>
+            )}
+          </button>
+        </header>
+      )}
 
       <section
         aria-label={m.chat.messages}
@@ -381,6 +402,11 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
             onSend={send}
             onStop={() => void chat.stop()}
           />
+          {lagen && (
+            <p className="lg-chat-hint">
+              {modelLabel} · {m.chat.verifyAnswers}
+            </p>
+          )}
         </div>
       </div>
 

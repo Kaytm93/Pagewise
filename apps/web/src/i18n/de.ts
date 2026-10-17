@@ -528,6 +528,7 @@ export const de = {
     reconnect: 'Erneut verbinden',
     keyboardHintFine: 'Enter sendet, Umschalt + Enter macht eine neue Zeile.',
     keyboardHintCoarse: 'Cmd oder Strg + Enter sendet.',
+    verifyAnswers: 'Antworten bitte prüfen',
     tooLong: 'Die Nachricht ist zu lang. Erlaubt sind höchstens {max} Zeichen.',
     openSettings: 'Zu den Einstellungen',
     noModelTitle: 'Noch kein Modell gewählt',
