@@ -7,7 +7,7 @@ import {
   Plus,
   Settings,
 } from 'lucide-react';
-import { useEffect, useId, useState } from 'react';
+import { type Ref, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { Subject } from '../api/types';
 import { messages as m } from '../i18n';
 import { type Route, useRoute } from '../router';
@@ -44,18 +44,21 @@ function SubjectRow({
   expanded,
   onToggle,
   onNavigate,
+  liRef,
 }: {
   subject: Subject;
   route: Route;
   expanded: boolean;
   onToggle: () => void;
   onNavigate?: () => void;
+  /** DOM der Zeile für den Bildlauf zum aktiven Eintrag (shell-home#09); nur die aktive Zeile bekommt ihn. */
+  liRef?: Ref<HTMLLIElement>;
 }) {
   const panelId = useId();
   const active = isActive(route, subject.id, null);
   const inChat = (route.name === 'chat' || route.name === 'note') && route.subjectId === subject.id;
   return (
-    <li data-subj={subjectColorAttr(subject.color)}>
+    <li ref={liRef} data-subj={subjectColorAttr(subject.color)}>
       <div className="flex items-center">
         <Link
           to={{ name: 'subject', subjectId: subject.id, groupId: null }}
@@ -143,12 +146,32 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     // der nachfolgende Effekt holt es nach, wenn diese Instanz es zuerst sieht.
     return new Set(activeSubjectId ? [...openGroups, activeSubjectId] : openGroups);
   });
+  // Schlüssel des zuletzt in den Blick geholten Eintrags: Nur ein Wechsel des aktiven Eintrags scrollt
+  // (shell-home#09), das erneute Rendern einer Instanz mit demselben Eintrag stört den Bildlauf nicht.
+  const scrolledFor = useRef<string | null>(null);
+  const listeRef = useRef<HTMLDivElement | null>(null);
+  // Das DOM des aktiven Eintrags hängt am Fach („Standard“ ist immer da), nicht an der Route;
+  // das umschließende <li> trägt es, damit Link (ohne ref-Prop) unberührt bleibt.
+  const aktiveRef = useRef<HTMLLIElement | null>(null);
 
   // Das aktive Fach ist immer aufgeklappt, auch nach einem Sprung über einen Link — und es bleibt
   // über das Ende der Instanz hinaus gemerkt (Schublade schließen und wieder öffnen, F-073).
   useEffect(() => {
     if (activeSubjectId) addOpenGroup(activeSubjectId);
   }, [activeSubjectId]);
+
+  // Aktiven Eintrag in den sichtbaren Bereich holen (shell-home#09): nur wenn der Schlüssel wechselt,
+  // und erst nach dem Layout, damit die Zielposition stimmt. jsdom hat kein Layout; dort bleibt es
+  // beim Aufruf, gemessen wird im Echtbrowser (shots/M4-T009/).
+  useLayoutEffect(() => {
+    const ziel = aktiveRef.current;
+    const liste = listeRef.current;
+    if (!ziel || !liste) return;
+    const schlüssel = `${activeSubjectId ?? route.name}:${liste === document.querySelector('nav .overflow-y-auto') ? '' : 'schublade'}`;
+    if (scrolledFor.current === schlüssel) return;
+    scrolledFor.current = schlüssel;
+    if (ziel.scrollIntoView) ziel.scrollIntoView({ block: 'nearest' });
+  }, [activeSubjectId, route.name]);
 
   function toggle(id: string) {
     // Nächsten Zustand aus dem aktuellen berechnen (kein Nebeneffekt im Updater: Updater können
@@ -167,6 +190,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       expanded={open.has(subject.id)}
       onToggle={() => toggle(subject.id)}
       onNavigate={onNavigate}
+      liRef={activeSubjectId === subject.id ? aktiveRef : undefined}
     />
   );
 
@@ -175,21 +199,21 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <div aria-hidden="true" className="lg-spine" />
       <nav
         aria-label={m.shell.navigation}
-        className="flex h-full min-w-0 flex-1 flex-col pt-[max(1.125rem,env(safe-area-inset-top))]"
+        className={`flex h-full min-w-0 flex-1 flex-col pt-[max(1.125rem,env(safe-area-inset-top))] lg-compact`}
       >
-        <div className="pr-3 pl-2 pb-3">
+        <div className="lg-kopf-wrap pr-3 pl-2 pb-3">
           <Link
             to={{ name: 'default-chat' }}
             onClick={onNavigate}
             aria-label={m.shell.defaultChat}
             title={m.shell.defaultChat}
-            className="mo-press inline-flex min-h-12 items-center rounded-[10px] px-3 font-heading text-[22px] tracking-[-0.3px] text-ink no-underline"
+            className="lg-kopf lg-brand mo-press inline-flex min-h-12 items-center rounded-[10px] px-3 font-heading text-[22px] tracking-[-0.3px] text-ink no-underline"
           >
             {m.app.name}
           </Link>
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-3 pl-2 pb-4">
+        <div ref={listeRef} className="lg-liste flex-1 overflow-y-auto pr-3 pl-2 pb-4">
           <ul className="space-y-0.5 pb-3">
             <li className="flex items-center">
               <Link
@@ -258,9 +282,24 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             <Plus aria-hidden="true" strokeWidth={1.6} className="size-[18px] shrink-0" />
             {m.shell.addSubject}
           </button>
+
+          {/* Zweite Fuß-Instanz für das Querformat (shell-home#09): im Compact-Modus zeigt die
+              Medienabfrage in lagen.css nur diese an (der feste Fuß unten wird ausgeblendet) — die
+              Einstellungen stehen dann als letzte Zeile in der Liste und sind mitgescrollt. */}
+          <div className="lg-fuss-inliste mt-1 hidden border-t border-line-warm pt-2">
+            <Link
+              to={{ name: 'settings' }}
+              onClick={onNavigate}
+              aria-current={route.name === 'settings' ? 'page' : undefined}
+              className={`${rowBase} ${route.name === 'settings' ? rowActive : ''}`}
+            >
+              <Settings aria-hidden="true" strokeWidth={1.6} className="size-[18px]" />
+              {m.shell.settings}
+            </Link>
+          </div>
         </div>
 
-        <div className="border-t border-line-warm py-2 pr-3 pl-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="lg-fuss border-t border-line-warm py-2 pr-3 pl-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <Link
             to={{ name: 'settings' }}
             onClick={onNavigate}

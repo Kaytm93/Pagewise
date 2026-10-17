@@ -387,6 +387,51 @@
   }
 }
 
+/*
+ * Querformat (Höhe < 500 px, shell-home#09): Kopf/Fuß kompakt und der Fuß mit in die Liste. Die
+ * Regeln stehen bewusst UNGLAYered: Tailwind-Utilities liegen im Utilities-Layer und würden Regeln
+ * aus @layer components schlagen (vgl. REFLECTIONS) — so gilt die Medienabfrage in allen Richtungen.
+ * Die beiden Fuß-Instanzen (fester Fuß und Fußzeile in der Liste) zeigt genau eine: das Medium
+ * entscheidet, kein JS, kein Layout-Flackern beim Drehen des Geräts.
+ */
+@media (max-height: 499.98px) {
+  /* Auch der Kopfrand der Leiste selbst wird kompakt (schlält die fehlenden 6 px im
+     Querformat ein); die safe-area bleibt über max() erhalten. */
+  .lg-compact {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+
+  .lg-compact .lg-kopf {
+    min-height: 44px;
+    font-size: 18px;
+  }
+
+  .lg-compact .lg-kopf-wrap {
+    padding-bottom: 0.25rem;
+  }
+
+  /* Fester Fuß aus, Fußzeile in der Liste an (im DOM ohnehin vorhanden). */
+  .lg-compact .lg-fuss {
+    display: none;
+  }
+
+  .lg-compact .lg-fuss-inliste {
+    display: block;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  /* Die Fußzeile in der Liste: letzte Zeile, kein Doppelelement, Bedienfläche voll breit. */
+  .lg-compact .lg-fuss-inliste .lg-nav-item {
+    min-height: 44px;
+  }
+
+  /* Rand unten und der eingereihte Fuß wandern in den Scrollbereich: die Liste endet an der
+     Bildschirmkante und gewinnt so die Fußhöhe plus Ränder (über 100 px im Befund). */
+  .lg-compact .lg-liste {
+    padding-bottom: 0;
+  }
+}
+
 /* Dialog und Menü: kommen mit der Feder an, ohne Weg bei reduzierter Bewegung */
 @keyframes lg-pop {
   from {

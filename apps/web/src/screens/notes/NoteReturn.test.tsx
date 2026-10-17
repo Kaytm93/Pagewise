@@ -43,6 +43,15 @@ beforeAll(async () => {
 
 let scrollIntoView: ReturnType<typeof vi.fn>;
 
+/**
+ * Rufe auf Zielen im Seiteninhalt (main): Genau dort liegt das Ziel des Rückweg-Mechanismus der
+ * Fachseite. Die Seitenleiste scrollt seit M4-T009 selbst zum aktiven Eintrag (außerhalb von main,
+ * in der eigenen Liste) und darf diese Prüfung nicht berühren.
+ */
+function rueckrufeImInhalt(): Element[] {
+  return (scrollIntoView.mock.contexts as unknown as Element[]).filter((el) => el.closest('main'));
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   window.sessionStorage.clear();
@@ -102,10 +111,10 @@ describe('Rückweg aus dem Editor: Liste im Blick (M4-T017)', () => {
     open(server, `/subjects/${subject.id}`);
     const user = userEvent.setup();
     await screen.findByRole('tablist', { name: 'Inhalt' });
-    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(rueckrufeImInhalt()).toEqual([]);
     await user.click(screen.getByRole('link', { name: 'Beispielfach A' }));
     await waitFor(() => expect(window.location.pathname).toBe(`/subjects/${subject.id}`));
-    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(rueckrufeImInhalt()).toEqual([]);
     expect(document.activeElement?.id).not.toBe('hefte-eintraege-liste');
   });
 
@@ -113,7 +122,7 @@ describe('Rückweg aus dem Editor: Liste im Blick (M4-T017)', () => {
     const { server, subject } = setup();
     open(server, `/subjects/${subject.id}/notes`);
     await screen.findByText('Erster Eintrag');
-    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(rueckrufeImInhalt()).toEqual([]);
     expect(document.activeElement?.id).not.toBe('hefte-eintraege-liste');
   });
 });
