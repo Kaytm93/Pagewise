@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "abcjs": "6.7.1",
-    "dompurify": "3.4.16",
+    "dompurify": "3.4.17",
     "katex": "0.19.0",
     "smiles-drawer": "2.4.1"
   },
@@ -32,6 +32,6 @@
     "@types/node": "^22.0.0",
     "jsdom": "^29.1.1",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.4"
   }
 }
