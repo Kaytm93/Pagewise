@@ -265,6 +265,16 @@ export const de = {
       past: 'vorbei',
       empty: 'Heute keine Stunden',
     },
+    /** Startseite in der Richtung „Atelier“: Leitkarte, große Zahl und Wochenstreifen. */
+    atelierStart: {
+      days: '{count} Tage',
+      oneDay: '1 Tag',
+      today: 'heute',
+      hoursToday: 'Stunden heute',
+      untilExam: 'bis {subject}',
+      nextLesson: 'als Nächstes',
+      week: 'Diese Woche',
+    },
     /** Startseite in der Richtung „Lagen“: Stundenliste, Zettel und „Zuletzt genutzt“. */
     startGrid: {
       now: 'Jetzt',

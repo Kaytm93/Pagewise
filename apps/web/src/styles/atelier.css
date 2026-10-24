@@ -202,3 +202,257 @@
     transform: skewX(-30deg) translate3d(calc(var(--m) * 8%), 0, 0);
   }
 }
+
+/*
+ * Startseite in „Atelier“: Leitkarte, große Zahl, Wochenstreifen und die übrigen Stunden von heute.
+ * Die Balken des Streifens tragen ihre Höhe als `--at-bar` (Anzahl der Stunden, per setProperty gesetzt),
+ * `calc()` macht daraus Pixel. Bewegung nur über transform, Dauer und Kurve aus motion.css.
+ */
+@layer components {
+  .at-start-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    margin-top: 14px;
+  }
+
+  .at-lead {
+    min-width: 0;
+  }
+
+  /* Leitkarte: runde Fläche, Fachfarbe als weiches Licht, ein einziger Link */
+  .at-lead-link {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 44px;
+    padding: 20px 22px 18px;
+    border: 1px solid var(--line-warm);
+    border-radius: 16px;
+    background-color: var(--surface);
+    background-image: radial-gradient(
+      120% 96% at 100% 0%,
+      color-mix(in srgb, var(--subj) 14%, transparent),
+      transparent 72%
+    );
+    box-shadow:
+      inset 0 1px 0 var(--rim),
+      0 1px 2px rgba(var(--shadow), 0.06),
+      0 8px 20px -10px rgba(var(--shadow), calc(var(--shadow-a) * 1.1));
+    color: var(--ink);
+    text-decoration: none;
+    transition: transform var(--t-med) var(--spring-snap);
+  }
+
+  .at-lead-kicker {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .at-lead-name {
+    font-family: var(--font-heading);
+    font-size: clamp(26px, 3.4vw, 38px);
+    line-height: 1.08;
+    letter-spacing: -0.025em;
+    overflow-wrap: break-word;
+  }
+
+  .at-lead-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    font-size: 0.9375rem;
+    color: var(--ink-secondary);
+  }
+
+  .at-lead-empty {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 20px 22px;
+    border: 1px dashed color-mix(in srgb, var(--ink-muted) 45%, transparent);
+    border-radius: 16px;
+    color: var(--ink-secondary);
+  }
+
+  .at-lead-more {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    min-height: 44px;
+  }
+
+  @media (hover: hover) {
+    .at-lead-link:hover {
+      transform: translateY(calc(var(--m) * -2px));
+    }
+  }
+
+  /* Große Zahl: Ziffer in der Fachfarbe des Tests, darunter das Fach */
+  .at-count {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 4px;
+    min-width: 0;
+    color: var(--ink);
+  }
+
+  .at-count-num {
+    line-height: 0.84;
+    letter-spacing: -0.045em;
+  }
+
+  .at-count-sub {
+    font-size: 0.9375rem;
+    color: var(--ink-secondary);
+    overflow-wrap: break-word;
+  }
+
+  /* Wochenstreifen: sieben Spalten, Balken von unten, heute markiert */
+  .at-week {
+    margin-top: 30px;
+  }
+
+  .at-week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+    margin: 0;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--line-warm);
+    list-style: none;
+    --at-bar-unit: 7px;
+  }
+
+  .at-week-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .at-week-track {
+    display: flex;
+    align-items: flex-end;
+    height: 60px;
+    border-bottom: 1px solid var(--line-warm);
+  }
+
+  .at-week-bar {
+    display: block;
+    width: 100%;
+    height: calc(min(var(--at-bar, 0), 8) * var(--at-bar-unit));
+    border-radius: 4px 4px 1px 1px;
+    background-color: color-mix(in srgb, var(--subj) 26%, transparent);
+    transform-origin: bottom;
+    animation: at-bar-rise var(--t-slow) var(--spring) both;
+    animation-delay: calc(var(--i, 0) * var(--stagger));
+  }
+
+  .at-week-col[data-empty="true"] .at-week-bar {
+    min-height: 2px;
+    background-color: color-mix(in srgb, var(--ink-muted) 30%, transparent);
+  }
+
+  .at-week-col[aria-current="date"] .at-week-bar {
+    background-color: var(--subj);
+  }
+
+  .at-week-label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 5px;
+    font-size: 0.8125rem;
+    color: var(--ink-muted);
+  }
+
+  .at-week-day {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .at-week-today {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--ink-secondary);
+  }
+
+  .at-week-today::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--subj);
+  }
+
+  /* Die übrigen Stunden von heute: gedämpft, mit Zeit und Raum */
+  .at-next {
+    margin-top: 18px;
+    color: var(--ink-secondary);
+  }
+
+  .at-next-list {
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line-warm);
+    list-style: none;
+  }
+
+  .at-next-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 12px;
+    padding: 8px 2px;
+    border-bottom: 1px solid var(--line-warm);
+    font-size: 0.9375rem;
+    color: var(--ink-muted);
+  }
+
+  .at-next-name {
+    font-family: var(--font-heading);
+    color: var(--ink-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .at-next-room {
+    font-size: 0.875rem;
+  }
+
+  .at-next-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-top: 4px;
+  }
+
+  @media (min-width: 720px) {
+    .at-start-top {
+      grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+      align-items: end;
+      gap: 30px;
+    }
+
+    .at-week-grid {
+      gap: 8px;
+      --at-bar-unit: 8px;
+    }
+
+    .at-week-track {
+      height: 66px;
+    }
+  }
+}
+
+@keyframes at-bar-rise {
+  from {
+    transform: scaleY(calc(1 - var(--m)));
+  }
+}

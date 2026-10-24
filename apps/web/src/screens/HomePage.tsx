@@ -11,6 +11,7 @@ import { SubjectIcon } from '../ui/SubjectIcon';
 import { subjectColorAttr } from '../ui/subject-color';
 import { useDesign } from '../ui/useDesign';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
+import { StartAtelier } from './atelier/StartAtelier';
 import { AskForm } from './home/AskForm';
 import { RecentChats } from './lagen/RecentChats';
 import { StartGrid } from './lagen/StartGrid';
@@ -74,6 +75,8 @@ export function HomePage() {
           <StartGrid />
           <RecentChats />
         </>
+      ) : design === 'atelier' ? (
+        <StartAtelier />
       ) : (
         <>
           {design === 'raum' ? <StartPlan /> : <DayLine />}
