@@ -372,3 +372,150 @@
     );
   }
 }
+
+@layer components {
+  /* ===== Startseite in „Raum“: Stundenplan als Spalte, Pausen, „Jetzt“-Linie ===== */
+  .rm-plan {
+    --raum-unit: 1.2px;
+  }
+
+  .rm-plan-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 12px;
+    margin-bottom: 12px;
+  }
+
+  .rm-plan-head .rm-plan-day {
+    margin: 0;
+  }
+
+  .rm-plan-date,
+  .rm-plan-count {
+    font-size: 0.875rem;
+    color: var(--ink-muted);
+  }
+
+  .rm-plan-count {
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .rm-plan-list {
+    gap: 8px;
+  }
+
+  /* Die Höhe folgt der Dauer: --raum-span setzt StartPlan.tsx per setProperty, nie als style-Attribut. */
+  .rm-plan-item,
+  .rm-plan-break {
+    min-height: max(44px, calc(var(--raum-unit) * var(--raum-span, 45)));
+    border-radius: 8px;
+  }
+
+  .rm-plan-item {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    column-gap: 12px;
+    align-items: start;
+    padding: 8px 14px;
+    background-color: var(--surface);
+    box-shadow: inset 3px 0 0 var(--subj);
+  }
+
+  .rm-plan-time {
+    padding-top: 1px;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--ink-muted);
+  }
+
+  .rm-plan-name {
+    color: var(--ink);
+  }
+
+  .rm-plan-item[data-state="past"] {
+    background-color: transparent;
+    box-shadow:
+      inset 0 0 0 1px var(--line),
+      inset 3px 0 0 color-mix(in srgb, var(--subj) 50%, transparent);
+  }
+
+  .rm-plan-item[data-state="past"] .rm-plan-name {
+    color: var(--ink-muted);
+  }
+
+  .rm-plan-item[data-state="now"] {
+    background-color: var(--sheet);
+    box-shadow:
+      inset 4px 0 0 var(--subj),
+      inset 0 0 0 1px var(--line-warm),
+      0 1px 2px rgba(var(--shadow), 0.1),
+      0 10px 24px -12px rgba(var(--shadow), var(--shadow-a));
+  }
+
+  .rm-plan-item[data-state="now"] .rm-plan-time {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .rm-plan-item[data-state="now"] .rm-plan-meta {
+    color: var(--ink-secondary);
+  }
+
+  /* Pausen folgen der Dauer nur bis zu einer Grenze: eine lange Lücke (etwa Mittag) soll die Spalte
+     nicht füllen, die Dauer steht ohnehin als Text daneben. */
+  .rm-plan-break {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    height: min(calc(var(--raum-unit) * var(--raum-span, 10)), 72px);
+    padding: 6px 14px;
+    border: 1px dashed var(--line-warm);
+    font-size: 0.8125rem;
+    color: var(--ink-muted);
+  }
+
+  .rm-plan-empty {
+    padding: 14px 2px;
+  }
+
+  /* Text steht sofort; nur die Linie wächst (line-in aus motion.css, transform-origin links). */
+  .rm-plan-now {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 32px;
+    padding-left: 4px;
+  }
+
+  .rm-plan-now-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--link);
+    white-space: nowrap;
+  }
+
+  .rm-plan-now-line {
+    flex: 1;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+    transform-origin: left center;
+    animation: line-in var(--t-slow) var(--ease) both;
+  }
+
+  :root.fx-off .rm-plan-now-line {
+    animation: none;
+    transform: none;
+  }
+
+  @media (max-width: 420px) {
+    .rm-plan-item {
+      grid-template-columns: 3rem minmax(0, 1fr);
+      column-gap: 10px;
+      padding-inline: 12px;
+    }
+  }
+}

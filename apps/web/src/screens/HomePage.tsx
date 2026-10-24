@@ -14,6 +14,7 @@ import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { AskForm } from './home/AskForm';
 import { RecentChats } from './lagen/RecentChats';
 import { StartGrid } from './lagen/StartGrid';
+import { StartPlan } from './raum/StartPlan';
 import { SubjectDialog } from './SubjectDialog';
 import { groupCount, subjectMeta } from './subject-meta';
 
@@ -25,7 +26,7 @@ const dateFormat = new Intl.DateTimeFormat('de-DE', {
 
 export function HomePage() {
   const { subjects } = useWorkspace();
-  const design = useDesign() ?? 'raum';
+  const design = useDesign();
   const [creating, setCreating] = useState(false);
   const dialog = creating && <SubjectDialog onClose={() => setCreating(false)} />;
 
@@ -75,7 +76,7 @@ export function HomePage() {
         </>
       ) : (
         <>
-          <DayLine />
+          {design === 'raum' ? <StartPlan /> : <DayLine />}
           <NextUp />
         </>
       )}

@@ -255,6 +255,16 @@ export const de = {
       minutesLeft: 'noch {minutes} Min.',
       done: 'vorbei',
     },
+    /** Startseite in der Richtung „Raum“: Stundenplan mit Pausen und „Jetzt“-Linie. */
+    raumStart: {
+      now: 'Jetzt {time}',
+      break: 'Pause',
+      nextUp: 'als Nächstes',
+      remaining: 'noch {count} Minuten',
+      count: { one: '1 Stunde', many: '{count} Stunden' },
+      past: 'vorbei',
+      empty: 'Heute keine Stunden',
+    },
     /** Startseite in der Richtung „Lagen“: Stundenliste, Zettel und „Zuletzt genutzt“. */
     startGrid: {
       now: 'Jetzt',
