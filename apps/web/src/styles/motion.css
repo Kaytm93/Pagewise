@@ -227,6 +227,80 @@
   }
 }
 
+/* Vorwärts (tiefer in die App): das neue Blatt liegt unter dem alten und wird sichtbar, ohne zu kippen */
+@keyframes sheet-under {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--m) * 7px)) scale(calc(1 - var(--m) * 0.012));
+  }
+}
+
+/* Gleiche Tiefe: ruhiges Aufgehen ohne Blattmetapher */
+@keyframes page-rise {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--m) * 10px));
+  }
+}
+
+/* Raum, vorwärts: die neue Seite kommt von hinten auf den Betrachter zu */
+@keyframes dive-in {
+  from {
+    opacity: 0;
+    transform: perspective(1600px) translateZ(calc(var(--m) * 120px));
+  }
+}
+
+/* Raum, rückwärts: die neue Seite tritt hinter die alte zurück */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: perspective(1600px) translateZ(calc(var(--m) * -90px));
+  }
+}
+
+/*
+ * Blattwechsel nach Richtung. Die Richtungsregeln stehen ohne @layer und mit höherer Spezifität
+ * als .lg-arrive: sie überstimmen die Regel in lagen.css (dort in @layer components) sicher.
+ */
+.lg-arrive[data-dir="fwd"] {
+  animation: sheet-under var(--t-slow) var(--spring) both;
+}
+
+.lg-arrive[data-dir="back"] {
+  animation: sheet-arrive var(--t-slow) var(--spring) both;
+}
+
+.lg-arrive[data-dir="same"] {
+  animation: page-rise var(--t-med) var(--ease) both;
+}
+
+/* Atelier: kein Blatt, kein Kippen — in jeder Richtung dasselbe ruhige Aufgehen */
+:root[data-design="atelier"] .lg-arrive {
+  animation: page-rise var(--t-slow) var(--ease) both;
+}
+
+/* Raum: vorwärts taucht die Seite auf, rückwärts tritt sie zurück */
+:root[data-design="raum"] .lg-arrive[data-dir="fwd"] {
+  animation: dive-in var(--t-slow) var(--spring) both;
+}
+
+:root[data-design="raum"] .lg-arrive[data-dir="back"] {
+  animation: rise-in var(--t-slow) var(--spring) both;
+}
+
+:root[data-design="raum"] .lg-arrive[data-dir="same"] {
+  animation: page-rise var(--t-med) var(--ease) both;
+}
+
+/* Lagen bleibt beim Blatt: die Grundlage oben gilt dort unverändert. */
+
+/* „Aus“: keine Animation, also auch kein Füllstand aus den Keyframes — das Blatt steht vollständig da */
+:root.fx-off .lg-arrive {
+  opacity: 1;
+  transform: none;
+}
+
 /* Gestaffeltes Einblenden: --i setzt die Reihenfolge (per Klasse mo-i-1 … mo-i-8) */
 .mo-rise {
   animation: rise var(--t-slow) var(--spring) both;

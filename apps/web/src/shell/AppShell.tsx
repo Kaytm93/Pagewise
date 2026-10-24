@@ -109,6 +109,15 @@ function depthOf(route: Route): 1 | 2 | 3 {
   return 1;
 }
 
+/** Richtung des Blattwechsels: tiefer in die App (fwd), zurück (back) oder gleiche Tiefe (same). */
+type PageDirection = 'fwd' | 'back' | 'same';
+
+function directionOf(depth: number, previous: number): PageDirection {
+  if (depth > previous) return 'fwd';
+  if (depth < previous) return 'back';
+  return 'same';
+}
+
 /**
  * Rahmen der angemeldeten App (Designrichtungen „Raum“, „Lagen“ und „Atelier“, D-045; hier der Aufbau von „Lagen“,
  * die anderen überschreiben ihn in raum.css und atelier.css): ein Schreibtisch, links der Heftrücken als Seitenleiste
@@ -131,6 +140,21 @@ function Shell() {
   const app = useRef<HTMLDivElement>(null);
   // Schlüssel der Seite, auf der die Schublade geöffnet wurde (null: zu).
   const drawerPageKey = useRef<string | null>(null);
+
+  // Richtung des Wechsels: die Tiefe der neuen Seite gegen die der zuletzt gezeigten. Der Wert wird im
+  // Render nur gelesen und im Effekt nachgezogen, damit ein späteres Neuzeichnen derselben Seite die
+  // Bewegung nicht neu startet.
+  const key = pageKey(route);
+  const depth = depthOf(route);
+  const lastPage = useRef({ key, depth, dir: 'same' as PageDirection });
+  const dir: PageDirection =
+    lastPage.current.key === key
+      ? lastPage.current.dir
+      : directionOf(depth, lastPage.current.depth);
+
+  useEffect(() => {
+    lastPage.current = { key, depth, dir };
+  }, [key, depth, dir]);
 
   useEffect(() => (app.current ? startParallax(app.current) : undefined), []);
 
@@ -196,11 +220,11 @@ function Shell() {
           tabIndex={-1}
           className="flex-1 scroll-mt-20 pt-1 pr-[max(1.75rem,env(safe-area-inset-right))] pb-[max(1.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] outline-none md:py-3.5 md:pr-[max(3rem,env(safe-area-inset-right))] md:pl-0"
         >
-          <div className="lg-stack mx-auto max-w-[1180px]" data-depth={depthOf(route)}>
+          <div className="lg-stack mx-auto max-w-[1180px]" data-depth={depth}>
             <div aria-hidden="true" className="lg-ply lg-p1" />
             <div aria-hidden="true" className="lg-ply lg-p2" />
             <div aria-hidden="true" className="lg-ply lg-p3" />
-            <div key={pageKey(route)} className="lg-arrive">
+            <div key={pageKey(route)} className="lg-arrive" data-dir={dir}>
               <ErrorBoundary resetKey={pageKey(route)}>
                 <Page route={route} />
               </ErrorBoundary>
