@@ -21,5 +21,8 @@ export default defineConfig({
   test: {
     // Komponententests wählen jsdom per Kommentar `@vitest-environment jsdom` in der Datei.
     setupFiles: ['./src/test/setup.ts'],
+    // Laufen alle Pakete gleichzeitig (CI, `pnpm -r test`), brauchen einzelne jsdom-Tests über 5 s.
+    // 10 s verhindert falsche Rote durch Last, ohne echte Hänger zu verdecken.
+    testTimeout: 10_000,
   },
 });

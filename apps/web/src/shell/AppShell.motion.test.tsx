@@ -28,6 +28,15 @@ function mount(server: FakeServer) {
 // Anmelde- und Einrichtungsschirme tragen ebenfalls .lg-arrive; das Blatt der Hülle hängt am Stapel.
 const arrive = () => document.querySelector<HTMLElement>('.lg-stack > .lg-arrive');
 const dirOf = () => arrive()?.dataset.dir;
+const viewOf = () => document.querySelector<HTMLElement>('.lg-app')?.dataset.view;
+
+/**
+ * Wartet, bis React die neue Ansicht wirklich gezeichnet hat. Unter CI-Last kommt der Store-Update
+ * nicht synchron mit `act()` an; die Richtung wird im selben Commit wie `data-view` gesetzt.
+ */
+async function movedTo(view: string) {
+  await waitFor(() => expect(viewOf()).toBe(view));
+}
 
 async function ready() {
   await waitFor(() => expect(arrive()).not.toBeNull());
@@ -47,6 +56,7 @@ describe('Blattwechsel: Richtung am Blatt', () => {
     expect(dirOf()).toBe('same');
 
     act(() => navigate(`/subjects/${subject.id}`));
+    await movedTo('subject');
     expect(dirOf()).toBe('fwd');
   });
 
@@ -58,6 +68,7 @@ describe('Blattwechsel: Richtung am Blatt', () => {
     await ready();
 
     act(() => navigate('/'));
+    await movedTo('home');
     expect(dirOf()).toBe('back');
   });
 
@@ -66,6 +77,7 @@ describe('Blattwechsel: Richtung am Blatt', () => {
     await ready();
 
     act(() => navigate('/settings'));
+    await movedTo('settings');
     expect(dirOf()).toBe('same');
   });
 
@@ -76,6 +88,7 @@ describe('Blattwechsel: Richtung am Blatt', () => {
     await ready();
 
     act(() => navigate(`/subjects/${subject.id}`));
+    await movedTo('subject');
     expect(dirOf()).toBe('fwd');
 
     // Die Schublade öffnen zeichnet die Hülle neu, ohne die Seite zu wechseln.
