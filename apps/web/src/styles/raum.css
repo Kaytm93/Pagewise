@@ -519,3 +519,120 @@
     }
   }
 }
+
+@layer components {
+  /* ===== Fachseite in „Raum“: Register am rechten Blattrand, Ringe hinter dem Fachmotiv =====
+     Beides ist Zier (aria-hidden): kein Fortschritt, keine Zahl, keine Bedienung. Farben kommen aus
+     tokens.css und werden mit color-mix gemischt, Bewegung nur über transform/opacity. */
+
+  /* Bezugsrahmen für die schmale Blattbreite ist das Blatt selbst. Nur ein Blatt, das ein Register
+     trägt, wird zum Container — Chat, Notiz und die anderen Blätter bleiben unberührt. */
+  :root[data-design="raum"] .lg-sheet:has(.rm-reg) {
+    container-type: inline-size;
+    container-name: blatt;
+  }
+
+  /* Das Register: eine schmale Leiste am rechten Blattrand, unterhalb der Ringe. Es fängt keinen
+     Zeiger und keinen Fokus — es ist nur die stille zweite Darstellung der Reiterwahl. */
+  .rm-reg {
+    position: absolute;
+    z-index: 1;
+    top: 12rem;
+    right: 0;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    width: 34px;
+    pointer-events: none;
+  }
+
+  /* Unter 900 px Blattbreite bleibt nur die Reiterleiste; die Ringe bleiben. */
+  @container blatt (min-width: 900px) {
+    .rm-reg {
+      display: flex;
+    }
+  }
+
+  /* Eine Zunge: hochkant beschriftet, mit der Kante in der Fachfarbe. Die Zungen liegen versetzt
+     gestapelt — jede ein paar Pixel tiefer als die davor (--reg-i). */
+  .rm-reg-tab {
+    --reg-i: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 6.5rem;
+    margin-top: calc(var(--reg-i) * 5px);
+    padding: 4px 0;
+    border-left: 3px solid var(--subj);
+    border-radius: 7px 0 0 7px;
+    background-color: color-mix(in srgb, var(--subj) 12%, transparent);
+    color: var(--ink-muted);
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    writing-mode: vertical-rl;
+    transition:
+      background-color var(--t-fast) var(--ease),
+      color var(--t-fast) var(--ease),
+      transform var(--t-med) var(--ease);
+  }
+
+  .rm-reg-tab:nth-child(1) {
+    --reg-i: 0;
+  }
+
+  .rm-reg-tab:nth-child(2) {
+    --reg-i: 1;
+  }
+
+  .rm-reg-tab:nth-child(3) {
+    --reg-i: 2;
+  }
+
+  .rm-reg-tab:nth-child(4) {
+    --reg-i: 3;
+  }
+
+  /* Der gewählte Reiter steht hervor, die anderen bleiben gedämpft. */
+  .rm-reg-tab[data-active="true"] {
+    background-color: color-mix(in srgb, var(--subj) 30%, transparent);
+    color: var(--ink);
+    transform: translateX(calc(var(--m) * -6px));
+  }
+
+  /* Die Ringe: zwei dünne, gestrichelte Kreise hinter dem Fachmotiv. Reine Zier, ohne Wert.
+     `z-index: -1` legt sie unter Text und Symbol und über die Blattfläche — das Blatt ist durch
+     `container-type` ein eigener Stapelkontext, die Ringe bleiben also auf dem Papier. */
+  .rm-rings {
+    position: absolute;
+    z-index: -1;
+    top: 18px;
+    right: 6px;
+    width: 112px;
+    height: 112px;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .rm-rings circle {
+    fill: none;
+    stroke: color-mix(in srgb, var(--subj) 40%, transparent);
+    stroke-width: 1;
+    stroke-dasharray: 2 7;
+  }
+
+  .rm-rings circle:nth-of-type(2) {
+    stroke-dasharray: 1 10;
+  }
+
+  /* Ab md steht das Motiv größer (132 px) und rückt nach innen; die Ringe wachsen mit. */
+  @media (min-width: 768px) {
+    .rm-rings {
+      top: 4px;
+      right: 20px;
+      width: 188px;
+      height: 188px;
+    }
+  }
+}

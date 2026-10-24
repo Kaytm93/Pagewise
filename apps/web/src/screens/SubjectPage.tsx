@@ -20,6 +20,7 @@ import { SubjectHead } from './lagen/SubjectHead';
 import { NotFoundPage } from './NotFoundPage';
 import { NoteList } from './notes/NoteList';
 import { PromptRow } from './prompts/PromptRow';
+import { SheetRegister, SubjectRings } from './raum/SubjectFrame';
 import { SubjectDialog } from './SubjectDialog';
 import { subjectMeta } from './subject-meta';
 
@@ -38,6 +39,7 @@ export function SubjectPage({
   const design = useDesign();
   const lagen = design === 'lagen';
   const atelier = design === 'atelier';
+  const raum = design === 'raum';
   const [dialog, setDialog] = useState<Dialog>(null);
   // Rückweg aus dem Hefteintrags-Editor (M4-T017): NotePage markiert beim Verlassen seinen Chronik-Eintrag
   // als „kehrt zu den Hefteinträgen zurück“; hier wird die Markierung aufgesucht. Nur dieser eine Rückweg
@@ -82,12 +84,17 @@ export function SubjectPage({
       {!lagen && (
         <>
           <span aria-hidden="true" className="lg-tape top-5 left-5 [--r:-1.8deg] md:left-11" />
+          {/* „Raum“ legt zwei Ringe hinter das Fachmotiv — Zier, zusätzlich zum bisherigen Symbol. */}
+          {raum && !builtin && <SubjectRings />}
           {!builtin &&
             (atelier ? (
               <SubjectMotifs kind={subject.icon} className={motivKlasse} />
             ) : (
               <SubjectIcon icon={subject.icon} strokeWidth={0.4} className={motivKlasse} />
             ))}
+          {/* Register am rechten Blattrand: dieselbe Wahl wie die Reiterleiste unten, aber nur Darstellung
+              (aria-hidden, ohne Fokus, ohne Klick) — es schaltet nichts um. */}
+          {raum && <SheetRegister active={tab === 'notes' ? 'notes' : 'chats'} />}
         </>
       )}
       {group && (
