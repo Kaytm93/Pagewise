@@ -12,6 +12,7 @@ import { listRow, sectionTitle } from '../ui/styles';
 import { Tabs } from '../ui/Tabs';
 import { useDesign } from '../ui/useDesign';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
+import { SubjectMotifs } from './atelier/SubjectMotifs';
 import { ChatList } from './chat/ChatList';
 import { SubjectModel } from './chat/SubjectModel';
 import { GroupDialog } from './GroupDialog';
@@ -36,6 +37,7 @@ export function SubjectPage({
   const { findSubject } = useWorkspace();
   const design = useDesign();
   const lagen = design === 'lagen';
+  const atelier = design === 'atelier';
   const [dialog, setDialog] = useState<Dialog>(null);
   // Rückweg aus dem Hefteintrags-Editor (M4-T017): NotePage markiert beim Verlassen seinen Chronik-Eintrag
   // als „kehrt zu den Hefteinträgen zurück“; hier wird die Markierung aufgesucht. Nur dieser eine Rückweg
@@ -71,19 +73,21 @@ export function SubjectPage({
   const builtin = subject.kind === 'default';
   const meta = group ? (group.kind ?? '') : builtin ? m.defaultSubject.lead : subjectMeta(subject);
   const close = () => setDialog(null);
+  // Das Fachmotiv sitzt in allen Richtungen an derselben Stelle im Kopf; „Atelier“ zeichnet es selbst
+  // (gestaffelte Linien), die anderen Richtungen behalten das bisherige Symbol.
+  const motivKlasse = 'lg-motif top-8 right-5 size-[84px] opacity-80 md:right-12 md:size-[132px]';
 
   return (
     <Sheet width="wide">
       {!lagen && (
         <>
           <span aria-hidden="true" className="lg-tape top-5 left-5 [--r:-1.8deg] md:left-11" />
-          {!builtin && (
-            <SubjectIcon
-              icon={subject.icon}
-              strokeWidth={0.4}
-              className="lg-motif top-8 right-5 size-[84px] opacity-80 md:right-12 md:size-[132px]"
-            />
-          )}
+          {!builtin &&
+            (atelier ? (
+              <SubjectMotifs kind={subject.icon} className={motivKlasse} />
+            ) : (
+              <SubjectIcon icon={subject.icon} strokeWidth={0.4} className={motivKlasse} />
+            ))}
         </>
       )}
       {group && (

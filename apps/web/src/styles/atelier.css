@@ -7,6 +7,18 @@
  * tokens.css, Bewegung aus motion.css (nur transform und opacity). Im Chat steht das Licht still.
  */
 
+/*
+ * Das Licht blendet beim Fachwechsel weich um: `--subj` ist hier als Farbe registriert und darum
+ * interpolierbar. Nur diese eine Eigenschaft wechselt über — die Lichtbänder malen ihren Hintergrund
+ * weiterhin aus `--subj` und folgen der Überblendung Bild für Bild. Bei „Aus“ (fx-off) schaltet
+ * motion.css Übergänge ab; dann springt die Farbe, wie es die Stufe verlangt.
+ */
+@property --subj {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
 /* Ohne Fach (Start, Stundenplan, Einstellungen) liegt ein warmes Licht über dem Grund statt des neutralen Tons */
 :root[data-design="atelier"] .lg-app:not([data-subj]) {
   --subj: #c99a50;
@@ -23,6 +35,11 @@
 }
 
 @layer components {
+  /* Fachwechsel: nur die Lichtfarbe selbst blendet über (Dauer und Kurve aus motion.css) */
+  :root[data-design="atelier"] .lg-app {
+    transition: --subj var(--t-slow) var(--ease);
+  }
+
   /* ===== Grund: Papier, darüber das Licht der Fachfarbe und die Körnung ===== */
   :root[data-design="atelier"] .lg-app::before {
     background:
@@ -145,6 +162,11 @@
 
   :root[data-design="atelier"] .lg-tape {
     display: none;
+  }
+
+  /* Gezeichnete Fachmotive (SubjectMotifs): dünne Linie in der Fachfarbe, Stärke aus dem Token */
+  :root[data-design="atelier"] .lg-motif-marks {
+    stroke-width: var(--hairline, 1.5);
   }
 
   /* Zeilen: die Fachfarbe leuchtet als weiche Fläche statt als Balken */
