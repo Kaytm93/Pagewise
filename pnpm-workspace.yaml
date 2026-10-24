@@ -6,6 +6,12 @@ packages:
 onlyBuiltDependencies:
   - esbuild
 
+# Sicherheitslücken in undici (GHSA-xjj6-f33q-929c): 7.x und 8.x getrennt auf den
+# gepatchten Stand heben, damit die jeweilige Hauptversion erhalten bleibt.
+overrides:
+  "undici@>=7.18.0 <7.30.1": "7.30.1"
+  "undici@>=8.0.0 <8.12.2": "8.12.2"
+
 # better-sqlite3 liefert fertige Binärdateien für macOS, Linux und Windows mit und lädt sie
 # direkt. Ein Kompilierschritt (node-gyp) ist unnötig und würde auf Rechnern ohne
 # Entwicklerwerkzeuge scheitern, deshalb bleibt er aus.
