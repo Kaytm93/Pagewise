@@ -24,11 +24,113 @@
 :root[data-design="atelier"] {
   --sidebar-w: 264px;
   --sheet-edge: clamp(20px, 5vw, 72px);
+  /* Stärke des Lichts der Fachfarbe (Mockup B: hell .78, dunkel .5); der Kontrast prüft atelier-contrast.test.ts */
+  --at-k: 0.78;
+  /* Kern des Zeigerscheins (ui/pointer-glow.ts): hell fast weiß, dunkel ein Hauch warmes Licht */
+  --at-glow-base: rgb(255 255 255 / 0.9);
+  /* Fachtext-Ton: die Fachfarbe als Textfarbe (Kennzahl, Symbole, Marken), je Fach eigener Wert, AA-geprüft.
+     Ohne Fach (Start, Einstellungen) gilt die ruhige Tinte. */
+  --hue-ink: var(--ink-secondary);
 }
 
 @media (min-width: 768px) and (max-width: 1099.98px) {
   :root[data-design="atelier"] {
     --sidebar-w: 232px;
+  }
+}
+
+:root[data-design="atelier"][data-theme="dark"] {
+  --at-k: 0.5;
+  --at-glow-base: rgb(255 244 225 / 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-design="atelier"]:not([data-theme="light"]) {
+    --at-k: 0.5;
+    --at-glow-base: rgb(255 244 225 / 0.08);
+  }
+}
+
+/*
+ * Fachtext-Ton je Fachfarbe 0 bis 7. `--subj` (tokens.css) bleibt Fläche, Linie und Licht und erreicht als Text
+ * nur etwa 2 : 1; `--hue-ink` ist dieselbe Farbe, im Hellen abgedunkelt und im Dunkeln aufgehellt, bis sie auf
+ * Blatt, Karte, Papier, Arbeitsgrund und dem Licht der Fachfarbe mindestens 5,3 : 1 erreicht (Mockup B: 5,3 bis
+ * 6,9 : 1). atelier-contrast.test.ts rechnet das nach. Die Information steckt zusätzlich immer im Fachnamen.
+ */
+:root[data-design="atelier"] [data-subj="0"] {
+  --hue-ink: #28585e;
+}
+:root[data-design="atelier"] [data-subj="1"] {
+  --hue-ink: #754533;
+}
+:root[data-design="atelier"] [data-subj="2"] {
+  --hue-ink: #445734;
+}
+:root[data-design="atelier"] [data-subj="3"] {
+  --hue-ink: #654e21;
+}
+:root[data-design="atelier"] [data-subj="4"] {
+  --hue-ink: #3e526f;
+}
+:root[data-design="atelier"] [data-subj="5"] {
+  --hue-ink: #764253;
+}
+:root[data-design="atelier"] [data-subj="6"] {
+  --hue-ink: #594b6e;
+}
+:root[data-design="atelier"] [data-subj="7"] {
+  --hue-ink: #45535a;
+}
+
+:root[data-design="atelier"][data-theme="dark"] [data-subj="0"] {
+  --hue-ink: #7fbcc4;
+}
+:root[data-design="atelier"][data-theme="dark"] [data-subj="1"] {
+  --hue-ink: #dea691;
+}
+:root[data-design="atelier"][data-theme="dark"] [data-subj="2"] {
+  --hue-ink: #9bbd80;
+}
+:root[data-design="atelier"][data-theme="dark"] [data-subj="3"] {
+  --hue-ink: #d4ac60;
+}
+:root[data-design="atelier"][data-theme="dark"] [data-subj="4"] {
+  --hue-ink: #9bb4d8;
+}
+:root[data-design="atelier"][data-theme="dark"] [data-subj="5"] {
+  --hue-ink: #daa3b3;
+}
+:root[data-design="atelier"][data-theme="dark"] [data-subj="6"] {
+  --hue-ink: #b9accf;
+}
+:root[data-design="atelier"][data-theme="dark"] [data-subj="7"] {
+  --hue-ink: #a1b5be;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-design="atelier"]:not([data-theme="light"]) [data-subj="0"] {
+    --hue-ink: #7fbcc4;
+  }
+  :root[data-design="atelier"]:not([data-theme="light"]) [data-subj="1"] {
+    --hue-ink: #dea691;
+  }
+  :root[data-design="atelier"]:not([data-theme="light"]) [data-subj="2"] {
+    --hue-ink: #9bbd80;
+  }
+  :root[data-design="atelier"]:not([data-theme="light"]) [data-subj="3"] {
+    --hue-ink: #d4ac60;
+  }
+  :root[data-design="atelier"]:not([data-theme="light"]) [data-subj="4"] {
+    --hue-ink: #9bb4d8;
+  }
+  :root[data-design="atelier"]:not([data-theme="light"]) [data-subj="5"] {
+    --hue-ink: #daa3b3;
+  }
+  :root[data-design="atelier"]:not([data-theme="light"]) [data-subj="6"] {
+    --hue-ink: #b9accf;
+  }
+  :root[data-design="atelier"]:not([data-theme="light"]) [data-subj="7"] {
+    --hue-ink: #a1b5be;
   }
 }
 
@@ -58,12 +160,12 @@
     background:
       radial-gradient(
         62% 52% at 18% -6%,
-        color-mix(in srgb, var(--subj) 22%, transparent),
+        color-mix(in srgb, var(--subj) calc(30% * var(--at-k)), transparent),
         transparent 74%
       ),
       radial-gradient(
         38% 40% at 98% 4%,
-        color-mix(in srgb, var(--subj) 12%, transparent),
+        color-mix(in srgb, var(--subj) calc(15% * var(--at-k)), transparent),
         transparent 72%
       ),
       var(--grain), var(--canvas);
@@ -86,10 +188,10 @@
     background: linear-gradient(
       90deg,
       transparent 4%,
-      color-mix(in srgb, var(--subj) 8%, transparent) 22%,
+      color-mix(in srgb, var(--subj) calc(9% * var(--at-k)), transparent) 22%,
       transparent 40%,
       transparent 54%,
-      color-mix(in srgb, var(--subj) 5%, transparent) 70%,
+      color-mix(in srgb, var(--subj) calc(6% * var(--at-k)), transparent) 70%,
       transparent 88%
     );
     transform: skewX(-30deg);
@@ -217,255 +319,674 @@
 }
 
 /*
- * Startseite in „Atelier“: Leitkarte, große Zahl, Wochenstreifen und die übrigen Stunden von heute.
- * Die Balken des Streifens tragen ihre Höhe als `--at-bar` (Anzahl der Stunden, per setProperty gesetzt),
- * `calc()` macht daraus Pixel. Bewegung nur über transform, Dauer und Kurve aus motion.css.
+ * Seitenleiste: runde Fach-Icons und Zeigerlicht (Mockup B). Das Symbol bleibt ein 20-px-Zeichen im Eintrag
+ * (`size-5`); 5 px Polster machen daraus einen Kreis von 30 px, ohne die Seitenleiste umzubauen.
  */
 @layer components {
-  .at-start-top {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
-    margin-top: 14px;
-  }
-
-  .at-lead {
-    min-width: 0;
-  }
-
-  /* Leitkarte: runde Fläche, Fachfarbe als weiches Licht, ein einziger Link */
-  .at-lead-link {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-height: 44px;
-    padding: 20px 22px 18px;
-    border: 1px solid var(--line-warm);
-    border-radius: 16px;
-    background-color: var(--surface);
-    background-image: radial-gradient(
-      120% 96% at 100% 0%,
-      color-mix(in srgb, var(--subj) 14%, transparent),
-      transparent 72%
-    );
-    box-shadow:
-      inset 0 1px 0 var(--rim),
-      0 1px 2px rgba(var(--shadow), 0.06),
-      0 8px 20px -10px rgba(var(--shadow), calc(var(--shadow-a) * 1.1));
-    color: var(--ink);
-    text-decoration: none;
-    transition: transform var(--t-med) var(--spring-snap);
-  }
-
-  .at-lead-kicker {
-    font-size: 0.8125rem;
-    font-weight: 500;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--ink-muted);
-  }
-
-  .at-lead-name {
-    font-family: var(--font-heading);
-    font-size: clamp(26px, 3.4vw, 38px);
-    line-height: 1.08;
-    letter-spacing: -0.025em;
-    overflow-wrap: break-word;
-  }
-
-  .at-lead-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 14px;
-    font-size: 0.9375rem;
-    color: var(--ink-secondary);
-  }
-
-  .at-lead-empty {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 20px 22px;
-    border: 1px dashed color-mix(in srgb, var(--ink-muted) 45%, transparent);
-    border-radius: 16px;
-    color: var(--ink-secondary);
-  }
-
-  .at-lead-more {
-    display: inline-flex;
-    align-items: center;
-    align-self: flex-start;
-    min-height: 44px;
+  :root[data-design="atelier"] .lg-nav-item > svg:first-child {
+    box-sizing: content-box;
+    margin-left: -4px;
+    padding: 5px;
+    border-radius: 50%;
+    color: var(--hue-ink);
+    transition:
+      background-color var(--t-color) ease,
+      transform var(--t-med) var(--ease);
   }
 
   @media (hover: hover) {
-    .at-lead-link:hover {
-      transform: translateY(calc(var(--m) * -2px));
+    :root[data-design="atelier"] .lg-nav-item:hover > svg:first-child {
+      transform: translateY(calc(var(--m) * -1px));
     }
   }
 
-  /* Große Zahl: Ziffer in der Fachfarbe des Tests, darunter das Fach */
-  .at-count {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    gap: 4px;
+  /* Fächer tragen einen leisen Kreis in der Fachfarbe, der gewählte Eintrag einen kräftigeren */
+  :root[data-design="atelier"] li[data-subj] .lg-nav-item > svg:first-child {
+    background-color: color-mix(in srgb, var(--subj) 10%, transparent);
+  }
+
+  :root[data-design="atelier"] a.lg-nav-item[aria-current="page"] > svg:first-child,
+  :root[data-design="atelier"] a.lg-nav-item[data-current="true"] > svg:first-child {
+    background-color: color-mix(in srgb, var(--subj) 20%, transparent);
+  }
+
+  /* Der Punkt am Zeilenende ist durch den Kreis überflüssig */
+  :root[data-design="atelier"] .lg-nav-item > .lg-dot {
+    display: none;
+  }
+
+  /* ===== Zeigerlicht (ui/pointer-glow.ts setzt --gx und --gy in Pixeln) =====
+     Ein weicher Schein in der Fachfarbe, 320 px groß, wandert per transform; nur seine Deckkraft blendet ein.
+     Er erscheint nur bei „Voll“ und mit feinem Zeiger; sonst bleibt bei Zeilen die ruhige Tönung beim
+     Darüberfahren (siehe .lg-row:hover). Der Schein sitzt hinter dem Inhalt und wird am Rand abgeschnitten. */
+  :root[data-design="atelier"] :is(.lg-binder, .lg-slip, .lg-row, .at-glow) {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  :root[data-design="atelier"] :is(.lg-binder, .lg-slip, .lg-row, .at-glow)::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    width: 320px;
+    height: 320px;
+    margin: -160px 0 0 -160px;
+    border-radius: 50%;
+    background: radial-gradient(
+      closest-side,
+      var(--at-glow-base),
+      color-mix(in srgb, var(--subj) 14%, transparent) 55%,
+      transparent
+    );
+    opacity: 0;
+    pointer-events: none;
+    transform: translate3d(var(--gx, 0px), var(--gy, 0px), 0);
+    transition: opacity var(--t-med) var(--ease);
+  }
+
+  /* Verschachtelt statt „and“: hover-media.test.ts verlangt `@media (hover: hover)` um jede Hover-Regel */
+  @media (hover: hover) {
+    @media (pointer: fine) {
+      :root.fx-full[data-design="atelier"]
+        :is(.lg-binder, .lg-slip, .lg-row, .at-glow):hover::after {
+        opacity: 1;
+        will-change: transform;
+      }
+    }
+  }
+
+  :root.tab-hidden[data-design="atelier"] :is(.lg-binder, .lg-slip, .lg-row, .at-glow)::after {
+    opacity: 0;
+  }
+
+  /* Kachelrand: der Schein läuft nur als feine Linie am Rand entlang (Maske). Dies ist die einzige Stelle, an der
+     sich ein Verlauf selbst verschiebt; die Fläche ist eine Kachel groß, es entsteht kein Layout. */
+  :root[data-design="atelier"] .at-glow-edge {
+    position: relative;
+  }
+
+  :root[data-design="atelier"] .at-glow-edge::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: radial-gradient(
+      180px circle at var(--gx, 50%) var(--gy, 50%),
+      var(--subj),
+      transparent 70%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--t-med) var(--ease);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    :root.fx-full[data-design="atelier"] .at-glow-edge:hover::before {
+      opacity: 0.9;
+    }
+  }
+
+  /* Dialoge (ui/modal.tsx, lagen.css) bleiben in allen Richtungen eine deckende Fläche auf --sheet: Text darin
+     liegt nie auf dem Licht oder dem Grund dahinter. Hier wird sie nie durchsichtig gemacht (anders als das
+     Blatt oben); atelier-contrast.test.ts hält das fest. */
+  :root[data-design="atelier"] .lg-dialog {
+    background-color: var(--sheet);
+  }
+}
+
+/*
+ * Startseite in „Atelier“ (Mockup B): links die Stunden von heute als Liste mit „Jetzt“-Linie und der nächsten
+ * Stunde als großer Zeile (keine Karte), rechts der nächste Test mit Zahl, Stoff und Wochenstreifen. Die zwei
+ * Spalten richten sich nach der Breite des Bereichs (Container), nicht des Fensters: so passt das Raster auch
+ * neben der Seitenleiste. Bewegung nur über transform und opacity, Dauer und Kurve aus motion.css.
+ */
+@layer components {
+  .at-start {
+    container-type: inline-size;
+  }
+
+  .at-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 44px;
+  }
+
+  @container (min-width: 760px) {
+    .at-grid {
+      grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+      gap: clamp(32px, 6cqi, 88px);
+    }
+  }
+
+  .at-day-sec,
+  .at-test {
     min-width: 0;
+  }
+
+  /* Abschnittsüberschrift: Instrument Sans, mit kleiner Zusatzzeile */
+  .at-sec {
+    font-family: var(--font-heading);
+    font-size: 1.0625rem;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: -0.1px;
     color: var(--ink);
   }
 
-  .at-count-num {
-    line-height: 0.84;
-    letter-spacing: -0.045em;
-  }
-
-  .at-count-sub {
-    font-size: 0.9375rem;
-    color: var(--ink-secondary);
-    overflow-wrap: break-word;
-  }
-
-  /* Wochenstreifen: sieben Spalten, Balken von unten, heute markiert */
-  .at-week {
-    margin-top: 30px;
-  }
-
-  .at-week-grid {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 4px;
-    margin: 0;
-    padding: 14px 0 0;
-    border-top: 1px solid var(--line-warm);
-    list-style: none;
-    --at-bar-unit: 7px;
-  }
-
-  .at-week-col {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 0;
-  }
-
-  .at-week-track {
-    display: flex;
-    align-items: flex-end;
-    height: 60px;
-    border-bottom: 1px solid var(--line-warm);
-  }
-
-  .at-week-bar {
-    display: block;
-    width: 100%;
-    height: calc(min(var(--at-bar, 0), 8) * var(--at-bar-unit));
-    border-radius: 4px 4px 1px 1px;
-    background-color: color-mix(in srgb, var(--subj) 26%, transparent);
-    transform-origin: bottom;
-    animation: at-bar-rise var(--t-slow) var(--spring) both;
-    animation-delay: calc(var(--i, 0) * var(--stagger));
-  }
-
-  .at-week-col[data-empty="true"] .at-week-bar {
-    min-height: 2px;
-    background-color: color-mix(in srgb, var(--ink-muted) 30%, transparent);
-  }
-
-  .at-week-col[aria-current="date"] .at-week-bar {
-    background-color: var(--subj);
-  }
-
-  .at-week-label {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 2px 5px;
+  .at-sec small {
+    margin-left: 8px;
+    font-family: var(--font-sans);
     font-size: 0.8125rem;
+    font-weight: 400;
+    letter-spacing: 0;
     color: var(--ink-muted);
   }
 
-  .at-week-day {
-    font-variant-numeric: tabular-nums;
-  }
-
-  .at-week-today {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+  .at-empty {
+    margin-top: 10px;
     color: var(--ink-secondary);
   }
 
-  .at-week-today::before {
-    content: "";
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: var(--subj);
-  }
-
-  /* Die übrigen Stunden von heute: gedämpft, mit Zeit und Raum */
-  .at-next {
-    margin-top: 18px;
-    color: var(--ink-secondary);
-  }
-
-  .at-next-list {
-    margin: 0;
-    padding: 0;
-    border-top: 1px solid var(--line-warm);
-    list-style: none;
-  }
-
-  .at-next-item {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: baseline;
-    gap: 12px;
-    padding: 8px 2px;
-    border-bottom: 1px solid var(--line-warm);
-    font-size: 0.9375rem;
-    color: var(--ink-muted);
-  }
-
-  .at-next-name {
-    font-family: var(--font-heading);
-    color: var(--ink-secondary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .at-next-room {
-    font-size: 0.875rem;
-  }
-
-  .at-next-link {
+  .at-more {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
     margin-top: 4px;
   }
 
-  @media (min-width: 720px) {
-    .at-start-top {
-      grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
-      align-items: end;
-      gap: 30px;
+  /* ----- Tagesliste ----- */
+  .at-day {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .at-day-row {
+    border-top: 1px solid var(--line-warm);
+  }
+
+  .at-lesson {
+    display: grid;
+    grid-template-columns: 3.9rem minmax(0, 1fr) auto;
+    grid-template-areas: "time who meta";
+    align-items: center;
+    column-gap: 12px;
+    min-height: 56px;
+    margin-inline: -10px;
+    padding-inline: 10px;
+    border-radius: 12px;
+    color: inherit;
+    text-decoration: none;
+    transition:
+      background-color var(--t-color) ease,
+      box-shadow var(--t-color) ease;
+  }
+
+  .at-time {
+    grid-area: time;
+    font-size: 0.9rem;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .at-who {
+    grid-area: who;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .at-who-icon {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    color: var(--hue-ink);
+  }
+
+  .at-who-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .at-meta {
+    grid-area: meta;
+    max-width: 14rem;
+    font-size: 0.875rem;
+    text-align: right;
+    color: var(--ink-muted);
+  }
+
+  /* Vorbei: leiser, das Symbol grau */
+  .at-day-row[data-state="past"] .at-who {
+    font-weight: 400;
+    color: var(--ink-muted);
+  }
+
+  .at-day-row[data-state="past"] .at-who-icon {
+    color: var(--ink-muted);
+  }
+
+  /* Die laufende oder nächste Stunde: große Zeile mit Tönung und Rand in der Fachfarbe */
+  .at-day-row[data-lead] {
+    border-top-color: transparent;
+  }
+
+  .at-day-row[data-lead] + .at-day-row {
+    border-top-color: transparent;
+  }
+
+  .at-day-row[data-lead] .at-lesson {
+    min-height: 92px;
+    margin-inline: -14px;
+    padding-inline: 14px;
+    background-color: color-mix(in srgb, var(--subj) 7%, var(--canvas));
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--subj) 22%, transparent),
+      0 1px 2px rgba(var(--shadow), 0.06),
+      0 8px 20px -10px rgba(var(--shadow), calc(var(--shadow-a) * 1.1));
+  }
+
+  .at-day-row[data-lead] .at-who {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    line-height: 1.1;
+    letter-spacing: -0.4px;
+  }
+
+  .at-day-row[data-lead] .at-who-icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .at-day-row[data-lead] .at-time {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .at-day-row[data-lead] .at-meta {
+    font-weight: 500;
+    color: var(--hue-ink);
+  }
+
+  .at-arrow {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    margin-left: 6px;
+    vertical-align: -4px;
+    transition: transform var(--t-med) var(--ease);
+  }
+
+  @media (hover: hover) {
+    a.at-lesson:hover {
+      background-color: color-mix(in srgb, var(--subj) 9%, transparent);
     }
 
-    .at-week-grid {
-      gap: 8px;
-      --at-bar-unit: 8px;
+    .at-day-row[data-lead] a.at-lesson:hover {
+      background-color: color-mix(in srgb, var(--subj) 11%, var(--canvas));
     }
 
-    .at-week-track {
-      height: 66px;
+    a.at-lesson:hover .at-arrow {
+      transform: translateX(calc(var(--m) * 4px));
+    }
+  }
+
+  a.at-lesson:focus-visible {
+    background-color: color-mix(in srgb, var(--subj) 9%, transparent);
+  }
+
+  /* Schmaler Bereich: der Stand rutscht unter den Namen, damit dieser nicht abgeschnitten wird */
+  @container (max-width: 30rem) {
+    .at-lesson {
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas:
+        "time who"
+        "time meta";
+      padding-block: 8px;
+    }
+
+    .at-meta {
+      max-width: none;
+      text-align: left;
+    }
+
+    .at-day > .at-break {
+      padding-left: 0;
+    }
+  }
+
+  /* „Jetzt“-Linie: Text, Punkt und auslaufende Linie in der Bedienfarbe (der Text trägt die Information) */
+  .at-now {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--link);
+  }
+
+  .at-now::before {
+    content: "";
+    flex: none;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background-color: var(--accent);
+  }
+
+  .at-now-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    transform-origin: left;
+    animation: at-line-grow var(--t-slow) var(--ease) 0.4s both;
+  }
+
+  .at-break {
+    padding: 6px 0 6px 4.65rem;
+    font-size: 0.8125rem;
+    color: var(--ink-muted);
+  }
+
+  /* ----- Anstehend ----- */
+  .at-count {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    margin-top: 6px;
+  }
+
+  .at-count-num {
+    font-family: var(--font-heading);
+    font-size: clamp(5rem, 9cqi, 7.5rem);
+    font-weight: 500;
+    line-height: 0.82;
+    letter-spacing: -4px;
+    color: var(--hue-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .at-count-what {
+    min-width: 0;
+    padding-bottom: 6px;
+    line-height: 1.35;
+    color: var(--ink-secondary);
+    overflow-wrap: break-word;
+  }
+
+  .at-count-what b {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.2px;
+    color: var(--ink);
+  }
+
+  .at-topics {
+    max-width: 30ch;
+    margin-top: 18px;
+    font-size: 0.9375rem;
+    color: var(--ink-secondary);
+  }
+
+  .at-topics span {
+    color: var(--ink-muted);
+  }
+
+  .at-week-title {
+    margin-top: 26px;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--ink-muted);
+  }
+
+  /*
+   * Wochenstreifen: Montag bis Freitag, fünf gleich breite Spalten. Lange Wörter („Schulaufgabe“ in einer
+   * Spalte von 56 px) brechen um (Silbentrennung, sonst an jeder Stelle), nichts läuft über den Rand.
+   */
+  .at-week {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--line-warm);
+  }
+
+  .at-week-item {
+    position: relative;
+    min-width: 0;
+    min-height: 64px;
+    padding: 12px 4px 0 0;
+    font-size: 0.8125rem;
+    color: var(--ink-muted);
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+
+  .at-week-item::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: 0;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1.5px solid var(--control-edge);
+    background-color: var(--canvas);
+  }
+
+  .at-week-day {
+    display: block;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .at-week-note {
+    display: block;
+  }
+
+  .at-week-item[aria-current="date"]::before {
+    border-color: var(--accent);
+    background-color: var(--accent);
+  }
+
+  .at-week-item[aria-current="date"] .at-week-day {
+    color: var(--link);
+  }
+
+  /* Ein Test: Punkt in der Fachfarbe mit Rand im Fachtext-Ton, Beschriftung ist der Name der Prüfung */
+  .at-week-item[data-test]::before {
+    top: -6px;
+    width: 11px;
+    height: 11px;
+    border-color: var(--hue-ink);
+    background-color: var(--subj);
+  }
+
+  .at-week-item[data-test] .at-week-day {
+    color: var(--hue-ink);
+  }
+
+  .at-cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 22px;
+  }
+
+  .at-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition:
+      background-color var(--t-color) ease,
+      box-shadow var(--t-color) ease,
+      transform var(--t-fast) var(--ease);
+  }
+
+  .at-btn:active {
+    transform: scale(calc(1 - var(--m) * 0.02));
+  }
+
+  .at-btn-primary {
+    background-color: var(--primary);
+    color: var(--on-primary);
+    box-shadow:
+      inset 0 1px 0 var(--rim),
+      0 1px 2px rgba(var(--shadow), 0.06),
+      0 8px 20px -10px rgba(var(--shadow), calc(var(--shadow-a) * 1.1));
+  }
+
+  .at-btn-quiet {
+    border-color: var(--line-warm);
+    color: var(--ink);
+  }
+
+  @media (hover: hover) {
+    .at-btn-quiet:hover {
+      background-color: var(--paper);
     }
   }
 }
 
-@keyframes at-bar-rise {
+@keyframes at-line-grow {
   from {
-    transform: scaleY(calc(1 - var(--m)));
+    transform: scaleX(calc(1 - var(--m)));
+  }
+}
+
+/*
+ * Einstellungen und Listen in „Atelier“. Diese Regeln stehen bewusst UNGLAYered: Tailwind-Utilities (py-8,
+ * text-xl, rounded-[2px], min-h-16 …) liegen im Utilities-Layer und schlügen Regeln aus @layer components
+ * (vgl. REFLECTIONS, lagen.css). Alle sind auf `data-design="atelier"` begrenzt.
+ */
+
+/* Abschnittstitel (sectionTitle: klein, groß, gedämpft) heißen im Atelier wie im Mockup: Überschrift in Tinte */
+:root[data-design="atelier"] :is(h2, h3).uppercase {
+  font-family: var(--font-heading);
+  font-size: 1.0625rem;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.1px;
+  text-transform: none;
+  color: var(--ink);
+}
+
+:root[data-design="atelier"] .lg-row {
+  border-radius: 12px;
+}
+
+/* Einstellungen: mehr Luft zwischen den Abschnitten, feine Trennlinie */
+:root[data-design="atelier"] .lg-settings > .lg-set-sec {
+  padding-block: 2.5rem;
+  border-top-color: var(--line-warm);
+}
+
+:root[data-design="atelier"] .lg-settings > .lg-set-sec:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+:root[data-design="atelier"] .lg-settings .lg-set-sec > h2 {
+  font-size: 1.3125rem;
+  letter-spacing: -0.01em;
+}
+
+:root[data-design="atelier"] .lg-seg {
+  min-width: min(100%, 22rem);
+}
+
+/* Die drei Effektstufen als ruhige Liste: Name links, Wirkung rechts, Linien dazwischen (Mockup B) */
+:root[data-design="atelier"] .lg-fx-list {
+  gap: 0;
+  max-width: 40rem;
+  margin-top: 1.125rem;
+  border-top: 1px solid var(--line-warm);
+  font-size: 0.9rem;
+}
+
+:root[data-design="atelier"] .lg-fx-list li {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 12px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--line-warm);
+}
+
+:root[data-design="atelier"] .lg-fx-list b {
+  font-weight: 500;
+}
+
+@media (max-width: 479.98px) {
+  :root[data-design="atelier"] .lg-fx-list li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}
+
+/* „Zuletzt genutzt“ (screens/lagen/RecentChats.tsx): Symbole im Fachtext-Ton, die erste Zeile als große Zeile */
+:root[data-design="atelier"] .lg-row > svg:first-child {
+  color: var(--hue-ink);
+}
+
+:root[data-design="atelier"] [aria-labelledby="recent-chats-heading"] li:first-child .lg-row {
+  min-height: 7.25rem;
+  padding-inline: 14px;
+  background-color: color-mix(in srgb, var(--subj) 5%, var(--surface));
+  box-shadow:
+    inset 0 0 0 1px var(--line-warm),
+    0 1px 2px rgba(var(--shadow), 0.06),
+    0 8px 20px -10px rgba(var(--shadow), calc(var(--shadow-a) * 1.1));
+}
+
+:root[data-design="atelier"]
+  [aria-labelledby="recent-chats-heading"]
+  li:first-child
+  .lg-row
+  > span:nth-child(2)
+  > span:last-child {
+  font-size: 1.5rem;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  white-space: normal;
+}
+
+@media (hover: hover) {
+  :root[data-design="atelier"]
+    [aria-labelledby="recent-chats-heading"]
+    li:first-child
+    .lg-row:hover {
+    background-color: color-mix(in srgb, var(--subj) 8%, var(--surface));
   }
 }

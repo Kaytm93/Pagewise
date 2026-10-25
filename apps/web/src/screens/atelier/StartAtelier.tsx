@@ -1,4 +1,5 @@
-import type { TimetableEntry } from '../../api/types';
+import { ArrowRight } from 'lucide-react';
+import type { Subject, TimetableEntry } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import {
   addDays,
@@ -12,245 +13,327 @@ import { relativeDay } from '../../planning/labels';
 import { usePlanner } from '../../planning/PlannerProvider';
 import { daysUntil, groupExams, lessonsOn } from '../../planning/schedule';
 import { Link } from '../../ui/Link';
-import { sectionTitle } from '../../ui/styles';
+import { usePointerGlow } from '../../ui/pointer-glow';
+import { SubjectIcon } from '../../ui/SubjectIcon';
 import { subjectColorAttr } from '../../ui/subject-color';
 import { useDesign } from '../../ui/useDesign';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 
-/** Mehr Stunden zeigt die Liste unter der Leitkarte nicht. */
-const MAX_REST = 4;
+type State = 'past' | 'now' | 'next';
+
+/** Lücken kürzer als das sind keine Pause, sondern nur ein Wechsel (wie in `raum/StartPlan.tsx`). */
+const MIN_BREAK = 5;
+
+/** So viele Themen nennt die Zeile „Stoff laut Plan“, der Rest steht als „und N weitere“. */
+const MAX_TOPICS = 4;
+
+type Row =
+  | { kind: 'lesson'; lesson: TimetableEntry; state: State; lead: boolean }
+  | { kind: 'break'; id: string; minutes: number }
+  | { kind: 'now'; label: string };
 
 /**
- * Startseite in der Designrichtung „Atelier“: oben die Leitkarte mit der nächsten Stunde von heute (oder dem
- * nächsten Test), daneben die große Zahl der verbleibenden Tage, darunter der Wochenstreifen und die übrigen
- * Stunden von heute. Erscheint nur in dieser Richtung und nur, wenn der Plan geladen ist.
+ * Startseite in der Designrichtung „Atelier“ (Mockup B): links „Als Nächstes“, die Stunden von heute mit
+ * „Jetzt“-Linie und der laufenden oder nächsten Stunde als großer Zeile; rechts „Anstehend“ mit der Zahl der
+ * Tage bis zum nächsten Test, dem Stoff, dem Wochenstreifen (Montag bis Freitag) und zwei Wegen weiter.
+ * Erscheint nur in dieser Richtung und nur, wenn der Plan geladen ist. Zustände und Linie sind Text, nicht
+ * nur Farbe oder Bewegung.
  */
 export function StartAtelier() {
   const design = useDesign();
+  usePointerGlow();
   const { status, entries, exams, weekAnchor, now } = usePlanner();
   const { subjects } = useWorkspace();
   if (design !== 'atelier' || status !== 'ready') return null;
 
   const a = m.planning.atelierStart;
+  const r = m.planning.raumStart;
   const today = localDate(now);
   const minutes = minutesOfDay(now);
   const lessons = lessonsOn(entries, today, weekAnchor);
-  const remaining = lessons.filter((lesson) => toMinutes(lesson.endTime) > minutes);
-  const lead = remaining[0];
-  const rest = remaining.slice(1, 1 + MAX_REST);
   const exam = groupExams(exams, today).upcoming[0];
 
   const subjectOf = (id: string | null) => subjects.find((subject) => subject.id === id);
-  const nameOf = (id: string | null) => subjectOf(id)?.name ?? m.planning.timetable.noSubject;
+  const examSubject = subjectOf(exam?.subjectId ?? null);
+  const examName = examSubject?.name ?? m.planning.timetable.noSubject;
 
-  const days = exam ? daysUntil(exam.date, today) : 0;
-  const dayLabel = days === 1 ? a.oneDay : format(a.days, { count: days });
+  const examLine = exam
+    ? [
+        format(m.planning.startGrid.examHeading, { kind: exam.kind, subject: examName }),
+        formatDate(exam.date, 'long'),
+        exam.time ? format(m.planning.exams.at, { time: exam.time }) : null,
+      ]
+        .filter(Boolean)
+        .join(', ')
+    : '';
+  const rows = dayRows(lessons, minutes);
+  const count =
+    lessons.length === 1 ? r.count.one : format(r.count.many, { count: lessons.length });
 
-  // Der Streifen beginnt am Montag dieser Woche; die Spalte von heute ist markiert.
-  const week = Array.from({ length: 7 }, (_, index) => {
-    const date = addDays(today, index - (weekdayOf(today) - 1));
+  const topics = topicsOf(exam?.topics ?? null);
+  const shownTopics = topics.slice(0, MAX_TOPICS);
+  const moreTopics = topics.length - shownTopics.length;
+
+  // Montag bis Freitag; am Wochenende zeigt der Streifen die kommende Woche.
+  const weekday = weekdayOf(today);
+  const weekend = weekday >= 6;
+  const monday = addDays(today, weekend ? 8 - weekday : 1 - weekday);
+  const week = Array.from({ length: 5 }, (_, index) => {
+    const date = addDays(monday, index);
     return {
       date,
-      count: lessonsOn(entries, date, weekAnchor).length,
+      label: format(a.dayDate, {
+        day: m.planning.daysShort[index] ?? '',
+        date: String(Number(date.slice(8, 10))),
+      }),
+      exams: exams.filter((entry) => entry.date === date),
       today: date === today,
     };
   });
 
   return (
-    <section className="at-start mo-rise mo-i-3 mt-12" aria-labelledby="at-start-heading">
-      <h2 id="at-start-heading" className={sectionTitle}>
-        {m.planning.nextUp.title}
-      </h2>
+    <div className="at-start mo-rise mo-i-3 mt-12">
+      <div className="at-grid">
+        <section className="at-day-sec" aria-labelledby="at-day-heading">
+          <h2 className="at-sec">
+            <span id="at-day-heading">{m.planning.nextUp.title}</span>
+            {lessons.length > 0 && <small>{format(a.todayCount, { count })}</small>}
+          </h2>
 
-      <div className="at-start-top">
-        <div
-          className="at-lead"
-          data-subj={subjectColorAttr(subjectOf((lead ?? exam)?.subjectId ?? null)?.color)}
-        >
-          {lead ? (
-            <LessonCard lesson={lead} name={nameOf(lead.subjectId)} />
-          ) : exam ? (
-            <ExamCard
-              kind={exam.kind}
-              subject={nameOf(exam.subjectId)}
-              date={exam.date}
-              today={today}
-            />
-          ) : (
-            <div className="at-lead-empty">
-              <p>{m.planning.nextUp.noExams}</p>
-              <Link to={{ name: 'exams' }} className="at-lead-more">
-                {m.planning.nextUp.addExam}
+          {entries.length === 0 ? (
+            <div className="at-empty">
+              <p>{m.planning.nextUp.noTimetable}</p>
+              <Link to={{ name: 'timetable' }} className="at-more">
+                {m.planning.nextUp.setUp}
               </Link>
             </div>
-          )}
-        </div>
-
-        <div
-          className="at-count"
-          data-subj={subjectColorAttr(subjectOf(exam?.subjectId ?? null)?.color)}
-        >
-          {exam ? (
-            <>
-              <p className="at-count-num font-heading text-[clamp(56px,9vw,96px)] tabular-nums">
-                <span aria-hidden="true">{days}</span>
-                <span className="sr-only">{dayLabel}</span>
-              </p>
-              <p className="at-count-sub">
-                {format(a.untilExam, { subject: nameOf(exam.subjectId) })}
-              </p>
-            </>
           ) : (
             <>
-              <p className="at-count-num font-heading text-[clamp(56px,9vw,96px)] tabular-nums">
-                <span aria-hidden="true">{lessons.length}</span>
-                <span className="sr-only">{a.hoursToday}</span>
-              </p>
-              <p className="at-count-sub">{a.hoursToday}</p>
+              {lessons.length === 0 ? (
+                <p className="at-empty">{r.empty}</p>
+              ) : (
+                <ol className="at-day">
+                  {rows.map((row) => {
+                    if (row.kind === 'now') {
+                      return (
+                        <li key="now" className="at-now">
+                          <span>{row.label}</span>
+                          <span aria-hidden="true" className="at-now-line" />
+                        </li>
+                      );
+                    }
+                    if (row.kind === 'break') {
+                      return (
+                        <li key={row.id} className="at-break">
+                          {r.break} · {format(m.duration.minutes, { count: row.minutes })}
+                        </li>
+                      );
+                    }
+                    const { lesson, state, lead } = row;
+                    return (
+                      <li
+                        key={lesson.id}
+                        className="at-day-row"
+                        data-subj={subjectColorAttr(subjectOf(lesson.subjectId)?.color)}
+                        data-state={state}
+                        data-lead={lead ? 'true' : undefined}
+                      >
+                        <LessonItem
+                          lesson={lesson}
+                          subject={subjectOf(lesson.subjectId)}
+                          state={state}
+                          lead={lead}
+                          minutes={minutes}
+                        />
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+              <Link to={{ name: 'timetable' }} className="at-more">
+                {m.planning.nextUp.openTimetable}
+              </Link>
             </>
           )}
-        </div>
-      </div>
+        </section>
 
-      <section className="at-week" aria-labelledby="at-week-heading">
-        <h3 id="at-week-heading" className={sectionTitle}>
-          {a.week}
-        </h3>
-        <ol className="at-week-grid">
-          {week.map((day, index) => (
-            <li
-              key={day.date}
-              className="at-week-col"
-              data-empty={day.count === 0 ? 'true' : undefined}
-              aria-current={day.today ? 'date' : undefined}
-            >
-              <span className="at-week-track">
-                <span
-                  ref={barRef(day.count)}
-                  className={`at-week-bar mo-i-${index + 1}`}
-                  aria-hidden="true"
-                />
-              </span>
-              <span className="at-week-label">
-                <span className="at-week-day">{m.planning.daysShort[index] ?? ''}</span>
-                {day.today && <span className="at-week-today">{a.today}</span>}
-              </span>
-              <span className="sr-only">
-                {day.count === 1
-                  ? m.planning.raumStart.count.one
-                  : format(m.planning.raumStart.count.many, { count: day.count })}
-              </span>
-            </li>
-          ))}
-        </ol>
-      </section>
+        <section
+          className="at-test"
+          aria-labelledby="at-test-heading"
+          data-subj={subjectColorAttr(examSubject?.color)}
+        >
+          <h2 id="at-test-heading" className="at-sec">
+            {a.upcoming}
+          </h2>
 
-      <div className="at-next">
-        {entries.length === 0 ? (
-          <>
-            <p>{m.planning.nextUp.noTimetable}</p>
-            <Link to={{ name: 'timetable' }} className="at-next-link">
-              {m.planning.nextUp.setUp}
-            </Link>
-          </>
-        ) : remaining.length === 0 ? (
-          <>
-            <p>{m.planning.nextUp.nothingToday}</p>
-            <Link to={{ name: 'timetable' }} className="at-next-link">
-              {m.planning.nextUp.openTimetable}
-            </Link>
-          </>
-        ) : (
-          <>
-            {rest.length > 0 && (
-              <ol className="at-next-list">
-                {rest.map((lesson) => (
-                  <li
-                    key={lesson.id}
-                    className="at-next-item"
-                    data-subj={subjectColorAttr(subjectOf(lesson.subjectId)?.color)}
-                  >
-                    <time dateTime={lesson.startTime} className="tabular-nums">
-                      {lesson.startTime}
-                      <span className="sr-only"> – {lesson.endTime}</span>
-                    </time>
-                    <span className="at-next-name">{nameOf(lesson.subjectId)}</span>
-                    {lesson.room && (
-                      <span className="at-next-room">
-                        {format(m.planning.nextUp.lessonNowRoom, { room: lesson.room })}
-                      </span>
-                    )}
-                  </li>
+          {exam ? (
+            <>
+              <div className="at-count">
+                <span aria-hidden="true" className="at-count-num">
+                  {daysUntil(exam.date, today)}
+                </span>
+                <p className="at-count-what">
+                  <b>{relativeDay(exam.date, today)}</b>
+                  {examLine}
+                </p>
+              </div>
+              {topics.length > 0 && (
+                <p className="at-topics">
+                  <span>{a.topics}</span> {shownTopics.join(', ')}
+                  {moreTopics > 0 &&
+                    ` ${format(m.planning.startGrid.moreTopics, { count: moreTopics })}`}
+                </p>
+              )}
+            </>
+          ) : (
+            <div className="at-empty">
+              <p>{m.planning.nextUp.noExams}</p>
+            </div>
+          )}
+
+          <h3 id="at-week-heading" className="at-week-title">
+            {weekend ? a.nextWeek : a.week}
+          </h3>
+          <ol className="at-week" aria-labelledby="at-week-heading">
+            {week.map((day) => (
+              <li
+                key={day.date}
+                className="at-week-item"
+                data-subj={subjectColorAttr(subjectOf(day.exams[0]?.subjectId ?? null)?.color)}
+                data-test={day.exams.length > 0 ? 'true' : undefined}
+                aria-current={day.today ? 'date' : undefined}
+              >
+                <b className="at-week-day">{day.label}</b>
+                {day.today && <span className="at-week-note">{a.today}</span>}
+                {day.exams.map((entry) => (
+                  <span key={entry.id} className="at-week-note">
+                    {entry.kind}
+                  </span>
                 ))}
-              </ol>
+              </li>
+            ))}
+          </ol>
+
+          <div className="at-cta">
+            {exam && examSubject && topics.length > 0 && (
+              <Link
+                to={{ name: 'subject', subjectId: examSubject.id, groupId: null }}
+                className="at-btn at-btn-primary"
+              >
+                {a.toSubject}
+              </Link>
             )}
-            <Link to={{ name: 'timetable' }} className="at-next-link">
-              {m.planning.nextUp.openTimetable}
+            <Link to={{ name: 'exams' }} className="at-btn at-btn-quiet">
+              {exam ? m.planning.nextUp.allExams : m.planning.nextUp.addExam}
             </Link>
-          </>
-        )}
+          </div>
+        </section>
       </div>
-    </section>
+    </div>
   );
 }
 
-/** Die Leitkarte für die nächste Stunde: ein einziger Link auf das Fach (oder auf den Stundenplan). */
-function LessonCard({ lesson, name }: { lesson: TimetableEntry; name: string }) {
-  return (
-    <Link
-      to={
-        lesson.subjectId
-          ? { name: 'subject', subjectId: lesson.subjectId, groupId: null }
-          : { name: 'timetable' }
-      }
-      className="at-lead-link"
-    >
-      <span className="at-lead-kicker">{m.planning.atelierStart.nextLesson}</span>
-      <span className="at-lead-name">{name}</span>
-      <span className="at-lead-meta">
-        <time dateTime={lesson.startTime} className="tabular-nums">
-          {lesson.startTime}
-          <span className="sr-only"> – {lesson.endTime}</span>
-        </time>
-        {lesson.room && (
-          <span>{format(m.planning.nextUp.lessonNowRoom, { room: lesson.room })}</span>
-        )}
-      </span>
-    </Link>
-  );
-}
-
-/** Die Leitkarte für den nächsten Test: ein einziger Link auf die Tests. */
-function ExamCard({
-  kind,
+/** Eine Zeile der Tagesliste: Uhrzeit, Fach mit Symbol und rechts der Stand. Die große Zeile trägt einen Pfeil. */
+function LessonItem({
+  lesson,
   subject,
-  date,
-  today,
+  state,
+  lead,
+  minutes,
 }: {
-  kind: string;
-  subject: string;
-  date: string;
-  today: string;
+  lesson: TimetableEntry;
+  subject: Subject | undefined;
+  state: State;
+  lead: boolean;
+  minutes: number;
 }) {
-  return (
-    <Link to={{ name: 'exams' }} className="at-lead-link">
-      <span className="at-lead-kicker">{m.planning.nextUp.examTitle}</span>
-      <span className="at-lead-name">{subject}</span>
-      <span className="at-lead-meta">
-        <span>{kind}</span>
-        <span>{formatDate(date, 'long')}</span>
-        <span>{relativeDay(date, today)}</span>
+  const a = m.planning.atelierStart;
+  const meta = [
+    lesson.room ? format(m.planning.nextUp.lessonNowRoom, { room: lesson.room }) : null,
+    state === 'now'
+      ? format(m.planning.dayLine.minutesLeft, { minutes: toMinutes(lesson.endTime) - minutes })
+      : null,
+    state === 'next' && lead
+      ? format(a.startsIn, { minutes: toMinutes(lesson.startTime) - minutes })
+      : null,
+    state === 'past' ? m.planning.raumStart.past : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const body = (
+    <>
+      <time dateTime={lesson.startTime} className="at-time">
+        {lesson.startTime}
+        <span className="sr-only"> – {lesson.endTime}</span>
+      </time>
+      <span className="at-who">
+        {subject && <SubjectIcon icon={subject.icon} className="at-who-icon" />}
+        <span className="at-who-name">{subject?.name ?? m.planning.timetable.noSubject}</span>
       </span>
+      <span className="at-meta">
+        {meta}
+        {lead && <ArrowRight aria-hidden="true" strokeWidth={1.8} className="at-arrow" />}
+      </span>
+    </>
+  );
+  const current = state === 'now' ? ('time' as const) : undefined;
+  return lesson.subjectId ? (
+    <Link
+      to={{ name: 'subject', subjectId: lesson.subjectId, groupId: null }}
+      className="at-lesson at-glow"
+      aria-current={current}
+    >
+      {body}
     </Link>
+  ) : (
+    <div className="at-lesson" aria-current={current}>
+      {body}
+    </div>
   );
 }
 
 /**
- * Die Zahl der Stunden eines Tages als CSS-Variable für `calc()` im Wochenstreifen. Bewusst kein
- * `style`-Attribut mit Werten: der Wert geht über `setProperty` an das Element.
+ * Die Tagesliste als Zeilen: Stunden, dazwischen Pausen (ab `MIN_BREAK` Minuten) und die „Jetzt“-Linie vor
+ * der laufenden oder nächsten Stunde. Liegt „Jetzt“ in einer Pause, trägt die Linie deren Ende statt einer
+ * zweiten Pausenzeile. Die große Zeile ist die laufende, sonst die nächste Stunde.
  */
-function barRef(count: number) {
-  return (element: HTMLSpanElement | null) => {
-    element?.style.setProperty('--at-bar', String(count));
-  };
+function dayRows(lessons: TimetableEntry[], minutes: number): Row[] {
+  const stateOf = (lesson: TimetableEntry): State =>
+    toMinutes(lesson.endTime) <= minutes
+      ? 'past'
+      : toMinutes(lesson.startTime) <= minutes
+        ? 'now'
+        : 'next';
+  const running = lessons.findIndex((lesson) => stateOf(lesson) === 'now');
+  const firstNext = lessons.findIndex((lesson) => stateOf(lesson) === 'next');
+  const leadAt = running !== -1 ? running : firstNext;
+  const markerAt = leadAt !== -1 ? leadAt : lessons.length;
+  const clock = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+  const now = (until?: string): Row => ({
+    kind: 'now',
+    label: until
+      ? format(m.planning.atelierStart.nowBreak, { time: clock, until })
+      : format(m.planning.raumStart.now, { time: clock }),
+  });
+
+  const rows: Row[] = [];
+  lessons.forEach((lesson, index) => {
+    const previous = lessons[index - 1];
+    const gap = previous ? toMinutes(lesson.startTime) - toMinutes(previous.endTime) : 0;
+    const longBreak = gap >= MIN_BREAK;
+    const inBreak = longBreak && index === markerAt && running === -1;
+    if (longBreak && !inBreak) rows.push({ kind: 'break', id: `pause-${lesson.id}`, minutes: gap });
+    if (index === markerAt) rows.push(now(inBreak ? lesson.startTime : undefined));
+    rows.push({ kind: 'lesson', lesson, state: stateOf(lesson), lead: index === leadAt });
+  });
+  if (markerAt === lessons.length) rows.push(now());
+  return rows;
+}
+
+/** Die Themen eines Tests: Freitext, an Zeilenumbrüchen getrennt, ohne leere Einträge. */
+function topicsOf(raw: string | null): string[] {
+  return (raw ?? '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
 }

@@ -47,7 +47,7 @@ const hoverRegeln = (file: string) =>
 
 describe.each([
   ['raum.css', 2],
-  ['atelier.css', 2],
+  ['atelier.css', 4],
 ])('%s: Hover von Zeilen und Karten', (file, anzahl) => {
   const hovers = hoverRegeln(file);
 
