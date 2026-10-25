@@ -19,6 +19,7 @@ import { type ResourcePaths, resolveResources } from './paths';
 import { DefaultPrompts } from './prompts/defaults';
 import { ProviderClient } from './providers/client';
 import { ProviderService } from './providers/service';
+import { WebSearchService } from './search/service';
 import { type DataPaths, ensureDataLayout } from './storage/data-paths';
 import { DataEraser } from './storage/eraser';
 import { FileSecretStore, type SecretStore } from './storage/secret-store';
@@ -55,6 +56,8 @@ export interface Services {
   tools: ToolRegistry;
   /** Globaler Schalter für den Werkzeugzugriff der KI. */
   toolSettings: ToolSettings;
+  /** Websuche für das Werkzeug `web_search`: Schalter und Schlüssel (standardmäßig aus). */
+  webSearch: WebSearchService;
   chats: ChatService;
   eraser: DataEraser;
   close(): void;
@@ -66,6 +69,8 @@ export interface ServicesOptions {
   limiter?: AttemptLimiter;
   /** Nur für Tests: ersetzt `fetch` für Anfragen an Modell-Anbieter. */
   fetch?: typeof fetch;
+  /** Nur für Tests: ersetzt `fetch` für Anfragen an den Suchdienst. */
+  searchFetch?: typeof fetch;
   /** Nur für Tests: Grenzen und Takt des Chat-Dienstes. */
   chats?: ChatServiceOptions;
   /** Mitgelieferte Dateien (Migrationen, Katalog, Standard-Prompts). Ohne Angabe: `PAGEWISE_RESOURCES_DIR` oder das Repo. */
@@ -136,6 +141,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
   });
   const tools = createToolRegistry();
   const toolSettings = new ToolSettings(database.db);
+  const webSearch = new WebSearchService(database.db, secrets, { fetch: options.searchFetch });
   const chats = new ChatService(database.db, providers, {
     ...options.chats,
     defaults,
@@ -144,6 +150,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     assets,
     tools,
     toolSettings,
+    web: webSearch,
     workspaces,
   });
   const cleanup = new AgentCleanup(database.db, chats, assets, workspaces);
@@ -167,6 +174,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     defaults,
     tools,
     toolSettings,
+    webSearch,
     chats,
     eraser: new DataEraser({ database, paths, secrets, chats }),
     close: () => database.close(),

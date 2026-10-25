@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type { Db } from '../db/client';
+import type { WebSearch } from '../search/types';
 
 /**
  * Werkzeuge, die ein Modell im Chat aufrufen kann (Tool Calling). Das Register ist allgemein gehalten, weil
@@ -13,12 +14,21 @@ import type { Db } from '../db/client';
  *   Hinweis zum Ziel (zum Beispiel ein Wochentag) und der Zustand.
  */
 
+/** Zähler je Antwort: Was ein Werkzeug in dieser Antwort schon getan hat. */
+export interface ToolBudget {
+  webSearches: number;
+}
+
 export interface ToolContext {
   db: Db;
   /** Aktuelle Zeit; in Tests fest. */
   now: () => Date;
   /** Bricht Werkzeuge mit Netzzugriff ab, wenn die Person „Stopp“ drückt. */
   signal?: AbortSignal;
+  /** Websuche. Ohne Angabe ist `web_search` nicht verfügbar. */
+  web?: WebSearch;
+  /** Zähler dieser Antwort über alle Runden hinweg. */
+  budget: ToolBudget;
 }
 
 export interface ToolDefinition<Args = unknown> {

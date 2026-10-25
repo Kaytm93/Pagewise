@@ -25,7 +25,7 @@ describe('Werkzeuge', () => {
   beforeEach(() => {
     harness = createHarness();
     const { db } = harness.services.database;
-    context = { db, now: () => NOW };
+    context = { db, now: () => NOW, budget: { webSearches: 0 } };
     chemie = db.insert(subjects).values({ name: 'Beispiel-Chemie' }).returning().get().id;
     latein = db.insert(subjects).values({ name: 'Beispiel-Latein' }).returning().get().id;
   });

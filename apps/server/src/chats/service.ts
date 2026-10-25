@@ -23,6 +23,7 @@ import { type Billing, replyCost, type Usage } from '../providers/cost';
 import { ProviderError } from '../providers/errors';
 import type { Selection } from '../providers/models';
 import type { ProviderService } from '../providers/service';
+import type { WebSearch } from '../search/types';
 import { withToolInstructions } from '../tools/instructions';
 import type { ToolContext, ToolRegistry } from '../tools/registry';
 import type { ToolSettings } from '../tools/settings';
@@ -97,6 +98,8 @@ export interface ChatServiceOptions {
   tools?: ToolRegistry;
   /** Globaler Schalter für Werkzeuge. Ohne Angabe gilt „an“. */
   toolSettings?: ToolSettings;
+  /** Websuche für das Werkzeug `web_search`. Ohne Angabe gibt es keine Suche. */
+  web?: WebSearch;
   /** Arbeitsordner der Agenten: hier landen importierte Dateien zum Mitlesen. Ohne Angabe werden sie nicht kopiert. */
   workspaces?: WorkspaceManager;
   /** Aktuelle Zeit; in Tests fest. */
@@ -178,6 +181,7 @@ export class ChatService {
   private readonly activeAgents = new Set<string>();
   private readonly tools: ToolRegistry | null;
   private readonly toolSettings: ToolSettings | null;
+  private readonly web: WebSearch | undefined;
   private readonly workspaces: WorkspaceManager | null;
   private readonly now: () => Date;
   /** Pagewise wird beendet: abgebrochene Antworten gelten als unterbrochen, nicht als vom Nutzer gestoppt. */
@@ -198,6 +202,7 @@ export class ChatService {
     this.maxAgents = options.maxAgents ?? 2;
     this.tools = options.tools ?? null;
     this.toolSettings = options.toolSettings ?? null;
+    this.web = options.web;
     this.workspaces = options.workspaces ?? null;
     this.now = options.now ?? (() => new Date());
     // Antworten, die beim letzten Beenden des Servers liefen, sind unterbrochen. Was schon da war, bleibt.
@@ -798,10 +803,18 @@ export class ChatService {
           db: this.db,
           now: this.now,
           signal: generation.abort.signal,
+          web: this.web,
+          budget: { webSearches: 0 },
         };
         const offered = toolsOn && registry ? await registry.specs(toolContext) : [];
         const system =
-          offered.length > 0 ? withToolInstructions(input.system, this.now()) : input.system;
+          offered.length > 0
+            ? withToolInstructions(
+                input.system,
+                this.now(),
+                offered.some((spec) => spec.name === 'web_search'),
+              )
+            : input.system;
         // Bilder im Verlauf: nur ein Modell mit Bildverstehen bekommt sie; alle anderen lesen den Text.
         const vision = resolved.model.vision === true;
         const conversation: ChatMessage[] = [

@@ -19,6 +19,7 @@ import { promptRoutes } from './routes/prompts';
 import { providerRoutes } from './routes/providers';
 import { subjectRoutes } from './routes/subjects';
 import { toolSettingsRoutes } from './routes/tool-settings';
+import { webSearchRoutes } from './routes/web-search';
 import type { Services } from './services';
 
 export interface AppOptions {
@@ -88,6 +89,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
       '/api/exams',
       '/api/notes',
       '/api/tool-settings',
+      '/api/web-search',
       '/api/data',
     ]) {
       app.use(prefix, requireSession);
@@ -104,6 +106,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     app.route('/api', plannerRoutes(db));
     app.route('/api', noteRoutes(db, 'Hefteintrag'));
     app.route('/api', toolSettingsRoutes(services.toolSettings));
+    app.route('/api', webSearchRoutes(services.webSearch));
     app.route('/api', dataRoutes({ auth: services.auth, eraser: services.eraser }));
   }
 

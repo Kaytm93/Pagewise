@@ -59,6 +59,8 @@ export function createHarness(
     cliDetect?: DetectOptions;
     /** Agent-Prozess (Umgebung, Zusatzvariablen), nur für Tests mit der Ersatz-CLI. */
     agent?: ServicesOptions['agent'];
+    /** Ersetzt `fetch` für den Suchdienst. Tests, die eine Suche auslösen, setzen immer eine Fälschung. */
+    searchFetch?: typeof fetch;
   } = {},
 ): Harness {
   const base = mkdtempSync(join(tmpdir(), 'pagewise-test-'));
@@ -66,6 +68,7 @@ export function createHarness(
     scryptParams: { N: 16, r: 8, p: 1 },
     limiter: new AttemptLimiter({ maxFailures: options.maxFailures ?? 3 }),
     fetch: options.fetch,
+    searchFetch: options.searchFetch,
     chats: options.chats,
     catalogFile: options.catalogFile ?? join(base, 'kein-katalog.json'),
     defaultsDir: options.defaultsDir ?? join(base, 'keine-standards'),

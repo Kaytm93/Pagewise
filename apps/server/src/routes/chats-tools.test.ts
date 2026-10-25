@@ -78,6 +78,8 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
   let scripts: ((call: UpstreamCall, signal?: AbortSignal) => Response)[];
   let providerId: string;
   let subjectId: string;
+  let searchRequests: { url: string; token: string | null }[];
+  let searchReplies: (() => Response)[];
 
   async function build() {
     requests = [];
@@ -92,7 +94,37 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
       const next = scripts.shift();
       return next ? next(call, init?.signal ?? undefined) : text('Standardantwort');
     }) as typeof fetch;
-    harness = createHarness({ fetch: fakeFetch, chats: { now: () => NOW } });
+    searchRequests = [];
+    searchReplies = [];
+    const fakeSearch = (async (
+      input: Parameters<typeof fetch>[0],
+      init?: Parameters<typeof fetch>[1],
+    ) => {
+      const headers = init?.headers as Record<string, string> | undefined;
+      searchRequests.push({ url: String(input), token: headers?.['X-Subscription-Token'] ?? null });
+      const next = searchReplies.shift();
+      return next
+        ? next()
+        : new Response(
+            JSON.stringify({
+              web: {
+                results: [
+                  {
+                    title: 'Photosynthese',
+                    url: 'https://beispiel.example.test/pflanzen',
+                    description: 'Pflanzen nutzen Licht.',
+                  },
+                ],
+              },
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          );
+    }) as typeof fetch;
+    harness = createHarness({
+      fetch: fakeFetch,
+      chats: { now: () => NOW },
+      searchFetch: fakeSearch,
+    });
     session = await harness.signIn();
     subjectId = (await session.call('POST', '/api/subjects', { name: 'Beispiel-Chemie' })).body
       .id as string;
@@ -486,6 +518,106 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
     expect((last(events).data.message as { content: string }).content).toBe(
       'Ich sehe nach.\n\nAm Donnerstag.',
     );
+  });
+
+  describe('Websuche im Chat', () => {
+    // Fake-Schlüssel zur Laufzeit zusammengesetzt (Secret-Scan).
+    const SEARCH_KEY = ['suche', 'schluessel', 'qrstuvwxyz123456'].join('-');
+    const enableSearch = async () => {
+      const reply = await session.call('PUT', '/api/web-search', {
+        enabled: true,
+        apiKey: SEARCH_KEY,
+      });
+      expect(reply.status).toBe(200);
+    };
+    const lastActivity = (events: SseEvent[]) =>
+      events
+        .filter((e) => e.event === 'activity')
+        .map((e) => e.data.entry)
+        .at(-1);
+    const lastToolData = (call: UpstreamCall | undefined) =>
+      JSON.parse(call?.messages.at(-1)?.content ?? '{}');
+
+    it('bietet web_search erst an, wenn Schalter und Schlüssel gesetzt sind', async () => {
+      scripts.push(
+        () => text('Ohne Suche.'),
+        () => text('Mit Suche.'),
+      );
+      await ask('Was gibt es Neues zur Photosynthese?');
+      expect(toolNames(requests[0])).not.toContain('web_search');
+      expect(requests[0]?.messages[0]?.content).not.toContain('web_search');
+
+      await enableSearch();
+      await ask('Was gibt es Neues zur Photosynthese?');
+      expect(toolNames(requests[1])).toEqual(['get_timetable', 'get_exams', 'web_search']);
+      expect(requests[1]?.messages[0]?.content).toContain('web_search');
+    });
+
+    it('sucht, zeigt den Suchbegriff und gibt die Treffer als Daten weiter', async () => {
+      await enableSearch();
+      scripts.push(
+        () => toolCalls({ id: 'call_w', name: 'web_search', args: '{"query":"Photosynthese"}' }),
+        () => text('Laut beispiel.example.test nutzen Pflanzen Licht.'),
+      );
+      const { events } = await ask('Was gibt es Neues zur Photosynthese?');
+
+      // Der Suchdienst bekommt Begriff und Schlüssel im Kopf, der Schlüssel nie in der Adresse.
+      expect(searchRequests).toHaveLength(1);
+      expect(new URL(searchRequests[0]?.url ?? '').searchParams.get('q')).toBe('Photosynthese');
+      expect(searchRequests[0]?.token).toBe(SEARCH_KEY);
+      expect(searchRequests[0]?.url).not.toContain(SEARCH_KEY);
+
+      // Das Modell bekommt die Treffer als JSON-Daten.
+      expect(lastToolData(requests[1])).toMatchObject({
+        query: 'Photosynthese',
+        results: [{ title: 'Photosynthese', url: 'https://beispiel.example.test/pflanzen' }],
+      });
+
+      // Die Oberfläche zeigt den Suchbegriff, nie die Treffer und nie den Schlüssel.
+      expect(lastActivity(events)).toEqual({
+        id: 'tool-0',
+        tool: 'web_search',
+        target: 'Photosynthese',
+        state: 'done',
+      });
+      expect(JSON.stringify(events)).not.toContain('Pflanzen nutzen Licht');
+      expect(JSON.stringify(events)).not.toContain(SEARCH_KEY);
+      const rows = harness.services.database.db.select().from(messages).all();
+      expect(JSON.stringify(rows)).not.toContain(SEARCH_KEY);
+    });
+
+    it('zeigt einen Fehler des Suchdienstes als Fehler, mit dem Suchbegriff, und gibt nur den Code weiter', async () => {
+      await enableSearch();
+      searchReplies.push(() => new Response('Serverfehler mit Details', { status: 500 }));
+      scripts.push(
+        () => toolCalls({ id: 'w', name: 'web_search', args: '{"query":"Wetter Berlin"}' }),
+        () => text('Die Suche ist gerade nicht erreichbar.'),
+      );
+      const { events } = await ask('Wie wird das Wetter?');
+      expect(lastActivity(events)).toEqual({
+        id: 'tool-0',
+        tool: 'web_search',
+        target: 'Wetter Berlin',
+        state: 'error',
+      });
+      expect(lastToolData(requests[1])).toEqual({ error: 'unavailable' });
+    });
+
+    it('sendet keine Suche mit persönlichen Angaben und sagt dem Modell nur, dass es ungültig war', async () => {
+      await enableSearch();
+      scripts.push(
+        () =>
+          toolCalls({
+            id: 'w',
+            name: 'web_search',
+            args: '{"query":"Mail an beispiel-lehrkraft@beispiel.example.test"}',
+          }),
+        () => text('Ohne Suche.'),
+      );
+      await ask('Schreib meiner Lehrerin');
+      expect(searchRequests).toHaveLength(0);
+      expect(lastToolData(requests[1])).toEqual({ error: 'invalid_arguments' });
+    });
   });
 
   it('der Schalter und die Anbieter-Einstellung verlangen eine Anmeldung und prüfen die Eingabe', async () => {
