@@ -116,11 +116,12 @@ export function SubjectPage({
         <>
           <div className="relative mt-6 flex items-start justify-between gap-4 pr-[88px] md:pr-40">
             <div className="min-w-0">
-              {/* subject#06: kleiner einsteigen, damit übliche Fächer einzeilig bleiben; lange Wörter trennt
-                  `hyphens-auto` mit Trennstrich (Sprache „de“ kommt von <html lang="de">) statt mitten im Wort zu brechen. */}
+              {/* subject#06: Die Größe kommt aus `--subject-h1` (styles/screens.css, je Richtung): auf dem Telefon
+                  klein, damit übliche Fächer einzeilig bleiben; lange Wörter trennt `hyphens-auto` mit Trennstrich
+                  (Sprache „de“ kommt von <html lang="de">) statt mitten im Wort zu brechen. */}
               <h1
                 lang="de"
-                className="mo-rise font-heading hyphens-auto text-[clamp(28px,8vw,34px)] leading-none tracking-[-0.035em] text-balance break-words md:text-[clamp(28px,3.9vw,48px)]"
+                className="mo-rise font-heading hyphens-auto text-[length:var(--subject-h1)] leading-none tracking-[-0.035em] text-balance break-words"
               >
                 {group ? group.name : subject.name}
               </h1>

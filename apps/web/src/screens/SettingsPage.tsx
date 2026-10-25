@@ -94,7 +94,7 @@ const EFFECTS: { value: FxPreference; label: string }[] = [
 ];
 
 /** Wie viel sich bewegt (Effektstufe): „Automatisch“ folgt dem Gerät, sonst gilt die Wahl. */
-function EffectsChoice({ lagen, segClassName }: { lagen: boolean; segClassName?: string }) {
+function EffectsChoice({ segClassName }: { segClassName?: string }) {
   const [effects, setEffects] = useState<FxPreference>(() => readFx());
   const e = m.settings.appearance.effects;
   const fx = m.settings.appearance.fx;
@@ -116,19 +116,17 @@ function EffectsChoice({ lagen, segClassName }: { lagen: boolean; segClassName?:
         className={segClassName}
       />
       <p className="mt-3 max-w-[52ch] text-sm text-ink-secondary">{e.help[effects]}</p>
-      {lagen && (
-        <ul className="lg-fx-list">
-          <li>
-            <b>{fx.full.label}</b> {fx.full.text}
-          </li>
-          <li>
-            <b>{fx.reduced.label}</b> {fx.reduced.text}
-          </li>
-          <li>
-            <b>{fx.off.label}</b> {fx.off.text}
-          </li>
-        </ul>
-      )}
+      <ul className="lg-fx-list">
+        <li>
+          <b>{fx.full.label}</b> {fx.full.text}
+        </li>
+        <li>
+          <b>{fx.reduced.label}</b> {fx.reduced.text}
+        </li>
+        <li>
+          <b>{fx.off.label}</b> {fx.off.text}
+        </li>
+      </ul>
     </div>
   );
 }
@@ -332,7 +330,7 @@ export function SettingsPage() {
         <Section title={m.settings.appearance.title} lead={m.settings.appearance.lead}>
           <ThemeChoice segClassName={segClassName} />
           <DesignChoice segClassName={segClassName} />
-          <EffectsChoice lagen={lagen} segClassName={segClassName} />
+          <EffectsChoice segClassName={segClassName} />
         </Section>
         <Section title={m.settings.answers.title} lead={m.settings.answers.lead}>
           <AutoFixChoice />

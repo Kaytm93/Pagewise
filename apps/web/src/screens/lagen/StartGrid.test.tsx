@@ -106,7 +106,7 @@ describe('Startseite in „Lagen“', () => {
     expect(screen.getByText('Beispielchat zum Wiederholen')).toBeTruthy();
   });
 
-  it('lässt in „Raum“ Stundenliste, Zettelthemen und „Zuletzt genutzt“ weg', async () => {
+  it('lässt in „Raum“ Stundenliste und Zettelthemen weg, zeigt aber „Zuletzt genutzt“', async () => {
     document.documentElement.setAttribute('data-design', 'raum');
     const { server } = setup({ chat: true });
     const { container } = renderHome(server);
@@ -114,7 +114,36 @@ describe('Startseite in „Lagen“', () => {
     await waitFor(() => expect(container.querySelector('.rm-day-list')).not.toBeNull());
     expect(container.querySelector('.lg-lessons')).toBeNull();
     expect(container.querySelector('.lg-topics')).toBeNull();
+    expect(await screen.findByText('Zuletzt genutzt')).toBeTruthy();
+    expect(screen.getByText('Beispielchat zum Wiederholen')).toBeTruthy();
+  });
+
+  it('zeigt „Zuletzt genutzt“ auch in „Atelier“ und lässt es ohne Chats weg', async () => {
+    document.documentElement.setAttribute('data-design', 'atelier');
+    const withChat = setup({ chat: true });
+    const first = renderHome(withChat.server);
+    expect(await screen.findByText('Zuletzt genutzt')).toBeTruthy();
+    expect(screen.getByText('Beispielchat zum Wiederholen')).toBeTruthy();
+    first.unmount();
+
+    const { server, subject } = setup({ chat: false });
+    renderHome(server);
+    await waitFor(() =>
+      expect(server.calls('GET', `/api/chats?subjectId=${subject.id}`)).toHaveLength(1),
+    );
     expect(screen.queryByText('Zuletzt genutzt')).toBeNull();
+  });
+
+  it('nennt in der Überschrift die Stunden von heute und den nächsten Test', async () => {
+    document.documentElement.setAttribute('data-design', 'lagen');
+    const { server } = setup({ chat: false });
+    renderHome(server);
+
+    const heading = await screen.findByRole('heading', { level: 1 });
+    await waitFor(() => expect(heading.textContent).not.toBe('Womit fangen wir an?'));
+    expect(heading.textContent).toBe(
+      'Noch 2 Stunden heute, Schulaufgabe Beispielfach A in 3 Tagen.',
+    );
   });
 
   it('zeigt ohne Stunden den Hinweis mit Link zum Stundenplan', async () => {

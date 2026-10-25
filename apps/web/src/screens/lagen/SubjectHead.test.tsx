@@ -108,16 +108,16 @@ describe('Fachseite in „Lagen“', () => {
 });
 
 describe('Fachseite in „Raum“', () => {
-  it('behält den bisherigen Aufbau ohne meta-rows und ohne Tagesgruppen', async () => {
+  it('behält den bisherigen Kopf ohne meta-rows, zeigt die Chats aber nach Tagen gruppiert', async () => {
     document.documentElement.setAttribute('data-design', 'raum');
     const { server, subject } = setup();
     const { container } = mount(server, `/subjects/${subject.id}`);
 
     await screen.findByRole('heading', { level: 1, name: 'Beispielfach Lagen' });
     expect(container.querySelector('.lg-meta-rows')).toBeNull();
-    expect(container.querySelector('.lg-chats')).toBeNull();
     expect(await screen.findByText('Beispielchat heute')).toBeTruthy();
-    expect(screen.queryByText('Heute')).toBeNull();
-    expect(screen.queryByText('Gestern')).toBeNull();
+    expect(container.querySelector('.lg-chats')).not.toBeNull();
+    expect(screen.getByText('Heute')).toBeTruthy();
+    expect(screen.getByText('Gestern')).toBeTruthy();
   });
 });

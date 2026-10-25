@@ -1,0 +1,71 @@
+/*
+ * Gemeinsame Bausteine der Bildschirme (WP1b): Klassen und Tokens, die für alle drei Designrichtungen
+ * (`data-design="raum|lagen|atelier"`) gelten. Die Richtungen setzen darüber ihr Feinstyling in
+ * `raum.css`, `lagen.css` und `atelier.css`; hier steht nur, was jede Richtung braucht.
+ *
+ * Haken im Chat (`.lg-tool-check`): Bewegung hängt an `--m` und `--t-med` aus motion.css. Bei „Reduziert“
+ * (`--m: 0`) bleibt es bei einer kurzen Überblendung, bei „Aus“ stoppt motion.css jede Animation; der Haken
+ * steht dann sofort fertig da. Er ist ein Pfad mit Strich, also auch ohne Animation als Haken erkennbar.
+ *
+ * Haken für die Richtungs-Worker:
+ *   --subject-h1     Schriftgröße des Fachnamens (H1 der Fachseite), je Richtung gesetzt.
+ *   .lg-composer     Wurzel des Eingabefelds im Chat. Trägt `data-subj` (Fachfarbe 0 bis 7, sonst fehlt es) und
+ *                    `data-running` (solange eine Antwort läuft). Hier setzt eine Richtung Fachglühen und Radius.
+ *   .lg-agent-head   Kopf der Agent-Aktivität (summary), einzeilig; `data-state` ist `done` oder `error`.
+ *   .lg-tool-check / .lg-tool-cross / .lg-tool-dot   Statuszeichen eines Schritts.
+ *   .lg-fx-list      Erklärung der Effektstufen in den Einstellungen.
+ */
+
+/* Fachname: auf dem Telefon klein (übliche Fächer bleiben einzeilig, subject#06), ab 768 px je Richtung
+   fließend. Werte aus den Entwürfen: Lagen 40 bis 64 px, Atelier 38 bis 56 px, Raum 38 bis 60 px. */
+:root {
+  --subject-h1: clamp(28px, 8vw, 34px);
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --subject-h1: clamp(38px, 5.2vw, 60px);
+  }
+
+  :root[data-design="lagen"] {
+    --subject-h1: clamp(40px, 5.4vw, 64px);
+  }
+
+  :root[data-design="atelier"] {
+    --subject-h1: clamp(38px, 5vw, 56px);
+  }
+}
+
+@keyframes tool-check-draw {
+  from {
+    stroke-dashoffset: var(--m);
+    opacity: var(--m);
+  }
+}
+
+@layer components {
+  /* Haken eines erledigten Schritts: der Pfad hat pathLength="1" und wird in --t-med gezeichnet. */
+  .lg-tool-check path {
+    stroke-dasharray: 1 2;
+    stroke-dashoffset: 0;
+    animation: tool-check-draw var(--t-med) var(--ease) both;
+  }
+
+  /* Erklärung der drei Effektstufen: reiner Text, keine Bedienfläche. */
+  .lg-fx-list {
+    display: grid;
+    gap: 0.375rem;
+    max-width: 52ch;
+    margin: 0.875rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.90625rem;
+    line-height: 1.5;
+    color: var(--ink-secondary);
+  }
+
+  .lg-fx-list b {
+    font-weight: 600;
+    color: var(--ink);
+  }
+}

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { messages as m } from '../i18n';
 import { DayLine } from '../planning/DayLine';
 import { NextUp } from '../planning/NextUp';
+import { usePlanner } from '../planning/PlannerProvider';
 import { navigate } from '../router';
 import { Button } from '../ui/Button';
 import { Link } from '../ui/Link';
@@ -13,6 +14,7 @@ import { useDesign } from '../ui/useDesign';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { StartAtelier } from './atelier/StartAtelier';
 import { AskForm } from './home/AskForm';
+import { startHeadingFor } from './home/start-heading';
 import { RecentChats } from './lagen/RecentChats';
 import { StartGrid } from './lagen/StartGrid';
 import { StartPlan } from './raum/StartPlan';
@@ -27,6 +29,7 @@ const dateFormat = new Intl.DateTimeFormat('de-DE', {
 
 export function HomePage() {
   const { subjects } = useWorkspace();
+  const { status, entries, exams, weekAnchor, now } = usePlanner();
   const design = useDesign();
   const [creating, setCreating] = useState(false);
   const dialog = creating && <SubjectDialog onClose={() => setCreating(false)} />;
@@ -51,11 +54,23 @@ export function HomePage() {
     );
   }
 
+  // Die Überschrift nennt Stunden und Test von heute, sobald der Plan geladen ist; sonst der feste Text.
+  const heading =
+    status === 'ready'
+      ? startHeadingFor({
+          entries,
+          exams,
+          weekAnchor,
+          now,
+          subjectName: (id) => subjects.find((subject) => subject.id === id)?.name ?? null,
+        })
+      : null;
+
   return (
     <Sheet width="wide">
       <p className="mo-rise text-sm text-ink-muted">{dateFormat.format(new Date())}</p>
       <h1 className="mo-rise mo-i-1 mt-2.5 max-w-[760px] font-heading text-[clamp(34px,5.4vw,56px)] leading-[1.12] tracking-[-0.025em] text-balance">
-        {m.home.heading}
+        {heading ?? m.home.heading}
       </h1>
       <div className="mo-rise mo-i-2">
         <AskForm />
@@ -71,10 +86,7 @@ export function HomePage() {
       </div>
 
       {design === 'lagen' ? (
-        <>
-          <StartGrid />
-          <RecentChats />
-        </>
+        <StartGrid />
       ) : design === 'atelier' ? (
         <StartAtelier />
       ) : (
@@ -83,6 +95,8 @@ export function HomePage() {
           <NextUp />
         </>
       )}
+      {/* „Zuletzt genutzt“ steht in allen Richtungen, sobald es Chats gibt (gleiche Klassen `lg-*`). */}
+      <RecentChats />
 
       <section className="mo-rise mo-i-4 mt-12" aria-labelledby="home-subjects">
         <h2

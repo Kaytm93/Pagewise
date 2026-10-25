@@ -117,6 +117,20 @@ export const de = {
       'Lege deine Fächer an. In jedem Fach kannst du Untergruppen anlegen und später Chats und Hefteinträge führen.',
     title: 'Deine Fächer',
     heading: 'Womit fangen wir an?',
+    /** Überschrift der Startseite aus Stundenplan und Tests; ohne Daten gilt `heading`. */
+    headline: {
+      today: { one: 'Heute eine Stunde', many: 'Heute {count} Stunden' },
+      left: { one: 'Noch eine Stunde heute', many: 'Noch {count} Stunden heute' },
+      over: 'Für heute ist Schluss',
+      /** Art und Fach eines Tests, z. B. „Schulaufgabe Chemie“. */
+      exam: '{kind} {subject}',
+      /** Der Test liegt in der Zukunft: „Heute 4 Stunden, Schulaufgabe Chemie in 3 Tagen.“ */
+      lessonsAndExam: '{lessons}, {exam} {when}.',
+      /** Der Test ist heute: „Heute 4 Stunden und Schulaufgabe Chemie.“ */
+      lessonsAndExamToday: '{lessons} und {exam}.',
+      lessonsOnly: '{lessons}.',
+      examOnly: '{exam} {when}.',
+    },
     askLabel: 'Frage an den Standard-Chat',
     askPlaceholder: 'Frag, was du willst …',
     askSend: 'Frage senden',

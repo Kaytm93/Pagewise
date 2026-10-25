@@ -8,8 +8,8 @@ import type { Design } from '../ui/design';
 
 /*
  * Einstellungen in der Richtung „Lagen“ (M1-T5): Kicker über der Überschrift, breite Umschalter und
- * die Liste der drei Effektstufen. Die anderen Richtungen und der Zustand ohne Attribut bleiben beim
- * bisherigen Aufbau — dort gibt es weder Kicker noch Liste.
+ * die Liste der drei Effektstufen. Die Liste steht in allen Richtungen (WP1b); Kicker und breite
+ * Umschalter bleiben „Lagen“ vorbehalten.
  */
 
 function openSettings(design?: Design) {
@@ -52,13 +52,15 @@ describe('Einstellungen in „Lagen“', () => {
     );
   });
 
-  it('lässt Raum, Atelier und den Zustand ohne Attribut unverändert', async () => {
+  it('zeigt in Raum, Atelier und ohne Attribut die Effektstufen-Liste, aber weder Kicker noch breite Umschalter', async () => {
     for (const design of ['raum', 'atelier', undefined] as const) {
       const { unmount } = openSettings(design);
       await screen.findByRole('heading', { level: 1, name: 'Einstellungen' });
 
       expect(document.querySelector('.lg-kicker'), `${design}: Kicker`).toBeNull();
-      expect(document.querySelector('.lg-fx-list'), `${design}: Liste`).toBeNull();
+      const list = document.querySelector('.lg-fx-list');
+      expect(list, `${design}: Liste`).not.toBeNull();
+      expect(list?.querySelectorAll('li'), `${design}: Einträge`).toHaveLength(3);
       const group = screen.getByRole('group', { name: 'Bewegung' });
       expect(group.classList.contains('lg-seg-wide'), `${design}: Breite`).toBe(false);
 

@@ -1,4 +1,4 @@
-import { Check, ChevronRight, X } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
 import { useState } from 'react';
 import type { ActivityEntry } from '../../api/types';
 import { format, messages as m } from '../../i18n';
@@ -14,6 +14,27 @@ function stepText(step: ActivityEntry): string {
   return step.target ? `${label}: ${step.target}` : label;
 }
 
+/**
+ * Der Haken eines erledigten Schritts, in allen Richtungen gleich. Der Pfad hat `pathLength="1"`, damit
+ * `styles/screens.css` ihn per `stroke-dashoffset` zeichnen kann; ohne Animation steht er fertig da.
+ */
+function ToolCheck() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="lg-tool-check size-3.5 shrink-0 text-ink-muted"
+    >
+      <path pathLength={1} d="M5 12.5l4.5 4.5L19 7.5" />
+    </svg>
+  );
+}
+
 function StateMark({ state, lagen }: { state: ActivityEntry['state']; lagen: boolean }) {
   if (state === 'running') {
     return lagen ? (
@@ -25,16 +46,10 @@ function StateMark({ state, lagen }: { state: ActivityEntry['state']; lagen: boo
       />
     );
   }
-  const Icon = state === 'error' ? X : Check;
-  const mark = state === 'error' ? 'lg-tool-cross' : 'lg-tool-check';
-  return (
-    <Icon
-      aria-hidden="true"
-      className={`size-3.5 shrink-0 ${state === 'error' ? 'text-danger' : 'text-ink-muted'}${
-        lagen ? ` ${mark}` : ''
-      }`}
-    />
-  );
+  if (state === 'error') {
+    return <X aria-hidden="true" className="lg-tool-cross size-3.5 shrink-0 text-danger" />;
+  }
+  return <ToolCheck />;
 }
 
 const stateName = (state: ActivityEntry['state']): string =>
@@ -72,6 +87,7 @@ export function AgentActivity({ steps, live }: { steps: ActivityEntry[]; live: b
   const [open, setOpen] = useState(false);
   const lagen = useDesign() === 'lagen';
   if (steps.length === 0) return null;
+  const failed = steps.some((step) => step.state === 'error');
   if (live) {
     return (
       <div className="mt-3">
@@ -85,12 +101,19 @@ export function AgentActivity({ steps, live }: { steps: ActivityEntry[]; live: b
       className="mt-3 text-sm text-ink-secondary"
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary className="inline-flex min-h-11 cursor-pointer items-center text-ink-muted hover:text-ink">
-        <span>{format(m.chat.agent.summary, { count: steps.length })}</span>
+      <summary
+        data-state={failed ? 'error' : 'done'}
+        className="lg-agent-head inline-flex min-h-11 max-w-full cursor-pointer items-center gap-2 whitespace-nowrap text-ink-muted hover:text-ink"
+      >
+        {/* Kopf in einer Zeile: Statuszeichen, Titel (kürzt sich bei Platzmangel), Pfeil. */}
+        <StateMark state={failed ? 'error' : 'done'} lagen={lagen} />
+        <span className="min-w-0 truncate">
+          {format(m.chat.agent.summary, { count: steps.length })}
+        </span>
         <span className="sr-only">
           {open ? m.chat.agent.detailsHide : m.chat.agent.detailsShow}
         </span>
-        <ChevronRight aria-hidden="true" className="mo-arrow ml-1 size-4 shrink-0" />
+        <ChevronRight aria-hidden="true" className="mo-arrow size-4 shrink-0" />
       </summary>
       <div className="pb-2">
         <Steps steps={steps} lagen={lagen} />

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./tokens.css";
 @import "./motion.css";
+@import "./screens.css";
 @import "./lagen.css";
 @import "./raum.css";
 @import "./atelier.css";

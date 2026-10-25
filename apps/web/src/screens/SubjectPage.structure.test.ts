@@ -13,6 +13,8 @@ import { describe, expect, it } from 'vitest';
 
 const root = join(dirname(fileURLToPath(import.meta.url)));
 const quelle = readFileSync(join(root, 'SubjectPage.tsx'), 'utf8');
+const kopf = readFileSync(join(root, 'lagen', 'SubjectHead.tsx'), 'utf8');
+const screensCss = readFileSync(join(root, '..', 'styles', 'screens.css'), 'utf8');
 
 /** Klassenzeichenkette des <h1 … className="…"> in SubjectPage.tsx. */
 function h1Klassen(src: string): string {
@@ -42,12 +44,20 @@ describe('Fachname (H1) bricht nicht mitten im Wort (subject#06)', () => {
     expect(quelle).not.toContain('pr-24');
   });
 
-  it('startet auf dem Telefon mit 28 px statt 40 px Mindestschrift (clamp)', () => {
-    expect(klassen).toMatch(/text-\[clamp\(28px,8vw,34px\)\]/);
+  it('nimmt die Größe aus dem Token --subject-h1, in beiden Köpfen (WP1b)', () => {
+    expect(klassen).toContain('text-[length:var(--subject-h1)]');
+    expect(h1Klassen(kopf)).toContain('text-[length:var(--subject-h1)]');
+    expect(klassen).not.toMatch(/text-\[clamp/);
   });
 
-  it('steigt ab md weniger steil (3,9 vw statt 6,4 vw, Deckel 48 px statt 64 px)', () => {
-    expect(klassen).toMatch(/md:text-\[clamp\(28px,3\.9vw,48px\)\]/);
+  it('startet auf dem Telefon mit 28 px statt 40 px Mindestschrift (clamp im Token)', () => {
+    expect(screensCss).toMatch(/:root \{\s*--subject-h1: clamp\(28px, 8vw, 34px\);/);
+  });
+
+  it('setzt ab 768 px je Richtung eine eigene Spanne (Lagen 40 bis 64 px, Atelier 38 bis 56 px)', () => {
+    expect(screensCss).toContain('--subject-h1: clamp(40px, 5.4vw, 64px)');
+    expect(screensCss).toContain('--subject-h1: clamp(38px, 5vw, 56px)');
+    expect(screensCss).toContain('--subject-h1: clamp(38px, 5.2vw, 60px)');
   });
 
   it('bedienflächen bleiben unberührt: min-h-11 / size-11 stehen weiter', () => {

@@ -9,7 +9,6 @@ import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
 import { listRow } from '../../ui/styles';
-import { useDesign } from '../../ui/useDesign';
 import { formatWhen } from './when';
 
 const DAY_MS = 86_400_000;
@@ -33,8 +32,6 @@ function dayBucket(timestamp: number, now: number = Date.now()): number {
 /** Chats eines Fachs oder einer Untergruppe mit „Neuer Chat“. Chats bleiben immer in ihrem Fach. */
 export function ChatList({ subjectId, groupId }: { subjectId: string; groupId: string | null }) {
   const { api } = useSession();
-  const design = useDesign();
-  const lagen = design === 'lagen';
   const [chats, setChats] = useState<Chat[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -120,10 +117,10 @@ export function ChatList({ subjectId, groupId }: { subjectId: string; groupId: s
     m.subject.chatDayEarlier,
   ];
 
-  // In „Lagen“ stehen Zwischenzeilen zwischen den Tagen; die Reihenfolge folgt dem letzten Schreibzugriff.
+  // Zwischenzeilen trennen die Tage (in allen Richtungen); die Reihenfolge folgt dem letzten Schreibzugriff.
   const grouped: ReactNode[] = [];
   let lastBucket = -1;
-  if (lagen && chats) {
+  if (chats) {
     for (const chat of [...chats].sort((a, b) => b.updatedAt - a.updatedAt)) {
       const bucket = dayBucket(chat.updatedAt);
       if (bucket !== lastBucket) {
@@ -174,15 +171,7 @@ export function ChatList({ subjectId, groupId }: { subjectId: string; groupId: s
           <p className="mt-1 text-sm text-ink-secondary">{m.subject.noChatsHint}</p>
         </div>
       )}
-      {chats && chats.length > 0 && (
-        <ul
-          className={
-            lagen ? 'lg-chats mt-3' : 'mt-3 divide-y divide-line-warm border-y border-line-warm'
-          }
-        >
-          {lagen ? grouped : chats.map((chat) => row(chat))}
-        </ul>
-      )}
+      {chats && chats.length > 0 && <ul className="lg-chats mt-3">{grouped}</ul>}
 
       {deleting && (
         <ConfirmDialog

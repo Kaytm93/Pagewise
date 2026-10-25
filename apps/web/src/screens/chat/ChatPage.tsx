@@ -401,6 +401,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
             stopping={chat.stopping}
             onSend={send}
             onStop={() => void chat.stop()}
+            subjectColor={subject.color}
           />
           {lagen && (
             <p className="lg-chat-hint">

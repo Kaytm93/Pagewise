@@ -17,7 +17,7 @@ const MODEL = { id: 'modell-a', vision: false, tools: true, reasoning: false, st
 
 function setup() {
   const server = new FakeServer('unlocked');
-  const subject = server.addSubject('Beispielfach Lagen');
+  const subject = server.addSubject('Beispielfach Lagen', { color: 2 });
   const provider = server.addProvider('Anbieter A', {
     models: [{ ...MODEL, free: false }],
     hasKey: true,
@@ -100,4 +100,23 @@ describe('Werkzeugzeile in „Lagen“', () => {
     expect(container.querySelector('.lg-tool-dot')).toBeNull();
     expect(container.querySelector('.lg-tool-check')).not.toBeNull();
   });
+});
+
+describe('Composer als gemeinsamer Haken (WP1b)', () => {
+  it.each(['raum', 'lagen', 'atelier'])(
+    'trägt in „%s“ die Klasse lg-composer und die Fachfarbe als data-subj',
+    async (design) => {
+      document.documentElement.setAttribute('data-design', design);
+      const { server, subject, chat } = setup();
+      const { container } = open(server, chatPath(subject.id, chat.id));
+
+      await screen.findByRole('heading', { level: 1, name: 'Neuer Chat' });
+
+      const composer = container.querySelector('form.lg-composer') as HTMLElement;
+      expect(composer).not.toBeNull();
+      expect(composer.getAttribute('data-subj')).toBe('2');
+      expect(composer.hasAttribute('data-running')).toBe(false);
+      expect(composer.querySelector('textarea')).not.toBeNull();
+    },
+  );
 });

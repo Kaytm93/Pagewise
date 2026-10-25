@@ -15,8 +15,8 @@ const MAX_TOPICS = 8;
 
 /**
  * Die Startseite in der Richtung „Lagen“ (M1-T1): links die Stunden von heute mit der „Jetzt“-Marke,
- * rechts der nächste Test als Zettel. Beide Seiten stehen nebeneinander, sobald das Blatt breit genug
- * ist. Zustände und Marke sind Text, damit sie auch ohne Bewegung erkennbar bleiben.
+ * rechts der nächste Test als Zettel. Beide Seiten stehen nebeneinander, sobald das Blatt (nicht das
+ * Fenster) mindestens 800 px breit ist. Zustände und Marke sind Text, damit sie auch ohne Bewegung erkennbar bleiben.
  */
 export function StartGrid() {
   const { status, entries, exams, weekAnchor, now } = usePlanner();
@@ -100,81 +100,88 @@ export function StartGrid() {
   const moreTopics = topics.length - shownTopics.length;
 
   return (
-    <div className="mt-12 grid items-start gap-10 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] lg:gap-14">
-      <section className="mo-rise mo-i-3" aria-labelledby="start-lessons-heading">
-        <h2 id="start-lessons-heading" className={`mb-3.5 ${sectionTitle}`}>
-          {m.planning.nextUp.title}
-        </h2>
-        {lessons.length === 0 ? (
-          <div>
-            <p className="text-ink-secondary">
-              {entries.length === 0
-                ? m.planning.nextUp.noTimetable
-                : m.planning.nextUp.nothingToday}
-            </p>
-            <Link to={{ name: 'timetable' }} className="mt-1 inline-flex min-h-11 items-center">
-              {entries.length === 0 ? m.planning.nextUp.setUp : m.planning.nextUp.openTimetable}
-            </Link>
-          </div>
-        ) : (
-          <ol className="lg-lessons">{items}</ol>
-        )}
-      </section>
+    <div className="@container mt-12">
+      {/* Zwei Spalten ab 800 px Breite des Blatts (Container-Abfrage), nicht des Fensters: so passt das
+          Raster auch neben der Seitenleiste. */}
+      <div className="grid items-start gap-10 @min-[800px]:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] @min-[800px]:gap-14">
+        <section className="mo-rise mo-i-3" aria-labelledby="start-lessons-heading">
+          <h2 id="start-lessons-heading" className={`mb-3.5 ${sectionTitle}`}>
+            {m.planning.nextUp.title}
+          </h2>
+          {lessons.length === 0 ? (
+            <div>
+              <p className="text-ink-secondary">
+                {entries.length === 0
+                  ? m.planning.nextUp.noTimetable
+                  : m.planning.nextUp.nothingToday}
+              </p>
+              <Link to={{ name: 'timetable' }} className="mt-1 inline-flex min-h-11 items-center">
+                {entries.length === 0 ? m.planning.nextUp.setUp : m.planning.nextUp.openTimetable}
+              </Link>
+            </div>
+          ) : (
+            <ol className="lg-lessons">{items}</ol>
+          )}
+        </section>
 
-      <aside
-        className="mo-rise mo-i-4 pt-[18px]"
-        aria-labelledby="start-exam-heading"
-        data-subj={subjectColorAttr(subjectOf(exam?.subjectId ?? null)?.color)}
-      >
-        {exam ? (
-          <div className="lg-slip">
-            <span aria-hidden="true" className="lg-tape top-[-12px] left-1/2 -ml-14 [--r:1.6deg]" />
-            <h3 id="start-exam-heading" className="text-sm font-medium text-ink-muted">
-              {format(m.planning.startGrid.examHeading, {
-                kind: exam.kind,
-                subject: nameOf(exam.subjectId),
-              })}
-            </h3>
-            <p className="mt-2 font-heading text-[clamp(2rem,4.5vw,3rem)] leading-none tracking-[-0.04em] break-words">
-              {relativeDay(exam.date, today)}
-            </p>
-            <p className="mt-2 text-ink-secondary">
-              {formatDate(exam.date, 'long')}
-              {exam.time && `, ${format(m.planning.exams.at, { time: exam.time })}`}
-            </p>
-            {topics.length > 0 && (
-              <ul className="lg-topics">
-                {shownTopics.map((topic) => (
-                  <li key={topic.key}>{topic.text}</li>
-                ))}
-                {moreTopics > 0 && (
-                  <li className="lg-topics-more">
-                    {format(m.planning.startGrid.moreTopics, { count: moreTopics })}
-                  </li>
-                )}
-              </ul>
-            )}
-            <p className="mt-3 text-sm text-ink-muted">
-              {topics.length === 1
-                ? m.planning.startGrid.topicsOne
-                : format(m.planning.startGrid.topicsMany, { count: topics.length })}
-            </p>
-            <Link to={{ name: 'exams' }} className="mt-2 inline-flex min-h-11 items-center">
-              {m.planning.nextUp.allExams}
-            </Link>
-          </div>
-        ) : (
-          <div>
-            <h3 id="start-exam-heading" className={sectionTitle}>
-              {m.planning.nextUp.examTitle}
-            </h3>
-            <p className="text-ink-secondary">{m.planning.nextUp.noExams}</p>
-            <Link to={{ name: 'exams' }} className="mt-1 inline-flex min-h-11 items-center">
-              {m.planning.nextUp.addExam}
-            </Link>
-          </div>
-        )}
-      </aside>
+        <aside
+          className="mo-rise mo-i-4 pt-[18px]"
+          aria-labelledby="start-exam-heading"
+          data-subj={subjectColorAttr(subjectOf(exam?.subjectId ?? null)?.color)}
+        >
+          {exam ? (
+            <div className="lg-slip">
+              <span
+                aria-hidden="true"
+                className="lg-tape top-[-12px] left-1/2 -ml-14 [--r:1.6deg]"
+              />
+              <h3 id="start-exam-heading" className="text-sm font-medium text-ink-muted">
+                {format(m.planning.startGrid.examHeading, {
+                  kind: exam.kind,
+                  subject: nameOf(exam.subjectId),
+                })}
+              </h3>
+              <p className="mt-2 font-heading text-[clamp(2rem,4.5vw,3rem)] leading-none tracking-[-0.04em] break-words">
+                {relativeDay(exam.date, today)}
+              </p>
+              <p className="mt-2 text-ink-secondary">
+                {formatDate(exam.date, 'long')}
+                {exam.time && `, ${format(m.planning.exams.at, { time: exam.time })}`}
+              </p>
+              {topics.length > 0 && (
+                <ul className="lg-topics">
+                  {shownTopics.map((topic) => (
+                    <li key={topic.key}>{topic.text}</li>
+                  ))}
+                  {moreTopics > 0 && (
+                    <li className="lg-topics-more">
+                      {format(m.planning.startGrid.moreTopics, { count: moreTopics })}
+                    </li>
+                  )}
+                </ul>
+              )}
+              <p className="mt-3 text-sm text-ink-muted">
+                {topics.length === 1
+                  ? m.planning.startGrid.topicsOne
+                  : format(m.planning.startGrid.topicsMany, { count: topics.length })}
+              </p>
+              <Link to={{ name: 'exams' }} className="mt-2 inline-flex min-h-11 items-center">
+                {m.planning.nextUp.allExams}
+              </Link>
+            </div>
+          ) : (
+            <div>
+              <h3 id="start-exam-heading" className={sectionTitle}>
+                {m.planning.nextUp.examTitle}
+              </h3>
+              <p className="text-ink-secondary">{m.planning.nextUp.noExams}</p>
+              <Link to={{ name: 'exams' }} className="mt-1 inline-flex min-h-11 items-center">
+                {m.planning.nextUp.addExam}
+              </Link>
+            </div>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }

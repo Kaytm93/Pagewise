@@ -48,7 +48,7 @@ export function SubjectHead({
         </p>
         <h1
           lang="de"
-          className="mo-rise mo-i-1 font-heading hyphens-auto text-[clamp(28px,8vw,34px)] leading-none tracking-[-0.035em] text-balance break-words md:text-[clamp(28px,3.9vw,48px)]"
+          className="mo-rise mo-i-1 font-heading hyphens-auto text-[length:var(--subject-h1)] leading-none tracking-[-0.035em] text-balance break-words"
         >
           {group ? group.name : subject.name}
         </h1>

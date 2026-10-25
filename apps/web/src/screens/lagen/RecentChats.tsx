@@ -12,7 +12,7 @@ import { formatWhen } from '../chat/when';
 const MAX_CHATS = 4;
 
 /**
- * „Zuletzt genutzt“ auf der Startseite in der Richtung „Lagen“ (M1-T1): die vier zuletzt geänderten
+ * „Zuletzt genutzt“ auf der Startseite in allen Richtungen (M1-T1): die vier zuletzt geänderten
  * Chats über alle Fächer. Die Liste entsteht aus den vorhandenen Chat-Endpunkten; ein Fach, dessen
  * Abfrage scheitert, wird übersprungen. Ohne Chats bleibt der Abschnitt ganz weg.
  */

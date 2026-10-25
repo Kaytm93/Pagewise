@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { format, messages as m } from '../../i18n';
 import { FieldError } from '../../ui/FieldError';
+import { subjectColorAttr } from '../../ui/subject-color';
 import { useDesign } from '../../ui/useDesign';
 
 /** Gleiche Grenze wie auf dem Server (`MESSAGE_MAX_CHARACTERS`). */
@@ -31,9 +32,19 @@ interface Props {
   /** Sendet die Nachricht; `true`, sobald der Server sie angenommen hat. */
   onSend: (text: string) => Promise<boolean>;
   onStop: () => void;
+  /** Fachfarbe 0 bis 7 (oder `null`): geht als `data-subj` an die Wurzel, damit die Richtung ein Fachglühen setzen kann. */
+  subjectColor?: number | null;
 }
 
-export function Composer({ chatId, disabled, running, stopping, onSend, onStop }: Props) {
+export function Composer({
+  chatId,
+  disabled,
+  running,
+  stopping,
+  onSend,
+  onStop,
+  subjectColor,
+}: Props) {
   const [draft, setDraft] = useState(() => drafts.get(chatId) ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +117,12 @@ export function Composer({ chatId, disabled, running, stopping, onSend, onStop }
   const buttonShape = lagen ? 'rounded-full' : 'rounded-[12px]';
 
   return (
-    <form onSubmit={submit}>
+    <form
+      onSubmit={submit}
+      className="lg-composer"
+      data-subj={subjectColorAttr(subjectColor)}
+      data-running={running || undefined}
+    >
       <div className={lagen ? 'lg-composer-field' : 'flex items-end gap-2'}>
         <label htmlFor={`${hintId}-field`} className="sr-only">
           {m.chat.composerLabel}
