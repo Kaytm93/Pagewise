@@ -440,6 +440,29 @@ export const de = {
     editGroup: 'Untergruppe bearbeiten',
     editGroupNamed: 'Untergruppe „{name}“ bearbeiten',
   },
+  /** Fachseite („Arbeitsplatz“) und Chat in der Richtung „Atelier“. */
+  atelierFach: {
+    ledger: 'Kennzahlen des Fachs',
+    nextExam: 'Nächster Test',
+    noExam: 'Kein Test eingetragen',
+    groupsLead:
+      'Eine Untergruppe wählen zeigt hier nur ihre Chats und Hefteinträge. Noch einmal wählen hebt den Filter auf.',
+    tilesLabel: 'Untergruppe als Filter',
+    filterOff: 'Filtern',
+    filterOn: 'Filter aktiv',
+    openGroupNamed: 'Untergruppe „{name}“ öffnen',
+    openGroup: 'Öffnen',
+    filterNote: 'Zeigt nur: {name}',
+    filterClear: 'Filter aufheben',
+    status: {
+      thinking: 'denkt …',
+      writing: 'schreibt …',
+      done: 'fertig',
+      ready: 'bereit',
+      stopped: 'angehalten',
+      failed: 'fehlgeschlagen',
+    },
+  },
   subjectDialog: {
     createTitle: 'Fach anlegen',
     editTitle: 'Fach bearbeiten',

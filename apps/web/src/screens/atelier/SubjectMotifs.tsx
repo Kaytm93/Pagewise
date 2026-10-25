@@ -1,14 +1,18 @@
+import { useId } from 'react';
+
 /**
- * Die gezeichneten Fachmotive der Richtung „Atelier“ (D-045): je Fach drei ruhige Linienmotive, die beim
- * Aufbau gestaffelt erscheinen (`mo-rise` mit `mo-i-1` … `mo-i-3` aus motion.css). Keine Flächen, keine
- * Strich-für-Strich-Animation — die Entscheidung im Projekt lautet: Motive erscheinen gestaffelt.
+ * Die gezeichneten Fachmotive der Richtung „Atelier“ (D-045): je Fach drei ruhige Linienmotive, die sich beim
+ * Aufbau gestaffelt zeichnen. Die Linien tragen `pathLength="1"` und die Klasse `lg-motif-stroke`; `atelier-fach.css`
+ * lässt sie mit dem Keyframe `draw` (motion.css) Strich für Strich erscheinen, bei „Reduziert“ blenden sie nur ein,
+ * bei „Aus“ steht alles sofort da. Die Staffel (`mo-rise` mit `mo-i-1` … `mo-i-3`) bleibt als Klasse stehen und
+ * ist der Rückfall, falls die Zeichnung einmal nicht greift.
  *
- * Jeder Pfad trägt `pathLength="1"` und die Klasse `lg-motif-stroke`, damit eine Richtung ihn per CSS als Strich
- * zeichnen kann (`stroke-dasharray`/`stroke-dashoffset`); ohne eigenes CSS ändert das nichts.
+ * Wo der erste Linienzug eine geschlossene Form umreißt (Buch, Kolben, Blatt …), liegt dahinter eine blasse Fläche
+ * in der Fachfarbe, die nach den Linien einblendet — wie im Entwurf. Sie ist ein `<use>` (Klasse `lg-motif-fill`) auf
+ * denselben Linienzug, kein eigener Pfad: so bleibt jeder `<path>` ein Linienzug mit Staffel.
  *
  * Farbe kommt über `currentColor` (`.lg-motif` setzt `color: var(--subj)`), die Strichstärke über
  * `var(--hairline, 1.5)` aus atelier.css. Die Motive sind rein dekorativ und darum `aria-hidden`.
- * Ohne Bewegung (`fx-off`) steht die Gruppe sofort vollständig da; bei `fx-reduced` blendet sie kurz ein.
  */
 
 /** Ein Motiv: Kennung (React-Key) und ein Pfad aus mehreren Linienzügen. */
@@ -113,6 +117,20 @@ const MOTIFS: Record<string, readonly Motif[]> = {
   ],
 };
 
+/** Erste Linienzüge, die eine geschlossene Form bilden und darum eine Fläche tragen (nicht: offene Linien). */
+const FILLED = new Set([
+  'pages',
+  'nib',
+  'bubble',
+  'body',
+  'orbit',
+  'tube',
+  'blade',
+  'sphere',
+  'roof',
+  'board',
+]);
+
 /** Ohne eigenes Symbol (oder bei unbekannter Kennung) das ruhige Buchmotiv, wie beim Symbol selbst. */
 const FALLBACK = 'book';
 
@@ -124,6 +142,8 @@ export function SubjectMotifs({
   kind: string | null;
   className?: string;
 }) {
+  // Jede Zeichnung braucht eigene Kennungen, damit das `<use>` der Fläche immer den Pfad seiner Zeichnung trifft.
+  const uid = useId().replace(/:/g, '');
   const resolved = kind && MOTIFS[kind] ? kind : FALLBACK;
   const motifs = MOTIFS[resolved] ?? MOTIFS[FALLBACK] ?? [];
   return (
@@ -140,12 +160,17 @@ export function SubjectMotifs({
       className={className ? `lg-motif-marks ${className}` : 'lg-motif-marks'}
     >
       {motifs.map(([id, d], index) => (
-        <path
-          key={id}
-          pathLength={1}
-          className={`lg-motif-stroke mo-rise mo-i-${index + 1}`}
-          d={d}
-        />
+        <g key={id}>
+          {index === 0 && FILLED.has(id) && (
+            <use href={`#${uid}-${id}`} className="lg-motif-fill" />
+          )}
+          <path
+            id={`${uid}-${id}`}
+            pathLength={1}
+            className={`lg-motif-stroke mo-rise mo-i-${index + 1}`}
+            d={d}
+          />
+        </g>
       ))}
     </svg>
   );

@@ -14,6 +14,7 @@ import { Modal } from '../../ui/modal';
 import { Sheet } from '../../ui/Sheet';
 import { useDesign } from '../../ui/useDesign';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
+import { ChatEdgeMotif, ChatStatus, chatPhase } from '../atelier/SubjectAtelierChat';
 import { commonErrorMessage } from '../auth-errors';
 import { NotFoundPage } from '../NotFoundPage';
 import { autoFixRequest, mayContainBlocks } from './autofix';
@@ -114,6 +115,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
   const { state } = chat;
   const design = useDesign();
   const lagen = design === 'lagen';
+  const atelier = design === 'atelier';
   const [dialog, setDialog] = useState<Dialog>(null);
   const [announcement, setAnnouncement] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
@@ -267,8 +269,16 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
     describeEngine(engines.profiles, subject.engineProfileId) ??
     describeSelection(providers, subject.model ?? modelSettings.default);
 
+  const phase = chatPhase({
+    running: chat.running || current.generating,
+    thinking: state.thinking,
+    last,
+  });
+
   return (
     <Sheet flush>
+      {/* „Atelier“: das Fachmotiv am Rand, neben der Lesespalte (reine Zier, nur bei breitem Fenster). */}
+      {atelier && subject.kind !== 'default' && <ChatEdgeMotif kind={subject.icon} />}
       {lagen ? (
         <ChatHead
           title={title}
@@ -282,7 +292,9 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
           onDelete={() => setDialog('delete')}
         />
       ) : (
-        <header className="border-b border-line-warm px-4 py-3 sm:px-8 md:pl-10">
+        <header
+          className={`border-b border-line-warm px-4 py-3 sm:px-8 md:pl-10${atelier ? ' at-chat-head' : ''}`}
+        >
           <Link to={backTo} className="mo-press inline-flex min-h-11 items-center gap-1.5 text-sm">
             <ArrowLeft aria-hidden="true" className="size-4" />
             {group?.name ?? subject.name}
@@ -327,6 +339,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
               </span>
             )}
           </button>
+          {atelier && <ChatStatus phase={phase} />}
         </header>
       )}
 
@@ -366,7 +379,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
       <div
         ref={watchComposer}
         onInput={chat.dismissProblem}
-        className="sticky bottom-[var(--kb,0px)] z-10 rounded-b-[12px] border-t border-line-warm bg-sheet px-4 pt-3.5 pb-3.5 sm:px-8"
+        className={`sticky bottom-[var(--kb,0px)] z-10 rounded-b-[12px] border-t border-line-warm bg-sheet px-4 pt-3.5 pb-3.5 sm:px-8${atelier ? ' at-chat-dock' : ''}`}
       >
         <div className="mx-auto w-full max-w-[700px]">
           {chat.reconnecting && (

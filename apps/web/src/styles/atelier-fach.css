@@ -1,0 +1,533 @@
+/*
+ * „Atelier“, Teil 2: die Fachseite als Arbeitsplatz und der Chat (D-045, Mockup B).
+ *
+ * Fachseite: Kopf mit großem, gezeichnetem Fachmotiv, Ledger (Kennzahlen als Tabelle), Untergruppen als Kacheln,
+ * die zugleich Filter sind. Chat: das Randmotiv des Fachs neben der Lesespalte, Kopf mit Status, Composer mit
+ * Radius 20 px und einem leisen Fachglühen im Fokus.
+ *
+ * Regeln, die hier gelten:
+ *  - Farben, Schatten, Dauern nur aus Tokens (tokens.css, motion.css); die Fachfarbe `--subj` färbt Flächen
+ *    und Linien, nie Text.
+ *  - Bewegung nur über transform, opacity und die Strichlänge des Motivs (`draw` aus motion.css); Dauer in
+ *    Vielfachen von `--t-slow`. Kurze Farb- und Rahmenwechsel an Bedienelementen über `--t-color`.
+ *    Neue Keyframes hängen an `--m`. Bei „Reduziert“ blenden Motive nur ein, bei „Aus“ steht alles sofort da.
+ *  - Kein dauerhaftes `will-change`, kein `backdrop-filter`.
+ *  - Die Regeln stehen ohne @layer, damit sie Utility-Klassen der Bausteine (Tailwind) überstimmen.
+ *    Hover nur hinter `@media (hover: hover)`.
+ */
+
+/* ===== Fachmotiv: größer, mit Fläche, Strich für Strich gezeichnet ===== */
+
+/* Kopf der Fachseite: Text links, Motiv rechts. Die Mindesthöhe hält das Motiv aus dem Ledger heraus. */
+:root[data-design="atelier"] .at-head {
+  --at-motif: 96px;
+  --at-motif-stroke: 1.5;
+  min-height: calc(var(--at-motif) * 0.9);
+}
+
+:root[data-design="atelier"] .at-head-text {
+  padding-right: calc(var(--at-motif) * 0.8);
+}
+
+:root[data-design="atelier"] .at-motif {
+  top: -10px;
+  right: 0;
+  width: var(--at-motif);
+  height: var(--at-motif);
+  stroke-width: var(--at-motif-stroke);
+  opacity: 0.9;
+}
+
+/* Das Motiv wächst in Stufen; die Strichstärke schrumpft mit, damit die Linie überall etwa gleich fein bleibt */
+@media (min-width: 640px) {
+  :root[data-design="atelier"] .at-head {
+    --at-motif: 144px;
+    --at-motif-stroke: 1.05;
+  }
+}
+
+@media (min-width: 900px) {
+  :root[data-design="atelier"] .at-head {
+    --at-motif: 208px;
+    --at-motif-stroke: 0.75;
+  }
+}
+
+@media (min-width: 1200px) {
+  :root[data-design="atelier"] .at-head {
+    --at-motif: 280px;
+    --at-motif-stroke: 0.55;
+  }
+}
+
+/* Die Linien zeichnen sich (Keyframe `draw`), gestaffelt über mo-i-N; gesamt rund 1,5 s bei „Voll“ */
+:root[data-design="atelier"] .lg-motif-stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: draw calc(var(--t-slow) * 2.4) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * var(--stagger) * 3 + var(--t-fast));
+}
+
+/* Die Fläche hinter dem Umriss blendet erst ein, wenn die Linie steht */
+:root[data-design="atelier"] .lg-motif-fill {
+  fill: color-mix(in srgb, var(--subj) 13%, transparent);
+  stroke: none;
+  animation: fade calc(var(--t-slow) * 1.5) var(--ease) both;
+  animation-delay: calc(var(--t-slow) * 1.6);
+}
+
+/* Reduziert: kein Zeichnen, nur kurzes Einblenden */
+:root[data-design="atelier"].fx-reduced .lg-motif-stroke,
+:root[data-design="atelier"].fx-reduced .lg-motif-fill {
+  stroke-dasharray: none;
+  animation: fade var(--t-med) both;
+  animation-delay: 0ms;
+}
+
+/* Aus: sofort fertig */
+:root[data-design="atelier"].fx-off .lg-motif-stroke {
+  stroke-dasharray: none;
+  animation: none;
+}
+
+:root[data-design="atelier"].fx-off .lg-motif-fill {
+  animation: none;
+}
+
+/* Ohne gesetzte Stufe (Skript noch nicht gelaufen) folgt das Motiv dem System */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-design="atelier"]:not(.fx-full):not(.fx-reduced):not(.fx-off) .lg-motif-stroke,
+  :root[data-design="atelier"]:not(.fx-full):not(.fx-reduced):not(.fx-off) .lg-motif-fill {
+    stroke-dasharray: none;
+    animation: fade var(--t-med) both;
+    animation-delay: 0ms;
+  }
+}
+
+/* ===== Ledger: Kennzahlen des Fachs als Tabelle ===== */
+
+:root[data-design="atelier"] .at-ledger {
+  max-width: 44rem;
+  margin: 28px 0 0;
+  border-top: 1px solid var(--line-warm);
+}
+
+:root[data-design="atelier"] .at-ledger-row {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 56px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line-warm);
+}
+
+:root[data-design="atelier"] .at-ledger dt {
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+
+:root[data-design="atelier"] .at-ledger dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+:root[data-design="atelier"] .at-ledger-value {
+  min-width: 0;
+  font-weight: 500;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+:root[data-design="atelier"] .at-ledger-quiet {
+  font-weight: 400;
+  color: var(--ink-secondary);
+}
+
+:root[data-design="atelier"] .at-ledger-sub {
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-design="atelier"] .at-ledger-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-left: auto;
+  padding-inline: 4px;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 479.98px) {
+  :root[data-design="atelier"] .at-ledger-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding-top: 10px;
+  }
+
+  :root[data-design="atelier"] .at-ledger-link {
+    margin-left: 0;
+  }
+}
+
+/* ===== Untergruppen: Kacheln, die zugleich Filter sind ===== */
+
+:root[data-design="atelier"] .at-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: 14px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+:root[data-design="atelier"] .at-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--line-warm);
+  border-radius: 16px;
+  background-color: var(--surface);
+  box-shadow:
+    inset 0 1px 0 var(--rim),
+    0 1px 2px rgba(var(--shadow), 0.06),
+    0 8px 20px -10px rgba(var(--shadow), calc(var(--shadow-a) * 1.1));
+  transition:
+    transform var(--t-med) var(--spring-snap),
+    border-color var(--t-color),
+    background-color var(--t-color),
+    box-shadow var(--t-color);
+}
+
+/* Gewählt: Rand und Fläche in der Fachfarbe; dazu steht „Filter aktiv“ mit Haken in der Kachel */
+:root[data-design="atelier"] .at-tile[data-pressed] {
+  border-color: var(--subj);
+  background-color: color-mix(in srgb, var(--subj) 8%, var(--surface));
+  box-shadow:
+    inset 0 0 0 1px var(--subj),
+    0 8px 20px -10px rgba(var(--shadow), calc(var(--shadow-a) * 1.1));
+}
+
+@media (hover: hover) {
+  :root[data-design="atelier"] .at-tile:hover {
+    transform: translateY(calc(var(--m) * -2px));
+    box-shadow:
+      inset 0 1px 0 var(--rim),
+      0 2px 4px rgba(var(--shadow), 0.05),
+      0 18px 40px -16px rgba(var(--shadow), calc(var(--shadow-a) * 1.6));
+  }
+}
+
+:root[data-design="atelier"] .at-tile-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 96px;
+  padding: 16px 18px 6px;
+  border: 0;
+  border-radius: 15px 15px 0 0;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+:root[data-design="atelier"] .at-tile-main:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+}
+
+:root[data-design="atelier"] .at-tile-name {
+  max-width: 100%;
+  font-family: var(--font-heading);
+  font-size: 1.375rem;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.3px;
+  overflow-wrap: anywhere;
+}
+
+:root[data-design="atelier"] .at-tile-kind {
+  max-width: 100%;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+
+:root[data-design="atelier"] .at-tile-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-secondary);
+}
+
+:root[data-design="atelier"] .at-tile-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px 4px 10px;
+}
+
+:root[data-design="atelier"] .at-tile-open {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 8px;
+  font-size: 0.875rem;
+}
+
+:root[data-design="atelier"] .at-tile-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--t-color),
+    color var(--t-color);
+}
+
+@media (hover: hover) {
+  :root[data-design="atelier"] .at-tile-edit:hover {
+    background-color: var(--paper);
+    color: var(--ink);
+  }
+}
+
+/* Hinweis über den Listen, solange ein Filter gilt */
+:root[data-design="atelier"] .at-filter-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 12px;
+  min-height: 44px;
+  margin-top: 12px;
+  padding-left: 14px;
+  border-left: 3px solid var(--subj);
+  font-size: 0.9375rem;
+  color: var(--ink-secondary);
+  overflow-wrap: anywhere;
+}
+
+:root[data-design="atelier"] .at-filter-clear {
+  min-height: 44px;
+  padding-inline: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* ===== Chat: Kopf mit Status ===== */
+
+:root[data-design="atelier"] .at-chat-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 12px;
+  border-bottom-color: var(--line-warm);
+  background-color: color-mix(in srgb, var(--canvas) 86%, transparent);
+}
+
+/* Reihenfolge: Rückweg und Status in einer Zeile, darunter Titel, darunter das Modell */
+:root[data-design="atelier"] .at-chat-head > a {
+  order: 1;
+  min-width: 0;
+}
+
+:root[data-design="atelier"] .at-chat-head > div {
+  order: 3;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+:root[data-design="atelier"] .at-chat-head > button {
+  order: 4;
+  min-width: 0;
+}
+
+:root[data-design="atelier"] .at-chat-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  order: 2;
+  min-height: 44px;
+  margin: 0 0 0 auto;
+  font-size: 0.8125rem;
+  color: var(--ink-secondary);
+}
+
+:root[data-design="atelier"] .at-chat-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--subj);
+}
+
+:root[data-design="atelier"] .at-chat-status[data-state="ready"] .at-chat-dot,
+:root[data-design="atelier"] .at-chat-status[data-state="done"] .at-chat-dot,
+:root[data-design="atelier"] .at-chat-status[data-state="stopped"] .at-chat-dot {
+  background-color: var(--ink-muted);
+}
+
+:root[data-design="atelier"] .at-chat-status[data-state="failed"] .at-chat-dot {
+  background-color: var(--danger);
+}
+
+/* Der Punkt atmet nur, solange gearbeitet wird; das Wort daneben sagt es auch ohne Bewegung */
+:root[data-design="atelier"] .at-chat-status[data-state="thinking"] .at-chat-dot,
+:root[data-design="atelier"] .at-chat-status[data-state="writing"] .at-chat-dot {
+  animation: at-breathe calc(var(--t-slow) * 2.6) var(--ease) infinite;
+}
+
+@keyframes at-breathe {
+  50% {
+    opacity: calc(1 - var(--m) * 0.65);
+    transform: scale(calc(1 - var(--m) * 0.3));
+  }
+}
+
+/* Kopf der Agent-Aktivität (`data-state` ist `done` oder `error`): eine ruhige Kapsel mit Zustandsfarbe am Rand */
+:root[data-design="atelier"] .lg-agent-head {
+  padding-inline: 12px 10px;
+  border: 1px solid var(--line-warm);
+  border-radius: 999px;
+  background-color: var(--surface);
+  transition:
+    border-color var(--t-color),
+    color var(--t-color);
+}
+
+:root[data-design="atelier"] .lg-agent-head[data-state="done"] {
+  border-color: color-mix(in srgb, var(--subj) 50%, transparent);
+}
+
+:root[data-design="atelier"] .lg-agent-head[data-state="error"] {
+  border-color: color-mix(in srgb, var(--danger) 60%, transparent);
+  color: var(--ink);
+}
+
+/* Nichts läuft über: lange Wörter brechen, Code und Tabellen scrollen in ihrem eigenen Bereich */
+:root[data-design="atelier"] .lg-app[data-view="chat"] .lg-sheet {
+  min-width: 0;
+  max-width: 100%;
+}
+
+:root[data-design="atelier"] .lg-app[data-view="chat"] .lg-sheet article {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+:root[data-design="atelier"] .lg-app[data-view="chat"] .lg-sheet pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* ===== Chat: Randmotiv des Fachs ===== */
+
+/* Nur bei breitem Fenster und nur in den Rändern neben der Lesespalte (700 px, mittig): die Spalte bleibt frei */
+:root[data-design="atelier"] .at-chat-edge {
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  :root[data-design="atelier"] .at-chat-edge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+    display: block;
+    width: clamp(0px, calc((100% - 700px) / 2 - 24px), 240px);
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent, black 45%);
+    mask-image: linear-gradient(90deg, transparent, black 45%);
+  }
+
+  /* Das Motiv bleibt beim Lesen oben im Rand stehen; im Chat zeichnet es sich nicht neu */
+  :root[data-design="atelier"] .at-chat-motif {
+    --at-motif-stroke: 0.8;
+    position: sticky;
+    top: 96px;
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    stroke-width: var(--at-motif-stroke);
+    opacity: 0.7;
+  }
+
+  :root[data-design="atelier"] .at-chat-motif .lg-motif-stroke {
+    stroke-dasharray: none;
+    animation: none;
+  }
+
+  :root[data-design="atelier"] .at-chat-motif .lg-motif-fill {
+    animation: none;
+  }
+}
+
+/* ===== Chat: Eingabe ===== */
+
+/* Der untere Streifen blendet in den Grund aus, statt eine Kante zu ziehen */
+:root[data-design="atelier"] .at-chat-dock {
+  border-top-color: transparent;
+  border-radius: 0;
+  background: linear-gradient(180deg, transparent, var(--canvas) 38%);
+}
+
+/* Das Feld: Radius 20 px, eine einzige Fläche; das Textfeld darin hat keinen eigenen Rahmen mehr */
+:root[data-design="atelier"] .lg-composer {
+  padding: 8px 8px 8px 16px;
+  border: 1px solid var(--control-edge);
+  border-radius: 20px;
+  background-color: var(--surface);
+  box-shadow:
+    inset 0 1px 0 var(--rim),
+    0 1px 2px rgba(var(--shadow), 0.06),
+    0 8px 20px -10px rgba(var(--shadow), calc(var(--shadow-a) * 1.1));
+  transition:
+    border-color var(--t-color),
+    box-shadow var(--t-color);
+}
+
+:root[data-design="atelier"] .lg-composer textarea,
+:root[data-design="atelier"] .lg-composer textarea:focus {
+  border-color: transparent;
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Fokus: ein leises Glühen in der Fachfarbe, dazu der Ring in der Bedienfarbe (kräftig genug, mindestens 3 : 1) */
+:root[data-design="atelier"] .lg-composer:focus-within {
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 1px 0 var(--rim),
+    0 0 0 4px color-mix(in srgb, var(--subj) 18%, transparent),
+    0 8px 20px -10px rgba(var(--shadow), calc(var(--shadow-a) * 1.1));
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
