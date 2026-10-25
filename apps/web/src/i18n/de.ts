@@ -351,7 +351,7 @@ export const de = {
       invalid_slides:
         'Der Aufbau der Präsentation passt nicht: Titel, Folien, Stichpunkte und Absätze müssen stimmen.',
       unsupported_text:
-        'Das Dokument enthält Zeichen, die das PDF nicht darstellt. Tiefgestellte Ziffern schreibt man als normale Ziffern, zum Beispiel H2O.',
+        'Das Dokument enthält Zeichen, die das PDF nicht darstellt. Griechische Buchstaben und andere Sonderzeichen bitte als Wort schreiben, zum Beispiel „Delta“ statt Δ.',
       render_failed: 'Das Zeichnen ist fehlgeschlagen.',
     },
     callout: {

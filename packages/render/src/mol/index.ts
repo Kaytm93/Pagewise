@@ -1,9 +1,9 @@
 import { RenderError } from '../errors';
-import { renderMoleculeSvg } from './draw';
+import { renderFormulaSvg, renderMoleculeSvg } from './draw';
 import { KNOWN_FORMULAS, MOLECULES, type Molecule } from './library';
 import { type MolSpec, parseMolSpec } from './spec';
 
-export { renderMoleculeSvg, withSubscripts } from './draw';
+export { renderFormulaSvg, renderMoleculeSvg, withSubscripts } from './draw';
 export { KNOWN_FORMULAS, MOLECULES, type Molecule } from './library';
 export { canonicalFormula, type MolSpec, parseMolSpec } from './spec';
 
@@ -24,26 +24,43 @@ export function findMolecule(formula: string): Molecule | undefined {
 /** Zeichenfolge aus Buchstaben und Ziffern, höchstens 12 Zeichen: sicher für eine Fehlermeldung. */
 const safeName = (value: string) => value.replace(/[^A-Za-z0-9]/g, '').slice(0, 12);
 
+/** Eine Formel aus Elementen und Ziffern, Klammern erlaubt (`AgNO3`, `Ca(OH)2`). Kleinbuchstaben nur hinter einem Element. */
+const FORMULA_SHAPE = /^(?:[A-Z][a-z]?\d*|[()]\d*)+$/;
+
 /**
- * Zeichnet eine Summenformel aus der Tabelle. Wirft `RenderError`: `unknown_formula`, wenn sie dort nicht
- * steht (der Fehler nennt die Formel, damit das Modell stattdessen SMILES nehmen kann).
+ * Eine Summenformel ohne Tabelleneintrag, die als Text gezeichnet wird: Salze und anorganische Stoffe (AgNO3,
+ * CaCO3). Organische Formeln mit Kohlenstoff und Wasserstoff (C8H18) bleiben beim Fehler, dafür gibt es SMILES.
+ */
+function isPlainFormula(value: string): boolean {
+  if (value.length > 40 || !FORMULA_SHAPE.test(value)) return false;
+  const elements: string[] = value.match(/[A-Z][a-z]?/g) ?? [];
+  return !(elements.includes('C') && elements.includes('H'));
+}
+
+/**
+ * Zeichnet eine Summenformel: aus der Tabelle als Valenzstrichformel, sonst als Text, wenn sie ein Salz oder
+ * anorganischer Stoff ist. Wirft `RenderError`: `unknown_formula` sonst (der Fehler nennt die Formel, damit das
+ * Modell stattdessen SMILES nehmen kann).
  */
 export function renderFormula(spec: MolSpec): string {
   const molecule = findMolecule(spec.value);
-  if (!molecule) throw new RenderError('unknown_formula', safeName(spec.value));
-  return renderMoleculeSvg(molecule, {
-    angles: spec.angles,
-    lonePairs: spec.lonePairs,
-    caption: spec.caption,
-    formula: spec.value,
-  });
+  if (molecule) {
+    return renderMoleculeSvg(molecule, {
+      angles: spec.angles,
+      lonePairs: spec.lonePairs,
+      caption: spec.caption,
+      formula: spec.value,
+    });
+  }
+  if (isPlainFormula(spec.value)) return renderFormulaSvg(spec.value);
+  throw new RenderError('unknown_formula', safeName(spec.value));
 }
 
 /** Prüft einen ` ```mol `-Block mit Summenformel ohne zu zeichnen (SMILES prüft `@pagewise/render/smiles`). */
 export function validateFormulaSpec(spec: MolSpec): RenderError | null {
-  return spec.kind === 'formula' && !findMolecule(spec.value)
-    ? new RenderError('unknown_formula', safeName(spec.value))
-    : null;
+  if (spec.kind !== 'formula' || findMolecule(spec.value) || isPlainFormula(spec.value))
+    return null;
+  return new RenderError('unknown_formula', safeName(spec.value));
 }
 
 export { parseMolSpec as parseMol };

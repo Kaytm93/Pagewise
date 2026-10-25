@@ -130,6 +130,15 @@ describe('SVG bereinigen: XSS-Fälle', () => {
     expect(cleaned).toContain('class="pg-atom"');
   });
 
+  it('lässt die Formel als Text (Salz) unverändert durch, mit Indizes', () => {
+    const parsed = parseMolSpec('AgNO3');
+    if (!parsed.ok) throw parsed.error;
+    const cleaned = sanitizeSvg(renderFormula(parsed.value));
+    expect(cleaned).toContain('class="pg-formula-text"');
+    expect(cleaned).toContain('font-size="22"');
+    expect(cleaned).toContain('AgNO₃');
+  });
+
   it('lehnt etwas ab, das kein SVG ist', () => {
     expect(() => sanitizeSvg('<img src=x onerror=alert(1)>')).toThrowError(
       expect.objectContaining({ code: 'render_failed' }),

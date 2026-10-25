@@ -36,9 +36,27 @@ describe('Dokument-Angabe', () => {
     expect(result.ok).toBe(true);
   });
 
-  it.each(['H₂O', 'Pfeil →', 'Zeile\numbruch', 'Tab\tsei'])('lehnt Zeichen in %j ab', (text) => {
-    expect(isPdfText(text)).toBe(false);
+  it('nimmt Formeln mit Indizes, Ladungen und Pfeil im Block', () => {
+    const chemistry = doc({
+      title: 'Silbernitrat (AgNO₃)',
+      parts: [{ type: 'paragraph', text: 'AgNO₃ + NaCl → AgCl + NaNO₃, Ag⁺ und NO₃⁻ sind Ionen.' }],
+    });
+    expect(parseDocumentSpec(chemistry).ok).toBe(true);
   });
+
+  it.each(['H₂O', 'Ag⁺ und NO₃⁻', 'SO₄²⁻', 'AgNO₃ + NaCl → AgCl + NaNO₃', '2 − 1 ≤ 3 ≥ 0 ≈ 1'])(
+    'nimmt Indizes, Ladungen und Mathezeichen in %j',
+    (text) => {
+      expect(isPdfText(text)).toBe(true);
+    },
+  );
+
+  it.each(['Δ H', 'Gleichgewicht ⇌ Ende', 'Zeile\numbruch', 'Tab\tsei', 'Test 🙂'])(
+    'lehnt Zeichen in %j ab',
+    (text) => {
+      expect(isPdfText(text)).toBe(false);
+    },
+  );
 
   it.each([
     ['', 'empty', undefined],
@@ -52,8 +70,8 @@ describe('Dokument-Angabe', () => {
     [doc({ parts: [{ type: 'list', items: [] }] }), 'invalid_document', 'items'],
     [doc({ parts: [{ type: 'paragraph', text: 'a\nb' }] }), 'invalid_document', 'text'],
     [doc({ parts: [{ type: 'paragraph', text: 'x'.repeat(1201) }] }), 'invalid_document', 'text'],
-    [doc({ parts: [{ type: 'paragraph', text: 'Formel H₂O' }] }), 'unsupported_text', undefined],
-    [doc({ parts: [{ type: 'list', items: ['→ Ziel'] }] }), 'unsupported_text', undefined],
+    [doc({ parts: [{ type: 'paragraph', text: 'Formel Δ H' }] }), 'unsupported_text', undefined],
+    [doc({ parts: [{ type: 'list', items: ['Ziel ⇌ Ende'] }] }), 'unsupported_text', undefined],
     [doc({ parts: [{ type: 'paragraph', text: 'Steuer\u0007' }] }), 'invalid_document', 'text'],
   ])('lehnt %j ab (%s, Hinweis %s)', (source, code, detail) => {
     const result = parseDocumentSpec(source);
@@ -75,7 +93,7 @@ describe('Dokument-Angabe', () => {
   });
 
   it('nennt im Hinweis nie Text aus der Eingabe', () => {
-    const result = parseDocumentSpec(doc({ parts: [{ type: 'paragraph', text: 'geheim H₂O' }] }));
+    const result = parseDocumentSpec(doc({ parts: [{ type: 'paragraph', text: 'geheim Δ' }] }));
     expect(JSON.stringify(result)).not.toMatch(/geheim/);
   });
 
@@ -95,7 +113,7 @@ describe('Dokument im Text', () => {
   it('meldet fehlerhafte Dokument-Blöcke, gültige bleiben ohne Befund', async () => {
     expect(await validateMarkdown(`\`\`\`document\n${doc()}\n\`\`\``)).toEqual([]);
     const issues = await validateMarkdown(
-      `\`\`\`document\n${doc({ parts: [{ type: 'paragraph', text: 'H₂O' }] })}\n\`\`\``,
+      `\`\`\`document\n${doc({ parts: [{ type: 'paragraph', text: 'Δ H' }] })}\n\`\`\``,
     );
     expect(issues).toEqual([
       expect.objectContaining({ kind: 'document', index: 1, code: 'unsupported_text' }),

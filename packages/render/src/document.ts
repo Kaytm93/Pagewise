@@ -23,7 +23,7 @@ const MAX = {
 
 /**
  * Zeichen, die die eingebaute PDF-Schrift (Helvetica, WinAnsi) darstellt: ASCII ohne Steuerzeichen, Latin-1
- * und die Zusatzzeichen von Windows-1252 (€, „, “, –, …). Tiefgestellte Ziffern wie ₂ gehören nicht dazu.
+ * und die Zusatzzeichen von Windows-1252 (€, „, “, –, …).
  */
 const WIN_ANSI_EXTRA = new Set([
   0x20ac, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021, 0x02c6, 0x2030, 0x0160, 0x2039, 0x0152,
@@ -31,12 +31,52 @@ const WIN_ANSI_EXTRA = new Set([
   0x0153, 0x017e, 0x0178,
 ]);
 
-/** `true`, wenn jedes Zeichen in der PDF-Schrift vorkommt. Zeilenumbrüche gehören nicht dazu. */
+/** Hochgestellte Zeichen und ihr Grundzeichen (`⁺` ist `+`). Das PDF setzt sie klein und erhöht. */
+export const SUPERSCRIPTS: ReadonlyMap<string, string> = new Map([
+  ['⁰', '0'],
+  ['¹', '1'],
+  ['²', '2'],
+  ['³', '3'],
+  ['⁴', '4'],
+  ['⁵', '5'],
+  ['⁶', '6'],
+  ['⁷', '7'],
+  ['⁸', '8'],
+  ['⁹', '9'],
+  ['⁺', '+'],
+  ['⁻', '-'],
+]);
+
+/** Tiefgestellte Zeichen und ihr Grundzeichen (`₂` ist `2`). Das PDF setzt sie klein und gesenkt. */
+export const SUBSCRIPTS: ReadonlyMap<string, string> = new Map([
+  ['₀', '0'],
+  ['₁', '1'],
+  ['₂', '2'],
+  ['₃', '3'],
+  ['₄', '4'],
+  ['₅', '5'],
+  ['₆', '6'],
+  ['₇', '7'],
+  ['₈', '8'],
+  ['₉', '9'],
+  ['₊', '+'],
+  ['₋', '-'],
+]);
+
+/** Mathezeichen, die das PDF als eigene Zeichen setzt: Pfeil, Minus, Vergleich, ungefähr gleich. */
+export const MATH_SIGNS: ReadonlySet<string> = new Set(['→', '−', '≤', '≥', '≈']);
+
+/**
+ * `true`, wenn jedes Zeichen im PDF vorkommt: Schrift, Hoch- und Tiefstellung oder Mathezeichen. Zeilenumbrüche
+ * gehören nicht dazu.
+ */
 export function isPdfText(value: string): boolean {
   for (const char of value) {
     const code = char.codePointAt(0) ?? 0;
     const known = (code >= 0x20 && code <= 0x7e) || (code >= 0xa0 && code <= 0xff);
-    if (!known && !WIN_ANSI_EXTRA.has(code)) return false;
+    if (known || WIN_ANSI_EXTRA.has(code)) continue;
+    if (SUPERSCRIPTS.has(char) || SUBSCRIPTS.has(char) || MATH_SIGNS.has(char)) continue;
+    return false;
   }
   return true;
 }
@@ -50,8 +90,8 @@ const hasOnly = (value: Json, keys: string[]) =>
   Object.keys(value).every((key) => keys.includes(key));
 
 /**
- * Text für ein Feld: nicht leer, nicht zu lang, ohne Steuerzeichen. Zeichen außerhalb der PDF-Schrift bekommen
- * einen eigenen Fehlercode, damit das Modell (Korrekturanfrage) „H2O“ statt „H₂O“ schreibt.
+ * Text für ein Feld: nicht leer, nicht zu lang, ohne Steuerzeichen. Zeichen, die das PDF nicht setzt, bekommen
+ * einen eigenen Fehlercode, damit das Modell (Korrekturanfrage) ein einfacheres Zeichen wählt.
  */
 function readText(value: unknown, max: number): Result<string> {
   if (

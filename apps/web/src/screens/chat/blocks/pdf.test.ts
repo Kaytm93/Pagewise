@@ -38,6 +38,25 @@ describe('PDF-Erzeugung', () => {
     // Jede Seite ist ein eigenes Objekt mit /Type /Page
     expect(text.match(/\/Type\s*\/Page\b(?!s)/g)?.length ?? 0).toBeGreaterThan(2);
   });
+
+  it('setzt Indizes, Ladungen und Mathezeichen, auch über mehrere Zeilen', async () => {
+    const chemistry = spec({
+      title: 'Silbernitrat (AgNO₃)',
+      parts: [
+        {
+          type: 'paragraph',
+          text: 'AgNO₃ + NaCl → AgCl + NaNO₃. Ag⁺ und NO₃⁻ sind Ionen, SO₄²⁻ hat die Ladung 2−. '.repeat(
+            12,
+          ),
+        },
+        { type: 'list', items: ['2 ≤ 3 ≥ 1 ≈ 2', 'H₂O und CO₂'] },
+      ],
+    });
+    const blob = await buildPdf(chemistry);
+    expect(blob.type).toBe('application/pdf');
+    const head = new TextDecoder().decode(new Uint8Array(await blob.slice(0, 8).arrayBuffer()));
+    expect(head.startsWith('%PDF-')).toBe(true);
+  });
 });
 
 describe('Dateiname', () => {

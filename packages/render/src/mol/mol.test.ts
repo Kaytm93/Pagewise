@@ -168,6 +168,25 @@ describe('Unbekannte Formeln', () => {
   it('SMILES-Angaben prüft ein anderer Weg', () => {
     expect(validateFormulaSpec(spec('smiles: CCO'))).toBeNull();
   });
+
+  it('zeichnen Salze und anorganische Stoffe als Formel-Text mit Indizes', () => {
+    const silver = renderFormula(spec('AgNO₃'));
+    expect(silver).toContain('class="pg-mol pg-formula"');
+    expect(silver).toContain('>AgNO₃<');
+    expect(renderFormula(spec('CaCO3'))).toContain('>CaCO₃<');
+    expect(validateFormulaSpec(spec('AgNO3'))).toBeNull();
+  });
+
+  it('lassen organische Formeln mit C und H beim Fehler (dafür gibt es SMILES)', () => {
+    expect(() => renderFormula(spec('C8H18'))).toThrowError(
+      expect.objectContaining({ code: 'unknown_formula' }),
+    );
+    expect(validateFormulaSpec(spec('C8H18'))?.code).toBe('unknown_formula');
+  });
+
+  it('zeichnen Wörter ohne Formelform nicht als Text', () => {
+    expect(validateFormulaSpec(spec('Hello'))?.code).toBe('unknown_formula');
+  });
 });
 
 describe('withSubscripts', () => {

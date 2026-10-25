@@ -352,6 +352,7 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Entscheidung:** `packages/render/src/mol/` mit eigenem SVG-Renderer und einer Tabelle von 17 Schulmolekülen (H₂, O₂, N₂, Cl₂, F₂, HCl, HF, H₂O, H₂S, NH₃, CH₄, CO₂, SO₂, CH₂O, HCN, C₂H₂, C₂H₄). Das Modell nennt nur die Summenformel (` ```mol ` mit `H2O`); die Geometrie steht in der Tabelle (Winkel, Elektronenpaare, Keil und gestrichelte Bindung). Alles andere, vor allem Organisches, geht als `smiles: CCO` an SmilesDrawer. Unbekannte Summenformel: Fehlercode `unknown_formula` mit der bereinigten Formel als Hinweis.
 - **Begründung:** Modelle liefern Koordinaten und SMILES für größere Moleküle oft falsch (erwartet, nicht gemessen). Deshalb keine Koordinaten im Block und keine erfundene Zeichnung. Ob echte Modelle die Syntax einhalten, prüft der Maintainer.
 - **Grenzen:** keine Ionen, Ladungen oder Mesomerie. NH₃ und CH₄ sind Lehrbuch-Schema, nicht maßstäblich.
+- **Nachtrag (D-063):** Eine Summenformel, die nicht in der Tabelle steht, aber kein organischer Stoff ist (kein Kohlenstoff zusammen mit Wasserstoff), wird als Text gezeichnet, etwa `AgNO3` als AgNO₃. `unknown_formula` bleibt für organische Formeln wie `C8H18`; dort gilt SMILES.
 
 ## D-047 Funktionsgraphen: eigener Plotter ohne `eval` (4. Oktober 2026)
 
@@ -534,6 +535,8 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Nicht geprüft:** Download auf echtem iPhone oder iPad (PWA, Safari), Download in der Mac-App (Electron legt die Datei im Ordner Downloads ab, die Benachrichtigung ist nicht gesehen), Schrift mit Sonderzeichen außerhalb WinAnsi.
 - **Prompt-Platz (Abweichung von D-034):** Die technische Schicht war bei 1.463 Zeichen (Obergrenze 1.500). Die Zeilen für Dokument und Präsentation bringen sie auf 1.930. Die Obergrenze in `compose.test.ts` steht daher bei 2.000 Zeichen, das sind rund 120 Token mehr je Nachricht. **Offen für Kay:** bestätigen, oder die beiden Zeilen kürzen.
 
+- **Nachtrag (D-063):** Die Zeichenliste ist erweitert. Hoch- und Tiefstellung (₂, ⁺) und die Mathezeichen → − ≤ ≥ ≈ gehen jetzt ins PDF, die Regel „keine tiefgestellten Zeichen“ ist entfallen. Griechische Buchstaben, Emoji und ⇌ bleiben gesperrt.
+
 ## D-061 Präsentation als PPTX: pptxgenjs 4.0.1 (25. Oktober 2026)
 
 - **Anlass:** M10-T007. Das Modell erzeugt eine Präsentation als ` ```slides `-Block, die App zeigt die Folien als Karten im Format 16:9 und bietet „Als PowerPoint herunterladen“.
@@ -557,3 +560,15 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Verworfen:** eine Preisliste für alle Modelle (veraltet schnell, falsch bei Abos und Gratisangeboten); Kosten während des Schreibens (die Zahl liegt erst am Ende vor).
 - **Geprüft:** Kostenregeln (`providers/cost.test.ts`), Strom mit Denkprozess und Kosten (`client.test.ts`), Speichern und Senden über die Route (`routes/chats.test.ts`), Reducer und Anzeige (`chat-state.test.ts`, `Reasoning.test.tsx`, `metrics.test.ts`). Lint, Typecheck, Geheimnis-Prüfung und alle Testpakete grün.
 - **Nicht geprüft:** echte Anbieter mit Schlüssel (OpenRouter, Z.ai), ob Ollama und LM Studio den Denkprozess im Strom liefern, Anzeige auf iPhone und iPad.
+
+## D-063 Unicode-Indizes, Ladungen und Pfeile im PDF; Salze als Formel-Text (25. Oktober 2026)
+
+- **Anlass:** Ein Dokument mit „AgNO₃“ und „Ag⁺“ wurde abgelehnt (`unsupported_text`), weil die PDF-Schrift tiefgestellte und hochgestellte Zeichen nicht kennt. Das Modell hielt sich an die Regel „H2O statt H₂O“ nicht, die Korrekturanfrage half nicht. Ein ` ```mol `-Block mit „AgNO₃“ gab `unknown_formula`, weil Salze nicht in der Tabelle der Schulmoleküle stehen.
+- **Prüfung** (`packages/render/src/document.ts`): Zugelassen sind ₀–₉, ₊ ₋, ⁰ ⁴–⁹ ⁺ ⁻ (Hoch- und Tiefstellung) sowie die Mathezeichen → − ≤ ≥ ≈. Die Zeichen stehen als Tabellen `SUPERSCRIPTS`, `SUBSCRIPTS` und `MATH_SIGNS` im Paket, damit Prüfung und PDF dieselbe Liste benutzen.
+- **PDF** (`apps/web/src/screens/chat/blocks/pdf.ts`): Hoch- und Tiefstellung setzt das PDF als kleinere Zeichen (70 % der Schriftgröße), Hochgestelltes um 35 %, Tiefgestelltes um 20 % der Größe angehoben beziehungsweise gesenkt. Pfeile, Vergleichszeichen und das Minus stammen aus der eingebauten Symbol-Schrift. Das Minus ist das Symbol-Minus (Code 0x2D), nicht der Bindestrich. Die Breiten dieser Zeichen stehen fest in Em (Pfeil 0,987, übrige 0,549), weil jsPDF für sie keine brauchbare Breite liefert: Ohne diese Festlegung fiel der Abstand nach dem Pfeil weg.
+- **Salze im `mol`-Block** (`packages/render/src/mol/index.ts`): Eine Summenformel ohne Tabelleneintrag wird als Text gezeichnet, wenn sie kein organischer Stoff ist. Organisch heißt: Kohlenstoff und Wasserstoff zusammen. Die Heuristik ist grob: CaCO₃ wird als Text gezeichnet, NaHCO₃ (C und H) bleibt beim Fehler. Die Zeichnung ist eine SVG-Textzeile mit Unicode-Indizes, wie die Beschriftung unter einem Molekül.
+- **Weiterhin gesperrt:** griechische Buchstaben, Emoji und ⇌ (die Symbol-Schrift hat es nicht). Der Hinweis zu `unsupported_text` verweist jetzt auf das Ausschreiben als Wort, nie auf Text aus der Eingabe.
+- **Prompt:** Die Regel gegen tiefgestellte Zeichen entfällt in der Dokument-Zeile der technischen Schicht (`compose.ts`). Die Schicht bleibt unter 2.000 Zeichen.
+- **Verworfen:** Zeichen im Renderer auf ASCII umschreiben (`AgNO3` statt `AgNO₃`): spart Code, aber das PDF sähe nach Rohtext aus. Eine Unicode-Schrift einbetten: mehrere hundert Kilobyte im Paket, für wenige Zeichen zu viel.
+- **Geprüft:** Render-Tests 217 → 228 (Zeichenprüfung, Salz-Formel, organische Formeln, Bereinigung der Salz-SVG). Web-Tests für PDF mit Indizes und Mathezeichen, Vorschau-Fehler mit geändertem Beispiel. Prompt-Test (Obergrenze) grün. Gesamt: alle Pakete grün (Render 228, Server 1038, Web 1026, Desktop 316, Repo-Tests 47). PDF-Sichtprüfung: Silbernitrat-Beispiel per esbuild gebaut, mit `pdfinfo` (A4, eine Seite) und `pdftoppm` als Bild geprüft, Indizes, Ladungen, Pfeile und Umbruch über zwei Zeilen stimmen.
+- **Nicht geprüft:** PowerPoint: Hochstellung in Arial ist nicht gemessen; PPTX nimmt Unicode direkt, die Folien wurden nicht neu geprüft. Download auf iPhone, iPad und in der Mac-App.

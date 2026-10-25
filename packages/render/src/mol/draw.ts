@@ -100,6 +100,16 @@ export interface DrawOptions {
 }
 
 /**
+ * Zeichnet eine Summenformel nur als Text, ohne Valenzstriche: die Beschriftung eines Salzes wie AgNO₃, mit
+ * Unicode-Indizes wie unter einem Molekül. Ohne Stilangaben, Farbe über `currentColor`.
+ */
+export function renderFormulaSvg(formula: string): string {
+  const text = withSubscripts(formula);
+  const width = Math.max(80, [...text].length * 14 + 2 * MARGIN);
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="pg-mol pg-formula" width="${n(width)}" height="48" viewBox="0 0 ${n(width)} 48" role="img" font-family="Inter, system-ui, sans-serif"><text class="pg-formula-text" fill="currentColor" x="${n(width / 2)}" y="31" text-anchor="middle" font-size="22">${escapeXml(text)}</text></svg>`;
+}
+
+/**
  * Zeichnet eine Valenzstrichformel als SVG-Text: Atomzeichen, Bindungsstriche, freie Elektronenpaare als
  * Striche, auf Wunsch Bindungswinkel. Ohne Stilangaben und Skript; Aussehen über Klassen (`pg-*`) mit
  * `currentColor` als Rückfall.

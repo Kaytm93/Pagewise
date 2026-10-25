@@ -31,7 +31,7 @@ describe('Dokument im Chat', () => {
   it('meldet Zeichen, die die PDF-Schrift nicht kennt, mit festem Text', async () => {
     const bad = JSON.stringify({
       title: 'Formel',
-      parts: [{ type: 'paragraph', text: 'H₂O ist Wasser.' }],
+      parts: [{ type: 'paragraph', text: 'Δ H ist negativ.' }],
     });
     const { container } = show(`\`\`\`document\n${bad}\n\`\`\``);
     await waitFor(() => expect(container.querySelector('[data-block-error]')).not.toBeNull());
