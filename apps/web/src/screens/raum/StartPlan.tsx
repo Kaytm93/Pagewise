@@ -8,36 +8,16 @@ import { sectionTitle } from '../../ui/styles';
 import { subjectColorAttr } from '../../ui/subject-color';
 import { useDesign } from '../../ui/useDesign';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
+import { type Block, layoutTimeline } from './timeline';
 
-type State = 'past' | 'now' | 'next';
-
-/** Lücken kürzer als das sind keine Pause, sondern nur ein Wechsel. */
-const MIN_BREAK = 5;
-
-interface LessonRow {
-  kind: 'lesson';
-  lesson: TimetableEntry;
-  state: State;
-  block: number;
-}
-
-interface BreakRow {
-  kind: 'break';
-  id: string;
-  minutes: number;
-  block: number;
-}
-
-interface NowRow {
-  kind: 'now';
-}
-
-type Row = LessonRow | BreakRow | NowRow;
+type Row = Block | { kind: 'now' };
 
 /**
- * Stundenplan der Startseite in der Designrichtung „Raum“: die Stunden von heute als Spalte, dazwischen die
- * Pausen, an der laufenden Stelle die „Jetzt“-Linie. Vergangenes ist gedämpft, die laufende Stunde trägt die
- * Fachfarbe als linke Kante. Erscheint nur in dieser Richtung und nur, wenn der Plan geladen ist.
+ * Stundenplan der Startseite in der Designrichtung „Raum“ (Mockup C): eine Zeitachse. Die Zeiten stehen links,
+ * die Stunden von heute als Karten mit der Fachfarbe als Kante an ihrer Uhrzeit, dazwischen die Pausen, und die
+ * „Jetzt“-Marke mit Punkt wandert mit der Uhr (`--now`, in Minuten ab der ersten Stunde). Vergangenes ist
+ * gedämpft. Erscheint nur in dieser Richtung und nur, wenn der Plan geladen ist; ohne Stunden von heute gibt es
+ * auch keine Marke. Die Rechnung steht in `timeline.ts`.
  */
 export function StartPlan() {
   const design = useDesign();
@@ -50,40 +30,35 @@ export function StartPlan() {
   const r = m.planning.raumStart;
   const minutes = minutesOfDay(now);
   const clock = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
-  const stateOf = (start: string, end: string): State =>
-    toMinutes(end) <= minutes ? 'past' : toMinutes(start) <= minutes ? 'now' : 'next';
-
-  const runningIndex = lessons.findIndex(
-    (lesson) => stateOf(lesson.startTime, lesson.endTime) === 'now',
-  );
-  const firstNext = lessons.findIndex(
-    (lesson) => stateOf(lesson.startTime, lesson.endTime) === 'next',
-  );
-  const markerAt =
-    runningIndex !== -1 ? runningIndex : firstNext !== -1 ? firstNext : lessons.length;
-  const runningLesson = runningIndex !== -1 ? lessons[runningIndex] : undefined;
-  const runningMinutesLeft = runningLesson ? toMinutes(runningLesson.endTime) - minutes : 0;
   const weekday = m.planning.days[weekdayOf(today) - 1] as string;
 
+  const sorted = [...lessons].sort(
+    (a, b) =>
+      toMinutes(a.startTime) - toMinutes(b.startTime) ||
+      toMinutes(a.endTime) - toMinutes(b.endTime),
+  );
+  const timeline = layoutTimeline(
+    sorted.map((lesson) => ({
+      id: lesson.id,
+      start: toMinutes(lesson.startTime),
+      end: toMinutes(lesson.endTime),
+    })),
+    minutes,
+  );
+  const running = timeline.runningIndex !== -1 ? sorted[timeline.runningIndex] : undefined;
+  const runningMinutesLeft = running ? toMinutes(running.endTime) - minutes : 0;
+
+  // Reihenfolge im Dokument: die Marke steht vor der laufenden, sonst vor der nächsten Stunde.
   const rows: Row[] = [];
-  let block = 0;
-  lessons.forEach((lesson, index) => {
-    const previous = lessons[index - 1];
-    if (previous) {
-      const gap = toMinutes(lesson.startTime) - toMinutes(previous.endTime);
-      if (gap >= MIN_BREAK) {
-        rows.push({ kind: 'break', id: `pause-${lesson.id}`, minutes: gap, block: block++ });
-      }
+  let lessonSeen = 0;
+  for (const block of timeline.blocks) {
+    if (block.kind === 'lesson') {
+      if (lessonSeen === timeline.markerBefore) rows.push({ kind: 'now' });
+      lessonSeen += 1;
     }
-    if (index === markerAt) rows.push({ kind: 'now' });
-    rows.push({
-      kind: 'lesson',
-      lesson,
-      state: stateOf(lesson.startTime, lesson.endTime),
-      block: block++,
-    });
-  });
-  if (markerAt === lessons.length) rows.push({ kind: 'now' });
+    rows.push(block);
+  }
+  if (timeline.markerBefore >= sorted.length) rows.push({ kind: 'now' });
 
   const count =
     lessons.length === 1 ? r.count.one : format(r.count.many, { count: lessons.length });
@@ -109,45 +84,53 @@ export function StartPlan() {
           </Link>
         </div>
       ) : (
-        <ol className="rm-day-list rm-plan-list">
-          {rows.map((row) => {
+        <ol ref={axisRef(timeline.unit, timeline.span)} className="rm-day-list rm-plan-list">
+          {rows.map((row, position) => {
             if (row.kind === 'now') {
-              const running = runningLesson !== undefined;
+              const isRunning = running !== undefined;
               return (
-                <li key="now" role={running ? 'presentation' : undefined} className="rm-plan-now">
+                <li
+                  key="now"
+                  ref={markerRef(timeline.nowAt, timeline.nowLabelShift)}
+                  role={isRunning ? 'presentation' : undefined}
+                  className="rm-plan-now"
+                >
                   <span className="rm-plan-now-label">
-                    {running && <span className="sr-only">{weekday}, </span>}
-                    {running && '\u200B'}
+                    {isRunning && <span className="sr-only">{weekday}, </span>}
+                    {isRunning && '\u200B'}
                     {format(r.now, { time: clock })}
-                    {running && (
+                    {isRunning && (
                       <span className="sr-only">
                         , {format(r.remaining, { count: runningMinutesLeft })}
                       </span>
                     )}
                   </span>
+                  <span aria-hidden="true" className="rm-plan-now-dot" />
                   <span aria-hidden="true" className="rm-plan-now-line" />
                 </li>
               );
             }
 
-            const stagger = row.block < 8 ? `mo-i-${row.block + 1}` : 'mo-i-8';
+            const stagger = position < 8 ? `mo-i-${position + 1}` : 'mo-i-8';
 
             if (row.kind === 'break') {
               return (
                 <li
                   key={row.id}
                   role="presentation"
-                  ref={spanRef(row.minutes)}
+                  ref={blockRef(row.at, row.len)}
                   className={`rm-plan-break mo-rise ${stagger}`}
                 >
-                  <span className="min-w-0">
+                  {/* Kurze Lücken zeigen nur die Linie; der Text bleibt für Screenreader. */}
+                  <span className={row.len * timeline.unit < 24 ? 'sr-only' : 'min-w-0'}>
                     {r.break} · {format(m.duration.minutes, { count: row.minutes })}
                   </span>
                 </li>
               );
             }
 
-            const { lesson, state } = row;
+            const lesson = sorted[row.index] as TimetableEntry;
+            const { state } = row;
             const subject = subjects.find((entry) => entry.id === lesson.subjectId);
             const meta = [
               lesson.room ? format(m.planning.nextUp.lessonNowRoom, { room: lesson.room }) : null,
@@ -165,7 +148,7 @@ export function StartPlan() {
             return (
               <li
                 key={lesson.id}
-                ref={spanRef(toMinutes(lesson.endTime) - toMinutes(lesson.startTime))}
+                ref={blockRef(row.at, row.len)}
                 data-subj={subjectColorAttr(subject?.color)}
                 data-state={state}
                 aria-current={state === 'now' ? 'time' : undefined}
@@ -175,7 +158,7 @@ export function StartPlan() {
                   {lesson.startTime}
                   <span className="sr-only"> – {lesson.endTime}</span>
                 </time>
-                <span className="min-w-0">
+                <span className="rm-plan-card">
                   <span className="rm-plan-name block truncate font-heading text-lg tracking-[-0.1px]">
                     {subject?.name ?? m.planning.timetable.noSubject}
                   </span>
@@ -190,12 +173,28 @@ export function StartPlan() {
   );
 }
 
-/**
- * Die Dauer einer Stunde als Zahl für `calc(var(--raum-unit) * N)`. Bewusst kein `style`-Attribut: der Wert
- * geht als CSS-Variable an das Element (Regel: dynamische Werte nur über setProperty).
+/*
+ * Zahlen gehen als CSS-Variablen an die Elemente, nie als `style`-Attribut (Regel: dynamische Werte nur über
+ * setProperty). Die Achse trägt Pixel je Minute und Länge; jeder Block seinen Beginn und seine Dauer in
+ * Minuten, die Marke ihre Stelle und den Versatz ihres Zettels.
  */
-function spanRef(minutes: number) {
+function axisRef(unit: number, span: number) {
+  return (element: HTMLOListElement | null) => {
+    element?.style.setProperty('--tl-unit', `${unit}px`);
+    element?.style.setProperty('--tl-span', String(span));
+  };
+}
+
+function blockRef(at: number, len: number) {
   return (element: HTMLLIElement | null) => {
-    element?.style.setProperty('--raum-span', String(minutes));
+    element?.style.setProperty('--at', String(at));
+    element?.style.setProperty('--len', String(len));
+  };
+}
+
+function markerRef(at: number, labelShift: number) {
+  return (element: HTMLLIElement | null) => {
+    element?.style.setProperty('--now', String(at));
+    element?.style.setProperty('--now-shift', String(labelShift));
   };
 }

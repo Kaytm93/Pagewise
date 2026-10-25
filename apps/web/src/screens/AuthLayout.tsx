@@ -19,7 +19,8 @@ export function AuthLayout({
           <p className="mb-6 font-heading text-xl tracking-[-0.3px] text-ink-secondary">
             {m.app.name}
           </p>
-          <div className="lg-sheet p-6 sm:p-8">
+          {/* `lg-sheet-auth`: eine Karte für sich, kein Blatt im Ordner — in „Raum“ ohne Randlinie und Heftschatten. */}
+          <div className="lg-sheet lg-sheet-auth p-6 sm:p-8">
             {title && (
               <h1 className="font-heading text-3xl tracking-tight text-ink sm:text-title">
                 {title}
