@@ -579,3 +579,13 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Entscheidung:** Override in `pnpm-workspace.yaml` wie bei undici: `image-size@>=0.6.3 <=2.0.2` auf `2.0.3`. Für 1.x gibt es keinen Patch, 2.0.3 ist der gepatchte Stand.
 - **Geprüft:** 2.0.3 erschien am 14. September 2026 (über zwei Wochen alt), Lizenz MIT, Node 18 oder neuer, keine Abhängigkeiten (`npm view`). Im Browser-Bündel von pptxgenjs fehlt das Paket (Browser-Feld), `apps/web/dist` enthält keinen Treffer für `image-size`. `pnpm audit --audit-level high` endet mit Code 0. Alle Pakete grün, Typecheck, Biome, Scan.
 - **Nicht behoben (nicht blockierend):** `esbuild` (mittel, nur über das Dev-Werkzeug `drizzle-kit`) und `katex` (niedrig, über `remark-math`). Eigener Schritt, wenn nötig.
+
+## D-065 Chemische Schreibweise mit `\ce` und `\pu` (mhchem, 25. Oktober 2026)
+
+- **Anlass:** Reaktionsgleichungen wie `\ce{AgNO3 + NaCl -> AgCl v + NaNO3}` schlugen fehl („Die Formel enthält einen Fehler“). Die Prompt-Regel verbot `\ce`, das Modell hielt sich nicht daran. Der gemeldete Fehler stammte vermutlich aus einem solchen Block; die Formel aus der Meldung selbst (`\boxed{…}`) wird gezeichnet.
+- **Entscheidung:** `packages/render/src/math.ts` importiert das mitgelieferte Modul `katex/contrib/mhchem` (KaTeX 0.19.0, mhchem 3.3.0). Es registriert `\ce` und `\pu` an derselben KaTeX-Instanz. `trust` bleibt aus: `\href` innerhalb von `\ce` wird weiter abgelehnt.
+- **Prompt:** Die Regel „keine `\ce`-Befehle“ ist ersetzt durch ein Beispiel (`\ce{2H2 + O2 -> 2H2O}`). Die technische Schicht bleibt unter 2.000 Zeichen.
+- **Größe:** mhchem etwa 33 kB minifiziert, rund 8 kB gzip. Es liegt nur im erst beim Anzeigen geladenen Formel-Paket, das Hauptbündel bleibt unverändert.
+- **Verworfen:** Die Regel nur verschärfen. Das Modell hält sich daran nicht zuverlässig; die Erweiterung löst den Fall an der Quelle.
+- **Geprüft:** Render-Tests 230 (u. a. Reaktionen, Ladungen, `\pu`, `\href` in `\ce`), Prompt-Test, Web-Blöcke mit `\ce` im Text und als Absatz. Im headless Chromium gezeichnet: Reaktionspfeile, Fällungspfeil `↓`, Gleichgewichtspfeil, Ladungen, `\pu`.
+- **Nicht geprüft:** WebKit auf iPhone und iPad, die Mac-App.

@@ -8,7 +8,21 @@ describe('Formeln', () => {
     expect(katexHtml('\\frac{a+b}{c}', false)).toContain('katex');
     expect(katexHtml('\\sum_{i=1}^{n} i', true)).toContain('katex-display');
     expect(validateMath('x^2 + y^2 = r^2', false)).toBeNull();
-    expect(validateMath('\\ce{H2O}', false)?.code).toBe('invalid_math');
+  });
+
+  it('zeichnet chemische Schreibweise mit \\ce und \\pu (mhchem)', () => {
+    expect(katexHtml('\\ce{H2O}', false)).toContain('katex');
+    expect(validateMath('\\ce{SO4^{2-}}', false)).toBeNull();
+    expect(validateMath('\\ce{Fe^{3+}}', false)).toBeNull();
+    expect(validateMath('\\pu{12 mL}', false)).toBeNull();
+    // Reaktionsgleichungen, auch lange: bleiben innerhalb der Makro-Grenze
+    expect(validateMath('\\ce{AgNO3 + NaCl -> AgCl v + NaNO3}', true)).toBeNull();
+    expect(validateMath('\\ce{Ag+ + Cl- <=> AgCl v}', true)).toBeNull();
+    expect(validateMath('\\ce{2KMnO4 + 16HCl -> 2KCl + 2MnCl2 + 5Cl2 v + 8H2O}', true)).toBeNull();
+  });
+
+  it('lässt auch in \\ce keine Links durch', () => {
+    expect(validateMath('\\ce{\\href{https://beispiel.invalid}{x}}', false)).not.toBeNull();
   });
 
   it('meldet Fehler mit festem Code und höchstens einer Position', () => {

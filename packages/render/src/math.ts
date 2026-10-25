@@ -1,4 +1,7 @@
 import katex from 'katex';
+// Chemische Schreibweise mit `\ce{…}` und `\pu{…}` (mhchem). Das Modul registriert seine Befehle an derselben
+// KaTeX-Instanz, es setzt keine Stilangaben und braucht kein `trust`.
+import 'katex/contrib/mhchem';
 import { LIMITS, RenderError } from './errors';
 
 /**

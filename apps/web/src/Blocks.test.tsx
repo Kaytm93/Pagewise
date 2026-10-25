@@ -29,6 +29,15 @@ describe('Formeln', () => {
     expect(container.querySelector('annotation')).toBeNull();
   });
 
+  it('zeichnet Reaktionsgleichungen mit \\ce (mhchem) im Text und als Absatz', async () => {
+    const { container } = show(
+      'Fällung: $\\ce{Ag+ + Cl- -> AgCl v}$\n\n$$\\ce{2H2 + O2 -> 2H2O}$$',
+    );
+    await waitFor(() => expect(container.querySelectorAll('.katex').length).toBe(2));
+    expect(container.querySelector('[data-block-error]')).toBeNull();
+    expect(container.textContent).toContain('Fällung');
+  });
+
   it('zeigt eine fehlerhafte Formel nach Abschluss mit Meldung, im Text als Quelltext', async () => {
     const { container } = show('Kaputt $\\frac{1$ und\n\n$$\\unbekannt{x}$$');
     await waitFor(() => expect(container.querySelector('[data-block-error]')).not.toBeNull());
