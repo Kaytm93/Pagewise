@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./math": "./src/math.ts",
     "./math-dom": "./src/math-dom.ts",
+    "./document": "./src/document.ts",
     "./graph": "./src/graph/index.ts",
     "./mol": "./src/mol/index.ts",
     "./abc": "./src/abc.ts",

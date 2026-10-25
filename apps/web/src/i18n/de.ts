@@ -329,6 +329,7 @@ export const de = {
     mol: 'Strukturformel',
     abc: 'Noten',
     quiz: 'Quiz',
+    document: 'Dokument',
     errorTitle: '{kind} konnte nicht gezeichnet werden.',
     errors: {
       empty: 'Der Block ist leer.',
@@ -344,6 +345,10 @@ export const de = {
       invalid_abc: 'Die Noten lassen sich nicht lesen.',
       invalid_quiz:
         'Der Aufbau des Quiz passt nicht: Fragen, Antworten und genau eine richtige Lösung müssen stimmen.',
+      invalid_document:
+        'Der Aufbau des Dokuments passt nicht: Titel, Abschnitte und Texte müssen stimmen.',
+      unsupported_text:
+        'Das Dokument enthält Zeichen, die das PDF nicht darstellt. Tiefgestellte Ziffern schreibt man als normale Ziffern, zum Beispiel H2O.',
       render_failed: 'Das Zeichnen ist fehlgeschlagen.',
     },
     callout: {
@@ -364,6 +369,11 @@ export const de = {
       rightAnswer: 'Richtige Antwort: {answer}',
       unanswered: 'Nicht beantwortet.',
       explanation: 'Erklärung: {text}',
+    },
+    documentView: {
+      download: 'Als PDF herunterladen',
+      making: 'PDF wird erstellt …',
+      failed: 'Das PDF konnte nicht erstellt werden. Versuche es noch einmal.',
     },
   },
   notes: {
