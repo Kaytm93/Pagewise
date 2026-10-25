@@ -13,7 +13,8 @@ const MAX_CHATS = 4;
 
 /**
  * „Zuletzt genutzt“ auf der Startseite in allen Richtungen (M1-T1): die vier zuletzt geänderten
- * Chats über alle Fächer. Die Liste entsteht aus den vorhandenen Chat-Endpunkten; ein Fach, dessen
+ * Chats über alle Fächer. In „Lagen“ trägt der Fachname die Zeile und der erste Eintrag ist groß (lagen.css,
+ * `.lg-recent*`); die anderen Richtungen behalten das bisherige Bild. Die Liste entsteht aus den vorhandenen Chat-Endpunkten; ein Fach, dessen
  * Abfrage scheitert, wird übersprungen. Ohne Chats bleibt der Abschnitt ganz weg.
  */
 export function RecentChats() {
@@ -51,7 +52,7 @@ export function RecentChats() {
       <h2 id="recent-chats-heading" className={`mb-3.5 ${sectionTitle}`}>
         {m.planning.startGrid.recent}
       </h2>
-      <ul className="border-t border-line-warm">
+      <ul className="lg-recent border-t border-line-warm">
         {chats.map((chat) => {
           const subject = subjects.find((entry) => entry.id === chat.subjectId);
           const title = chat.title === '' ? m.subject.chatUntitled : chat.title;
@@ -65,12 +66,15 @@ export function RecentChats() {
                 to={{ name: 'chat', subjectId: chat.subjectId, chatId: chat.id }}
                 className="lg-row grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-[2px] px-2 py-3.5 text-ink no-underline"
               >
-                <SubjectIcon icon={subject?.icon ?? null} className="size-6 text-ink-secondary" />
+                <SubjectIcon
+                  icon={subject?.icon ?? null}
+                  className="lg-recent-icon size-6 text-ink-secondary"
+                />
                 <span className="min-w-0">
-                  <span className="block truncate text-sm text-ink-muted">
+                  <span className="lg-recent-subject block truncate text-sm text-ink-muted">
                     {subject?.name ?? m.planning.timetable.noSubject}
                   </span>
-                  <span className="block truncate font-heading text-lg tracking-[-0.1px]">
+                  <span className="lg-recent-title block truncate font-heading text-lg tracking-[-0.1px]">
                     {title}
                   </span>
                 </span>

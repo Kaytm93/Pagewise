@@ -3,6 +3,9 @@
  * Aufbau gestaffelt erscheinen (`mo-rise` mit `mo-i-1` … `mo-i-3` aus motion.css). Keine Flächen, keine
  * Strich-für-Strich-Animation — die Entscheidung im Projekt lautet: Motive erscheinen gestaffelt.
  *
+ * Jeder Pfad trägt `pathLength="1"` und die Klasse `lg-motif-stroke`, damit eine Richtung ihn per CSS als Strich
+ * zeichnen kann (`stroke-dasharray`/`stroke-dashoffset`); ohne eigenes CSS ändert das nichts.
+ *
  * Farbe kommt über `currentColor` (`.lg-motif` setzt `color: var(--subj)`), die Strichstärke über
  * `var(--hairline, 1.5)` aus atelier.css. Die Motive sind rein dekorativ und darum `aria-hidden`.
  * Ohne Bewegung (`fx-off`) steht die Gruppe sofort vollständig da; bei `fx-reduced` blendet sie kurz ein.
@@ -137,7 +140,12 @@ export function SubjectMotifs({
       className={className ? `lg-motif-marks ${className}` : 'lg-motif-marks'}
     >
       {motifs.map(([id, d], index) => (
-        <path key={id} className={`mo-rise mo-i-${index + 1}`} d={d} />
+        <path
+          key={id}
+          pathLength={1}
+          className={`lg-motif-stroke mo-rise mo-i-${index + 1}`}
+          d={d}
+        />
       ))}
     </svg>
   );

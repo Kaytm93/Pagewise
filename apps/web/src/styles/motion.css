@@ -223,6 +223,15 @@
   }
 }
 
+/* „Lagen“: Linie, die sich von links zeichnet (Jetzt-Linie, Unterstreichung). Bei „Reduziert“ (--m: 0) bleibt die
+   Länge voll und es blendet nur ein; bei „Aus“ entfällt die Animation ganz. */
+@keyframes lg-line-in {
+  from {
+    opacity: 0;
+    transform: scaleX(calc(1 - var(--m)));
+  }
+}
+
 /* Das neue Blatt wird aufgelegt: kommt leicht gedreht und angehoben an und setzt sich ab */
 @keyframes sheet-arrive {
   from {
@@ -237,6 +246,25 @@
   from {
     opacity: 0;
     transform: translateY(calc(var(--m) * 7px)) scale(calc(1 - var(--m) * 0.012));
+  }
+}
+
+/*
+ * „Lagen“, Ankunft des neuen Blatts. Das alte Blatt bleibt bewusst stehen (kein Ausblenden, design.md): nur das
+ * neue legt sich auf. Rückwärts kommt es oben rechts angehoben und gedreht herein (Mockup A: 5 % / -7 % / 3° für
+ * das abziehende Blatt, hier ruhiger: 3,5 % / -5 % / 2°), vorwärts wächst es von unten wie die Mockup-Feder
+ * (14 px). Das Einblenden läuft getrennt und kürzer (`fade`), damit das Blatt früh deckt. --m: 0 lässt nur
+ * Überblenden übrig.
+ */
+@keyframes lg-sheet-arrive {
+  from {
+    transform: translate(calc(var(--m) * 3.5%), calc(var(--m) * -5%)) rotate(calc(var(--m) * 2deg));
+  }
+}
+
+@keyframes lg-sheet-under {
+  from {
+    transform: translateY(calc(var(--m) * 14px)) scale(calc(1 - var(--m) * 0.012));
   }
 }
 
@@ -298,7 +326,25 @@
   animation: page-rise var(--t-med) var(--ease) both;
 }
 
-/* Lagen bleibt beim Blatt: die Grundlage oben gilt dort unverändert. */
+/*
+ * Lagen bleibt beim Blatt, mit spürbarerer Ankunft als die Grundlage (nur hier; die Grundkeyframes bleiben für die
+ * Anmelde- und Einrichtungsschirme der anderen Richtungen). Drehpunkt oben: Das Blatt ist so hoch wie sein Inhalt
+ * (die Seite scrollt als Ganzes), um die Mitte gedreht schwänge es oben seitlich weit aus (Höhe/2 · sin α) und
+ * würde am Fensterrand abgeschnitten (S-02); am oberen Rand bleibt der sichtbare Teil ruhig.
+ */
+:root[data-design="lagen"] .lg-arrive[data-dir="fwd"] {
+  transform-origin: 50% 0;
+  animation:
+    lg-sheet-under var(--t-slow) var(--spring) both,
+    fade var(--t-med) ease-out both;
+}
+
+:root[data-design="lagen"] .lg-arrive[data-dir="back"] {
+  transform-origin: 50% 0;
+  animation:
+    lg-sheet-arrive var(--t-slow) var(--spring) both,
+    fade var(--t-med) ease-out both;
+}
 
 /* „Aus“: keine Animation, also auch kein Füllstand aus den Keyframes — das Blatt steht vollständig da */
 :root.fx-off .lg-arrive {

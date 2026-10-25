@@ -2,14 +2,16 @@ import { Pencil } from 'lucide-react';
 import type { Group, Subject } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { Button } from '../../ui/Button';
-import { SubjectIcon } from '../../ui/SubjectIcon';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { describeSelection } from '../chat/models';
+import { SubjectMotif } from './SubjectMotif';
 
 /**
  * Kopf der Fachseite in der Richtung „Lagen“ (M1-T2): Kicker, Name, Klebeband und Fachmotiv wie im
  * Entwurf, darunter die Zeilen zu Modell, Stunden, Untergruppen und Lehrkraft. Der Modell-Chip führt
- * zum vorhandenen Modell-Abschnitt; ein eigenes Menü gibt es hier nicht.
+ * zum vorhandenen Modell-Abschnitt; ein eigenes Menü gibt es hier nicht. Er bleibt ein Link (anders als im
+ * Entwurf, wo er ein Menü öffnet), weil der Modell-Abschnitt sonst per Tastatur nur über das Durchtabben der
+ * ganzen Seite erreichbar wäre. Das Fachmotiv zeichnet sich beim Erscheinen (`SubjectMotif`).
  */
 export function SubjectHead({
   subject,
@@ -36,11 +38,7 @@ export function SubjectHead({
     <header className="relative mt-6 pt-7">
       <span aria-hidden="true" className="lg-tape top-1 left-0 [--r:-1.8deg]" />
       {!builtin && (
-        <SubjectIcon
-          icon={subject.icon}
-          strokeWidth={0.4}
-          className="lg-motif top-0 right-0 size-[84px] opacity-80 md:size-[132px]"
-        />
+        <SubjectMotif icon={subject.icon} className="top-0 right-0 size-[84px] md:size-[132px]" />
       )}
       <div className="relative pr-[88px] md:pr-40">
         <p className="lg-kicker mo-rise">

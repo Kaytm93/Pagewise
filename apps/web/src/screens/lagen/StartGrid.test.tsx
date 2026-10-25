@@ -176,3 +176,79 @@ describe('Startseite in „Lagen“', () => {
     expect(screen.queryByText('Zuletzt genutzt')).toBeNull();
   });
 });
+
+describe('Pausen in der Stundenliste von „Lagen“', () => {
+  it('setzt bei einer Lücke ab 5 Minuten eine Pausenzeile, bei kleineren nicht', async () => {
+    document.documentElement.setAttribute('data-design', 'lagen');
+    const server = new FakeServer('unlocked');
+    const subject = server.addSubject('Beispielfach A', { icon: 'flask', color: 0 });
+    // 3 Minuten Lücke: nur ein Wechsel; 20 Minuten Lücke: Pause; 5 Minuten: gerade noch Pause.
+    const stunden: [string, string][] = [
+      ['08:00', '08:45'],
+      ['08:48', '09:30'],
+      ['09:50', '10:55'],
+      ['11:00', '11:45'],
+    ];
+    for (const [startTime, endTime] of stunden) {
+      server.addLesson({ weekday: 1, startTime, endTime, subjectId: subject.id, room: null });
+    }
+    const { container } = renderHome(server);
+
+    const list = (await waitFor(() => {
+      const found = container.querySelector('.lg-lessons');
+      expect(found).not.toBeNull();
+      return found;
+    })) as HTMLElement;
+
+    const pausen = [...list.querySelectorAll('.lg-lesson-break')];
+    expect(pausen.map((pause) => pause.textContent)).toEqual([
+      '09:30Pause · 20 Minuten',
+      '10:55Pause · 5 Minuten',
+    ]);
+    // Reihenfolge: Pause steht vor der Marke, die Marke vor der laufenden Stunde.
+    expect([...list.children].map((item) => item.className.split(' ')[0])).toEqual([
+      'lg-lesson',
+      'lg-lesson',
+      'lg-lesson-break',
+      'lg-now-marker',
+      'lg-lesson',
+      'lg-lesson-break',
+      'lg-lesson',
+    ]);
+    // Stundenzeilen bleiben, was sie waren: Zustände nur an .lg-lesson.
+    expect(
+      [...list.querySelectorAll('.lg-lesson')].map((item) => item.getAttribute('data-state')),
+    ).toEqual(['past', 'past', 'now', 'next']);
+  });
+
+  it('setzt die Stundennamen auf 21 px (Tailwind-Größe, keine alte 18 px)', async () => {
+    document.documentElement.setAttribute('data-design', 'lagen');
+    const { server } = setup();
+    const { container } = renderHome(server);
+    await screen.findByText('Schulaufgabe Beispielfach A');
+
+    const name = container.querySelector('.lg-lesson-name') as HTMLElement;
+    expect(name.className).toContain('text-[1.3125rem]');
+    expect(name.className).not.toContain('text-lg');
+  });
+});
+
+describe('„Zuletzt genutzt“ trägt die Haken für den großen ersten Eintrag', () => {
+  it('gibt jedem Eintrag Fachname, Titel und Symbol als eigene Hakenklassen', async () => {
+    document.documentElement.setAttribute('data-design', 'lagen');
+    const { server, subject } = setup({ chat: true });
+    server.addChat(subject.id, { title: 'Zweiter Beispielchat' });
+    const { container } = renderHome(server);
+
+    await screen.findByText('Zuletzt genutzt');
+    const liste = container.querySelector('.lg-recent') as HTMLElement;
+    const eintraege = [...liste.children];
+    expect(eintraege).toHaveLength(2);
+    for (const eintrag of eintraege) {
+      expect(eintrag.querySelector('.lg-recent-subject')?.textContent).toBe('Beispielfach A');
+      expect(eintrag.querySelector('.lg-recent-title')).not.toBeNull();
+      expect(eintrag.querySelector('.lg-recent-icon')).not.toBeNull();
+      expect(eintrag.querySelector('a.lg-row')).not.toBeNull();
+    }
+  });
+});

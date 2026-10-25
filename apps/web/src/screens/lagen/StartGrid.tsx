@@ -13,10 +13,14 @@ type State = 'past' | 'now' | 'next';
 
 const MAX_TOPICS = 8;
 
+/** Lücken zwischen zwei Stunden ab so vielen Minuten sind eine Pause (derselbe Wert wie in „Raum“). */
+const MIN_BREAK = 5;
+
 /**
  * Die Startseite in der Richtung „Lagen“ (M1-T1): links die Stunden von heute mit der „Jetzt“-Marke,
  * rechts der nächste Test als Zettel. Beide Seiten stehen nebeneinander, sobald das Blatt (nicht das
  * Fenster) mindestens 800 px breit ist. Zustände und Marke sind Text, damit sie auch ohne Bewegung erkennbar bleiben.
+ * Zwischen zwei Stunden steht bei einer Lücke ab `MIN_BREAK` Minuten eine leise Pausenzeile.
  */
 export function StartGrid() {
   const { status, entries, exams, weekAnchor, now } = usePlanner();
@@ -47,6 +51,11 @@ export function StartGrid() {
 
   const items: ReactNode[] = [];
   lessons.forEach((lesson, index) => {
+    const previous = lessons[index - 1];
+    if (previous) {
+      const gap = toMinutes(lesson.startTime) - toMinutes(previous.endTime);
+      if (gap >= MIN_BREAK) items.push(breakRow(`pause-${lesson.id}`, previous.endTime, gap));
+    }
     if (index === markerAt) items.push(marker(clock));
     const state = stateOf(lesson.startTime, lesson.endTime);
     const subject = subjectOf(lesson.subjectId);
@@ -58,13 +67,13 @@ export function StartGrid() {
         aria-current={state === 'now' ? 'time' : undefined}
         className="lg-lesson"
       >
-        <time dateTime={lesson.startTime} className="tabular-nums text-sm text-ink-muted">
+        <time dateTime={lesson.startTime} className="tabular-nums text-[0.90625rem] text-ink-muted">
           {lesson.startTime}
           <span className="sr-only"> – {lesson.endTime}</span>
         </time>
         <span className="min-w-0">
           <span className="flex items-baseline justify-between gap-3">
-            <span className="lg-lesson-name block min-w-0 truncate font-heading text-lg tracking-[-0.1px]">
+            <span className="lg-lesson-name block min-w-0 truncate font-heading text-[1.3125rem] tracking-[-0.2px]">
               {subject?.name ?? m.planning.timetable.noSubject}
             </span>
             {lesson.room && <span className="shrink-0 text-sm text-ink-muted">{lesson.room}</span>}
@@ -192,6 +201,20 @@ function topicsOf(raw: string | null): string[] {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line !== '');
+}
+
+/** Pause zwischen zwei Stunden: Beginn der Lücke und ihre Länge (Wörter wie in „Raum“). */
+function breakRow(key: string, start: string, minutes: number) {
+  return (
+    <li key={key} className="lg-lesson-break">
+      <time dateTime={start} className="tabular-nums">
+        {start}
+      </time>
+      <span>
+        {m.planning.raumStart.break} · {format(m.duration.minutes, { count: minutes })}
+      </span>
+    </li>
+  );
 }
 
 function marker(clock: string) {

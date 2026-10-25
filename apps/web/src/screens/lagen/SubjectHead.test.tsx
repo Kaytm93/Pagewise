@@ -121,3 +121,36 @@ describe('Fachseite in „Raum“', () => {
     expect(screen.getByText('Gestern')).toBeTruthy();
   });
 });
+
+describe('Fachmotiv im Kopf der Fachseite von „Lagen“', () => {
+  it('zeichnet das Motiv: jede Form mit pathLength und lg-motif-stroke, hauchdünn, ohne style', async () => {
+    document.documentElement.setAttribute('data-design', 'lagen');
+    const { server, subject } = setup();
+    const { container } = mount(server, `/subjects/${subject.id}`);
+    await screen.findByRole('heading', { level: 1, name: 'Beispielfach Lagen' });
+
+    const motif = container.querySelector('svg.lg-motif') as SVGSVGElement;
+    expect(motif).not.toBeNull();
+    expect(motif.getAttribute('stroke-width')).toBe('0.24');
+    expect(motif.getAttribute('aria-hidden')).toBe('true');
+    const shapes = [...motif.querySelectorAll('path, circle, rect, line')];
+    expect(shapes.length).toBeGreaterThan(0);
+    for (const shape of shapes) {
+      expect(shape.getAttribute('pathLength')).toBe('1');
+      expect(shape.classList.contains('lg-motif-stroke')).toBe(true);
+      expect(shape.getAttribute('style')).toBeNull();
+    }
+  });
+
+  it('lässt den Modell-Chip ein Link bleiben (per Tastatur erreichbar, springt zum Modell-Abschnitt)', async () => {
+    document.documentElement.setAttribute('data-design', 'lagen');
+    const { server, subject } = setup();
+    mount(server, `/subjects/${subject.id}`);
+    await screen.findByRole('heading', { level: 1, name: 'Beispielfach Lagen' });
+
+    const chip = screen.getByRole('link', { name: 'Standardmodell' });
+    expect(chip.classList.contains('lg-chip')).toBe(true);
+    expect(chip.getAttribute('href')).toBe('#model-heading');
+    expect(chip.tabIndex).toBe(0);
+  });
+});

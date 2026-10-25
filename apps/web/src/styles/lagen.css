@@ -24,6 +24,39 @@
   }
 }
 
+/*
+ * Schreibtisch ab „md“ (Mockup A: `.desk` mit Rand 14/30/30/0 und `.stack` mit margin-left: -16px).
+ * Rand oben 14 px, rechts 30 px, unten 30 px, links 0: Der Rand unten fasst die Blätter darunter ganz
+ * (das dritte liegt 19 px tiefer; bei 14 px wurden 5 px abgeschnitten). Das Blatt schiebt sich 16 px
+ * unter den Heftrücken, der darum über dem Blatt liegt (z-index) und seinen Schatten auf das Blatt wirft;
+ * das Blatt gleicht die 16 px mit Innenabstand links aus, damit der Inhalt am sichtbaren Rand beginnt.
+ * `--stack-space` zieht die 16 px mehr Rand von der Mindesthöhe des Blatts ab (Sheet.tsx), die Seite
+ * scrollt also bei wenig Inhalt weiterhin nicht.
+ */
+@media (min-width: 768px) {
+  :root[data-design="lagen"] {
+    --sheet-under: 16px;
+  }
+
+  :root[data-design="lagen"] .lg-aside {
+    z-index: 1;
+  }
+
+  :root[data-design="lagen"] .lg-app #main {
+    margin-left: calc(var(--sheet-under) * -1);
+    padding-block: 14px 30px;
+    padding-inline: 0 max(30px, env(safe-area-inset-right));
+  }
+
+  :root[data-design="lagen"] .lg-stack {
+    --stack-space: 16px;
+  }
+
+  :root[data-design="lagen"] .lg-sheet {
+    padding-left: var(--sheet-under);
+  }
+}
+
 @layer components {
   /* ===== Schreibtisch ===== */
   .lg-app {
@@ -571,11 +604,30 @@ details[open] > summary .mo-arrow {
 .lg-lesson {
   position: relative;
   display: grid;
-  grid-template-columns: 4rem minmax(0, 1fr);
+  grid-template-columns: 62px minmax(0, 1fr);
   column-gap: 0.75rem;
   align-items: baseline;
   padding: 0.875rem 0.25rem;
   border-bottom: 1px solid var(--line-warm);
+}
+
+/* Pause zwischen zwei Stunden (Lücke ab 5 Minuten, wie in „Raum“): leise Zeile mit gepunkteter Linie */
+.lg-lesson-break {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  column-gap: 0.75rem;
+  align-items: baseline;
+  padding: 7px 0.25rem;
+  border-bottom: 1px dotted var(--line-warm);
+  font-size: 0.84375rem;
+  color: var(--ink-muted);
+}
+
+@media (min-width: 48rem) {
+  .lg-lesson,
+  .lg-lesson-break {
+    grid-template-columns: 78px minmax(0, 1fr);
+  }
 }
 
 .lg-lesson[data-state="past"] .lg-lesson-name {
@@ -586,7 +638,7 @@ details[open] > summary .mo-arrow {
   padding-block: 1.25rem 0.75rem;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--subj) 9%, transparent),
+    color-mix(in srgb, var(--subj) 10%, transparent),
     transparent 80%
   );
   box-shadow: inset 3px 0 0 var(--subj);
@@ -604,10 +656,14 @@ details[open] > summary .mo-arrow {
   padding: 0.375rem 0.25rem;
 }
 
+/* Die Linie wächst von links, danach kommt die Marke dazu. Der Text steht von Anfang an im Baum; bei
+   „Reduziert“ blendet alles nur ein (--m: 0), bei „Aus“ steht es sofort da (motion.css). */
 .lg-now-marker::after {
   content: "";
   flex: 1;
   border-top: 2px solid var(--ink);
+  transform-origin: left;
+  animation: lg-line-in calc(var(--t-slow) * 1.6) var(--ease) 380ms both;
 }
 
 .lg-now-marker-label {
@@ -619,6 +675,7 @@ details[open] > summary .mo-arrow {
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+  animation: rise var(--t-slow) var(--spring) 520ms both;
 }
 
 .lg-topics {
@@ -741,7 +798,12 @@ details[open] > summary .mo-arrow {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink-muted) 14%, transparent);
 }
 
-/* Reiter als Heftregister: der aktive Reiter liegt in Papierfarbe auf der Linie */
+/*
+ * Reiter als Mappenreiter (Mockup A, `.tab`): Der gewählte Reiter hat die Farbe des Blatts, einen feinen
+ * Rand und oben einen Balken in der Fachfarbe; sein Fuß deckt die Linie der Leiste ab, er geht also ins
+ * Blatt darunter über. Die anderen liegen flach und heben sich beim Darüberfahren. Bleibt ein echtes
+ * Tab-Muster (Rollen, Pfeiltasten in ui/Tabs.tsx); der Zustand steht auch im Gewicht der Schrift.
+ */
 :root[data-design="lagen"] .lg-register {
   align-items: flex-end;
   gap: 0.25rem;
@@ -750,20 +812,54 @@ details[open] > summary .mo-arrow {
 
 :root[data-design="lagen"] .lg-register [role="tab"] {
   position: relative;
+  min-height: 46px;
+  padding-inline: clamp(0.875rem, 4.5vw, 1.25rem);
+  border-width: 1px 1px 0;
+  border-style: solid;
+  border-color: transparent;
   border-radius: 0.625rem 0.625rem 0 0;
+  background: transparent;
   color: var(--ink-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  letter-spacing: normal;
   white-space: nowrap;
   transition:
-    background-color var(--t-fast) var(--ease),
-    color var(--t-fast) var(--ease);
+    background-color var(--t-color) var(--ease),
+    border-color var(--t-color) var(--ease),
+    color var(--t-color) var(--ease),
+    transform var(--t-med) var(--spring-snap);
+}
+
+@media (hover: hover) {
+  :root[data-design="lagen"] .lg-register [role="tab"][aria-selected="false"]:hover {
+    background: rgba(var(--shadow), 0.05);
+    color: var(--ink);
+    transform: translateY(calc(var(--m) * -2px));
+  }
 }
 
 :root[data-design="lagen"] .lg-register [role="tab"][aria-selected="true"] {
-  background: var(--paper);
+  border-color: var(--line-warm);
+  background: var(--sheet);
   color: var(--ink);
-  box-shadow: 0 -4px 8px -6px color-mix(in srgb, var(--ink) 22%, transparent);
+  font-weight: 500;
+  box-shadow: 0 -4px 8px -6px rgba(var(--shadow), 0.2);
 }
 
+/* Fachbalken oben */
+:root[data-design="lagen"] .lg-register [role="tab"][aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 12px;
+  left: 12px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--subj);
+}
+
+/* Fuß in Blattfarbe: verdeckt die Linie der Leiste unter dem gewählten Reiter */
 :root[data-design="lagen"] .lg-register [role="tab"][aria-selected="true"]::after {
   content: "";
   position: absolute;
@@ -771,7 +867,7 @@ details[open] > summary .mo-arrow {
   bottom: -2px;
   left: 0;
   height: 3px;
-  background: var(--paper);
+  background: var(--sheet);
 }
 
 /* Chatliste mit Tagesgruppen */
@@ -860,6 +956,13 @@ details[open] > summary .mo-arrow {
   opacity: 1;
 }
 
+/* Haken eines erledigten Schritts (gezeichnet in screens.css): 18 px in der zweiten Textfarbe wie im Mockup */
+:root[data-design="lagen"] .lg-tool-check {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--ink-secondary);
+}
+
 /* Statuszeile unter dem Composer */
 :root[data-design="lagen"] .lg-chat-hint {
   margin-top: 0.5rem;
@@ -870,7 +973,8 @@ details[open] > summary .mo-arrow {
   overflow-wrap: anywhere;
 }
 
-/* Composer-Feld: ein umrandeter Kasten mit runden Ecken, die Sende-Taste bleibt rund. */
+/* Composer-Feld: ein umrandeter Kasten mit runden Ecken; die Tasten (Senden, Stopp) sind wie im Mockup
+   Quadrate mit Radius 12 px, nicht rund. Die Regel steht ohne Layer und schlägt rounded-full. */
 :root[data-design="lagen"] .lg-composer-field {
   display: flex;
   align-items: flex-end;
@@ -886,6 +990,10 @@ details[open] > summary .mo-arrow {
   transition:
     border-color var(--t-fast) var(--ease),
     box-shadow var(--t-med) var(--ease);
+}
+
+:root[data-design="lagen"] .lg-composer-field > button {
+  border-radius: 12px;
 }
 
 :root[data-design="lagen"] .lg-composer-field:focus-within {
@@ -979,16 +1087,34 @@ details[open] > summary .mo-arrow {
   letter-spacing: -0.01em;
 }
 
-/* Die Umschalter reichen bis 420 px; der gewählte Eintrag liegt als Streifen in Papierfarbe auf. */
+/*
+ * Die Umschalter reichen bis 420 px. Wie im Mockup liegt der gewählte Eintrag als Streifen in Blattfarbe
+ * auf der Papierfarbe der Leiste (die Grundregel .lg-seg gilt unverändert). Papier und Blatt sind sich
+ * nah, deshalb trägt der Streifen zusätzlich einen Rand in der Farbe der Bedienränder (mindestens 3 : 1 zu
+ * den Nachbarn); der Zustand steht außerdem im Gewicht der Schrift (Segmented.tsx), nicht nur in Farbe.
+ */
 :root[data-design="lagen"] .lg-seg-wide {
   display: grid;
   width: 100%;
   max-width: 420px;
-  background: var(--sheet);
 }
 
 :root[data-design="lagen"] .lg-seg-wide::before {
-  background: var(--paper);
+  box-shadow:
+    0 0 0 1px var(--control-edge),
+    0 1px 2px rgba(var(--shadow), 0.16),
+    0 3px 8px -3px rgba(var(--shadow), 0.2),
+    inset 0 1px 0 var(--rim);
+}
+
+/* Überschrift der Einstellungen: 44 px wie im Mockup, auf dem Telefon fließend kleiner (ein langes Wort
+   wie „Einstellungen“ muss in 320 px passen und trennt sonst mit Trennstrich). */
+:root[data-design="lagen"] .lg-app[data-view="settings"] .lg-sheet h1 {
+  font-size: clamp(1.875rem, 1.2rem + 3.4vw, 2.75rem);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  hyphens: auto;
+  overflow-wrap: break-word;
 }
 
 /* Erklärung der drei Effektstufen: reiner Text, keine Bedienfläche. */
@@ -1007,4 +1133,88 @@ details[open] > summary .mo-arrow {
 :root[data-design="lagen"] .lg-fx-list b {
   font-weight: 600;
   color: var(--ink);
+}
+
+/* ===== Startseite: Überschrift und „Zuletzt genutzt“ ===== */
+
+/*
+ * Gezeichnete Unterstreichung unter der Startüberschrift, in der Fachfarbe der Ansicht (Mockup A: Strich
+ * unter den hervorgehobenen Wörtern). Die Überschrift gehört HomePage.tsx; hier hängt der Strich nur an
+ * ihrem ::after. Er wächst in --t-slow von links (lg-line-in, an --m gebunden: bei „Reduziert“ blendet er
+ * nur ein); bei „Aus“ stoppt motion.css die Animation und er steht fertig da. Reine Zier, nicht Information.
+ */
+:root[data-design="lagen"] .lg-app[data-view="home"] .lg-sheet h1::after {
+  content: "";
+  display: block;
+  width: clamp(5rem, 24%, 9rem);
+  height: 4px;
+  margin-top: 0.75rem;
+  border-radius: 4px 2px 4px 2px;
+  background: var(--subj);
+  transform-origin: left;
+  animation: lg-line-in calc(var(--t-slow) * 1.4) var(--ease) 420ms both;
+}
+
+/*
+ * „Zuletzt genutzt“ (RecentChats.tsx, in allen Richtungen dieselben Elemente): In „Lagen“ trägt der Fachname die
+ * Zeile, der Chattitel steht klein darunter, der erste Eintrag ist groß (Mockup A: 28 px, 84 px hoch, Symbol
+ * 30 px), die übrigen kleiner (20 px). Alles unter dem Richtungs-Selektor, damit Raum und Atelier unverändert bleiben.
+ */
+:root[data-design="lagen"] .lg-recent-subject {
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  line-height: 1.25;
+  letter-spacing: -0.2px;
+}
+
+:root[data-design="lagen"] .lg-recent-title {
+  margin-top: 1px;
+  color: var(--ink-muted);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  letter-spacing: normal;
+}
+
+:root[data-design="lagen"] .lg-recent > li:first-child .lg-row {
+  min-height: 5.25rem;
+}
+
+:root[data-design="lagen"] .lg-recent > li:first-child .lg-recent-icon {
+  width: 1.875rem;
+  height: 1.875rem;
+}
+
+:root[data-design="lagen"] .lg-recent > li:first-child .lg-recent-subject {
+  font-size: 1.5625rem;
+  line-height: 1.15;
+  letter-spacing: -0.4px;
+}
+
+@media (min-width: 48rem) {
+  :root[data-design="lagen"] .lg-recent > li:first-child .lg-recent-subject {
+    font-size: 1.75rem;
+  }
+}
+
+/* ===== Fachmotiv im Kopf der Fachseite (SubjectMotif.tsx) =====
+ *
+ * Jede Form des Linienmotivs trägt pathLength="1" und die Klasse lg-motif-stroke und zeichnet sich beim
+ * Erscheinen (Keyframe `draw` aus motion.css), gestaffelt über mo-i-N. Bei „Reduziert“ blendet das Motiv nur
+ * ein, bei „Aus“ steht es fertig da. Nur in „Lagen“ (die Klasse nutzt auch „Atelier“ mit eigenem CSS).
+ */
+:root[data-design="lagen"] .lg-motif-stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: draw calc(var(--t-slow) * 2) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * var(--stagger) + 140ms);
+}
+
+:root[data-design="lagen"].fx-reduced .lg-motif-stroke {
+  stroke-dasharray: none;
+  animation: fade var(--t-med) both;
+}
+
+:root[data-design="lagen"].fx-off .lg-motif-stroke {
+  stroke-dasharray: none;
 }
