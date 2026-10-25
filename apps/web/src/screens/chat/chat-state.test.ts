@@ -27,6 +27,9 @@ function msg(id: string, seq: number, extra: Partial<ChatMessage> = {}): ChatMes
     errorCode: null,
     activity: [],
     assets: [],
+    reasoning: null,
+    tokensPerSecond: null,
+    costUsd: null,
     createdAt: 1,
     ...extra,
   };
@@ -111,6 +114,45 @@ describe('chatReducer', () => {
     expect(state.messages.map((entry) => entry.id)).toEqual(['u1', 'a1', 'a2']);
   });
 
+  it('sammelt den Denkprozess getrennt vom Text und behält ihn beim Wiederanhängen', () => {
+    const state = run([
+      loaded(),
+      event({
+        type: 'start',
+        userMessage: msg('u1', 1, { content: 'Frage' }),
+        assistantMessage: msg('a1', 2, { status: 'streaming' }),
+      }),
+      event({ type: 'reasoning', text: 'Erst überlegen. ' }),
+      event({ type: 'reasoning', text: 'Dann antworten.' }),
+    ]);
+    expect(state.thinking).toBe(true);
+    expect(state.messages[1]).toMatchObject({
+      content: '',
+      reasoning: 'Erst überlegen. Dann antworten.',
+    });
+
+    const answered = run([event({ type: 'delta', text: 'Antwort' })], state);
+    expect(answered.thinking).toBe(false);
+    expect(answered.messages[1]).toMatchObject({
+      content: 'Antwort',
+      reasoning: 'Erst überlegen. Dann antworten.',
+    });
+
+    const reattached = run([
+      loaded([msg('u1', 1), msg('a1', 2, { status: 'streaming' })], { generating: true }),
+      event({
+        type: 'snapshot',
+        assistantMessageId: 'a1',
+        text: '',
+        model: null,
+        thinking: true,
+        reasoning: 'Gedacht.',
+        activity: [],
+      }),
+    ]);
+    expect(reattached.messages[1]?.reasoning).toBe('Gedacht.');
+  });
+
   it('sammelt die Schritte eines Agenten, ersetzt Schritte mit gleicher Kennung und übernimmt den Stand beim Anhängen', () => {
     const step = (id: string, state: 'running' | 'done') => ({
       id,
@@ -134,6 +176,7 @@ describe('chatReducer', () => {
           text: 'Text',
           model: null,
           thinking: false,
+          reasoning: '',
           activity: [step('t9', 'done')],
         }),
       ],
@@ -153,6 +196,7 @@ describe('chatReducer', () => {
         text: 'alt und neu',
         model: { providerId: 'p1', model: 'modell-a' },
         thinking: false,
+        reasoning: '',
         activity: [],
       }),
       event({ type: 'delta', text: '!' }),

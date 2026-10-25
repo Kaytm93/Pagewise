@@ -459,7 +459,7 @@ describe('ProviderClient.streamChat', () => {
       { type: 'delta', text: 'lo ' },
       { type: 'delta', text: 'Welt' },
       { type: 'finish', reason: 'stop' },
-      { type: 'usage', promptTokens: 7, completionTokens: 3 },
+      { type: 'usage', promptTokens: 7, completionTokens: 3, reported: null },
     ]);
     expect(calls[0]).toMatchObject({
       method: 'POST',
@@ -472,6 +472,38 @@ describe('ProviderClient.streamChat', () => {
       stream: true,
     });
     expect(calls[0]?.headers.Authorization).toBe(`Bearer ${KEY}`);
+  });
+
+  it('übernimmt gemeldete Kosten nur als gültigen Betrag', async () => {
+    const { fetch } = fakeFetch(() =>
+      sse([
+        chunk({ content: 'Hallo' }),
+        `data: ${JSON.stringify({ choices: [], usage: { prompt_tokens: 5, completion_tokens: 2, cost: 0.00042 } })}\n\n`,
+        'data: [DONE]\n\n',
+      ]),
+    );
+    const events = await drain(new ProviderClient({ fetch }).streamChat(target, request));
+    expect(events).toContainEqual({
+      type: 'usage',
+      promptTokens: 5,
+      completionTokens: 2,
+      reported: 0.00042,
+    });
+  });
+
+  it('verwirft Kosten als Text oder negativ', async () => {
+    const { fetch } = fakeFetch(() =>
+      sse([
+        `data: ${JSON.stringify({ choices: [], usage: { cost: '0.5' } })}\n\n`,
+        `data: ${JSON.stringify({ choices: [], usage: { cost: -1 } })}\n\n`,
+        'data: [DONE]\n\n',
+      ]),
+    );
+    const events = await drain(new ProviderClient({ fetch }).streamChat(target, request));
+    expect(events.filter((event) => event.type === 'usage')).toEqual([
+      { type: 'usage', promptTokens: null, completionTokens: null, reported: null },
+      { type: 'usage', promptTokens: null, completionTokens: null, reported: null },
+    ]);
   });
 
   it('übergibt Temperatur und Längengrenze nur, wenn sie gesetzt sind', async () => {
@@ -565,7 +597,7 @@ describe('ProviderClient.streamChat', () => {
     );
     expect(await drain(new ProviderClient({ fetch }).streamChat(target, request))).toEqual([
       { type: 'delta', text: 'ganze Antwort' },
-      { type: 'usage', promptTokens: 1, completionTokens: 2 },
+      { type: 'usage', promptTokens: 1, completionTokens: 2, reported: null },
       { type: 'finish', reason: 'stop' },
     ]);
   });

@@ -9,6 +9,8 @@ import { BotHead } from '../atelier/BotHead';
 import { AgentActivity } from './AgentActivity';
 import { AssetList } from './AssetList';
 import { Markdown } from './Markdown';
+import { metricsLine } from './metrics';
+import { Reasoning } from './Reasoning';
 import { isModelTool, ToolNotes } from './ToolNotes';
 import { useCopy } from './useCopy';
 
@@ -130,6 +132,7 @@ export const MessageItem = memo(function MessageItem({
   const hasText = message.content.trim() !== '';
   const byAgent = message.engineProfileId !== null;
   const working = message.activity[message.activity.length - 1];
+  const metrics = byAgent ? null : metricsLine(message);
 
   return (
     <article aria-busy={live || undefined}>
@@ -138,6 +141,7 @@ export const MessageItem = memo(function MessageItem({
       <h2 className="sr-only">{m.chat.answer}</h2>
       {atelier && <BotHead message={message} live={live} thinking={thinking} />}
       {!byAgent && <ToolNotes steps={message.activity} />}
+      {message.reasoning && <Reasoning text={message.reasoning} live={live} />}
       {hasText && <Markdown text={message.content} final={!live} />}
       {hasText && live && (
         <p className="mt-2 flex min-h-6 items-center gap-2 text-sm text-ink-muted">
@@ -185,6 +189,7 @@ export const MessageItem = memo(function MessageItem({
         </div>
       )}
       {note && <p className="mt-3 text-sm text-ink-muted">{note}</p>}
+      {!live && metrics && <p className="mt-1 text-meta text-ink-muted">{metrics}</p>}
 
       {!live && (
         <div className="mt-2 -ml-3 flex flex-wrap items-center gap-x-1 text-meta text-ink-muted">

@@ -19,6 +19,7 @@ import { getSubject, type SubjectView } from '../domain/subjects';
 import { DefaultPrompts } from '../prompts/defaults';
 import type { ChatMessage, ToolCall } from '../providers/client';
 import { textOf } from '../providers/client';
+import { type Billing, replyCost, type Usage } from '../providers/cost';
 import { ProviderError } from '../providers/errors';
 import type { Selection } from '../providers/models';
 import type { ProviderService } from '../providers/service';
@@ -125,6 +126,12 @@ export interface PendingAttachment {
   data: Uint8Array;
 }
 
+/** Tokens je Sekunde vom ersten bis zum letzten Token, auf eine Nachkommastelle gerundet. */
+function speedOf(tokens: number | null, generationMs: number | null): number | null {
+  if (tokens === null || generationMs === null || tokens <= 0 || generationMs <= 0) return null;
+  return Math.round((tokens * 10_000) / generationMs) / 10;
+}
+
 function toMessage(row: MessageRow, assets: AssetView[] = []): MessageView {
   return {
     id: row.id,
@@ -138,8 +145,19 @@ function toMessage(row: MessageRow, assets: AssetView[] = []): MessageView {
     errorCode: row.errorCode as ChatErrorCode | null,
     activity: parseActivity(row.activity),
     assets,
+    reasoning: row.reasoning || null,
+    tokensPerSecond: speedOf(row.completionTokens, row.generationMs),
+    costUsd: row.costUsd,
     createdAt: row.createdAt.getTime(),
   };
+}
+
+/** Nutzung einer beendeten Antwort: Tokens, Kosten und Dauer des Schreibens in Millisekunden. */
+interface Settled {
+  promptTokens: number | null;
+  completionTokens: number | null;
+  costUsd: number | null;
+  generationMs: number | null;
 }
 
 /**
@@ -721,7 +739,11 @@ export class ChatService {
   ): Promise<void> {
     const assistantId = generation.assistantId;
     let lastCode: ChatErrorCode = 'no_model';
-    let usage: { promptTokens: number | null; completionTokens: number | null } | null = null;
+    // Die Nutzung füllt eine Funktion nach; `as` verhindert, dass TypeScript sie auf `null` festlegt.
+    let usage = null as Usage | null;
+    // Abrechnung und Beginn des Schreibens: beides gehört zum Versuch mit dem aktuellen Modell.
+    let billing: Billing | null = null;
+    let started: number | null = null;
     let lastFlush = Date.now();
     let status: MessageStatus = 'error';
     let code: ChatErrorCode | null = 'no_model';
@@ -758,6 +780,12 @@ export class ChatService {
           .where(eq(messages.id, assistantId))
           .run();
         usage = null;
+        billing = {
+          preset: resolved.preset,
+          model: selection.model,
+          baseUrl: resolved.target.baseUrl,
+        };
+        started = null;
 
         const registry = this.tools;
         const toolsOn =
@@ -779,13 +807,11 @@ export class ChatService {
         let calls = 0;
         let usedTools = false;
         // Die Nutzung zählt über alle Runden einer Antwort zusammen.
-        const addUsage = (next: {
-          promptTokens: number | null;
-          completionTokens: number | null;
-        }) => {
+        const addUsage = (next: Usage) => {
           usage = {
             promptTokens: sum(usage?.promptTokens ?? null, next.promptTokens),
             completionTokens: sum(usage?.completionTokens ?? null, next.completionTokens),
+            reported: sum(usage?.reported ?? null, next.reported),
           };
         };
 
@@ -805,6 +831,9 @@ export class ChatService {
               generation.abort.signal,
             );
             for await (const event of stream) {
+              if (event.type === 'delta' || event.type === 'reasoning') {
+                started ??= this.now().getTime();
+              }
               if (event.type === 'delta') {
                 if (event.text === '') continue;
                 // Zwischen dem Text vor und nach einem Werkzeugaufruf steht ein Absatz.
@@ -823,10 +852,12 @@ export class ChatService {
                 }
               } else if (event.type === 'reasoning') {
                 generation.emit({ type: 'thinking' });
+                generation.emit({ type: 'reasoning', text: event.text });
               } else if (event.type === 'usage') {
                 addUsage({
                   promptTokens: event.promptTokens,
                   completionTokens: event.completionTokens,
+                  reported: event.reported,
                 });
               } else if (event.type === 'tool_calls') {
                 requested = event.calls;
@@ -924,14 +955,23 @@ export class ChatService {
       code = 'internal';
     }
 
-    this.finish(generation, status, code, usage);
+    const measured: Settled | null =
+      usage && billing
+        ? {
+            promptTokens: usage.promptTokens,
+            completionTokens: usage.completionTokens,
+            costUsd: replyCost(billing, usage),
+            generationMs: started === null ? null : this.now().getTime() - started,
+          }
+        : null;
+    this.finish(generation, status, code, measured);
   }
 
   private finish(
     generation: Generation,
     status: MessageStatus,
     code: ChatErrorCode | null,
-    usage: { promptTokens: number | null; completionTokens: number | null } | null,
+    usage: Settled | null,
     agent: {
       engineProfileId: string;
       model: string | null;
@@ -965,6 +1005,9 @@ export class ChatService {
               }),
           promptTokens: usage?.promptTokens ?? null,
           completionTokens: usage?.completionTokens ?? null,
+          reasoning: generation.reasoning || null,
+          generationMs: usage?.generationMs ?? null,
+          costUsd: usage?.costUsd ?? null,
         })
         .where(eq(messages.id, generation.assistantId))
         .run();
@@ -990,6 +1033,9 @@ export class ChatService {
       errorCode: code,
       activity: agent?.activity ?? [],
       assets: agent?.assets ?? [],
+      reasoning: generation.reasoning || null,
+      tokensPerSecond: speedOf(usage?.completionTokens ?? null, usage?.generationMs ?? null),
+      costUsd: usage?.costUsd ?? null,
       createdAt: Date.now(),
     };
     this.active.delete(generation.chatId);

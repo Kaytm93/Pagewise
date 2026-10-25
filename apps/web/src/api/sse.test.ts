@@ -66,6 +66,14 @@ describe('parseStreamEvent', () => {
     ).toMatchObject({ type: 'start', userMessage: null });
   });
 
+  it('liest den Denkprozess und verwirft ihn ohne Text', () => {
+    expect(parse('reasoning', { text: 'Überlegung' })).toEqual({
+      type: 'reasoning',
+      text: 'Überlegung',
+    });
+    expect(parse('reasoning', {})).toBeNull();
+  });
+
   it('liest snapshot, model, thinking und delta', () => {
     expect(
       parse('snapshot', {
@@ -80,6 +88,7 @@ describe('parseStreamEvent', () => {
       text: 'Hallo',
       model: { providerId: 'p1', model: 'modell-a' },
       thinking: true,
+      reasoning: '',
       activity: [],
     });
     expect(parse('model', { providerId: 'p1', model: 'modell-a' })).toEqual({

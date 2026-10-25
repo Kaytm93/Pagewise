@@ -399,6 +399,7 @@ describe('Chats', () => {
         'snapshot',
         'model',
         'thinking',
+        'reasoning',
         'delta',
         'delta',
         'done',
@@ -430,7 +431,20 @@ describe('Chats', () => {
       ]);
       // Die Zählung des Anbieters wird mitgespeichert.
       const row = harness.services.database.db.select().from(messages).all()[1];
-      expect(row).toMatchObject({ promptTokens: 11, completionTokens: 3 });
+      expect(row).toMatchObject({ promptTokens: 11, completionTokens: 3, reasoning: 'hmm' });
+    });
+
+    it('speichert die vom Anbieter gemeldeten Kosten mit der Antwort', async () => {
+      const costed =
+        `data: ${JSON.stringify({ choices: [{ delta: { content: 'Hallo' }, finish_reason: null }] })}\n\n` +
+        `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }], usage: { prompt_tokens: 11, completion_tokens: 3, cost: 0.0042 } })}\n\n` +
+        'data: [DONE]\n\n';
+      upstream = () => new Response(costed, { headers: { 'content-type': 'text/event-stream' } });
+      const chat = await newChat();
+      const reply = await send(chat, 'Eine Frage');
+      expect(parseSse(reply.text).at(-1)?.data).toMatchObject({ message: { costUsd: 0.0042 } });
+      const row = harness.services.database.db.select().from(messages).all()[1];
+      expect(row).toMatchObject({ completionTokens: 3, costUsd: 0.0042 });
     });
 
     it('schickt System-Prompt aus den Ebenen, den Verlauf und den Schlüssel nur an den Anbieter', async () => {

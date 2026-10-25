@@ -660,6 +660,9 @@ export class FakeServer {
       errorCode: null,
       activity: [],
       assets: [],
+      reasoning: null,
+      tokensPerSecond: null,
+      costUsd: null,
       createdAt: Date.now(),
       ...extra,
     };

@@ -224,6 +224,12 @@ export interface ChatMessage {
   activity: ActivityEntry[];
   /** Dateien, die der Agent erzeugt hat. */
   assets: ChatAsset[];
+  /** Denkprozess des Modells, sonst `null` (nur wenn der Anbieter einen liefert). */
+  reasoning: string | null;
+  /** Tokens je Sekunde, sonst `null`. */
+  tokensPerSecond: number | null;
+  /** Kosten in US-Dollar, nur bei Anbietern, die Geld je Token verlangen; sonst `null`. */
+  costUsd: number | null;
   createdAt: number;
 }
 
@@ -256,10 +262,12 @@ export type StreamEvent =
       text: string;
       model: Selection | null;
       thinking: boolean;
+      reasoning: string;
       activity: ActivityEntry[];
     }
   | { type: 'model'; providerId: string; model: string }
   | { type: 'thinking' }
+  | { type: 'reasoning'; text: string }
   | { type: 'delta'; text: string }
   | { type: 'activity'; entry: ActivityEntry }
   | { type: 'done'; message: ChatMessage }

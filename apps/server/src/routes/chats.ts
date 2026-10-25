@@ -125,7 +125,8 @@ function terminalName(event: GenerationEvent): string | null {
 
 /**
  * Schickt eine laufende Antwort als Server-Sent Events. Ablauf: optional `start`, dann `snapshot` mit dem
- * bisherigen Stand (der Browser ersetzt damit seinen Text), danach `model`, `thinking`, `delta`, bei Agenten
+ * bisherigen Stand (der Browser ersetzt damit seinen Text), danach `model`, `thinking`, `reasoning` (Denkprozess,
+ * nur Anzeige), `delta`, bei Agenten
  * `activity` (Werkzeugaufrufe) und zum Schluss `done`, `failed` oder `stopped`. Bricht die Verbindung ab, läuft die Antwort weiter: sie wird
  * gespeichert und der Browser kann sich mit GET /chats/:id/generation wieder anhängen.
  * Fehler enthalten nur Codes, nie Texte von Anbietern.
@@ -151,6 +152,9 @@ function streamGeneration(c: Context, generation: Generation, start: StartedGene
           break;
         case 'thinking':
           send('thinking', {});
+          break;
+        case 'reasoning':
+          send('reasoning', { text: event.text });
           break;
         case 'delta':
           send('delta', { text: event.text });
@@ -180,6 +184,7 @@ function streamGeneration(c: Context, generation: Generation, start: StartedGene
       text: snapshot.text,
       model: snapshot.model,
       thinking: snapshot.thinking,
+      reasoning: snapshot.reasoning,
       activity: snapshot.activity,
     });
     if (snapshot.ended) onEvent(snapshot.ended);

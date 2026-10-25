@@ -85,6 +85,13 @@
       "when": 1791129683654,
       "tag": "0011_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1792939449221,
+      "tag": "0012_message_reasoning_cost",
+      "breakpoints": true
     }
   ]
 }

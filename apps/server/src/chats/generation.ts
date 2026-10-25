@@ -38,6 +38,12 @@ export interface MessageView {
   activity: ActivityEntry[];
   /** Dateien, die der Agent erzeugt hat. */
   assets: AssetView[];
+  /** Denkprozess des Modells, nur wenn der Anbieter ihn liefert; sonst `null`. */
+  reasoning: string | null;
+  /** Tokens je Sekunde, nur wenn der Anbieter die Zahl der Tokens meldet; sonst `null`. */
+  tokensPerSecond: number | null;
+  /** Kosten in US-Dollar, nur bei Anbietern, die Geld je Token verlangen; sonst `null`. */
+  costUsd: number | null;
   createdAt: number;
 }
 
@@ -45,6 +51,8 @@ export interface MessageView {
 export type GenerationEvent =
   | { type: 'model'; providerId: string; model: string }
   | { type: 'thinking' }
+  /** Ein Stück des Denkprozesses (nur Anzeige, nie Teil der Antwort). */
+  | { type: 'reasoning'; text: string }
   | { type: 'delta'; text: string }
   /** Ein Werkzeugaufruf des Agenten beginnt oder endet (gleiche `id`: ersetzt den früheren Stand). */
   | { type: 'activity'; entry: ActivityEntry }
@@ -58,6 +66,8 @@ export interface Snapshot {
   text: string;
   model: { providerId: string; model: string } | null;
   thinking: boolean;
+  /** Bisheriger Denkprozess (leer, wenn der Anbieter keinen liefert). */
+  reasoning: string;
   activity: ActivityEntry[];
   /** `true`, solange beigelegte Dateien übernommen werden; das Modell wird erst danach gefragt. */
   preparing?: boolean;
@@ -76,6 +86,7 @@ export class Generation {
   private accumulated = '';
   private currentModel: { providerId: string; model: string } | null = null;
   private thinkingSeen = false;
+  private reasoningText = '';
   private activityList: ActivityEntry[] = [];
   private ended: GenerationEvent | null = null;
   /** Vorbereitung läuft (Dateiimport): ein Anhänger erfährt das über seinen Schnappschuss. */
@@ -111,6 +122,10 @@ export class Generation {
     return this.thinkingSeen;
   }
 
+  get reasoning(): string {
+    return this.reasoningText;
+  }
+
   get activity(): ActivityEntry[] {
     return this.activityList;
   }
@@ -129,6 +144,7 @@ export class Generation {
       text: this.accumulated,
       model: this.currentModel,
       thinking: this.thinkingSeen,
+      reasoning: this.reasoningText,
       activity: this.activityList,
       preparing: this.preparingSeen || undefined,
       ended: this.ended,
@@ -151,9 +167,13 @@ export class Generation {
     } else if (event.type === 'model') {
       this.currentModel = { providerId: event.providerId, model: event.model };
       this.thinkingSeen = false;
+      // Ein neuer Versuch mit anderem Modell beginnt auch mit einem leeren Denkprozess.
+      this.reasoningText = '';
     } else if (event.type === 'thinking') {
       if (this.thinkingSeen) return;
       this.thinkingSeen = true;
+    } else if (event.type === 'reasoning') {
+      this.reasoningText += event.text;
     } else this.ended = event;
 
     for (const listener of [...this.listeners]) {

@@ -1,6 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
-import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+  check,
+  index,
+  integer,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 
 // Alle Zeitstempel sind Millisekunden seit 1970 (UTC). Die Tabellen enthalten keine Vorbelegung:
 // Fächer, Untergruppen und Profilangaben legt der Nutzer selbst an.
@@ -224,6 +232,12 @@ export const messages = sqliteTable(
     errorCode: text('error_code'),
     promptTokens: integer('prompt_tokens'),
     completionTokens: integer('completion_tokens'),
+    /** Denkprozess des Modells (Text), nur wenn der Anbieter ihn liefert. */
+    reasoning: text('reasoning'),
+    /** Zeit vom ersten bis zum letzten Token in Millisekunden (für die Tokengeschwindigkeit). */
+    generationMs: integer('generation_ms'),
+    /** Kosten in US-Dollar, nur bei Anbietern, die Geld je Token verlangen; sonst `NULL`. */
+    costUsd: real('cost_usd'),
     ...timestamps,
   },
   (table) => [

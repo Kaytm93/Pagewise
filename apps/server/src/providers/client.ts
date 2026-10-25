@@ -59,7 +59,13 @@ export type ChatEvent =
   | { type: 'reasoning'; text: string }
   /** Das Modell will Werkzeuge aufrufen (kommt nach dem Strom, vollständig zusammengesetzt; die Reihenfolge zu `finish` ist nicht festgelegt). */
   | { type: 'tool_calls'; calls: ToolCall[] }
-  | { type: 'usage'; promptTokens: number | null; completionTokens: number | null }
+  /** `reported` sind die Kosten in US-Dollar, falls der Anbieter sie meldet (OpenRouter). */
+  | {
+      type: 'usage';
+      promptTokens: number | null;
+      completionTokens: number | null;
+      reported: number | null;
+    }
   | { type: 'finish'; reason: string | null };
 
 export type TestResult =
@@ -94,6 +100,11 @@ function str(value: Json): string | null {
 
 function int(value: Json): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? Math.trunc(value) : null;
+}
+
+/** Kosten in US-Dollar aus einer Antwort, nur gültige Beträge (nie negativ). */
+function amount(value: Json): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
 /** Preis aus der Modellliste (Zeichenkette oder Zahl) oder `NaN`, wenn keiner angegeben ist. */
@@ -416,6 +427,7 @@ export class ProviderClient {
         type: 'usage',
         promptTokens: int(json.usage.prompt_tokens),
         completionTokens: int(json.usage.completion_tokens),
+        reported: amount(json.usage.cost),
       });
     }
     // Das Ende steht oft im selben Block wie der letzte Text; es kommt deshalb zuletzt.
@@ -446,6 +458,7 @@ export class ProviderClient {
         type: 'usage',
         promptTokens: int(json.usage.prompt_tokens),
         completionTokens: int(json.usage.completion_tokens),
+        reported: amount(json.usage.cost),
       };
     }
     yield { type: 'finish', reason: str(choice?.finish_reason) };

@@ -82,6 +82,7 @@ function applyEvent(state: ChatState, event: StreamEvent): ChatState {
                 status: 'streaming',
                 providerId: event.model?.providerId ?? entry.providerId,
                 model: event.model?.model ?? entry.model,
+                reasoning: event.reasoning === '' ? null : event.reasoning,
                 activity: event.activity,
               }
             : entry,
@@ -106,6 +107,15 @@ function applyEvent(state: ChatState, event: StreamEvent): ChatState {
       };
     case 'thinking':
       return { ...state, thinking: true };
+    case 'reasoning':
+      return {
+        ...state,
+        thinking: true,
+        messages: patchLive(state, (entry) => ({
+          ...entry,
+          reasoning: (entry.reasoning ?? '') + event.text,
+        })),
+      };
     case 'delta':
       return {
         ...state,

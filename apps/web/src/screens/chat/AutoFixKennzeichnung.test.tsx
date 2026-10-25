@@ -24,6 +24,9 @@ function nutzer(inhalt: string): ChatMessage {
     errorCode: null,
     activity: [],
     assets: [],
+    reasoning: null,
+    tokensPerSecond: null,
+    costUsd: null,
     createdAt: 0,
   };
 }
@@ -81,6 +84,9 @@ describe('Kennzeichnung der automatischen Korrektur (M4-T026)', () => {
       errorCode: null,
       activity: [],
       assets: [],
+      reasoning: null,
+      tokensPerSecond: null,
+      costUsd: null,
       createdAt: 0,
     };
     render(

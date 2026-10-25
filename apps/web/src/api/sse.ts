@@ -132,6 +132,10 @@ function asMessage(value: unknown): ChatMessage | null {
     errorCode: typeof errorCode === 'string' ? errorCode : null,
     activity: asActivityList(value.activity),
     assets: asAssets(value.assets),
+    reasoning:
+      typeof value.reasoning === 'string' && value.reasoning !== '' ? value.reasoning : null,
+    tokensPerSecond: typeof value.tokensPerSecond === 'number' ? value.tokensPerSecond : null,
+    costUsd: typeof value.costUsd === 'number' ? value.costUsd : null,
     createdAt,
   };
 }
@@ -174,6 +178,7 @@ export function parseStreamEvent(message: SseMessage): StreamEvent | null {
         text: payload.text,
         model: asSelection(payload.model),
         thinking: payload.thinking === true,
+        reasoning: typeof payload.reasoning === 'string' ? payload.reasoning : '',
         activity: asActivityList(payload.activity),
       };
     case 'model': {
@@ -182,6 +187,8 @@ export function parseStreamEvent(message: SseMessage): StreamEvent | null {
     }
     case 'thinking':
       return { type: 'thinking' };
+    case 'reasoning':
+      return typeof payload.text === 'string' ? { type: 'reasoning', text: payload.text } : null;
     case 'delta':
       return typeof payload.text === 'string' ? { type: 'delta', text: payload.text } : null;
     case 'activity': {
