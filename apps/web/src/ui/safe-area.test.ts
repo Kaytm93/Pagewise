@@ -37,7 +37,9 @@ describe('Safe-Areas links und rechts', () => {
     expect(shell).toContain('pl-[max(0.75rem,env(safe-area-inset-left))]');
     expect(shell).toContain('pr-[max(1.75rem,env(safe-area-inset-right))]');
     // Die Seitenleiste ab 768 px (iPhone quer) rutscht um den Rand nach innen.
-    expect(shell).toContain('md:grid-cols-[calc(17.25rem+env(safe-area-inset-left))_1fr]');
+    expect(shell).toContain(
+      'md:grid-cols-[calc(var(--sidebar-w,17.25rem)+env(safe-area-inset-left))_1fr]',
+    );
   });
 });
 

@@ -1,6 +1,6 @@
 import { messages as m } from '../i18n';
 import { Button } from './Button';
-import { Modal } from './modal';
+import { Modal, ModalFooter } from './modal';
 
 interface Props {
   title: string;
@@ -22,14 +22,14 @@ export function ConfirmDialog({
 }: Props) {
   return (
     <Modal title={title} description={description} onClose={onCancel}>
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <ModalFooter>
         <Button variant="secondary" onClick={onCancel} data-autofocus>
           {m.common.cancel}
         </Button>
         <Button variant="primary" busy={busy} onClick={onConfirm}>
           {confirmLabel}
         </Button>
-      </div>
+      </ModalFooter>
     </Modal>
   );
 }

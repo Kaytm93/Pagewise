@@ -9,7 +9,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { TextField } from '../ui/Field';
 import { FieldError } from '../ui/FieldError';
 import { IconPicker } from '../ui/IconPicker';
-import { Modal } from '../ui/modal';
+import { Modal, ModalFooter } from '../ui/modal';
 import { Segmented } from '../ui/Segmented';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { commonErrorMessage } from './auth-errors';
@@ -204,7 +204,7 @@ export function SubjectDialog({ subject, onClose }: { subject?: Subject; onClose
               onChange={setColor}
             />
             {errors.form && <FieldError>{errors.form}</FieldError>}
-            <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+            <ModalFooter>
               {subject && (
                 <Button
                   variant="danger"
@@ -221,7 +221,7 @@ export function SubjectDialog({ subject, onClose }: { subject?: Subject; onClose
               <Button type="submit" variant="primary" busy={busy}>
                 {m.common.save}
               </Button>
-            </div>
+            </ModalFooter>
           </form>
         )}
       </Modal>

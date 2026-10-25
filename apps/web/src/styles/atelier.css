@@ -19,6 +19,19 @@
   initial-value: transparent;
 }
 
+/* Maße der Hülle (Mockup B): Seitenleiste 264 px, auf dem iPad (768–1099 px) 232 px; der Blattrand wächst mit
+   der Breite (5 vw, zwischen 20 und 72 px) */
+:root[data-design="atelier"] {
+  --sidebar-w: 264px;
+  --sheet-edge: clamp(20px, 5vw, 72px);
+}
+
+@media (min-width: 768px) and (max-width: 1099.98px) {
+  :root[data-design="atelier"] {
+    --sidebar-w: 232px;
+  }
+}
+
 /* Ohne Fach (Start, Stundenplan, Einstellungen) liegt ein warmes Licht über dem Grund statt des neutralen Tons */
 :root[data-design="atelier"] .lg-app:not([data-subj]) {
   --subj: #c99a50;

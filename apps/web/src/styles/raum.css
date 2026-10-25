@@ -25,6 +25,9 @@
 
 /* ===== Tokens ===== */
 :root[data-design="raum"] {
+  /* Maße der Hülle (Mockup C): Seitenleiste 240 px, auf dem iPad (768–1099 px) 216 px; der Blattrand bleibt */
+  --sidebar-w: 240px;
+  --sheet-edge: 52px;
   --desk-a: #f1eee8;
   --desk-b: #dedad2;
   --edge-1: #ece7dc;
@@ -48,6 +51,12 @@
   --heft-shadow:
     0 40px 52px -26px rgba(0, 0, 0, 0.8), 0 16px 24px -14px rgba(0, 0, 0, 0.6),
     0 2px 3px rgba(0, 0, 0, 0.5);
+}
+
+@media (min-width: 768px) and (max-width: 1099.98px) {
+  :root[data-design="raum"] {
+    --sidebar-w: 216px;
+  }
 }
 
 @media (prefers-color-scheme: dark) {

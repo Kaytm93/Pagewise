@@ -4,7 +4,7 @@ import { Button } from '../../ui/Button';
 import { SelectField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
-import { Modal } from '../../ui/modal';
+import { Modal, ModalFooter } from '../../ui/modal';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { commonErrorMessage } from '../auth-errors';
 import { parseSelectionKey, selectionKey } from '../providers/provider-text';
@@ -113,14 +113,14 @@ export function ModelDialog({
             <p className="text-sm text-ink-secondary">{d.agentHint}</p>
           )}
           {error && <FieldError>{error}</FieldError>}
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <ModalFooter>
             <Button variant="secondary" onClick={onClose}>
               {m.common.cancel}
             </Button>
             <Button type="submit" variant="primary" busy={busy}>
               {m.common.save}
             </Button>
-          </div>
+          </ModalFooter>
         </form>
       )}
     </Modal>

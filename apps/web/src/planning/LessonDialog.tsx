@@ -7,7 +7,7 @@ import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { SelectField, TextField } from '../ui/Field';
 import { FieldError } from '../ui/FieldError';
-import { Modal } from '../ui/modal';
+import { Modal, ModalFooter } from '../ui/modal';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { TIME_PATTERN } from './dates';
 import { usePlanner } from './PlannerProvider';
@@ -197,7 +197,7 @@ export function LessonDialog({
             autoComplete="off"
           />
           {errors.form && <FieldError>{errors.form}</FieldError>}
-          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <ModalFooter>
             {entry && (
               <Button
                 variant="danger"
@@ -214,7 +214,7 @@ export function LessonDialog({
             <Button type="submit" variant="primary" busy={busy}>
               {m.common.save}
             </Button>
-          </div>
+          </ModalFooter>
         </form>
       </Modal>
       {confirmDelete && entry && (

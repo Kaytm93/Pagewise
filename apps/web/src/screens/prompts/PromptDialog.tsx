@@ -7,7 +7,7 @@ import { Button } from '../../ui/Button';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { TextAreaField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
-import { Modal } from '../../ui/modal';
+import { Modal, ModalFooter } from '../../ui/modal';
 import { Segmented } from '../../ui/Segmented';
 import { commonErrorMessage } from '../auth-errors';
 
@@ -242,7 +242,7 @@ export function PromptDialog({
         )}
 
         {error && <FieldError>{error}</FieldError>}
-        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
+        <ModalFooter className="mt-6 sm:items-center">
           {showEditor && !hasDefault && (
             <Button
               variant="ghost"
@@ -295,7 +295,7 @@ export function PromptDialog({
               {m.common.save}
             </Button>
           )}
-        </div>
+        </ModalFooter>
       </Modal>
       {confirmReset && (
         <ConfirmDialog

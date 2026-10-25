@@ -5,7 +5,7 @@ import { Button } from '../../ui/Button';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { SecretField, SelectField, TextField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
-import { Modal } from '../../ui/modal';
+import { Modal, ModalFooter } from '../../ui/modal';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { type EngineErrors, kindLabel, mapEngineError, tokenState } from './engine-text';
 
@@ -173,7 +173,7 @@ export function EngineDialog({
           />
 
           {errors.form && <FieldError>{errors.form}</FieldError>}
-          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <ModalFooter>
             {editing && (
               <Button
                 variant="danger"
@@ -190,7 +190,7 @@ export function EngineDialog({
             <Button type="submit" variant="primary" busy={busy}>
               {m.common.save}
             </Button>
-          </div>
+          </ModalFooter>
         </form>
       </Modal>
       {confirmDelete && profile && (
