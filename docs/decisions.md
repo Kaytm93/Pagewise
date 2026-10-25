@@ -572,3 +572,10 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Verworfen:** Zeichen im Renderer auf ASCII umschreiben (`AgNO3` statt `AgNO₃`): spart Code, aber das PDF sähe nach Rohtext aus. Eine Unicode-Schrift einbetten: mehrere hundert Kilobyte im Paket, für wenige Zeichen zu viel.
 - **Geprüft:** Render-Tests 217 → 228 (Zeichenprüfung, Salz-Formel, organische Formeln, Bereinigung der Salz-SVG). Web-Tests für PDF mit Indizes und Mathezeichen, Vorschau-Fehler mit geändertem Beispiel. Prompt-Test (Obergrenze) grün. Gesamt: alle Pakete grün (Render 228, Server 1038, Web 1026, Desktop 316, Repo-Tests 47). PDF-Sichtprüfung: Silbernitrat-Beispiel per esbuild gebaut, mit `pdfinfo` (A4, eine Seite) und `pdftoppm` als Bild geprüft, Indizes, Ladungen, Pfeile und Umbruch über zwei Zeilen stimmen.
 - **Nicht geprüft:** PowerPoint: Hochstellung in Arial ist nicht gemessen; PPTX nimmt Unicode direkt, die Folien wurden nicht neu geprüft. Download auf iPhone, iPad und in der Mac-App.
+
+## D-064 image-size per Override auf 2.0.3 (25. Oktober 2026)
+
+- **Anlass:** `pnpm audit --audit-level high` schlägt in der CI fehl (Job `check`). Zwei Warnungen mit hohem Schweregrad: GHSA-5p2g-fcmc-qvqq und GHSA-w3rx-r6r6-pgpr, ICNS-Parser in `image-size` (Endlosschleife, Denial of Service). Der Pfad ist `apps/web > pptxgenjs > image-size`, eingeführt mit D-061.
+- **Entscheidung:** Override in `pnpm-workspace.yaml` wie bei undici: `image-size@>=0.6.3 <=2.0.2` auf `2.0.3`. Für 1.x gibt es keinen Patch, 2.0.3 ist der gepatchte Stand.
+- **Geprüft:** 2.0.3 erschien am 14. September 2026 (über zwei Wochen alt), Lizenz MIT, Node 18 oder neuer, keine Abhängigkeiten (`npm view`). Im Browser-Bündel von pptxgenjs fehlt das Paket (Browser-Feld), `apps/web/dist` enthält keinen Treffer für `image-size`. `pnpm audit --audit-level high` endet mit Code 0. Alle Pakete grün, Typecheck, Biome, Scan.
+- **Nicht behoben (nicht blockierend):** `esbuild` (mittel, nur über das Dev-Werkzeug `drizzle-kit`) und `katex` (niedrig, über `remark-math`). Eigener Schritt, wenn nötig.

@@ -8,9 +8,12 @@ onlyBuiltDependencies:
 
 # Sicherheitslücken in undici (GHSA-xjj6-f33q-929c): 7.x und 8.x getrennt auf den
 # gepatchten Stand heben, damit die jeweilige Hauptversion erhalten bleibt.
+# image-size (GHSA-5p2g-fcmc-qvqq, GHSA-w3rx-r6r6-pgpr) kommt nur über pptxgenjs in den Baum; 1.x hat keinen
+# Patch, 2.0.3 schon. Das Browser-Bündel von pptxgenjs enthält das Paket nicht.
 overrides:
   "undici@>=7.18.0 <7.30.1": "7.30.1"
   "undici@>=8.0.0 <8.12.2": "8.12.2"
+  "image-size@>=0.6.3 <=2.0.2": "2.0.3"
 
 # better-sqlite3 liefert fertige Binärdateien für macOS, Linux und Windows mit und lädt sie
 # direkt. Ein Kompilierschritt (node-gyp) ist unnötig und würde auf Rechnern ohne
