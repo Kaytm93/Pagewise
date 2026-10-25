@@ -1,7 +1,6 @@
 import { MessageCircle, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { messages as m } from '../i18n';
-import { DayLine } from '../planning/DayLine';
 import { NextUp } from '../planning/NextUp';
 import { usePlanner } from '../planning/PlannerProvider';
 import { navigate } from '../router';
@@ -66,100 +65,132 @@ export function HomePage() {
         })
       : null;
 
-  return (
-    <Sheet width="wide">
+  // Ohne gesetzte Richtung (nur in Tests) gilt wie bisher der Aufbau von „Raum“, die Voreinstellung.
+  const raum = design !== 'lagen' && design !== 'atelier';
+  // „Raum“ setzt die Zeilen runder (Mockup C); die anderen Richtungen behalten ihre fast eckigen Zeilen.
+  const rowRadius = raum ? 'rounded-[8px]' : 'rounded-[2px]';
+
+  const head = (
+    <>
       <p className="mo-rise text-sm text-ink-muted">{dateFormat.format(new Date())}</p>
       <h1 className="mo-rise mo-i-1 mt-2.5 max-w-[760px] font-heading text-[clamp(34px,5.4vw,56px)] leading-[1.12] tracking-[-0.025em] text-balance">
         {heading ?? m.home.heading}
       </h1>
-      <div className="mo-rise mo-i-2">
-        <AskForm />
-        <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-sm text-ink-muted">
-          {m.home.or}
+    </>
+  );
+
+  // Die Frage an den Standard-Chat: in „Raum“ unten als feste Zeile (Mockup C), sonst unter der Überschrift.
+  const ask = (
+    <div className={raum ? 'rm-start-dock mo-rise mo-i-5' : 'mo-rise mo-i-2'}>
+      <AskForm />
+      <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-sm text-ink-muted">
+        {m.home.or}
+        <Link
+          to={{ name: 'default-chat' }}
+          className="inline-flex min-h-11 items-center underline underline-offset-[3px]"
+        >
+          {m.home.openDefault}
+        </Link>
+      </p>
+    </div>
+  );
+
+  const subjectList = (
+    <section className="mo-rise mo-i-4 mt-12" aria-labelledby="home-subjects">
+      <h2
+        id="home-subjects"
+        className="mb-3.5 font-sans text-[15px] font-medium tracking-[0.06em] text-ink-muted uppercase"
+      >
+        {m.home.title}
+      </h2>
+      <ul className="border-t border-line-warm">
+        <li className="border-b border-line-warm">
           <Link
             to={{ name: 'default-chat' }}
-            className="inline-flex min-h-11 items-center underline underline-offset-[3px]"
+            className={`lg-row grid min-h-16 grid-cols-[auto_1fr_auto] items-center gap-4 ${rowRadius} px-2 py-3.5 text-ink no-underline`}
           >
-            {m.home.openDefault}
+            <MessageCircle
+              aria-hidden="true"
+              strokeWidth={1.6}
+              className="size-6 text-ink-secondary"
+            />
+            <span className="min-w-0">
+              <span className="block truncate font-heading text-xl tracking-[-0.2px]">
+                {m.defaultSubject.homeTitle}
+              </span>
+              <span className="block truncate text-sm text-ink-muted">
+                {m.defaultSubject.homeHint}
+              </span>
+            </span>
           </Link>
-        </p>
-      </div>
+        </li>
+        {subjects.map((subject) => {
+          const meta = subjectMeta(subject);
+          return (
+            <li
+              key={subject.id}
+              data-subj={subjectColorAttr(subject.color)}
+              className="border-b border-line-warm"
+            >
+              <Link
+                to={{ name: 'subject', subjectId: subject.id, groupId: null }}
+                className={`lg-row grid min-h-16 grid-cols-[auto_1fr_auto] items-center gap-4 ${rowRadius} px-2 py-3.5 text-ink no-underline`}
+              >
+                <SubjectIcon icon={subject.icon} className="size-6 text-ink-secondary" />
+                <span className="min-w-0">
+                  <span className="block truncate font-heading text-xl tracking-[-0.2px]">
+                    {subject.name}
+                  </span>
+                  {meta && <span className="block truncate text-sm text-ink-muted">{meta}</span>}
+                </span>
+                {subject.groups.length > 0 && (
+                  <span className="hidden shrink-0 text-sm text-ink-muted sm:block">
+                    {groupCount(subject.groups.length)}
+                  </span>
+                )}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+      <Button variant="ghost" className="mt-3 -ml-3" onClick={() => setCreating(true)}>
+        <Plus aria-hidden="true" className="size-4" />
+        {m.shell.addSubject}
+      </Button>
+    </section>
+  );
 
-      {design === 'lagen' ? (
-        <StartGrid />
-      ) : design === 'atelier' ? (
-        <StartAtelier />
-      ) : (
-        <>
-          {design === 'raum' ? <StartPlan /> : <DayLine />}
-          <NextUp />
-        </>
-      )}
+  if (raum) {
+    // Zweispaltig, sobald das Blatt breit genug ist (raum.css, Container „blatt“): links der Tag als
+    // Zeitachse, rechts Termine, „Zuletzt genutzt“ und Fächer. Die Eingabe sitzt unten am Blatt.
+    return (
+      <Sheet width="wide">
+        <div className="rm-start">
+          {head}
+          <div className="rm-start-grid">
+            <StartPlan />
+            <div className="rm-start-side">
+              <NextUp />
+              {/* „Zuletzt genutzt“ steht in allen Richtungen, sobald es Chats gibt (gleiche Klassen `lg-*`). */}
+              <RecentChats />
+              {subjectList}
+            </div>
+          </div>
+          {ask}
+        </div>
+        {dialog}
+      </Sheet>
+    );
+  }
+
+  return (
+    <Sheet width="wide">
+      {head}
+      {ask}
+      {design === 'lagen' ? <StartGrid /> : <StartAtelier />}
       {/* „Zuletzt genutzt“ steht in allen Richtungen, sobald es Chats gibt (gleiche Klassen `lg-*`). */}
       <RecentChats />
-
-      <section className="mo-rise mo-i-4 mt-12" aria-labelledby="home-subjects">
-        <h2
-          id="home-subjects"
-          className="mb-3.5 font-sans text-[15px] font-medium tracking-[0.06em] text-ink-muted uppercase"
-        >
-          {m.home.title}
-        </h2>
-        <ul className="border-t border-line-warm">
-          <li className="border-b border-line-warm">
-            <Link
-              to={{ name: 'default-chat' }}
-              className="lg-row grid min-h-16 grid-cols-[auto_1fr_auto] items-center gap-4 rounded-[2px] px-2 py-3.5 text-ink no-underline"
-            >
-              <MessageCircle
-                aria-hidden="true"
-                strokeWidth={1.6}
-                className="size-6 text-ink-secondary"
-              />
-              <span className="min-w-0">
-                <span className="block truncate font-heading text-xl tracking-[-0.2px]">
-                  {m.defaultSubject.homeTitle}
-                </span>
-                <span className="block truncate text-sm text-ink-muted">
-                  {m.defaultSubject.homeHint}
-                </span>
-              </span>
-            </Link>
-          </li>
-          {subjects.map((subject) => {
-            const meta = subjectMeta(subject);
-            return (
-              <li
-                key={subject.id}
-                data-subj={subjectColorAttr(subject.color)}
-                className="border-b border-line-warm"
-              >
-                <Link
-                  to={{ name: 'subject', subjectId: subject.id, groupId: null }}
-                  className="lg-row grid min-h-16 grid-cols-[auto_1fr_auto] items-center gap-4 rounded-[2px] px-2 py-3.5 text-ink no-underline"
-                >
-                  <SubjectIcon icon={subject.icon} className="size-6 text-ink-secondary" />
-                  <span className="min-w-0">
-                    <span className="block truncate font-heading text-xl tracking-[-0.2px]">
-                      {subject.name}
-                    </span>
-                    {meta && <span className="block truncate text-sm text-ink-muted">{meta}</span>}
-                  </span>
-                  {subject.groups.length > 0 && (
-                    <span className="hidden shrink-0 text-sm text-ink-muted sm:block">
-                      {groupCount(subject.groups.length)}
-                    </span>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-        <Button variant="ghost" className="mt-3 -ml-3" onClick={() => setCreating(true)}>
-          <Plus aria-hidden="true" className="size-4" />
-          {m.shell.addSubject}
-        </Button>
-      </section>
+      {subjectList}
       {dialog}
     </Sheet>
   );
