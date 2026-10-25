@@ -7,7 +7,7 @@ import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { TextField } from '../ui/Field';
 import { FieldError } from '../ui/FieldError';
-import { Modal } from '../ui/modal';
+import { Modal, ModalFooter } from '../ui/modal';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { commonErrorMessage } from './auth-errors';
 
@@ -107,7 +107,7 @@ export function GroupDialog({
             ))}
           </datalist>
           {errors.form && <FieldError>{errors.form}</FieldError>}
-          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <ModalFooter>
             {group && (
               <Button
                 variant="danger"
@@ -124,7 +124,7 @@ export function GroupDialog({
             <Button type="submit" variant="primary" busy={busy}>
               {m.common.save}
             </Button>
-          </div>
+          </ModalFooter>
         </form>
       </Modal>
       {confirmDelete && group && (

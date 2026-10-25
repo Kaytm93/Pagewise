@@ -165,11 +165,10 @@ function Shell() {
   // Die Schublade gibt den Fokus beim Schließen an ihren Öffner zurück. Schließt sie durch einen
   // Seitenwechsel, gehört der Fokus auf den neuen Inhalt; dieser Effekt läuft nach dem Aufräumen des
   // Drawers und setzt ihn darum zurück. Bei Escape oder Streichung aufs Blatt bleibt die Rückgabe.
+  // Gemerkt wird die Seite beim Öffnen (nicht während sie offen ist): die Schublade fährt beim Wechsel
+  // noch aus, die Route ist da schon die neue.
   useEffect(() => {
-    if (drawerOpen) {
-      drawerPageKey.current = pageKey(route);
-      return;
-    }
+    if (drawerOpen) return;
     const before = drawerPageKey.current;
     drawerPageKey.current = null;
     if (before !== null && before !== pageKey(route)) {
@@ -177,10 +176,15 @@ function Shell() {
     }
   }, [drawerOpen, route]);
 
+  function openDrawer() {
+    drawerPageKey.current = pageKey(route);
+    setDrawerOpen(true);
+  }
+
   return (
     <div
       ref={app}
-      className="lg-app md:grid md:grid-cols-[calc(17.25rem+env(safe-area-inset-left))_1fr]"
+      className="lg-app md:grid md:grid-cols-[calc(var(--sidebar-w,17.25rem)+env(safe-area-inset-left))_1fr]"
       data-subj={color}
       data-view={route.name}
     >
@@ -202,7 +206,7 @@ function Shell() {
           <div className="flex h-14 items-center gap-1 pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]">
             <button
               type="button"
-              onClick={() => setDrawerOpen(true)}
+              onClick={openDrawer}
               aria-label={m.common.openMenu}
               aria-expanded={drawerOpen}
               className="mo-press inline-flex size-11 shrink-0 items-center justify-center rounded-[12px] text-ink hover:bg-paper"
@@ -235,7 +239,7 @@ function Shell() {
 
       {drawerOpen && (
         <Drawer label={m.shell.navigation} onClose={() => setDrawerOpen(false)}>
-          <Sidebar onNavigate={() => setDrawerOpen(false)} />
+          {(close) => <Sidebar onNavigate={close} />}
         </Drawer>
       )}
     </div>

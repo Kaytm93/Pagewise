@@ -7,6 +7,23 @@
  * die Bewegung aus motion.css (--m, --t-*, --spring). Alles Bewegte nutzt nur transform und opacity.
  */
 
+/*
+ * Maße der Hülle (Mockup A): Breite der Seitenleiste (`--sidebar-w`, AppShell.tsx) und Blattrand ab „md“
+ * (`--sheet-edge`, Sheet.tsx). Die anderen Richtungen setzen ihre eigenen Werte in raum.css und atelier.css.
+ * iPad hochkant und kleine Fenster (768–1023 px) bekommen eine schmalere Leiste und einen engeren Rand.
+ */
+:root[data-design="lagen"] {
+  --sidebar-w: 276px;
+  --sheet-edge: 52px;
+}
+
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  :root[data-design="lagen"] {
+    --sidebar-w: 248px;
+    --sheet-edge: 34px;
+  }
+}
+
 @layer components {
   /* ===== Schreibtisch ===== */
   .lg-app {
@@ -184,6 +201,35 @@
       0 1px 2px rgba(var(--shadow), 0.1),
       0 8px 18px -6px rgba(var(--shadow), var(--shadow-a)),
       0 28px 44px -26px rgba(var(--shadow), calc(var(--shadow-a) * 1.3));
+  }
+
+  /*
+   * Dialog (ui/modal.tsx): eine eigene, deckende Fläche für alle Richtungen, unabhängig von der Hülle des
+   * Blatts. Text liegt immer auf --sheet (Kontrast AA), nie auf dem Schreibtisch dahinter. Die Fußzeile
+   * (.lg-dialog-foot) trägt ihren Abstand nach unten selbst, ohne sie braucht der Inhalt ihn.
+   */
+  .lg-dialog {
+    position: relative;
+    border: 1px solid var(--line-warm);
+    background-color: var(--sheet);
+    box-shadow:
+      inset 0 1px 0 var(--rim),
+      0 1px 2px rgba(var(--shadow), 0.12),
+      0 24px 48px -12px rgba(var(--shadow), calc(var(--shadow-a) * 2.2));
+  }
+
+  .lg-dialog-inner {
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+  }
+
+  @media (min-width: 40rem) {
+    .lg-dialog-inner {
+      padding-bottom: 1.5rem;
+    }
+  }
+
+  .lg-dialog-inner:has(.lg-dialog-foot) {
+    padding-bottom: 0;
   }
 
   /* Zettel: kleineres Blatt für einzelne Hinweise, leicht schief */
@@ -449,6 +495,20 @@
   from {
     opacity: 0;
     transform: translateX(calc(var(--m) * -104%));
+  }
+}
+
+/* … und beim Schließen wieder aus: bei „Reduziert“ (--m: 0) blendet sie nur aus, bei „Aus“ entfällt sie */
+@keyframes lg-drawer-out {
+  to {
+    opacity: 0;
+    transform: translateX(calc(var(--m) * -104%));
+  }
+}
+
+@keyframes lg-fade-out {
+  to {
+    opacity: 0;
   }
 }
 

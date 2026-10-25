@@ -10,7 +10,8 @@ const WIDTHS: Record<Width, string> = {
 /**
  * Das Blatt auf dem Schreibtisch (Gestaltung „Lagen“, D-043): Papier mit Körnung, Rand und Schatten. Der Inhalt
  * steht in einer lesbaren Breite in der Mitte. Mit `flush` füllt der Inhalt das ganze Blatt (Chat), dann
- * kümmert sich die Ansicht selbst um Abstände.
+ * kümmert sich die Ansicht selbst um Abstände. Der Blattrand ab „md“ ist `--sheet-edge` (je Richtung und
+ * Breite in lagen.css, raum.css und atelier.css gesetzt).
  */
 export function Sheet({
   children,
@@ -37,7 +38,7 @@ export function Sheet({
   return (
     <div className={`lg-sheet ${minHeight}`}>
       <div
-        className={`mx-auto w-full ${WIDTHS[width]} px-[22px] pt-[26px] pb-12 sm:px-8 md:px-[52px] md:pt-[46px] md:pb-16 ${className}`}
+        className={`mx-auto w-full ${WIDTHS[width]} px-[22px] pt-[26px] pb-12 sm:px-8 md:px-[var(--sheet-edge,52px)] md:pt-[46px] md:pb-16 ${className}`}
       >
         {children}
       </div>

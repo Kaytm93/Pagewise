@@ -5,7 +5,7 @@ import { useSession } from '../session/SessionProvider';
 import { Button } from '../ui/Button';
 import { PasscodeField } from '../ui/Field';
 import { FieldError } from '../ui/FieldError';
-import { Modal } from '../ui/modal';
+import { Modal, ModalFooter } from '../ui/modal';
 import { commonErrorMessage, rateLimitMessage } from './auth-errors';
 
 /** „Alles löschen“: verlangt den Passcode und lädt danach die App neu (leerer Zustand, Onboarding). */
@@ -51,14 +51,14 @@ export function EraseDialog({ onClose }: { onClose: () => void }) {
           data-autofocus
         />
         {error && <FieldError>{error}</FieldError>}
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <ModalFooter>
           <Button variant="secondary" onClick={onClose} disabled={busy}>
             {m.common.cancel}
           </Button>
           <Button type="submit" variant="danger" busy={busy}>
             {m.settings.data.confirm}
           </Button>
-        </div>
+        </ModalFooter>
       </form>
     </Modal>
   );

@@ -7,7 +7,7 @@ import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { SelectField, TextAreaField, TextField } from '../ui/Field';
 import { FieldError } from '../ui/FieldError';
-import { Modal } from '../ui/modal';
+import { Modal, ModalFooter } from '../ui/modal';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { isValidDate, localDate, TIME_PATTERN } from './dates';
 import { usePlanner } from './PlannerProvider';
@@ -179,7 +179,7 @@ export function ExamDialog({
               maxLength={2000}
             />
             {errors.form && <FieldError>{errors.form}</FieldError>}
-            <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+            <ModalFooter>
               {exam && (
                 <Button
                   variant="danger"
@@ -196,7 +196,7 @@ export function ExamDialog({
               <Button type="submit" variant="primary" busy={busy}>
                 {m.common.save}
               </Button>
-            </div>
+            </ModalFooter>
           </form>
         )}
       </Modal>

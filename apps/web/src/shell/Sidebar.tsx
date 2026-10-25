@@ -12,6 +12,7 @@ import type { Subject } from '../api/types';
 import { messages as m } from '../i18n';
 import { type Route, useRoute } from '../router';
 import { SubjectDialog } from '../screens/SubjectDialog';
+import type { Design } from '../ui/design';
 import { Link } from '../ui/Link';
 import { SubjectIcon } from '../ui/SubjectIcon';
 import { subjectColorAttr } from '../ui/subject-color';
@@ -40,6 +41,51 @@ function isActive(route: Route, subjectId: string, groupId: string | null): bool
 /** Hebt das Aufklappen eines Fachs über die Instanz hinaus (Schublade aus/ein). */
 function addOpenGroup(id: string) {
   openGroups = new Set(openGroups).add(id);
+}
+
+/**
+ * Kleine Marke vor dem Wortzeichen, eine je Richtung (Mockups): Lagen ein Blatt mit Zeilen, Atelier ein
+ * gefülltes Feld mit Blatt, Raum zwei aufgeschlagene Seiten mit Fachlinie. Reine Zier, daher aria-hidden;
+ * der Name steht als Text daneben. Farben über Tokens (currentColor, Utility-Klassen), nie feste Werte.
+ */
+function BrandMark({ design }: { design: Design | null }) {
+  const stroke = {
+    fill: 'none',
+    strokeWidth: 1.6,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+  } as const;
+  if (design === 'atelier') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 28 28" className="size-7 shrink-0">
+        <rect width="28" height="28" rx="8" className="fill-current" />
+        <g {...stroke} className="stroke-desk">
+          <path d="M9 7.5h7l4 4V20.5H9z" />
+          <path d="M16 7.5v4h4M11.5 15h6M11.5 17.8h4" />
+        </g>
+      </svg>
+    );
+  }
+  if (design === 'raum') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 26 26" className="size-[26px] shrink-0">
+        <g {...stroke} className="stroke-current">
+          <path d="M4 6.5c3.2-1.6 6.3-1.4 9 .8v14c-2.7-2.2-5.8-2.4-9-.8z" />
+          <path d="M22 6.5c-3.2-1.6-6.3-1.4-9 .8v14c2.7-2.2 5.8-2.4 9-.8z" />
+        </g>
+        <path d="M13 7.3v14" {...stroke} className="stroke-accent" />
+      </svg>
+    );
+  }
+  return (
+    <svg aria-hidden="true" viewBox="0 0 26 26" className="size-[26px] shrink-0">
+      <g {...stroke} className="stroke-current">
+        <rect x="4" y="3.5" width="14" height="17" rx="2.2" />
+        <path d="M21.5 7.5v13.3a2.2 2.2 0 0 1-2.2 2.2H8.5" />
+        <path d="M8 9h6M8 12.5h6M8 16h3.5" />
+      </g>
+    </svg>
+  );
 }
 
 /** Ein Fach als Zeile, aufklappbar zu den Untergruppen. Das eingebaute Fach „Standard“ bekommt ein eigenes Symbol. */
@@ -73,9 +119,9 @@ function SubjectRow({
           className={`${rowBase} ${active || inChat ? rowActive : ''}`}
         >
           {subject.kind === 'default' ? (
-            <MessageCircle aria-hidden="true" strokeWidth={1.6} className="size-[18px] shrink-0" />
+            <MessageCircle aria-hidden="true" strokeWidth={1.6} className="size-5 shrink-0" />
           ) : (
-            <SubjectIcon icon={subject.icon} className="size-[18px] shrink-0" />
+            <SubjectIcon icon={subject.icon} className="size-5 shrink-0" />
           )}
           <span title={subject.name} className="truncate">
             {subject.name}
@@ -141,7 +187,8 @@ function SubjectRow({
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { subjects, defaultSubject } = useWorkspace();
   const route = useRoute();
-  const lagen = useDesign() === 'lagen';
+  const design = useDesign();
+  const lagen = design === 'lagen';
   const activeSubjectId =
     route.name === 'subject' || route.name === 'chat' || route.name === 'note'
       ? route.subjectId
@@ -287,8 +334,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             aria-label={m.shell.defaultChat}
             title={m.shell.defaultChat}
-            className="lg-kopf lg-brand mo-press inline-flex min-h-12 items-center rounded-[10px] px-3 font-heading text-[22px] tracking-[-0.3px] text-ink no-underline"
+            className="lg-kopf lg-brand mo-press inline-flex min-h-12 items-center gap-2.5 rounded-[10px] px-3 font-heading text-[22px] tracking-[-0.3px] text-ink no-underline"
           >
+            <BrandMark design={design} />
             {m.app.name}
           </Link>
         </div>
@@ -303,7 +351,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 aria-current={route.name === 'home' ? 'page' : undefined}
                 className={`${rowBase} ${route.name === 'home' ? rowActive : ''}`}
               >
-                <House aria-hidden="true" strokeWidth={1.6} className="size-[18px] shrink-0" />
+                <House aria-hidden="true" strokeWidth={1.6} className="size-5 shrink-0" />
                 {m.sidebar.home}
               </Link>
             </li>
@@ -315,11 +363,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 aria-current={route.name === 'timetable' ? 'page' : undefined}
                 className={`${rowBase} ${route.name === 'timetable' ? rowActive : ''}`}
               >
-                <CalendarDays
-                  aria-hidden="true"
-                  strokeWidth={1.6}
-                  className="size-[18px] shrink-0"
-                />
+                <CalendarDays aria-hidden="true" strokeWidth={1.6} className="size-5 shrink-0" />
                 {m.sidebar.timetable}
               </Link>
             </li>
@@ -330,11 +374,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 aria-current={route.name === 'exams' ? 'page' : undefined}
                 className={`${rowBase} ${route.name === 'exams' ? rowActive : ''}`}
               >
-                <ClipboardList
-                  aria-hidden="true"
-                  strokeWidth={1.6}
-                  className="size-[18px] shrink-0"
-                />
+                <ClipboardList aria-hidden="true" strokeWidth={1.6} className="size-5 shrink-0" />
                 {m.sidebar.exams}
               </Link>
             </li>
@@ -360,7 +400,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             onClick={() => setCreating(true)}
             className="mo-press mt-1 flex min-h-11 w-full items-center gap-3 rounded-[10px] pl-3.5 text-ink-muted hover:text-ink"
           >
-            <Plus aria-hidden="true" strokeWidth={1.6} className="size-[18px] shrink-0" />
+            <Plus aria-hidden="true" strokeWidth={1.6} className="size-5 shrink-0" />
             {m.shell.addSubject}
           </button>
 
@@ -374,7 +414,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               aria-current={route.name === 'settings' ? 'page' : undefined}
               className={`${rowBase} ${route.name === 'settings' ? rowActive : ''}`}
             >
-              <Settings aria-hidden="true" strokeWidth={1.6} className="size-[18px]" />
+              <Settings aria-hidden="true" strokeWidth={1.6} className="size-5" />
               {m.shell.settings}
             </Link>
           </div>
@@ -387,7 +427,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             aria-current={route.name === 'settings' ? 'page' : undefined}
             className={`${rowBase} ${route.name === 'settings' ? rowActive : ''}`}
           >
-            <Settings aria-hidden="true" strokeWidth={1.6} className="size-[18px]" />
+            <Settings aria-hidden="true" strokeWidth={1.6} className="size-5" />
             {m.shell.settings}
           </Link>
         </div>
