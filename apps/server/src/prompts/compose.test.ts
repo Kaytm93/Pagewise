@@ -87,6 +87,7 @@ describe('composePrompt', () => {
       '```graph',
       '```mol',
       '```abc',
+      '```quiz',
       '[!merksatz]',
       '[!beispiel]',
       '[!aufgabe]',
@@ -105,6 +106,11 @@ describe('composePrompt', () => {
     expect(example).toBeDefined();
     expect(await validateMarkdown(`\`\`\`graph\n${example}\n\`\`\``)).toEqual([]);
     expect(await validateMarkdown('```mol\nsmiles: CCO\n```')).toEqual([]);
+    const quiz = /Block ```quiz mit JSON, zum Beispiel (\{.*?\})\. "answer"/s.exec(
+      TECHNICAL_LAYER,
+    )?.[1];
+    expect(quiz).toBeDefined();
+    expect(await validateMarkdown(`\`\`\`quiz\n${quiz}\n\`\`\``)).toEqual([]);
   });
 
   it('setzt die Schichten in der Reihenfolge 0, 1, 2, 3 zusammen', () => {
