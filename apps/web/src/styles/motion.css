@@ -4,14 +4,15 @@
  * Alles Bewegte hängt an diesen Variablen, nie an festen Werten:
  *   --m       Wegfaktor. 1 = volle Wege, 0 = nur Überblenden (kein Verschieben, Drehen, Skalieren).
  *   --t-*     Dauern. --stagger: Versatz zwischen Elementen einer Liste.
+ *   --t-color Dauer kurzer Farb-, Rand- und Schattenwechsel an Bedienelementen (D-058): 140 ms bei „Voll“, sonst 0.
  *   --spring  Feder als linear()-Easing (Rückfall: cubic-bezier).
  *
  * Effektstufen stehen als Klasse am <html> (ui/fx.ts): fx-full (Voreinstellung), fx-reduced (nur kurze
  * Überblendungen, so folgt die App `prefers-reduced-motion`) und fx-off (keine Bewegung). Information
  * steckt nie allein in Bewegung: Zustände sind immer auch ohne sie erkennbar.
  *
- * Leistung: nur transform und opacity werden animiert, dazu die Farbe des Lichts (@property, ein paar
- * Pixel Fläche). Dauerläufer (Schimmer, Schreibmarke) laufen nur auf kleinen Flächen und pausieren im
+ * Leistung: Flächen bewegen sich nur per transform und opacity, dazu die Farbe des Lichts (@property, ein paar
+ * Pixel Fläche) und, an Bedienelementen, kurze Farb- und Schattenwechsel mit --t-color. Dauerläufer (Schimmer, Schreibmarke) laufen nur auf kleinen Flächen und pausieren im
  * Hintergrund-Tab (Klasse tab-hidden).
  */
 
@@ -26,6 +27,7 @@
   --t-fast: 140ms;
   --t-med: 340ms;
   --t-slow: 620ms;
+  --t-color: 140ms;
   --stagger: 48ms;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   /* Feder: Rückfall ohne linear() */
@@ -127,6 +129,7 @@
 /* Reduziert: nur kurze Überblendungen, kein Weg */
 :root.fx-reduced {
   --m: 0;
+  --t-color: 0ms;
   --t-fast: 100ms;
   --t-med: 140ms;
   --t-slow: 160ms;
@@ -139,6 +142,7 @@
 /* Aus: keine Bewegung */
 :root.fx-off {
   --m: 0;
+  --t-color: 0ms;
   --t-fast: 0ms;
   --t-med: 0ms;
   --t-slow: 0ms;
@@ -160,6 +164,7 @@
 @media (prefers-reduced-motion: reduce) {
   :root:not(.fx-full):not(.fx-reduced):not(.fx-off) {
     --m: 0;
+    --t-color: 0ms;
     --t-fast: 100ms;
     --t-med: 140ms;
     --t-slow: 160ms;
