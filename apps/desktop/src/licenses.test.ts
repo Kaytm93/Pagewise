@@ -151,8 +151,14 @@ describe('Lizenzhinweise der gebündelten Pakete', () => {
     expect(names.has('electron')).toBe(false);
     expect(names.has('vitest')).toBe(false);
     expect(found.filter((p) => p.license === 'UNKNOWN').map((p) => p.name)).toEqual([]);
-    // Nur freie Lizenzen: kein GPL, AGPL, SSPL, kein „UNLICENSED“.
-    const unfree = found.filter((p) => /GPL|SSPL|UNLICENSED|Commons-Clause/i.test(p.license));
+    // Nur freie Lizenzen: kein GPL, AGPL, SSPL, kein „UNLICENSED“. Ausnahme: jszip steht unter „MIT OR GPL“
+    // (Pagewise nutzt die MIT-Option, Entscheidung Kay, D-061). Nur genau diese Angabe, nur dieses Paket.
+    const MIT_OPTION = new Map([['jszip', '(MIT OR GPL-3.0-or-later)']]);
+    const unfree = found.filter(
+      (p) =>
+        /GPL|SSPL|UNLICENSED|Commons-Clause/i.test(p.license) &&
+        MIT_OPTION.get(p.name) !== p.license,
+    );
     expect(unfree.map((p) => `${p.name} ${p.license}`)).toEqual([]);
     // Die Schriften stehen unter der OFL und ihr Text geht mit.
     const font = found.find((p) => p.name === '@fontsource/inter');

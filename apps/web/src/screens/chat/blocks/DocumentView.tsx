@@ -3,8 +3,8 @@ import { useMemo, useState } from 'react';
 import { messages as m } from '../../../i18n';
 import { Button } from '../../../ui/Button';
 import { BlockError } from './BlockView';
-import { saveBlob } from './download';
-import { buildPdf, fileName } from './pdf';
+import { fileName, saveBlob } from './download';
+import { buildPdf } from './pdf';
 
 /**
  * Dokument im Chat: eine Vorschau aus Text (ohne Netz) und der Knopf „Als PDF herunterladen“. Die PDF-Datei

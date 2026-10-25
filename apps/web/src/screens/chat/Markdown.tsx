@@ -24,6 +24,7 @@ const MathView = lazy(() => import('./blocks/MathView'));
 const BlockView = lazy(() => import('./blocks/BlockView'));
 const QuizView = lazy(() => import('./blocks/QuizView'));
 const DocumentView = lazy(() => import('./blocks/DocumentView'));
+const SlidesView = lazy(() => import('./blocks/SlidesView'));
 
 /** Ob die Antwort fertig ist: Während des Schreibens ist ein fehlerhafter Block meist nur unfertig. */
 const FinalContext = createContext(true);
@@ -95,7 +96,7 @@ function PreBlock({ children }: { children?: ReactNode }) {
         </Suspense>
       );
     }
-    const kind = /\blanguage-(graph|mol|abc|quiz|document)\b/.exec(className)?.[1];
+    const kind = /\blanguage-(graph|mol|abc|quiz|document|slides)\b/.exec(className)?.[1];
     if (kind === 'graph' || kind === 'mol' || kind === 'abc') {
       return (
         <Suspense fallback={<BlockFallback />}>
@@ -114,6 +115,13 @@ function PreBlock({ children }: { children?: ReactNode }) {
       return (
         <Suspense fallback={<BlockFallback />}>
           <DocumentView source={source} final={final} />
+        </Suspense>
+      );
+    }
+    if (kind === 'slides') {
+      return (
+        <Suspense fallback={<BlockFallback />}>
+          <SlidesView source={source} final={final} />
         </Suspense>
       );
     }

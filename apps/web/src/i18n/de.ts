@@ -330,6 +330,7 @@ export const de = {
     abc: 'Noten',
     quiz: 'Quiz',
     document: 'Dokument',
+    slides: 'Präsentation',
     errorTitle: '{kind} konnte nicht gezeichnet werden.',
     errors: {
       empty: 'Der Block ist leer.',
@@ -347,6 +348,8 @@ export const de = {
         'Der Aufbau des Quiz passt nicht: Fragen, Antworten und genau eine richtige Lösung müssen stimmen.',
       invalid_document:
         'Der Aufbau des Dokuments passt nicht: Titel, Abschnitte und Texte müssen stimmen.',
+      invalid_slides:
+        'Der Aufbau der Präsentation passt nicht: Titel, Folien, Stichpunkte und Absätze müssen stimmen.',
       unsupported_text:
         'Das Dokument enthält Zeichen, die das PDF nicht darstellt. Tiefgestellte Ziffern schreibt man als normale Ziffern, zum Beispiel H2O.',
       render_failed: 'Das Zeichnen ist fehlgeschlagen.',
@@ -374,6 +377,12 @@ export const de = {
       download: 'Als PDF herunterladen',
       making: 'PDF wird erstellt …',
       failed: 'Das PDF konnte nicht erstellt werden. Versuche es noch einmal.',
+    },
+    slidesView: {
+      slideOf: 'Folie {n} von {total}',
+      download: 'Als PowerPoint herunterladen',
+      making: 'Präsentation wird erstellt …',
+      failed: 'Die Präsentation konnte nicht erstellt werden. Versuche es noch einmal.',
     },
   },
   notes: {

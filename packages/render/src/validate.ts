@@ -4,6 +4,7 @@ import { type BlockIssue, RenderError } from './errors';
 import { validateGraph } from './graph';
 import { parseMolSpec, validateFormulaSpec } from './mol';
 import { validateQuiz } from './quiz';
+import { validateSlides } from './slides';
 
 function issue(
   block: Block,
@@ -44,6 +45,9 @@ export async function validateMarkdown(markdown: string): Promise<BlockIssue[]> 
         break;
       case 'document':
         error = validateDocument(block.source);
+        break;
+      case 'slides':
+        error = validateSlides(block.source);
         break;
       case 'mol': {
         const spec = parseMolSpec(block.source);

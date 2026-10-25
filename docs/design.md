@@ -74,6 +74,7 @@ Rahmen und Startfläche folgen der **gewählten** Darstellung, nicht nur dem Ger
 - Fläche: `bg-paper` (Blatt in allen drei Richtungen), Rand über `control-edge` und die Akzentfarbe; Kanten wechseln nur nach dem Prüfen.
 - Auswertung nur im Speicher der Ansicht: kein Netz, nichts wird gespeichert, „Noch einmal“ setzt alles zurück.
 - Dokument-Vorschau (D-060): ein Blatt auf `bg-canvas` mit Rand `control-edge`, höchstens 21 cm breit, darunter der Knopf „Als PDF herunterladen“. Die Vorschau zeigt Text, das PDF entsteht erst beim Klicken.
+- Folien-Vorschau (D-061): je Folie eine Karte im Format 16:9 (`aspect-video`) auf `bg-canvas`, Rand `control-edge`; die Karte wächst mit dem Inhalt statt abzuschneiden. Darunter der Knopf „Als PowerPoint herunterladen“.
 
 ## Unterstützte Browser
 

@@ -78,7 +78,8 @@ describe('composePrompt', () => {
   it('enthält keine Schulinhalte und keine Variablen in der technischen Schicht', () => {
     expect(TECHNICAL_LAYER).not.toMatch(/\{\{/);
     // Jede Nachricht bezahlt diese Schicht in Token mit: knapp halten.
-    expect(TECHNICAL_LAYER.length).toBeLessThan(1500);
+    // D-034 nannte 1.500; D-060 hebt die Grenze für Dokument und Präsentation an (zur Bestätigung durch Kay).
+    expect(TECHNICAL_LAYER.length).toBeLessThan(2000);
   });
 
   it('erklärt die Blöcke der Hefteinträge und nennt alle Summenformeln der Zeichnung', () => {
@@ -88,6 +89,8 @@ describe('composePrompt', () => {
       '```mol',
       '```abc',
       '```quiz',
+      '```document',
+      '```slides',
       '[!merksatz]',
       '[!beispiel]',
       '[!aufgabe]',
@@ -111,6 +114,16 @@ describe('composePrompt', () => {
     )?.[1];
     expect(quiz).toBeDefined();
     expect(await validateMarkdown(`\`\`\`quiz\n${quiz}\n\`\`\``)).toEqual([]);
+    const document = /Block ```document mit JSON, zum Beispiel (\{.*?\})\. /s.exec(
+      TECHNICAL_LAYER,
+    )?.[1];
+    expect(document).toBeDefined();
+    expect(await validateMarkdown(`\`\`\`document\n${document}\n\`\`\``)).toEqual([]);
+    const slides = /Block ```slides mit JSON, zum Beispiel (\{.*?\})\. /s.exec(
+      TECHNICAL_LAYER,
+    )?.[1];
+    expect(slides).toBeDefined();
+    expect(await validateMarkdown(`\`\`\`slides\n${slides}\n\`\`\``)).toEqual([]);
   });
 
   it('setzt die Schichten in der Reihenfolge 0, 1, 2, 3 zusammen', () => {
