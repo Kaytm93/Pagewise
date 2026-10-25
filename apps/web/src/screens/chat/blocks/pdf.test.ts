@@ -1,6 +1,7 @@
 import { parseDocumentSpec } from '@pagewise/render/document';
 import { describe, expect, it } from 'vitest';
-import { buildPdf, fileName } from './pdf';
+import { fileName } from './download';
+import { buildPdf } from './pdf';
 
 const spec = (overrides: Record<string, unknown> = {}) => {
   const result = parseDocumentSpec(

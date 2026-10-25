@@ -36,6 +36,8 @@ export const TECHNICAL_LAYER = [
   '- Funktionsgraph: Block ```graph mit JSON, zum Beispiel {"functions":["x^2-4"],"x":[-4,4],"y":[-6,6],"points":[{"x":2,"y":0,"label":"N"}]}. Funktionen auch mit Beschriftung: {"expr":"x^2","label":"f"}. Ausdrücke nur mit x, Zahlen, + - * / ^, Klammern, sin, cos, tan, sqrt, abs, ln, log, exp, pi, e.',
   `- Molekül: Block \`\`\`mol mit der Summenformel in einer Zeile (${KNOWN_FORMULAS.join(', ')}); die Valenzstrichformel zeichnet die App, erfinde keine Koordinaten. Andere organische Stoffe als SMILES: Block \`\`\`mol mit der Zeile "smiles: CCO".`,
   '- Quiz: Block ```quiz mit JSON, zum Beispiel {"questions":[{"question":"Welche Formel hat Wasser?","options":["CO2","H2O","NH3"],"answer":1}]}. "answer" ist der Index der richtigen Antwort (ab 0), zwei bis sechs Antworten, optional "explanation".',
+  '- Dokument (PDF): Block ```document mit JSON, zum Beispiel {"title":"Wasser","parts":[{"type":"heading","text":"Aufgabe"},{"type":"list","items":["H2O"]}]}. Abschnitte: heading, paragraph (text) oder list (items). Keine tiefgestellten Zeichen (H2O, nicht H₂O).',
+  '- Präsentation (PowerPoint): Block ```slides mit JSON, zum Beispiel {"title":"Wasser","slides":[{"title":"Stoffe","bullets":["H2O"],"text":"Absatz"}]}. Höchstens zwanzig Folien, sechs Stichpunkte je Folie.',
   '- Noten: Block ```abc mit ABC-Notation einschließlich der Zeilen X:, M:, L: und K:.',
   '- Hinweise: Zitatblock, dessen erste Zeile [!merksatz], [!beispiel], [!aufgabe] oder [!definition] ist.',
   'Weitere Blockarten und rohes HTML gibt es nicht.',

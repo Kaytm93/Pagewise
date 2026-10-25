@@ -15,3 +15,14 @@ export function saveBlob(blob: Blob, name: string): void {
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
+
+/** Dateiname aus dem Titel: ohne Zeichen, die Dateisysteme nicht mögen, und höchstens 80 Zeichen. */
+export function fileName(title: string, extension: string): string {
+  const base = title
+    .replace(/[\\/:*?"<>|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80)
+    .trim();
+  return `${base || 'Dokument'}.${extension}`;
+}
