@@ -73,6 +73,7 @@ Rahmen und Startfläche folgen der **gewählten** Darstellung, nicht nur dem Ger
 - Richtig und Falsch stehen als Text mit Symbol da, nie nur als Farbe. Das Ergebnis erhält nach „Prüfen“ den Fokus.
 - Fläche: `bg-paper` (Blatt in allen drei Richtungen), Rand über `control-edge` und die Akzentfarbe; Kanten wechseln nur nach dem Prüfen.
 - Auswertung nur im Speicher der Ansicht: kein Netz, nichts wird gespeichert, „Noch einmal“ setzt alles zurück.
+- Dokument-Vorschau (D-060): ein Blatt auf `bg-canvas` mit Rand `control-edge`, höchstens 21 cm breit, darunter der Knopf „Als PDF herunterladen“. Die Vorschau zeigt Text, das PDF entsteht erst beim Klicken.
 
 ## Unterstützte Browser
 

@@ -25,4 +25,4 @@ export async function autoFixRequest(content: string): Promise<string | null> {
 
 /** Sieht der Text nach einem Block aus? Spart das Laden der Prüfung bei gewöhnlichen Antworten. */
 export const mayContainBlocks = (content: string): boolean =>
-  /```(?:graph|mol|abc|quiz)|\$/i.test(content);
+  /```(?:graph|mol|abc|quiz|document)|\$/i.test(content);
