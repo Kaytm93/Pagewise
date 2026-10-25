@@ -46,6 +46,7 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | „Alles löschen“ leert jede Tabelle außer Anmeldung, Sitzungen und Migrationsprotokoll (auch künftige) | umgesetzt, siehe D-038 |
 | Verschlüsselte Backups und Export | geplant |
 | Werkzeugzugriff der KI: nur lesend, geprüfte Argumente, begrenzte Ausgabe, Schalter global und je Anbieter, nur Name und Zustand gespeichert | umgesetzt (Welle 3), siehe D-044 und [tools.md](tools.md) |
+| Websuche der KI: standardmäßig aus, Suchbegriff im Chat sichtbar, Schlüssel nur im Secret-Speicher, Begriffsprüfung gegen E-Mail, Telefonnummer und lange Zahlen, Grenzen je Antwort und Minute, Treffer als Daten | umgesetzt, siehe D-067 und [tools.md](tools.md) |
 | Mac-App: Fenster mit Sandkasten, getrenntem Kontext und ohne Node, Hauptfenster ohne Preload, alle Berechtigungen der Seite abgelehnt, Navigation nur zur eigenen Herkunft | umgesetzt (Mac-Hülle), im echten Electron gemessen, siehe D-053 |
 | Mac-App: Server als Unterprozess mit Allowlist-Umgebung und leerer Argumentliste, Status und Einrichtungscode nur über IPC, nie über HTTP | umgesetzt, siehe D-050, D-051, D-053 |
 | Mac-App: Hüllen-Fenster nur mit festen Funktionen im Preload, IPC nur von eigenen lokalen Seiten (Sender und Frame-URL geprüft), strenge CSP ohne Inline-Skript und -Style | umgesetzt, siehe D-053, D-054 |
@@ -86,6 +87,7 @@ Alles, was Nutzerdaten enthält, liegt im Datenverzeichnis: Datenbank, Uploads, 
 - Ein lokales Skript kann keine Garantie geben. Der Scan erkennt bekannte Muster, nicht jedes Geheimnis. Prüfe Commits vor dem Veröffentlichen selbst.
 - Wer Zugriff auf den Rechner hat, hat Zugriff auf die Daten. Das Datenverzeichnis ist nicht verschlüsselt, nutze die Festplattenverschlüsselung deines Systems.
 - Modell-Anbieter sehen, was du ihnen sendest. Free-Modelle können Prompts protokollieren. Pagewise prüft die Datenschutzregeln der Anbieter nicht, auch nicht die von OpenRouter und der Anbieter dahinter.
+- Die Websuche schickt Suchbegriffe, die das Modell schreibt, an Brave Search, einen Dienst außerhalb dieses Geräts. Sie ist standardmäßig aus. Die Begriffsprüfung erkennt E-Mail-Adressen, Telefonnummern und lange Zahlen, aber keine Namen oder Schulen. Lies die Datenschutzbedingungen des Dienstes, bevor du die Suche einschaltest.
 - Ein eingetragener Anbieter bekommt deinen Schlüssel und alles, was du an ihn schickst. Trägst du eine fremde Adresse ein, geht der Schlüssel dorthin. Pagewise prüft nur, dass die Adresse `https` nutzt, nicht, wem sie gehört.
 - Die Sicherungen vor Migrationen im Ordner `backups` sind unverschlüsselt, wie der Rest des Datenverzeichnisses.
 - „Alles löschen“ erreicht nur Pagewise selbst. Kopien durch Time Machine, Snapshots des Dateisystems oder eine Cloud-Sicherung des Ordners bleiben bestehen, und auf SSDs gibt es kein garantiertes Überschreiben. Schließe das Datenverzeichnis aus solchen Sicherungen aus, wenn das wichtig ist.

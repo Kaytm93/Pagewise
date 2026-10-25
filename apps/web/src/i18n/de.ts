@@ -669,6 +669,7 @@ export const de = {
     tools: {
       get_timetable: 'Stundenplan eingesehen',
       get_exams: 'Tests eingesehen',
+      web_search: 'Websuche',
     },
     modelDialog: {
       chatTitle: 'Modell für diesen Chat',
@@ -1153,7 +1154,7 @@ export const de = {
       points: [
         'Deine Daten liegen nur auf diesem Rechner, in einem Datenverzeichnis außerhalb des Programmordners.',
         'Pagewise sammelt nichts: keine Telemetrie, keine Konten, keine Analyse.',
-        'Daten verlassen den Rechner nur, wenn du sie an einen Anbieter schickst. Dann gehen Prompt, Verlauf und Bilder an den Anbieter, den du für das Fach oder den Chat gewählt hast. Kostenlose Modelle können Eingaben protokollieren, schick dort nichts Sensibles.',
+        'Daten verlassen den Rechner nur, wenn du sie an einen Anbieter schickst. Dann gehen Prompt, Verlauf und Bilder an den Anbieter, den du für das Fach oder den Chat gewählt hast. Kostenlose Modelle können Eingaben protokollieren, schick dort nichts Sensibles. Die Websuche der KI ist standardmäßig aus. Schaltest du sie ein, gehen die Suchbegriffe der KI an Brave Search.',
         'API-Schlüssel bleiben auf dem Server und werden in der Oberfläche nie angezeigt.',
       ],
       finish: 'Los geht’s',
@@ -1176,6 +1177,32 @@ export const de = {
       hint: 'Die Daten gehen nur an den Anbieter, wenn das Modell sie über ein Werkzeug anfordert, nie mit jeder Nachricht. Das Modell muss Werkzeuge unterstützen (in der Modellliste des Anbieters markiert), und der Anbieter muss es erlauben. Im Chat siehst du, wann sie genutzt wurden. Die KI kann nichts ändern.',
       failed: 'Die Einstellung konnte nicht gespeichert werden.',
       loading: 'Wird geladen …',
+    },
+    webSearch: {
+      title: 'Websuche für die KI',
+      lead: 'Die KI kann im Internet nach aktuellen Informationen suchen. Dafür braucht Pagewise einen Schlüssel der Brave Search API.',
+      label: 'KI darf im Internet suchen',
+      hint: 'Die Suchbegriffe, die die KI schreibt, gehen an Brave Search, einen Dienst außerhalb dieses Geräts. Im Chat siehst du jeden Suchbegriff. Standardmäßig aus.',
+      keyLabel: 'Schlüssel der Brave Search API',
+      keyHint: 'Wird auf diesem Gerät gespeichert und nie wieder angezeigt.',
+      keyRequired: 'Gib einen Schlüssel ein.',
+      keyInvalid:
+        'Der Schlüssel konnte nicht gespeichert werden. Er darf nur aus einer Zeile bestehen.',
+      saveKey: 'Schlüssel speichern',
+      removeKey: 'Schlüssel entfernen',
+      check: 'Verbindung prüfen',
+      checkOk: 'Die Verbindung funktioniert ({count} Treffer bei der Prüfsuche).',
+      failed: 'Die Einstellung konnte nicht gespeichert werden.',
+      loading: 'Wird geladen …',
+      errors: {
+        not_configured: 'Speichere zuerst einen Schlüssel.',
+        auth_failed: 'Der Dienst hat den Schlüssel abgelehnt.',
+        rate_limited: 'Der Dienst meldet gerade zu viele Anfragen. Versuch es später erneut.',
+        unavailable: 'Der Suchdienst ist gerade nicht erreichbar.',
+        timeout: 'Der Suchdienst antwortet nicht rechtzeitig.',
+        invalid_response: 'Der Suchdienst hat eine unbrauchbare Antwort geschickt.',
+        failed: 'Die Prüfung ist fehlgeschlagen.',
+      },
     },
     answers: {
       title: 'Antworten',

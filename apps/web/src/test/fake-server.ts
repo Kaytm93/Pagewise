@@ -199,6 +199,12 @@ export class FakeServer {
   exams: Exam[] = [];
   notes: Note[] = [];
   toolsEnabled = true;
+  /** Websuche: Schalter, letzte Zeichen des Schlüssels und die Antwort der Prüfsuche. */
+  webSearch = {
+    enabled: false,
+    keyHint: null as string | null,
+    testReply: { ok: true, results: 1 } as { ok: boolean; results?: number; error?: string },
+  };
   /** Das eingebaute Fach „Standard“, wie es der echte Server immer mitliefert. */
   defaultSubject: Subject = this.freshDefaultSubject();
   /** Katalog der Fachvorlagen (erfundene Namen). */
@@ -1059,6 +1065,21 @@ export class FakeServer {
     if (path === '/api/tool-settings') {
       if (method === 'PUT') this.toolsEnabled = data.enabled === true;
       return json(200, { enabled: this.toolsEnabled });
+    }
+    if (path === '/api/web-search') {
+      if (method === 'PUT') {
+        if (typeof data.enabled === 'boolean') this.webSearch.enabled = data.enabled;
+        if (typeof data.apiKey === 'string') this.webSearch.keyHint = data.apiKey.slice(-4);
+        if (data.clearKey === true) this.webSearch.keyHint = null;
+      }
+      return json(200, {
+        enabled: this.webSearch.enabled,
+        hasKey: this.webSearch.keyHint !== null,
+        keyHint: this.webSearch.keyHint,
+      });
+    }
+    if (path === '/api/web-search/test' && method === 'POST') {
+      return json(200, this.webSearch.testReply);
     }
     if (path === '/api/timetable' && method === 'GET') {
       return json(200, { entries: this.timetable, weekAnchor: this.weekAnchor });

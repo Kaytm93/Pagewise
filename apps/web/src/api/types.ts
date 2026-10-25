@@ -199,6 +199,15 @@ export interface ActivityEntry {
   state: 'running' | 'done' | 'error';
 }
 
+/** Zustand der Websuche. Der Schlüssel selbst kommt nie zurück, nur seine letzten Zeichen. */
+export interface WebSearchStatus {
+  enabled: boolean;
+  hasKey: boolean;
+  keyHint: string | null;
+}
+
+export type WebSearchTest = { ok: true; results: number } | { ok: false; error: string };
+
 /** Eine Datei, die ein Agent erzeugt hat. Der Download läuft über `api.assetUrl(id)`. */
 export interface ChatAsset {
   id: string;

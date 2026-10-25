@@ -1,12 +1,13 @@
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 import { ApiError } from '../api/client';
-import { messages as m } from '../i18n';
+import type { WebSearchStatus } from '../api/types';
+import { format, messages as m } from '../i18n';
 import { useSession } from '../session/SessionProvider';
 import { readAutoFix, saveAutoFix } from '../ui/autofix';
 import { Button } from '../ui/Button';
 import { type Design, readDesign, saveDesign } from '../ui/design';
 import { isDesktopApp, openDesktopUpdate } from '../ui/desktop-app';
-import { CheckField, PasscodeField } from '../ui/Field';
+import { CheckField, PasscodeField, SecretField } from '../ui/Field';
 import { FieldError } from '../ui/FieldError';
 import { type FxPreference, readFx, saveFx } from '../ui/fx';
 import { Segmented } from '../ui/Segmented';
@@ -202,6 +203,127 @@ function ToolsChoice() {
   );
 }
 
+/** Die Websuche für die KI: Schalter, Schlüssel und Verbindungstest. Standardmäßig aus. */
+function WebSearchChoice() {
+  const { api } = useSession();
+  const t = m.settings.webSearch;
+  const [status, setStatus] = useState<WebSearchStatus | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [keyError, setKeyError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [check, setCheck] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .webSearch()
+      .then((value) => {
+        if (!cancelled) setStatus(value);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
+
+  /** Speichert eine Änderung. Gibt `false` zurück, wenn sie abgelehnt wurde. */
+  async function change(patch: { enabled?: boolean; apiKey?: string; clearKey?: boolean }) {
+    setFailed(false);
+    setBusy(true);
+    try {
+      setStatus(await api.setWebSearch(patch));
+      return true;
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.code === 'invalid_input') {
+        setKeyError(t.keyInvalid);
+      } else {
+        setFailed(true);
+      }
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveKey(event: FormEvent) {
+    event.preventDefault();
+    const value = apiKey.trim();
+    if (value === '') return setKeyError(t.keyRequired);
+    setKeyError(null);
+    if (await change({ apiKey: value })) setApiKey('');
+  }
+
+  async function runCheck() {
+    setCheck(null);
+    try {
+      const result = await api.testWebSearch();
+      setCheck(
+        result.ok
+          ? format(t.checkOk, { count: String(result.results) })
+          : ((t.errors as Record<string, string>)[result.error] ?? t.errors.failed),
+      );
+    } catch {
+      setCheck(t.errors.failed);
+    }
+  }
+
+  if (status === null && !failed) {
+    return (
+      <p role="status" className="text-ink-muted">
+        {t.loading}
+      </p>
+    );
+  }
+  if (status === null) return <FieldError>{t.failed}</FieldError>;
+  return (
+    <div className="space-y-6">
+      <CheckField
+        label={t.label}
+        hint={t.hint}
+        checked={status.enabled}
+        onChange={(value) => void change({ enabled: value })}
+      />
+      <form onSubmit={saveKey} className="max-w-sm space-y-4" noValidate>
+        <SecretField
+          label={t.keyLabel}
+          value={apiKey}
+          onChange={(event) => setApiKey(event.target.value)}
+          hint={
+            status.hasKey && status.keyHint
+              ? format(m.providers.keySetEnding, { last4: status.keyHint })
+              : t.keyHint
+          }
+          error={keyError ?? undefined}
+          showLabel={m.providers.form.showKey}
+          hideLabel={m.providers.form.hideKey}
+        />
+        <div className="flex flex-wrap gap-3">
+          <Button type="submit" variant="primary" busy={busy} disabled={apiKey.trim() === ''}>
+            {t.saveKey}
+          </Button>
+          {status.hasKey && (
+            <Button busy={busy} onClick={() => void change({ clearKey: true })}>
+              {t.removeKey}
+            </Button>
+          )}
+          <Button busy={busy} onClick={() => void runCheck()}>
+            {t.check}
+          </Button>
+        </div>
+      </form>
+      {check && (
+        <p role="status" className="text-sm text-ink-secondary">
+          {check}
+        </p>
+      )}
+      {failed && <FieldError>{t.failed}</FieldError>}
+    </div>
+  );
+}
+
 function ChangePasscode() {
   const { api } = useSession();
   const [current, setCurrent] = useState('');
@@ -340,6 +462,9 @@ export function SettingsPage() {
         </Section>
         <Section title={m.settings.tools.title} lead={m.settings.tools.lead}>
           <ToolsChoice />
+        </Section>
+        <Section title={m.settings.webSearch.title} lead={m.settings.webSearch.lead}>
+          <WebSearchChoice />
         </Section>
         <Section title={m.agents.title} lead={m.agents.lead}>
           <AgentSection />

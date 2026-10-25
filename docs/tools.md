@@ -1,6 +1,6 @@
 # Werkzeuge der KI (Tool Calling)
 
-Stand: 4. Oktober 2026 (D-044). Chat-Modelle können kleine, **nur lesende** Werkzeuge aufrufen. Heute: `get_timetable` und `get_exams` (Stundenplan und Tests). Das Register ist allgemein gebaut, der Agent-Modus für API-Modelle (Phase 3) nutzt es wieder.
+Stand: 26. Oktober 2026 (D-044, D-067). Chat-Modelle können kleine, **nur lesende** Werkzeuge aufrufen. Heute: `get_timetable` und `get_exams` (Stundenplan und Tests) sowie `web_search` (Websuche, eigener Schalter, standardmäßig aus, siehe unten). Das Register ist allgemein gebaut, der Agent-Modus für API-Modelle (Phase 3) nutzt es wieder.
 
 ## Wann ein Modell Werkzeuge bekommt
 
@@ -25,9 +25,18 @@ Das Modell bekommt die Werkzeuge im Format der Schnittstelle (`tools`) und einen
 - Weder Argumente noch Ergebnisse stehen in Logs, Fehlermeldungen oder der Datenbank. Gespeichert wird nur Name, kurzes Ziel (`target`, zum Beispiel ein Wochentag) und Zustand.
 - Freitext aus Ergebnissen (Notizen, Themen) ist Fremdtext: Er steht als JSON-String in den Daten und löst nichts aus.
 
+## Websuche (`web_search`, D-067)
+
+- **Freigabe:** Der Schalter „KI darf im Internet suchen“ (Einstellungen, Voreinstellung aus), ein gespeicherter Schlüssel der Brave Search API und die Freigaben von Anbieter und Modell. Ohne Schalter und Schlüssel wird das Werkzeug nicht angeboten.
+- **Was geht hinaus:** Der Suchbegriff, den das Modell schreibt, an Brave Search. Nichts sonst. Der Begriff ist im Chat sichtbar („Websuche: …“), Treffer und Schlüssel nie.
+- **Argumente:** `query` (1 bis 200 Zeichen), optional `count` (1 bis 5). E-Mail-Adressen, Telefonnummern und Zahlenfolgen ab sechs Ziffern werden abgelehnt, ohne dass gesucht wird.
+- **Grenzen:** Höchstens 3 Suchen je Antwort, 10 je Minute, 8 Sekunden Zeitlimit, Abbruch bei „Stopp“, keine Weiterleitungen. Treffer: nur `http` und `https`, Markup entfernt, Titel höchstens 200 und Auszug höchstens 300 Zeichen.
+- **Schlüssel:** im Secret-Speicher unter `search.key`, wie bei den Anbietern. Antworten nennen nur `hasKey` und die letzten vier Zeichen.
+- **Routen:** `GET`, `PUT` und `POST /api/web-search/test` (Verbindungstest mit einer festen, neutralen Suche).
+
 ## Ein Werkzeug hinzufügen
 
-1. In `apps/server/src/tools/` eine `ToolDefinition` schreiben (Name, Beschreibung, `parameters` als JSON-Schema, `schema` als strenges zod-Objekt, `target`, `run`).
+1. In `apps/server/src/tools/` eine `ToolDefinition` schreiben (Name, Beschreibung, `parameters` als JSON-Schema, `schema` als strenges zod-Objekt, `target`, optional `available`, `run`). `run` darf asynchron sein; ein Fehler mit Code wird als `ToolError` geworfen.
 2. In `tools/index.ts` mit `register(…)` anmelden.
 3. Die Oberfläche braucht eine Bezeichnung unter `chat.tools` in `i18n/de.ts` und den Namen in `MODEL_TOOLS` (`screens/chat/ToolNotes.tsx`).
 4. Tests: Argumente (gültig, ungültig, fremde Felder), Grenzen der Ausgabe, kein Schreiben (Daten vorher und nachher gleich), Notiz mit Befehlstext.

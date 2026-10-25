@@ -37,6 +37,8 @@ import type {
   TimetableData,
   TimetableEntry,
   TimetableInput,
+  WebSearchStatus,
+  WebSearchTest,
   WeekAnchor,
 } from './types';
 
@@ -237,6 +239,13 @@ export function createApi(client: ApiClient) {
       return (await client.request<{ enabled: boolean }>('PUT', '/api/tool-settings', { enabled }))
         .enabled;
     },
+
+    /** Websuche: Schalter und Schlüssel. Der Schlüssel kommt nie zurück, nur seine letzten Zeichen. */
+    webSearch: () => client.request<WebSearchStatus>('GET', '/api/web-search'),
+    setWebSearch: (patch: { enabled?: boolean; apiKey?: string; clearKey?: boolean }) =>
+      client.request<WebSearchStatus>('PUT', '/api/web-search', patch),
+    /** Prüft die Verbindung mit einer festen, neutralen Suche. */
+    testWebSearch: () => client.request<WebSearchTest>('POST', '/api/web-search/test'),
 
     /** Adresse zum Herunterladen einer Datei (gleiche Herkunft, Anmeldung per Cookie). */
     assetUrl: (id: string) => `/api/assets/${id}/download`,

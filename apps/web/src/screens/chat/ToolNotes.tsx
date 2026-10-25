@@ -2,8 +2,11 @@ import { Check, X } from 'lucide-react';
 import type { ActivityEntry } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 
-/** Werkzeuge, die ein Modell im Chat aufrufen kann (Stundenplan, Tests). Alles andere ist Arbeit eines Agenten. */
-const MODEL_TOOLS = new Set(['get_timetable', 'get_exams']);
+/**
+ * Werkzeuge, die ein Modell im Chat aufrufen kann (Stundenplan, Tests, Websuche). Alles andere ist Arbeit eines
+ * Agenten.
+ */
+const MODEL_TOOLS = new Set(['get_timetable', 'get_exams', 'web_search']);
 
 export const isModelTool = (entry: ActivityEntry): boolean => MODEL_TOOLS.has(entry.tool);
 
