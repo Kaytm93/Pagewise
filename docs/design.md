@@ -17,7 +17,8 @@ Die drei Mockups (A „Lagen“, B „Atelier“, C „Raum“) wurden mit dem B
 - **Atelier:** `--hue-ink` je Fach als AA-Textton, Licht über `--at-k`, Tagesliste mit „Jetzt“-Linie, Fachseite als Arbeitsplatz (`atelier-fach.css`, `screens/atelier/SubjectAtelier*`: Kennzahlenzeile, Untergruppen als Kacheln und Filter, großes gezeichnetes Motiv), Chat mit Randmotiv, Status im Kopf und Fachglühen am Composer, Zeigerlicht (`ui/pointer-glow.ts`: nur Atelier, Stufe „Voll“, Maus oder Stift, sichtbarer Tab).
 - **Raum:** Tageslinie als Zeitachse mit wandernder Marke (`screens/raum/timeline.ts`, Pausenlogik unverändert), Dunkelton `--page-hi`, vier Fensterscheiben, Parallaxe mit zwei Ebenen und Glättung (`ui/parallax.ts`), Chat in Raum-Optik, Anmelde-Hülle ohne Fachkantenlinie (`lg-sheet-auth`). Hüllenfehler (S-02): Ordnerrücken, Randlinie und Eingabezeile sind korrigiert (Ursachen in den Commits).
 - **Bewegung:** neue Ausnahme für Bedienelemente, siehe unten (`--t-color`).
-- **Offen:** Befehlsleiste, Bot-Kopf je Chat-Nachricht (`MessageItem.tsx`), feste Fußzeile in `ProviderDialog` und im Chat, Zahlen für Chats und Hefteinträge im Atelier-Ledger (keine Daten ohne neue Abfrage), Motiv auf der Atelier-Startseite, Zähler an den Lagen-Reitern.
+- **Nachgetragen (25. Oktober, später):** feste Fußzeile (`ModalFooter`) auch in `ProviderDialog` und im Umbenennen-Dialog des Chats; Linienmotiv neben der Eingabe auf der Atelier-Startseite (`screens/atelier/StartMotif.tsx`, ab 820 px Breite); Kopfzeile je Antwort in Atelier (`screens/atelier/BotHead.tsx`: Zeichen in Fachfarbe, Name, Modell, Zustand; rein optisch, `aria-hidden`).
+- **Offen:** Befehlsleiste, Zahlen für Chats und Hefteinträge im Atelier-Ledger (keine Daten ohne neue Abfrage), Zähler an den Lagen-Reitern.
 
 ## Lagen (D-043)
 
