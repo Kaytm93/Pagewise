@@ -22,6 +22,7 @@ import { useCopy } from './useCopy';
 // ein solcher Block in einer Antwort vorkommt (das Hauptpaket bleibt klein, der Chat auch).
 const MathView = lazy(() => import('./blocks/MathView'));
 const BlockView = lazy(() => import('./blocks/BlockView'));
+const QuizView = lazy(() => import('./blocks/QuizView'));
 
 /** Ob die Antwort fertig ist: Während des Schreibens ist ein fehlerhafter Block meist nur unfertig. */
 const FinalContext = createContext(true);
@@ -93,11 +94,18 @@ function PreBlock({ children }: { children?: ReactNode }) {
         </Suspense>
       );
     }
-    const kind = /\blanguage-(graph|mol|abc)\b/.exec(className)?.[1];
+    const kind = /\blanguage-(graph|mol|abc|quiz)\b/.exec(className)?.[1];
     if (kind === 'graph' || kind === 'mol' || kind === 'abc') {
       return (
         <Suspense fallback={<BlockFallback />}>
           <BlockView kind={kind} source={source} final={final} />
+        </Suspense>
+      );
+    }
+    if (kind === 'quiz') {
+      return (
+        <Suspense fallback={<BlockFallback />}>
+          <QuizView source={source} final={final} />
         </Suspense>
       );
     }

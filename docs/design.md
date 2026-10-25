@@ -67,6 +67,13 @@ Rahmen und Startfläche folgen der **gewählten** Darstellung, nicht nur dem Ger
 4. Bedienflächen mindestens 44 px, sichtbarer Fokus (`:focus-visible`), Tastaturbedienung, Zielgröße auch bei Symbolen.
 5. Neue Abhängigkeiten (Animationsbibliothek, Shader, Canvas) nur nach Prüfung von Version, Größe, Lizenz und CSP-Verträglichkeit.
 
+## Interaktive Blöcke im Chat (D-059, 25. Oktober 2026)
+
+- Das Quiz ist ein Bedienelement, kein Bild: Antwortfelder sind echte Optionsfelder in einer Gruppe mit Legende (Tastatur: Pfeiltasten, Leertaste), Mindesthöhe 44 px, Fokus sichtbar über `outline` der Bedienfläche.
+- Richtig und Falsch stehen als Text mit Symbol da, nie nur als Farbe. Das Ergebnis erhält nach „Prüfen“ den Fokus.
+- Fläche: `bg-paper` (Blatt in allen drei Richtungen), Rand über `control-edge` und die Akzentfarbe; Kanten wechseln nur nach dem Prüfen.
+- Auswertung nur im Speicher der Ansicht: kein Netz, nichts wird gespeichert, „Noch einmal“ setzt alles zurück.
+
 ## Unterstützte Browser
 
 Voll: Safari 17.2 und neuer (iOS und iPadOS 17.2+), Chrome und Firefox der letzten Jahre. Die Federn nutzen `linear()` (Safari 17.2), die Lichtfarbe `@property` (Safari 16.4), der Umschalter `:has()` (Safari 15.4), Mischfarben `color-mix()` (Safari 16.2). Ältere Geräte verlieren Bewegung und Licht, die Oberfläche bleibt benutzbar; Rückfälle sind vorgesehen (Feder als `cubic-bezier`, Licht ohne Übergang).
