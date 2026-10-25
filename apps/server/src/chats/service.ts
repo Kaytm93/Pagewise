@@ -24,7 +24,7 @@ import { ProviderError } from '../providers/errors';
 import type { Selection } from '../providers/models';
 import type { ProviderService } from '../providers/service';
 import { withToolInstructions } from '../tools/instructions';
-import type { ToolRegistry } from '../tools/registry';
+import type { ToolContext, ToolRegistry } from '../tools/registry';
 import type { ToolSettings } from '../tools/settings';
 import { type ChatErrorCode, Generation, type MessageStatus, type MessageView } from './generation';
 import {
@@ -793,7 +793,15 @@ export class ChatService {
           (this.toolSettings?.enabled() ?? true) &&
           resolved.allowTools &&
           resolved.model.tools;
-        const system = toolsOn ? withToolInstructions(input.system, this.now()) : input.system;
+        // Der Kontext gehört zu dieser Antwort; nur die Werkzeuge, die gerade verfügbar sind, gehen an das Modell.
+        const toolContext: ToolContext = {
+          db: this.db,
+          now: this.now,
+          signal: generation.abort.signal,
+        };
+        const offered = toolsOn && registry ? await registry.specs(toolContext) : [];
+        const system =
+          offered.length > 0 ? withToolInstructions(input.system, this.now()) : input.system;
         // Bilder im Verlauf: nur ein Modell mit Bildverstehen bekommt sie; alle anderen lesen den Text.
         const vision = resolved.model.vision === true;
         const conversation: ChatMessage[] = [
@@ -826,7 +834,7 @@ export class ChatService {
                 messages: conversation,
                 // In der letzten Runde ohne Werkzeuge: Das Modell muss mit dem antworten, was es hat.
                 tools:
-                  toolsOn && registry && rounds < MAX_TOOL_ROUNDS ? registry.specs() : undefined,
+                  toolsOn && offered.length > 0 && rounds < MAX_TOOL_ROUNDS ? offered : undefined,
               },
               generation.abort.signal,
             );
@@ -884,16 +892,13 @@ export class ChatService {
                 type: 'activity',
                 entry: { id, tool: call.name, target: null, state: 'running' },
               });
-              const outcome = registry.execute(call.name, call.arguments, {
-                db: this.db,
-                now: this.now,
-              });
+              const outcome = await registry.execute(call.name, call.arguments, toolContext);
               generation.emit({
                 type: 'activity',
                 entry: {
                   id,
                   tool: call.name,
-                  target: outcome.ok ? outcome.target : null,
+                  target: outcome.target,
                   state: outcome.ok ? 'done' : 'error',
                 },
               });

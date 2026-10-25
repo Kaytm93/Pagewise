@@ -17,6 +17,8 @@ export interface ToolContext {
   db: Db;
   /** Aktuelle Zeit; in Tests fest. */
   now: () => Date;
+  /** Bricht Werkzeuge mit Netzzugriff ab, wenn die Person „Stopp“ drückt. */
+  signal?: AbortSignal;
 }
 
 export interface ToolDefinition<Args = unknown> {
@@ -29,8 +31,21 @@ export interface ToolDefinition<Args = unknown> {
   schema: z.ZodType<Args>;
   /** Kurzer Hinweis für die Oberfläche („Montag“), nie Inhalte. */
   target: (args: Args) => string | null;
-  /** Führt das Werkzeug aus. Gibt reine Daten (JSON) zurück. */
-  run: (args: Args, context: ToolContext) => unknown;
+  /** Ob das Werkzeug gerade angeboten wird (zum Beispiel nur mit gespeichertem Schlüssel). Ohne Angabe immer. */
+  available?: (context: ToolContext) => boolean | Promise<boolean>;
+  /**
+   * Führt das Werkzeug aus. Gibt reine Daten (JSON) zurück. Ein Fehler mit kurzem Code wird als `ToolError`
+   * geworfen; jede andere Ausnahme wird zu `failed`.
+   */
+  run: (args: Args, context: ToolContext) => unknown | Promise<unknown>;
+}
+
+/** Ein Fehler mit kurzem Code, den das Modell lesen darf. Die Meldung selbst bleibt intern und landet nie im Chat. */
+export class ToolError extends Error {
+  constructor(readonly code: string) {
+    super(code);
+    this.name = 'ToolError';
+  }
 }
 
 /** Angabe eines Werkzeugs für die Anfrage an den Anbieter. */
@@ -42,7 +57,13 @@ export interface ToolSpec {
 
 export type ToolOutcome =
   | { ok: true; content: string; target: string | null }
-  | { ok: false; code: 'unknown_tool' | 'invalid_arguments' | 'failed'; content: string };
+  | {
+      ok: false;
+      code: 'unknown_tool' | 'invalid_arguments' | 'failed';
+      content: string;
+      /** Auch bei Fehlern: Ein Werkzeug, das schon etwas nach außen geschickt hat, nennt, was es war. */
+      target: string | null;
+    };
 
 /** Größte Argumentzeichenfolge, die ein Modell schicken darf. */
 export const MAX_ARGUMENT_CHARACTERS = 4_096;
@@ -80,13 +101,14 @@ export class ToolRegistry {
     return this.tools.has(name);
   }
 
-  /** Die Werkzeuge für eine Anfrage, in der Reihenfolge der Anmeldung. */
-  specs(): ToolSpec[] {
-    return [...this.tools.values()].map(({ name, description, parameters }) => ({
-      name,
-      description,
-      parameters,
-    }));
+  /** Die Werkzeuge für eine Anfrage, die gerade verfügbar sind, in der Reihenfolge der Anmeldung. */
+  async specs(context: ToolContext): Promise<ToolSpec[]> {
+    const offered: ToolSpec[] = [];
+    for (const tool of this.tools.values()) {
+      if (tool.available && !(await tool.available(context))) continue;
+      offered.push({ name: tool.name, description: tool.description, parameters: tool.parameters });
+    }
+    return offered;
   }
 
   /**
@@ -94,32 +116,48 @@ export class ToolRegistry {
    * Werkzeug) werden zu einem Ergebnis mit Fehlercode, das das Modell lesen kann; sie brechen den Chat nicht ab
    * und enthalten nie Eingaben.
    */
-  execute(name: string, rawArguments: string, context: ToolContext): ToolOutcome {
+  async execute(name: string, rawArguments: string, context: ToolContext): Promise<ToolOutcome> {
     const tool = this.tools.get(name);
-    if (!tool) return { ok: false, code: 'unknown_tool', content: errorContent('unknown_tool') };
-    if (rawArguments.length > MAX_ARGUMENT_CHARACTERS) {
-      return { ok: false, code: 'invalid_arguments', content: errorContent('invalid_arguments') };
+    if (!tool || (tool.available && !(await tool.available(context)))) {
+      return {
+        ok: false,
+        code: 'unknown_tool',
+        content: errorContent('unknown_tool'),
+        target: null,
+      };
     }
+    const invalid: ToolOutcome = {
+      ok: false,
+      code: 'invalid_arguments',
+      content: errorContent('invalid_arguments'),
+      target: null,
+    };
+    if (rawArguments.length > MAX_ARGUMENT_CHARACTERS) return invalid;
     let input: unknown = {};
     if (rawArguments.trim() !== '') {
       try {
         input = JSON.parse(rawArguments);
       } catch {
-        return { ok: false, code: 'invalid_arguments', content: errorContent('invalid_arguments') };
+        return invalid;
       }
     }
     const parsed = tool.schema.safeParse(input);
-    if (!parsed.success) {
-      return { ok: false, code: 'invalid_arguments', content: errorContent('invalid_arguments') };
-    }
+    if (!parsed.success) return invalid;
+    const target = tool.target(parsed.data);
     try {
-      const content = JSON.stringify(tool.run(parsed.data, context));
+      const content = JSON.stringify(await tool.run(parsed.data, context));
       if (content.length > MAX_OUTPUT_CHARACTERS) {
-        return { ok: false, code: 'failed', content: errorContent('output_too_large') };
+        return {
+          ok: false,
+          code: 'failed',
+          content: errorContent('output_too_large'),
+          target,
+        };
       }
-      return { ok: true, content, target: tool.target(parsed.data) };
-    } catch {
-      return { ok: false, code: 'failed', content: errorContent('failed') };
+      return { ok: true, content, target };
+    } catch (error) {
+      const code = error instanceof ToolError ? error.code : 'failed';
+      return { ok: false, code: 'failed', content: errorContent(code), target };
     }
   }
 }
