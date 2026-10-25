@@ -88,6 +88,20 @@ export function ProviderDialog({
             onSaved={onClose}
             onUnchanged={onClose}
             onCancel={onClose}
+            stickyFooter
+            notices={
+              <>
+                {outcome && (
+                  <p
+                    role="status"
+                    className={`text-sm ${outcome.ok ? 'text-ink-secondary' : 'text-danger'}`}
+                  >
+                    {testMessage(outcome)}
+                  </p>
+                )}
+                {error && <FieldError>{error}</FieldError>}
+              </>
+            }
             extraActions={
               provider && (
                 <>
@@ -102,15 +116,6 @@ export function ProviderDialog({
             }
           />
         )}
-        {outcome && (
-          <p
-            role="status"
-            className={`mt-3 text-sm ${outcome.ok ? 'text-ink-secondary' : 'text-danger'}`}
-          >
-            {testMessage(outcome)}
-          </p>
-        )}
-        {error && <FieldError>{error}</FieldError>}
       </Modal>
       {confirmDelete && provider && (
         <ConfirmDialog

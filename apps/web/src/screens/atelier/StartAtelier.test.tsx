@@ -188,6 +188,27 @@ describe('Startseite in „Atelier“', () => {
     expect(container.querySelector('.at-count')).toBeNull();
   });
 
+  it('zeigt das Zierbild nur in „Atelier“, dekorativ und ohne Beschriftung', async () => {
+    document.documentElement.setAttribute('data-design', 'atelier');
+    const { server } = setup();
+    const { container } = renderHome(server);
+
+    await screen.findByRole('region', { name: 'Als Nächstes' });
+    const motif = container.querySelector('.at-start > .at-start-motif');
+    expect(motif?.getAttribute('aria-hidden')).toBe('true');
+    expect(motif?.getAttribute('focusable')).toBe('false');
+    expect(screen.queryByRole('img')).toBeNull();
+  });
+
+  it('zeigt das Zierbild in „Raum“ nicht', async () => {
+    document.documentElement.setAttribute('data-design', 'raum');
+    const { server } = setup();
+    const { container } = renderHome(server);
+
+    await waitFor(() => expect(container.querySelector('.rm-plan')).not.toBeNull());
+    expect(container.querySelector('.at-start-motif')).toBeNull();
+  });
+
   it('weist ohne Stundenplan auf das Eintragen hin', async () => {
     document.documentElement.setAttribute('data-design', 'atelier');
     const { server } = setup({ lessons: false });

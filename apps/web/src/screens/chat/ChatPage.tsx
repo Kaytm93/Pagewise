@@ -10,7 +10,7 @@ import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { TextField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
-import { Modal } from '../../ui/modal';
+import { Modal, ModalFooter } from '../../ui/modal';
 import { Sheet } from '../../ui/Sheet';
 import { useDesign } from '../../ui/useDesign';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
@@ -95,14 +95,14 @@ function RenameDialog({
           autoComplete="off"
           data-autofocus
         />
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <ModalFooter>
           <Button variant="secondary" onClick={onClose}>
             {m.common.cancel}
           </Button>
           <Button type="submit" variant="primary" busy={busy}>
             {m.common.save}
           </Button>
-        </div>
+        </ModalFooter>
       </form>
     </Modal>
   );

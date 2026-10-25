@@ -10,6 +10,7 @@ import { format, messages as m } from '../../i18n';
 import { Button } from '../../ui/Button';
 import { CheckField, SecretField, SelectField, TextField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
+import { ModalFooter } from '../../ui/modal';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { ModelListEditor } from './ModelListEditor';
 import {
@@ -27,6 +28,8 @@ const toEntry = (model: ModelEntry): ModelEntry => ({
   reasoning: model.reasoning,
   streaming: model.streaming,
 });
+
+const ACTIONS = 'flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-end';
 
 function Notice({ children }: { children: string }) {
   return (
@@ -51,6 +54,10 @@ interface Props {
   onCancel?: () => void;
   /** Zusätzliche Aktionen links neben den Knöpfen (Löschen, Testen). */
   extraActions?: ReactNode;
+  /** Meldungen (Testergebnis, Fehler) direkt über den Knöpfen, innerhalb des Formulars. */
+  notices?: ReactNode;
+  /** Knöpfe als feste Fußzeile eines Dialogs (`ModalFooter`); im Einrichten-Schritt bleiben sie im Fluss. */
+  stickyFooter?: boolean;
 }
 
 /** Formular zum Anlegen und Bearbeiten eines Anbieters. */
@@ -64,6 +71,8 @@ export function ProviderForm({
   onUnchanged,
   onCancel,
   extraActions,
+  notices,
+  stickyFooter = false,
 }: Props) {
   const { addProvider, editProvider } = useWorkspace();
   const [chosen, setChosen] = useState<PresetId>(provider?.preset ?? presetId);
@@ -139,6 +148,22 @@ export function ProviderForm({
       setBusy(false);
     }
   }
+
+  const actions = (
+    <>
+      {extraActions && (
+        <div className="flex flex-col gap-2 sm:mr-auto sm:flex-row">{extraActions}</div>
+      )}
+      {onCancel && (
+        <Button variant="secondary" onClick={onCancel} disabled={busy}>
+          {m.common.cancel}
+        </Button>
+      )}
+      <Button type="submit" variant="primary" busy={busy}>
+        {submitLabel}
+      </Button>
+    </>
+  );
 
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
@@ -257,19 +282,12 @@ export function ProviderForm({
       </section>
 
       {errors.form && <FieldError>{errors.form}</FieldError>}
-      <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-end">
-        {extraActions && (
-          <div className="flex flex-col gap-2 sm:mr-auto sm:flex-row">{extraActions}</div>
-        )}
-        {onCancel && (
-          <Button variant="secondary" onClick={onCancel} disabled={busy}>
-            {m.common.cancel}
-          </Button>
-        )}
-        <Button type="submit" variant="primary" busy={busy}>
-          {submitLabel}
-        </Button>
-      </div>
+      {notices}
+      {stickyFooter ? (
+        <ModalFooter>{actions}</ModalFooter>
+      ) : (
+        <div className={ACTIONS}>{actions}</div>
+      )}
     </form>
   );
 }

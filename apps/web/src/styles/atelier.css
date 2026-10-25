@@ -453,7 +453,42 @@
  */
 @layer components {
   .at-start {
+    position: relative;
     container-type: inline-size;
+  }
+
+  /*
+   * Zierbild (StartMotif.tsx): gewölbtes Fenster mit schrägem Licht, blass in der Linienfarbe. Es sitzt rechts
+   * neben der Frage unter der Überschrift (die Frage endet bei 640 px, die Überschrift darüber lässt rechts
+   * Platz), ragt etwas in den Blattrand und ist erst ab einem breiten Blatt da: schmaler würde es Text
+   * berühren. Nie anklickbar, nie ein Grund für Überlauf; die Striche zeichnen sich über atelier-fach.css.
+   */
+  .at-start-motif {
+    display: none;
+    position: absolute;
+    right: -1.5rem;
+    bottom: 100%;
+    width: 12.5rem;
+    height: 12.5rem;
+    fill: none;
+    stroke: var(--line-warm);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+  }
+
+  @container (min-width: 820px) {
+    .at-start-motif {
+      display: block;
+    }
+  }
+
+  @container (min-width: 900px) {
+    .at-start-motif {
+      width: 15rem;
+      height: 15rem;
+    }
   }
 
   .at-grid {

@@ -18,6 +18,7 @@ import { SubjectIcon } from '../../ui/SubjectIcon';
 import { subjectColorAttr } from '../../ui/subject-color';
 import { useDesign } from '../../ui/useDesign';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
+import { StartMotif } from './StartMotif';
 
 type State = 'past' | 'now' | 'next';
 
@@ -93,6 +94,7 @@ export function StartAtelier() {
 
   return (
     <div className="at-start mo-rise mo-i-3 mt-12">
+      <StartMotif />
       <div className="at-grid">
         <section className="at-day-sec" aria-labelledby="at-day-heading">
           <h2 className="at-sec">

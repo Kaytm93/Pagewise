@@ -409,6 +409,81 @@
   }
 }
 
+/* ===== Chat: Kopfzeile je Antwort (BotHead.tsx) ===== */
+
+/* Feste Zeilenhöhe und kein Umbruch: der Wechsel „schreibt …“, „fertig“ verschiebt nichts */
+:root[data-design="atelier"] .at-bot-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+:root[data-design="atelier"] .at-bot-mark {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--subj);
+}
+
+:root[data-design="atelier"] .at-bot-glyph {
+  fill: none;
+  stroke: var(--sheet);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+:root[data-design="atelier"] .at-bot-name {
+  flex: none;
+  font-family: var(--font-heading);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+:root[data-design="atelier"] .at-bot-model {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+  color: var(--ink-muted);
+}
+
+:root[data-design="atelier"] .at-bot-status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  font-size: 0.8125rem;
+  color: var(--ink-secondary);
+}
+
+:root[data-design="atelier"] .at-bot-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--subj);
+}
+
+:root[data-design="atelier"] .at-bot-head[data-state="done"] .at-bot-dot,
+:root[data-design="atelier"] .at-bot-head[data-state="stopped"] .at-bot-dot {
+  background-color: var(--ink-muted);
+}
+
+:root[data-design="atelier"] .at-bot-head[data-state="failed"] .at-bot-dot {
+  background-color: var(--danger);
+}
+
+/* Der Punkt atmet nur, solange geschrieben wird; das Wort daneben sagt es auch ohne Bewegung */
+:root[data-design="atelier"] .at-bot-head[data-state="thinking"] .at-bot-dot,
+:root[data-design="atelier"] .at-bot-head[data-state="writing"] .at-bot-dot {
+  animation: at-breathe calc(var(--t-slow) * 2.6) var(--ease) infinite;
+}
+
 /* Kopf der Agent-Aktivität (`data-state` ist `done` oder `error`): eine ruhige Kapsel mit Zustandsfarbe am Rand */
 :root[data-design="atelier"] .lg-agent-head {
   padding-inline: 12px 10px;

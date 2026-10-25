@@ -4,6 +4,8 @@ import type { ChatMessage, EngineKind } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { Button } from '../../ui/Button';
 import { Link } from '../../ui/Link';
+import { useDesign } from '../../ui/useDesign';
+import { BotHead } from '../atelier/BotHead';
 import { AgentActivity } from './AgentActivity';
 import { AssetList } from './AssetList';
 import { Markdown } from './Markdown';
@@ -72,6 +74,7 @@ export const MessageItem = memo(function MessageItem({
   saveNote,
 }: Props) {
   const { copyState, copy } = useCopy();
+  const atelier = useDesign() === 'atelier';
   const [noteState, setNoteState] = useState<
     | { status: 'idle' }
     | { status: 'saving' }
@@ -133,6 +136,7 @@ export const MessageItem = memo(function MessageItem({
       {/* Je Nachricht eine H2: Zwischen der H1 der Ansicht und den Nachrichten liegt kein H2-Bereich,
           darum wäre eine tiefere Ebene ein Sprung. Markdown staffelt darunter ab H2 (gleiche Ebene erlaubt). */}
       <h2 className="sr-only">{m.chat.answer}</h2>
+      {atelier && <BotHead message={message} live={live} thinking={thinking} />}
       {!byAgent && <ToolNotes steps={message.activity} />}
       {hasText && <Markdown text={message.content} final={!live} />}
       {hasText && live && (
