@@ -254,11 +254,11 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
     navigate(backTo);
   }
 
-  async function send(text: string): Promise<boolean> {
+  async function send(text: string, files: File[] = []): Promise<boolean> {
     pinned.current = true;
     setActionError(null);
     chat.dismissProblem();
-    return chat.send(text);
+    return chat.send(text, files);
   }
 
   const sourceText = model ? m.chat.source[model.source] : null;

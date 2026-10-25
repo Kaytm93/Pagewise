@@ -94,6 +94,9 @@ export const MessageItem = memo(function MessageItem({
     // Eine automatisch gesendete Korrektur wird als solche gekennzeichnet (M4-T026): kurzer Hinweis aus
     // den Texten über der Blase, damit sie nicht wie eine gewöhnliche Nachricht der Nutzerin aussieht.
     const korrektur = message.content.startsWith(m.chat.autoFix.prefix);
+    // Eigene Bilder aus dem Chat-Import zeigen eine Vorschau, andere eigene Dateien als Downloads.
+    const eigeneBilder = assetUrl ? message.assets.filter((asset) => asset.kind === 'image') : [];
+    const eigeneDateien = assetUrl ? message.assets.filter((asset) => asset.kind !== 'image') : [];
     return (
       <article className="flex flex-col items-end">
         <h2 className="sr-only">{m.chat.you}</h2>
@@ -109,6 +112,7 @@ export const MessageItem = memo(function MessageItem({
         <p className="max-w-[84%] rounded-[14px_14px_4px_14px] border border-line-warm bg-paper px-4 py-3 text-[1.0313rem] leading-relaxed break-words whitespace-pre-wrap">
           {message.content}
         </p>
+        {assetUrl && <AssetList assets={eigeneDateien} images={eigeneBilder} url={assetUrl} />}
       </article>
     );
   }
@@ -156,7 +160,15 @@ export const MessageItem = memo(function MessageItem({
       {byAgent && (
         <AgentActivity steps={message.activity.filter((step) => !isModelTool(step))} live={live} />
       )}
-      {assetUrl && <AssetList assets={message.assets} url={assetUrl} />}
+      {assetUrl && (
+        <AssetList
+          assets={
+            byAgent ? message.assets : message.assets.filter((asset) => asset.kind !== 'image')
+          }
+          url={assetUrl}
+          images={byAgent ? [] : message.assets.filter((asset) => asset.kind === 'image')}
+        />
+      )}
 
       {failed && (
         <div className="mt-3 rounded-box bg-paper px-4 py-3 text-sm">

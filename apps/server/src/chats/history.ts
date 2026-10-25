@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../providers/client';
+import type { ChatMessage, ContentPart } from '../providers/client';
 
 /**
  * Höchstmenge an Verlauf, die mit einer Anfrage an den Anbieter geht (Zeichen, ohne System-Prompt).
@@ -12,6 +12,16 @@ export interface StoredTurn {
   content: string;
   status: string;
 }
+
+/** Bild aus einem Chat-Import, das (wenn das Modell es kann) mit zum Anbieter geht. */
+export interface HistoryImage {
+  name: string;
+  mime: string;
+  data: Uint8Array;
+}
+
+/** Maximalgröße eines Bildes in Byte, das mit zum Anbieter geht (größere bleiben nur Namen im Text). */
+export const IMAGE_WIRE_MAX_BYTES = 5 * 1024 * 1024;
 
 /**
  * Macht aus den gespeicherten Nachrichten den Verlauf für das Modell:
@@ -47,6 +57,41 @@ export function buildHistory(
   const kept = merged.slice(start);
   while (kept[0] && kept[0].role !== 'user') kept.shift();
   return kept;
+}
+
+/**
+ * Hängt die Bilder eines Chat-Imports an die letzte Nutzer-Nachricht des Verlaufs: als Text- und
+ * Bildteile (OpenAI-Format, Daten-URL). Die Dateinamen stehen immer im Text, damit auch Modelle ohne
+ * Bildverstehen (Agenten, kleine Modelle) wissen, was beigelegt war. Bilder über
+ * {@link IMAGE_WIRE_MAX_BYTES} werden nur als Name mitgenommen.
+ */
+export function attachImages(history: ChatMessage[], images: HistoryImage[]): void {
+  if (images.length === 0) return;
+  const target = [...history]
+    .reverse()
+    .find(
+      (message) =>
+        message.role === 'user' && typeof message.content === 'string' && message.content !== '',
+    );
+  if (!target || typeof target.content !== 'string') return;
+  const text = target.content;
+  let names = '';
+  const parts: ContentPart[] = [];
+  for (const image of images) {
+    names += `\n- ${image.name}`;
+    if (image.data.length <= IMAGE_WIRE_MAX_BYTES) {
+      parts.push({
+        type: 'image_url',
+        image_url: {
+          url: `data:${image.mime};base64,${Buffer.from(image.data).toString('base64')}`,
+        },
+      });
+    }
+  }
+  // Der Text steht zuerst und nennt die beigelegten Dateien beim Namen; danach folgen die Bilder.
+  parts.unshift({ type: 'text', text: `${text}${names}` });
+  target.content = parts;
+  target.contentText = `${text}${names}`;
 }
 
 /** Titel aus der ersten Nachricht: erste nicht leere Zeile, Leerraum zusammengezogen, höchstens 60 Zeichen. */

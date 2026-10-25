@@ -246,7 +246,24 @@ export function createApi(client: ApiClient) {
       content: string,
       onMessage: (message: SseMessage) => void,
       signal?: AbortSignal,
-    ) => client.stream('POST', `/api/chats/${chatId}/messages`, { content }, onMessage, signal),
+      files?: File[],
+    ) => {
+      if (!files || files.length === 0) {
+        return client.stream(
+          'POST',
+          `/api/chats/${chatId}/messages`,
+          { content },
+          onMessage,
+          signal,
+        );
+      }
+      // Mit beigelegten Dateien reist die Nachricht als Formular, damit der Browser die Dateien direkt
+      // aus dem Dateiauswahl-Dialog hochlädt. Der Grenzwert-Header bleibt `multipart/form-data`.
+      const form = new FormData();
+      form.append('content', content);
+      for (const file of files) form.append('files', file, file.name);
+      return client.streamForm('POST', `/api/chats/${chatId}/messages`, form, onMessage, signal);
+    },
     /**
      * Wiederholt die letzte Antwort, wenn sie fehlschlug, abgebrochen oder unterbrochen wurde. Mit `viaApi`
      * antwortet für diesen Versuch ein API-Modell statt des gewählten Agenten.

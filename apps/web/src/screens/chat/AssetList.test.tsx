@@ -25,6 +25,7 @@ describe('AssetList: Dateiname im Dateiknopf', () => {
     const { container } = render(
       <AssetList
         assets={[asset('Sehr-langer-Beispieldateiname-fuer-den-Regietest.pdf')]}
+        images={[]}
         url={() => '#'}
       />,
     );
@@ -42,7 +43,9 @@ describe('AssetList: Dateiname im Dateiknopf', () => {
   });
 
   it('kurzer Name: gleiche Struktur, Endung bleibt sichtbar, title mit vollem Namen', () => {
-    const { container } = render(<AssetList assets={[asset('Notiz.md')]} url={() => '#'} />);
+    const { container } = render(
+      <AssetList assets={[asset('Notiz.md')]} images={[]} url={() => '#'} />,
+    );
     const knopf = knopfOf(container);
     expect(knopf.getAttribute('title')).toBe('Notiz.md');
     const [nameSpan, extSpan] = spansOf(knopf);
@@ -52,7 +55,9 @@ describe('AssetList: Dateiname im Dateiknopf', () => {
   });
 
   it('ohne Endung: leerer Endungs-Text, title mit vollem Namen', () => {
-    const { container } = render(<AssetList assets={[asset('Liesmich')]} url={() => '#'} />);
+    const { container } = render(
+      <AssetList assets={[asset('Liesmich')]} images={[]} url={() => '#'} />,
+    );
     const knopf = knopfOf(container);
     expect(knopf.getAttribute('title')).toBe('Liesmich');
     const [, extSpan] = spansOf(knopf);

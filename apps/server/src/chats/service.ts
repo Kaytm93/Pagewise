@@ -1,9 +1,10 @@
 import { and, asc, desc, eq, isNull, max } from 'drizzle-orm';
 import { parseActivity, serializeActivity, settleActivity } from '../agents/activity';
-import type { AssetService, AssetView } from '../agents/assets';
+import { type AssetService, type AssetView, MAX_ATTACHMENTS } from '../agents/assets';
 import { formatTranscript, withAgentInstructions } from '../agents/instructions';
 import type { EngineProfileService } from '../agents/profiles';
 import type { AgentOutcome, AgentRunner } from '../agents/runner';
+import type { WorkspaceManager } from '../agents/workspace';
 import type { Db } from '../db/client';
 import {
   type ChatRow,
@@ -17,6 +18,7 @@ import { buildSystemPrompt } from '../domain/prompts';
 import { getSubject, type SubjectView } from '../domain/subjects';
 import { DefaultPrompts } from '../prompts/defaults';
 import type { ChatMessage, ToolCall } from '../providers/client';
+import { textOf } from '../providers/client';
 import { ProviderError } from '../providers/errors';
 import type { Selection } from '../providers/models';
 import type { ProviderService } from '../providers/service';
@@ -24,7 +26,13 @@ import { withToolInstructions } from '../tools/instructions';
 import type { ToolRegistry } from '../tools/registry';
 import type { ToolSettings } from '../tools/settings';
 import { type ChatErrorCode, Generation, type MessageStatus, type MessageView } from './generation';
-import { buildHistory, HISTORY_MAX_CHARACTERS, titleFrom } from './history';
+import {
+  attachImages,
+  buildHistory,
+  HISTORY_MAX_CHARACTERS,
+  type HistoryImage,
+  titleFrom,
+} from './history';
 
 export interface ChatView {
   id: string;
@@ -56,7 +64,8 @@ export type ChatFailure = {
     | 'too_busy'
     | 'no_model'
     | 'nothing_to_retry'
-    | 'workspace_busy';
+    | 'workspace_busy'
+    | 'assets_missing';
 };
 export type ChatResult<T> = { ok: true; value: T } | ChatFailure;
 
@@ -87,6 +96,8 @@ export interface ChatServiceOptions {
   tools?: ToolRegistry;
   /** Globaler Schalter für Werkzeuge. Ohne Angabe gilt „an“. */
   toolSettings?: ToolSettings;
+  /** Arbeitsordner der Agenten: hier landen importierte Dateien zum Mitlesen. Ohne Angabe werden sie nicht kopiert. */
+  workspaces?: WorkspaceManager;
   /** Aktuelle Zeit; in Tests fest. */
   now?: () => Date;
 }
@@ -103,6 +114,15 @@ const TITLE_MAX = 120;
 
 function selectionOf(providerId: string | null, modelId: string | null): Selection | null {
   return providerId && modelId ? { providerId, model: modelId } : null;
+}
+
+/**
+ * Datei, die im Chat beigelegt wurde: vom Browser gelesen, noch ungeprüft. Der Server vertraut weder
+ * dem Namen noch der behaupteten Art (REGELN: Importe sind nie vertrauenswürdig).
+ */
+export interface PendingAttachment {
+  name: string;
+  data: Uint8Array;
 }
 
 function toMessage(row: MessageRow, assets: AssetView[] = []): MessageView {
@@ -140,6 +160,7 @@ export class ChatService {
   private readonly activeAgents = new Set<string>();
   private readonly tools: ToolRegistry | null;
   private readonly toolSettings: ToolSettings | null;
+  private readonly workspaces: WorkspaceManager | null;
   private readonly now: () => Date;
   /** Pagewise wird beendet: abgebrochene Antworten gelten als unterbrochen, nicht als vom Nutzer gestoppt. */
   private shuttingDown = false;
@@ -159,6 +180,7 @@ export class ChatService {
     this.maxAgents = options.maxAgents ?? 2;
     this.tools = options.tools ?? null;
     this.toolSettings = options.toolSettings ?? null;
+    this.workspaces = options.workspaces ?? null;
     this.now = options.now ?? (() => new Date());
     // Antworten, die beim letzten Beenden des Servers liefen, sind unterbrochen. Was schon da war, bleibt.
     this.db
@@ -419,8 +441,12 @@ export class ChatService {
   }
 
   /** Nimmt eine Nachricht an, legt die leere Antwort an und startet sie. Antwortet sofort. */
-  send(chatId: string, content: string): ChatResult<StartedGeneration> {
-    return this.start(chatId, content.replace(/\r\n?/g, '\n'), false);
+  send(
+    chatId: string,
+    content: string,
+    files: PendingAttachment[] = [],
+  ): ChatResult<StartedGeneration> {
+    return this.start(chatId, content.replace(/\r\n?/g, '\n'), false, files);
   }
 
   /**
@@ -431,15 +457,23 @@ export class ChatService {
     return this.start(chatId, null, options.viaApi === true);
   }
 
+  /**
+   * Startet synchron: Der Lauf (`run`/`runAgent`) wird sofort angemeldet, damit die Oberfläche ihre
+   * Ereignisse in gewohnter Reihenfolge bekommt. Beigelegte Dateien übernimmt der Lauf selbst — er
+   * wartet (`preparing`) und hängt die Bilder an, bevor das erste Modell gefragt wird.
+   */
   private start(
     chatId: string,
     content: string | null,
     viaApi: boolean,
+    files: PendingAttachment[] = [],
   ): ChatResult<StartedGeneration> {
     const chat = this.row(chatId);
     if (!chat) return { ok: false, error: 'not_found' };
     if (this.active.has(chatId)) return { ok: false, error: 'busy' };
     if (this.active.size >= this.maxActive) return { ok: false, error: 'too_busy' };
+    if (files.length > 0 && !this.assets) return { ok: false, error: 'assets_missing' };
+    if (files.length > MAX_ATTACHMENTS) return { ok: false, error: 'assets_missing' };
     const target = this.targetFor(chat, viaApi);
     if (target.kind === 'api' && target.chain.length === 0) return { ok: false, error: 'no_model' };
     let release: (() => void) | null = null;
@@ -515,8 +549,42 @@ export class ChatService {
       return { ok: false, error: 'nothing_to_retry' };
     }
 
+    // Beigelegte Dateien und Bilder werden parallel zur Antwort übernommen; der Lauf startet sofort
+    // synchron, damit die Oberfläche ihre Ereignisse in gewohnter Reihenfolge bekommt. Bevor das erste
+    // Modell gefragt wird, wartet der Lauf auf das Ende des Imports (`preparing`).
     const generation = new Generation(chatId, created.assistantRow.id);
+    if (files.length > 0) generation.markPreparing();
     this.active.set(chatId, generation);
+
+    const images: HistoryImage[] = [];
+    const preparing = (async () => {
+      if (created.userRow && this.assets) {
+        const chatKey = chat.groupId ?? chat.subjectId;
+        const workspaceDir = this.workspaces?.pathFor(chat.subjectId, chat.groupId);
+        for (const file of files) {
+          await this.assets.importFromChat(chatId, created.userRow.id, file.name, file.data, {
+            chatKey,
+            workspaceDir,
+          });
+        }
+        // Bilder der Nachricht werden gelesen und hängen später an der letzten Nutzer-Nachricht des
+        // Verlaufs; das Modell bekommt sie (wenn es Vision kann) als Bilddaten, sonst nur ihre Namen.
+        const views =
+          this.assets
+            .forMessages([created.userRow.id])
+            .get(created.userRow.id)
+            ?.filter((asset) => asset.kind === 'image') ?? [];
+        for (const view of views) {
+          try {
+            const data = await this.assets.read(view.id);
+            if (data) images.push({ name: view.name, mime: view.mime, data });
+          } catch {
+            // Ein Bild, das sich nicht lesen lässt, bleibt nur als Name im Text übrig.
+          }
+        }
+      }
+    })();
+
     const history = buildHistory(created.history, this.historyMax);
     if (target.kind === 'engine') {
       this.activeAgents.add(chatId);
@@ -527,9 +595,16 @@ export class ChatService {
         system: withAgentInstructions(prompt.value.system),
         history,
         sessionId: chat.agentSessionId,
+        preparing,
       });
     } else {
-      void this.run(generation, { chain: target.chain, system: prompt.value.system, history });
+      void this.run(generation, {
+        chain: target.chain,
+        system: prompt.value.system,
+        history,
+        preparing,
+        images,
+      });
     }
     return {
       ok: true,
@@ -555,15 +630,26 @@ export class ChatService {
       system: string;
       history: ChatMessage[];
       sessionId: string | null;
+      /** Läuft noch: das Übernehmen beigelegter Dateien; der Agent startet erst danach. */
+      preparing?: Promise<void>;
     },
   ): Promise<void> {
     const runner = this.agents;
     const lastUser = [...input.history].reverse().find((message) => message.role === 'user');
     let lastFlush = Date.now();
     let outcome: AgentOutcome;
+    // Warten, bis beigelegte Dateien im Arbeitsordner liegen; der Agent liest sie über seine Werkzeuge.
+    if (generation.preparing) {
+      await input.preparing;
+      generation.setPrepared();
+    }
     try {
       if (!runner || !lastUser) throw new Error('Kein Agent oder kein Auftrag.');
       const earlier = input.history.slice(0, input.history.lastIndexOf(lastUser));
+      const transcript = earlier.map((message) => ({
+        role: message.role,
+        content: textOf(message),
+      }));
       outcome = await runner.run({
         chatId: input.chat.id,
         assistantId: generation.assistantId,
@@ -573,8 +659,8 @@ export class ChatService {
         system: input.system,
         prompt: (resumed) =>
           resumed || earlier.length === 0
-            ? lastUser.content
-            : formatTranscript(earlier, lastUser.content),
+            ? textOf(lastUser)
+            : formatTranscript(transcript, textOf(lastUser)),
         sessionId: input.sessionId,
         signal: generation.abort.signal,
         onEvent: (event) => {
@@ -612,8 +698,7 @@ export class ChatService {
     });
   }
 
-  /**
-   * Führt die Antwort aus: probiert die Modelle der Reihe nach. Gewechselt wird nur bei einem Fehler,
+  /** Führt die Antwort aus: probiert die Modelle der Reihe nach. Gewechselt wird nur bei einem Fehler,
    * bei dem ein anderes Modell helfen kann, und nur solange noch kein Text da ist und kein Werkzeug lief.
    * Eine Antwort, die mitten im Text abbricht, bleibt als Teilantwort stehen.
    *
@@ -628,6 +713,10 @@ export class ChatService {
       chain: Selection[];
       system: string;
       history: ChatMessage[];
+      /** Läuft noch: das Übernehmen beigelegter Dateien; wird vor dem ersten Modellaufruf abgewartet. */
+      preparing?: Promise<void>;
+      /** Bilder des Imports dieser Nachricht; sie hängen nach dem Warten am Verlauf. */
+      images: HistoryImage[];
     },
   ): Promise<void> {
     const assistantId = generation.assistantId;
@@ -637,6 +726,13 @@ export class ChatService {
     let status: MessageStatus = 'error';
     let code: ChatErrorCode | null = 'no_model';
     let settled = false;
+
+    // Warten, bis beigelegte Dateien übernommen sind; sie hängen danach am Verlauf.
+    if (generation.preparing) {
+      await input.preparing;
+      generation.setPrepared();
+      attachImages(input.history, input.images);
+    }
 
     try {
       for (const [index, selection] of input.chain.entries()) {
@@ -670,7 +766,15 @@ export class ChatService {
           resolved.allowTools &&
           resolved.model.tools;
         const system = toolsOn ? withToolInstructions(input.system, this.now()) : input.system;
-        const conversation: ChatMessage[] = [{ role: 'system', content: system }, ...input.history];
+        // Bilder im Verlauf: nur ein Modell mit Bildverstehen bekommt sie; alle anderen lesen den Text.
+        const vision = resolved.model.vision === true;
+        const conversation: ChatMessage[] = [
+          { role: 'system', content: system },
+          ...input.history.map((message) => {
+            if (vision || typeof message.content === 'string') return message;
+            return { ...message, content: textOf(message) };
+          }),
+        ];
         let rounds = 0;
         let calls = 0;
         let usedTools = false;

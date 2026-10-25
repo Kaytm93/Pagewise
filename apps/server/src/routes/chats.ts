@@ -2,8 +2,15 @@ import type { Context, MiddlewareHandler } from 'hono';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
+import { MAX_ASSET_BYTES, MAX_ATTACHMENTS } from '../agents/assets';
 import type { Generation, GenerationEvent } from '../chats/generation';
-import type { ChatFailure, ChatResult, ChatService, StartedGeneration } from '../chats/service';
+import type {
+  ChatFailure,
+  ChatResult,
+  ChatService,
+  PendingAttachment,
+  StartedGeneration,
+} from '../chats/service';
 import { idField, MESSAGE_MAX_CHARACTERS, messageField, titleField } from '../http/fields';
 import { limitBody, readJson } from '../http/json';
 import type { AppEnv } from '../http/types';
@@ -30,6 +37,8 @@ const SubjectEngineBody = z.strictObject({ engineProfileId: idField.nullable() }
 
 // Zeichen können bis zu vier Byte belegen, dazu kommt das JSON drumherum.
 const MESSAGE_BODY_LIMIT = MESSAGE_MAX_CHARACTERS * 4 + 1024;
+/** Körpergrenze für Uploads: höchstens vier Dateien plus Formular-Overhead je Datei. */
+const UPLOAD_BODY_LIMIT = MAX_ATTACHMENTS * (MAX_ASSET_BYTES + 4096);
 const MESSAGES_PATH = /\/chats\/[^/]+\/messages$/;
 
 /** Abstand der Lebenszeichen, damit Proxys und Browser eine ruhige Verbindung nicht schließen. */
@@ -53,12 +62,59 @@ function failure(c: Context, result: ChatFailure): Response {
       return c.json({ error: 'nothing_to_retry' }, 409);
     case 'too_busy':
       return c.json({ error: 'too_busy' }, 429);
+    case 'assets_missing':
+      return c.json({ error: 'invalid_input', field: 'files' }, 400);
   }
 }
 
 function idParam(c: Context): string | null {
   const parsed = idField.safeParse(c.req.param('id'));
   return parsed.success ? parsed.data : null;
+}
+
+/**
+ * Liest eine Nachricht mit beigelegten Dateien: entweder als JSON (`content`) oder als mehrteiliges
+ * Formular (`content`, `files`) direkt aus dem Dateiauswahl-Dialog des Browsers. Vom Formular bleiben
+ * Fehlercodes mit Feldnamen wie bei JSON; gelesen werden höchstens {@link MAX_ATTACHMENTS} Dateien,
+ * je höchstens {@link MAX_ASSET_BYTES} — die eigentliche Prüfung (Signatur, Endung) macht der Server.
+ */
+async function readSendBody(
+  c: Context,
+): Promise<
+  { ok: true; content: string; files: PendingAttachment[] } | { ok: false; response: Response }
+> {
+  const type = c.req.header('content-type') ?? '';
+  if (!type.startsWith('multipart/form-data')) {
+    const body = await readJson(c, SendBody);
+    if (!body.ok) return body;
+    return { ok: true, content: body.data.content, files: [] };
+  }
+  let form: Record<string, string | File | Array<string | File>>;
+  try {
+    form = (await c.req.parseBody({ all: true })) as Record<
+      string,
+      string | File | Array<string | File>
+    >;
+  } catch {
+    return { ok: false, response: c.json({ error: 'invalid_input', field: 'files' }, 400) };
+  }
+  const rawContent = form.content;
+  const content = typeof rawContent === 'string' ? rawContent : '';
+  if (messageField.safeParse(content).success === false) {
+    return { ok: false, response: c.json({ error: 'invalid_input', field: 'content' }, 400) };
+  }
+  const entryField = form.files;
+  const entries = Array.isArray(entryField) ? entryField : [entryField].flat();
+  const files: PendingAttachment[] = [];
+  for (const entry of entries) {
+    if (files.length >= MAX_ATTACHMENTS) break;
+    if (entry === undefined || typeof entry === 'string') {
+      return { ok: false, response: c.json({ error: 'invalid_input', field: 'files' }, 400) };
+    }
+    const data = new Uint8Array(await entry.arrayBuffer());
+    files.push({ name: entry.name, data });
+  }
+  return { ok: true, content, files };
 }
 
 function terminalName(event: GenerationEvent): string | null {
@@ -149,8 +205,12 @@ export function chatRoutes(chats: ChatService): Hono<AppEnv> {
 
   const small = limitBody(16 * 1024);
   const large = limitBody(MESSAGE_BODY_LIMIT);
-  const bySize: MiddlewareHandler = (c, next) =>
-    MESSAGES_PATH.test(c.req.path) ? large(c, next) : small(c, next);
+  const upload = limitBody(UPLOAD_BODY_LIMIT);
+  const bySize: MiddlewareHandler = (c, next) => {
+    if (!MESSAGES_PATH.test(c.req.path)) return small(c, next);
+    const type = c.req.header('content-type') ?? '';
+    return type.startsWith('multipart/form-data') ? upload(c, next) : large(c, next);
+  };
   app.use('/chats', small);
   app.use('/chats/*', bySize);
 
@@ -204,9 +264,9 @@ export function chatRoutes(chats: ChatService): Hono<AppEnv> {
   app.post('/chats/:id/messages', async (c) => {
     const id = idParam(c);
     if (!id) return c.json({ error: 'not_found' }, 404);
-    const body = await readJson(c, SendBody);
+    const body = await readSendBody(c);
     if (!body.ok) return body.response;
-    const result = chats.send(id, body.data.content);
+    const result = chats.send(id, body.content, body.files);
     if (!result.ok) return failure(c, result);
     return streamGeneration(c, result.value.generation, result.value);
   });

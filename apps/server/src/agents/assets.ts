@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { lstatSync, readFileSync, realpathSync } from 'node:fs';
-import { basename, extname, join } from 'node:path';
+import { lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { basename, extname, join, resolve } from 'node:path';
 import { eq, inArray } from 'drizzle-orm';
 import { isInside } from '../data-dir';
 import type { Db } from '../db/client';
@@ -52,6 +52,47 @@ const TYPES: Record<string, { kind: AssetKind; mime: string }> = {
 export const MAX_ASSET_BYTES = 25 * 1024 * 1024;
 export const MAX_ASSETS_PER_RUN = 20;
 const NAME_MAX = 100;
+
+/** Höchstzahl der Dateien, die eine Chat-Nachricht beigelegt sein dürfen. */
+export const MAX_ATTACHMENTS = 4;
+
+/**
+ * Aus einer hochgeladenen Datei gelesener Anfang: reicht für die Typbestimmung per „magischen Zahlen“.
+ * PNG, JPEG, GIF und WebP (RIFF) erkennt die Signatur zuverlässig; PDF steht meist in den ersten Bytes.
+ */
+export const SNIFF_BYTES = 16;
+
+/** Prüft die Signatur („magische Zahlen“) des Dateianfangs gegen die behauptete Bildart. */
+export function imageSignatureMatches(sniff: Uint8Array, ext: string): boolean {
+  const starts = (signature: readonly number[]) =>
+    signature.length <= sniff.length && signature.every((byte, index) => sniff[index] === byte);
+  const at = (index: number, signature: readonly number[]) =>
+    signature.every((byte, offset) => sniff[index + offset] === byte);
+  switch (ext) {
+    case 'png':
+      return starts([0x89, 0x50, 0x4e, 0x47]);
+    case 'jpg':
+    case 'jpeg':
+      return starts([0xff, 0xd8, 0xff]);
+    case 'gif':
+      // „GIF87a“ und „GIF89a“.
+      return (
+        starts([0x47, 0x49, 0x46, 0x38]) &&
+        (sniff[4] === 0x37 || sniff[4] === 0x39) &&
+        sniff[5] === 0x61
+      );
+    case 'webp':
+      // „RIFF“ gefolgt von der Größe und „WEBP“.
+      return (
+        starts([0x52, 0x49, 0x46, 0x46]) && sniff.length >= 12 && at(8, [0x57, 0x45, 0x42, 0x50])
+      );
+    case 'svg':
+      // SVG ist Text: irgendwelcher Inhalt genügt, solange er nicht nur Leerraum ist.
+      return sniff.some((byte) => byte !== 0x20 && byte !== 0x09 && byte !== 0x0a && byte !== 0x0d);
+    default:
+      return false;
+  }
+}
 
 /** Dateiname zum Herunterladen: nur der Name (kein Pfad), ohne Steuerzeichen und Sonderzeichen, gekürzt. */
 export function safeFileName(path: string): string {
@@ -151,6 +192,59 @@ export class AssetService {
       map.set(row.messageId, list);
     }
     return map;
+  }
+
+  /**
+   * Übernimmt eine Datei, die im Chat hochgeladen wurde: prüft Größe und Endung, bei Bildern zusätzlich
+   * die Signatur des Inhalts („magische Zahlen“), bereinigt den Namen und legt die Zeile an die Nachricht
+   * des Nutzers. `imported` wird mit der Datei in den Arbeitsordner des Agenten kopiert, damit seine
+   * Werkzeuge sie lesen können. Es wird nie der behauptete Typ des Browsers vertraut.
+   */
+  async importFromChat(
+    chatId: string,
+    messageId: string,
+    name: string,
+    data: Uint8Array,
+    imported: { chatKey: string; workspaceDir?: string },
+  ): Promise<AssetRow | 'too_large' | 'bad_type' | 'failed'> {
+    if (data.length === 0 || data.length > MAX_ASSET_BYTES) return 'too_large';
+    const safe = safeFileName(name);
+    const type = typeOf(safe);
+    if (!type) return 'bad_type';
+    if (type.kind === 'image') {
+      const sniff = data.slice(0, SNIFF_BYTES);
+      if (!imageSignatureMatches(sniff, extname(safe).slice(1).toLowerCase())) return 'bad_type';
+    }
+    try {
+      const id = randomUUID();
+      await this.storage.put(id, data);
+      const row = this.db
+        .insert(assets)
+        .values({
+          id,
+          chatId,
+          messageId,
+          kind: type.kind,
+          mime: type.mime,
+          name: safe,
+          size: data.length,
+        })
+        .returning()
+        .get();
+      try {
+        if (!imported.workspaceDir) return row;
+        const dir = join(imported.workspaceDir, 'imports', imported.chatKey);
+        mkdirSync(dir, { recursive: true, mode: 0o700 });
+        const target = join(dir, safe);
+        if (!isInside(resolve(target), resolve(dir))) return row;
+        writeFileSync(target, data, { mode: 0o600 });
+      } catch {
+        // Klappt die Kopie nicht, bleibt die Datei trotzdem im Chat; der Agent vermisst sie nur.
+      }
+      return row;
+    } catch {
+      return 'failed';
+    }
   }
 
   get(id: string): AssetRow | undefined {

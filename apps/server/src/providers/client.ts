@@ -25,13 +25,24 @@ export interface ToolCall {
   arguments: string;
 }
 
+/** Ein Teil einer Nachricht: Text oder ein Bild (Daten-URL, OpenAI-Format). */
+export type ContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } };
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string;
+  /** Text, oder — nur beim Nutzer — Teile mit Bildern aus dem Chat-Import. */
+  content: string | ContentPart[];
   /** Nur Antworten des Assistenten: die Werkzeugaufrufe dieser Runde. */
   toolCalls?: ToolCall[];
   /** Nur Rolle `tool`: Kennung des Aufrufs, auf den das Ergebnis antwortet. */
   toolCallId?: string;
+  /**
+   * Der Text einer Nachricht mit Bildteilen (für Modelle ohne Bildverstehen und für die Protokolle der
+   * Werkzeugrunden). Fehlt er, gilt `content` selbst als Text.
+   */
+  contentText?: string;
 }
 
 export interface ChatRequest {
@@ -465,6 +476,12 @@ function wireMessage(message: ChatMessage): Record<string, unknown> {
     };
   }
   return { role: message.role, content: message.content };
+}
+
+/** Text einer Nachricht, auch wenn sie Bildteile trägt (für Nicht-Vision-Modelle und Werkzeugprotokolle). */
+export function textOf(message: ChatMessage): string {
+  if (typeof message.content === 'string') return message.content;
+  return message.contentText ?? message.content.find((part) => part.type === 'text')?.text ?? '';
 }
 
 /** Sammelt Werkzeugaufrufe aus einem Block des Stroms (`index` ordnet Stücke einem Aufruf zu). */

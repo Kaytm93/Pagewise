@@ -59,6 +59,8 @@ export interface Snapshot {
   model: { providerId: string; model: string } | null;
   thinking: boolean;
   activity: ActivityEntry[];
+  /** `true`, solange beigelegte Dateien übernommen werden; das Modell wird erst danach gefragt. */
+  preparing?: boolean;
   /** Das Ende, falls die Antwort schon fertig ist. */
   ended: GenerationEvent | null;
 }
@@ -76,6 +78,21 @@ export class Generation {
   private thinkingSeen = false;
   private activityList: ActivityEntry[] = [];
   private ended: GenerationEvent | null = null;
+  /** Vorbereitung läuft (Dateiimport): ein Anhänger erfährt das über seinen Schnappschuss. */
+  private preparingSeen = false;
+
+  /** Markiert das Ende der Vorbereitung (Dateiimport) und meldet es neuen Zuhörern nicht mehr. */
+  setPrepared(): void {
+    this.preparingSeen = false;
+  }
+
+  get preparing(): boolean {
+    return this.preparingSeen;
+  }
+
+  markPreparing(): void {
+    this.preparingSeen = true;
+  }
 
   constructor(
     readonly chatId: string,
@@ -113,6 +130,7 @@ export class Generation {
       model: this.currentModel,
       thinking: this.thinkingSeen,
       activity: this.activityList,
+      preparing: this.preparingSeen || undefined,
       ended: this.ended,
     };
     if (this.ended) return { snapshot, unsubscribe: () => {} };

@@ -144,6 +144,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     assets,
     tools,
     toolSettings,
+    workspaces,
   });
   const cleanup = new AgentCleanup(database.db, chats, assets, workspaces);
   // Das eingebaute Fach „Standard“ (fachunabhängiger Chat) gehört immer dazu.

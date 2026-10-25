@@ -21,7 +21,8 @@ export interface Reply {
 
 export interface CallOptions {
   body?: unknown;
-  rawBody?: string;
+  /** Körper von Hand (z. B. Formulare); ein String wird als UTF-8 geschickt. */
+  rawBody?: string | Uint8Array;
   cookie?: string | null;
   csrf?: string;
   headers?: Record<string, string>;
@@ -77,7 +78,7 @@ export function createHarness(
     const headers: Record<string, string> = { ...opts.headers };
     if (opts.cookie) headers.cookie = opts.cookie;
     if (opts.csrf) headers['x-csrf-token'] = opts.csrf;
-    let body: string | undefined = opts.rawBody;
+    let body: string | Uint8Array | undefined = opts.rawBody;
     if (opts.body !== undefined) {
       body = JSON.stringify(opts.body);
       headers['content-type'] = 'application/json';

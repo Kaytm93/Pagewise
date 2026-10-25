@@ -69,14 +69,16 @@ export class ApiClient {
     signal?: AbortSignal,
   ): Promise<Response> {
     const headers: Record<string, string> = { Accept: accept };
-    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (body !== undefined && !(body instanceof FormData))
+      headers['Content-Type'] = 'application/json';
     if (this.csrfToken) headers['X-CSRF-Token'] = this.csrfToken;
 
     try {
       return await this.fetchImpl(path, {
         method,
         headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body:
+          body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
         credentials: 'same-origin',
         signal,
       });
@@ -126,6 +128,30 @@ export class ApiClient {
    * mit einem `AbortError`.
    */
   async stream(
+    method: string,
+    path: string,
+    body: unknown,
+    onMessage: (message: SseMessage) => void,
+    signal?: AbortSignal,
+  ): Promise<'streamed' | 'empty'> {
+    return this.streamRequest(method, path, body, onMessage, signal);
+  }
+
+  /**
+   * Wie {@link stream}, aber der Körper wird unverändert geschickt (z. B. `FormData` für den
+   * Dateiimport); der Browser setzt dann `Content-Type` samt Grenzwert selbst.
+   */
+  async streamForm(
+    method: string,
+    path: string,
+    body: FormData,
+    onMessage: (message: SseMessage) => void,
+    signal?: AbortSignal,
+  ): Promise<'streamed' | 'empty'> {
+    return this.streamRequest(method, path, body, onMessage, signal);
+  }
+
+  private async streamRequest(
     method: string,
     path: string,
     body: unknown,

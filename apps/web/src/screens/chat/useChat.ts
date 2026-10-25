@@ -205,12 +205,15 @@ export function useChat(api: Api, chatId: string) {
   }, [attach]);
 
   const send = useCallback(
-    (content: string): Promise<boolean> =>
+    (content: string, files: File[] = []): Promise<boolean> =>
       new Promise((resolve) => {
-        void run((onMessage, signal) => api.sendMessage(chatId, content, onMessage, signal), {
-          changes: true,
-          onAccepted: resolve,
-        });
+        void run(
+          (onMessage, signal) => api.sendMessage(chatId, content, onMessage, signal, files),
+          {
+            changes: true,
+            onAccepted: resolve,
+          },
+        );
       }),
     [api, chatId, run],
   );

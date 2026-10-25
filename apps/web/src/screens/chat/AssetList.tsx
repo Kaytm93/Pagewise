@@ -15,11 +15,47 @@ function AssetIcon({ kind }: { kind: ChatAsset['kind'] }) {
   return <Icon aria-hidden="true" className="size-4 shrink-0 text-ink-muted" />;
 }
 
-/** Dateien, die ein Agent erzeugt hat, als Downloads. Der Server liefert sie nur als Anhang aus. */
-export function AssetList({ assets, url }: { assets: ChatAsset[]; url: (id: string) => string }) {
-  if (assets.length === 0) return null;
+interface AssetListProps {
+  assets: ChatAsset[];
+  /** Eigene Bilder (aus dem Chat-Import); sie bekommen eine Vorschau. */
+  images: ChatAsset[];
+  url: (id: string) => string;
+}
+
+/**
+ * Dateien einer Nachricht. Was ein Agent erzeugt hat, erscheint als Downloads. Eigene Bilder (aus dem
+ * Chat-Import) zeigen zusätzlich eine Vorschau; der Server liefert sie mit `Content-Disposition:
+ * attachment` aus, darum bleibt der Link der Download und das `img` liest dieselbe geprüfte Adresse
+ * (Signatur, `nosniff`, eigene Herkunft) — die Vorschau ist nur ein gewöhnliches Bild-Element.
+ */
+export function AssetList({ assets, images, url }: AssetListProps) {
+  if (assets.length === 0 && images.length === 0) return null;
   return (
     <section aria-label={m.chat.agent.files} className="mt-3">
+      {images.length > 0 && (
+        <ul className="mb-2 flex flex-wrap gap-2">
+          {images.map((asset) => (
+            <li key={asset.id} className="max-w-full">
+              <a
+                href={url(asset.id)}
+                download={asset.name}
+                title={format(m.chat.agent.download, {
+                  name: asset.name,
+                  size: formatSize(asset.size),
+                })}
+                className="mo-press block overflow-hidden rounded-control border border-line bg-paper hover:border-ink-muted"
+              >
+                <img
+                  src={url(asset.id)}
+                  alt={asset.name}
+                  loading="lazy"
+                  className="max-h-40 max-w-full object-contain"
+                />
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
       <ul className="flex flex-wrap gap-2">
         {assets.map((asset) => (
           <li key={asset.id} className="min-w-0 max-w-full">
