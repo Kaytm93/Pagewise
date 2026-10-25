@@ -288,6 +288,20 @@ export const de = {
       untilExam: 'bis {subject}',
       nextLesson: 'als Nächstes',
       week: 'Diese Woche',
+      /** Überschrift des Wochenstreifens am Wochenende: dann zeigt er die kommende Woche. */
+      nextWeek: 'Nächste Woche',
+      /** Kleine Zeile neben „Als Nächstes“: „Heute, 4 Stunden“. */
+      todayCount: 'Heute, {count}',
+      /** Rechte Spalte: der nächste Test mit Zahl, Stoff und Wochenstreifen. */
+      upcoming: 'Anstehend',
+      /** Die „Jetzt“-Linie, wenn gerade Pause ist: „Jetzt 09:52, Pause bis 10:05“. */
+      nowBreak: 'Jetzt {time}, Pause bis {until}',
+      /** Rechts an der nächsten Stunde: „in 13 Min.“. */
+      startsIn: 'in {minutes} Min.',
+      /** Das Datum einer Spalte im Wochenstreifen: „Mo 5.“. */
+      dayDate: '{day} {date}.',
+      topics: 'Stoff laut Plan:',
+      toSubject: 'Zum Fach',
     },
     /** Startseite in der Richtung „Lagen“: Stundenliste, Zettel und „Zuletzt genutzt“. */
     startGrid: {
