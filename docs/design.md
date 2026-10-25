@@ -1,10 +1,23 @@
 # Gestaltung
 
-Stand: 4. Oktober 2026 (D-043, D-045).
+Stand: 25. Oktober 2026 (D-043, D-045, D-058).
 
 ## Designrichtungen (D-045)
 
 Es gibt drei Richtungen, wählbar in den Einstellungen („Darstellung“, Standard **Raum**): **Raum** (Ordner mit Rücken und Heftung, Tageslinie), **Lagen** (Heft mit Heftrücken und Blattstapel, unten beschrieben) und **Atelier** (keine Hülle, großes Licht der Fachfarbe, runde Karten). Das Attribut `data-design` am `<html>` wählt aus, `public/boot.js` setzt es vor dem ersten Anstrich, `ui/design.ts` wechselt es zur Laufzeit. Dateien: `styles/lagen.css` (Grundlage), `styles/raum.css`, `styles/atelier.css` (überschreiben nur Abweichungen). Neue Bildschirme benutzen dieselben Klassen und brauchen keine Fallunterscheidung; was nur in einer Richtung existiert (Tageslinie in Raum), prüft `useDesign()`. Alle Regeln unten (Tokens, Bewegung, Kontrast, CSP) gelten für alle drei.
+
+## Angleichung an die Mockups (D-058, 25. Oktober 2026)
+
+Die drei Mockups (A „Lagen“, B „Atelier“, C „Raum“) wurden mit dem Bau verglichen und die Abweichungen geschlossen; Fehler der Mockups (Inline-Skripte, feste Farben, Überlauf bei 375 px, Touch-Ziele unter 44 px, zu heller `--ink-muted`) sind bewusst nicht übernommen (Liste in D-058).
+
+- **Maße je Richtung:** `--sidebar-w` und `--sheet-edge` stehen in der CSS-Datei der Richtung, `AppShell` und `Sheet` lesen sie. Seitenleiste Lagen 276 px (bis 1023 px Breite 248), Atelier 264 px (bis 1099 px 232), Raum 240 px (bis 1099 px 216). Blattrand Lagen 52 px (iPad 34), Atelier `clamp(20px, 5vw, 72px)`, Raum 52 px.
+- **Dialoge (S-01):** Das Panel trägt `lg-dialog` (deckende Fläche, nicht mehr `lg-sheet`), `ui/modal.tsx` führt einen Stapel: Escape schließt nur die oberste Ebene, die Scrollsperre fällt erst mit der letzten, der Fokus kehrt zurück und bleibt im Dialog, `ModalFooter` hält die Knöpfe sichtbar.
+- **Gemeinsame Bausteine** (`styles/screens.css`, alle Richtungen): `--subject-h1` (Fach-Überschrift fließend, je Richtung eigene Werte), Container-Query im Startraster, `.lg-composer`, `.lg-agent-head`, `.lg-tool-check` (gezeichneter Haken), `.lg-fx-list`. „Zuletzt genutzt“, Tagesgruppen im Chat und die Effektliste gelten für alle Richtungen. Die Startüberschrift entsteht aus Stundenplan und Tests (`screens/home/start-heading.ts`), ohne Daten gilt der feste Text.
+- **Lagen:** Blattwechsel mit größerer Ankunft, Mappenreiter mit Fachbalken, Stundenliste mit Pausen und wachsender „Jetzt“-Linie, gezeichnetes Fachmotiv (`lg-motif-stroke`, Keyframe `draw`).
+- **Atelier:** `--hue-ink` je Fach als AA-Textton, Licht über `--at-k`, Tagesliste mit „Jetzt“-Linie, Fachseite als Arbeitsplatz (`atelier-fach.css`, `screens/atelier/SubjectAtelier*`: Kennzahlenzeile, Untergruppen als Kacheln und Filter, großes gezeichnetes Motiv), Chat mit Randmotiv, Status im Kopf und Fachglühen am Composer, Zeigerlicht (`ui/pointer-glow.ts`: nur Atelier, Stufe „Voll“, Maus oder Stift, sichtbarer Tab).
+- **Raum:** Tageslinie als Zeitachse mit wandernder Marke (`screens/raum/timeline.ts`, Pausenlogik unverändert), Dunkelton `--page-hi`, vier Fensterscheiben, Parallaxe mit zwei Ebenen und Glättung (`ui/parallax.ts`), Chat in Raum-Optik, Anmelde-Hülle ohne Fachkantenlinie (`lg-sheet-auth`). Hüllenfehler (S-02): Ordnerrücken, Randlinie und Eingabezeile sind korrigiert (Ursachen in den Commits).
+- **Bewegung:** neue Ausnahme für Bedienelemente, siehe unten (`--t-color`).
+- **Offen:** Befehlsleiste, Bot-Kopf je Chat-Nachricht (`MessageItem.tsx`), feste Fußzeile in `ProviderDialog` und im Chat, Zahlen für Chats und Hefteinträge im Atelier-Ledger (keine Daten ohne neue Abfrage), Motiv auf der Atelier-Startseite, Zähler an den Lagen-Reitern.
 
 ## Lagen (D-043)
 
@@ -60,5 +73,5 @@ Voll: Safari 17.2 und neuer (iOS und iPadOS 17.2+), Chrome und Firefox der letzt
 ## Nicht gebaut (bewusst später)
 
 - Beweglicher Streifen in der Seitenleiste (Markierung gleitet zwischen Einträgen): braucht Messung der Einträge, fehleranfällig bei aufklappenden Untergruppen.
-- Startseite mit „Als Nächstes“ (Stunde, Test, „Jetzt“-Linie): wartet auf Stundenplan und Tests (Welle 3).
+- Startseite mit „Als Nächstes“, Stunden und „Jetzt“-Linie ist gebaut (siehe D-058 oben); Fortschritt je Test gibt es mangels Daten nicht.
 - Befehlsleiste (Cmd/Strg + K).
