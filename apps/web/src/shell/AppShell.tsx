@@ -11,6 +11,7 @@ import { NotFoundPage } from '../screens/NotFoundPage';
 import { SettingsPage } from '../screens/SettingsPage';
 import { SubjectPage } from '../screens/SubjectPage';
 import { startParallax } from '../ui/parallax';
+import { usePointerGlow } from '../ui/pointer-glow';
 import { Sheet } from '../ui/Sheet';
 import { subjectColorAttr } from '../ui/subject-color';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
@@ -157,6 +158,7 @@ function Shell() {
   }, [key, depth, dir]);
 
   useEffect(() => (app.current ? startParallax(app.current) : undefined), []);
+  usePointerGlow();
 
   useEffect(() => {
     document.title = title === m.app.name ? m.app.name : `${title} · ${m.app.name}`;
