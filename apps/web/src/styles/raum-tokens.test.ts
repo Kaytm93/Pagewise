@@ -149,34 +149,30 @@ describe('Raum: Fensterlicht', () => {
   });
 });
 
-describe('Raum: Ordnerrücken', () => {
-  it('trägt die Körnung mit .7 und Innenkanten auf einer eigenen Ebene', () => {
-    expect(declarations(raum, ":root[data-design='raum'] {")['--cover-grain']).toBe('0.7');
-    const body = rule(raum, ":root[data-design='raum'] .lg-stack .lg-p1::after");
-    expect(body).toContain('opacity: var(--cover-grain)');
-    expect(body).toContain('inset 0 1px 0 var(--cover-rim)');
-    expect(body).toContain('inset 0 -2px 0 var(--cover-shade)');
-    expect(body).toContain('inset 2px 0 0 var(--cover-lit)');
+describe('Raum: Ordnerrücken entfallen', () => {
+  it('hat keine Tokens mehr für Rücken, Heftung und Dunkelmischung', () => {
+    expect(raum).not.toMatch(/--cover-|--heft-shadow|--desk-[ab]\b|--edge-[123]\b/);
   });
 
-  it('bekommt links genug Platz im Innenabstand von #main (S-02 b)', () => {
-    // Rücken: Handy 14 px, ab md 22 px links vom Stapel; Platz: 20 px beziehungsweise 26 px.
-    expect(rule(raum, ":root[data-design='raum'] .lg-stack .lg-p1")).toContain(
-      'inset: -6px -6px -8px -14px',
-    );
-    expect(raum).toContain('inset: -9px -9px -11px -22px');
+  it('blendet die Ebenen des Stapels (Rücken, Papierkanten) aus', () => {
+    expect(rule(raum, ":root[data-design='raum'] .lg-ply")).toContain('display: none');
+  });
+});
+
+describe('Raum: Innenabstand von #main (S-02 b)', () => {
+  it('hält links und rechts Luft und setzt am Stapel keinen waagerechten Rand', () => {
     expect(rule(raum, ":root[data-design='raum'] #main")).toContain(
       'padding-left: max(20px, env(safe-area-inset-left))',
     );
     expect(raum).toMatch(/:root\[data-design='raum'\] #main\s*\{[^}]*padding-left: 26px/);
-    // Der waagerechte Rand am Stapel wird nicht mehr gesetzt: mx-auto (utilities) überstimmt ihn doch.
+    // Der waagerechte Rand am Stapel wird nicht gesetzt: mx-auto (utilities) überstimmt ihn doch.
     expect(rule(raum, ":root[data-design='raum'] .lg-stack")).not.toMatch(
       /margin(-inline|-left|-right)?:/,
     );
   });
 });
 
-describe('Raum: Blatt im Ordner (S-02 a, c)', () => {
+describe('Raum: Blatt im Stapel (S-02 a, c)', () => {
   const sheet = rule(raum, ":root[data-design='raum'] .lg-stack .lg-sheet");
 
   it('ist `overflow: clip`, damit position: sticky am Fenster klebt', () => {
@@ -187,34 +183,15 @@ describe('Raum: Blatt im Ordner (S-02 a, c)', () => {
     }
   });
 
-  it('zeichnet Heftschatten und Randlinie als Hintergrundebenen, nicht über dem Inhalt', () => {
+  it('legt auf das Blatt keine Pseudo-Elemente, die über dem Inhalt liegen', () => {
     expect(raum).not.toMatch(/\.lg-sheet::(before|after)/);
-    expect(sheet).toContain('var(--rule-x) 0');
-    expect(sheet).toContain('1px 100%');
   });
 
-  it('hält die Randlinie links vom Innenabstand des Blatts', () => {
-    // Innenabstand (ui/Sheet.tsx): px-[22px], sm:px-8 (32 px), md: --sheet-edge (52 px).
-    const ruleX = (media: string | null) => {
-      const source = media ? raum.slice(raum.indexOf(media)) : raum;
-      const body = rule(source, ":root[data-design='raum'] .lg-stack .lg-sheet");
-      return Number(/--rule-x:\s*(\d+)px/.exec(body)?.[1]);
-    };
-    expect(ruleX(null)).toBeLessThan(22);
-    expect(ruleX('@media (min-width: 640px)')).toBeLessThan(32);
-    expect(ruleX('@media (min-width: 768px)')).toBeLessThan(52);
-    // Chat: Kopf, Verlauf und Eingabe haben mindestens 16 px
-    const chat = /\.lg-stack \.lg-sheet\s*\{\s*--rule-x:\s*(\d+)px/.exec(
-      raum.slice(raum.indexOf('[data-view=')),
-    );
-    expect(Number(chat?.[1])).toBeLessThan(16);
-  });
-
-  it('gibt der Anmeldung die Karte ohne Randlinie und Heftschatten (S-02 d)', () => {
+  it('gibt der Anmeldung die Karte mit Körnung, ohne Stapelrand (S-02 d)', () => {
     expect(rule(raum, ":root[data-design='raum'] .lg-sheet.lg-sheet-auth")).toContain(
       'background-image: var(--grain)',
     );
-    // Eine Karte für sich mit Rand und Schatten, nicht der Ordnerrand
+    // Eine Karte für sich mit Kante und Schatten
     const card = rule(raum, ":root[data-design='raum'] .lg-sheet");
     expect(card).toContain('border: 1px solid var(--line-warm)');
   });

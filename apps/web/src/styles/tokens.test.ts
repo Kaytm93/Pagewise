@@ -291,3 +291,20 @@ describe('Fachfarben (D-043)', () => {
     expect(picker).not.toMatch(/text-white/);
   });
 });
+
+// Raum (neumorph, D-066): jede Bedienelement-Kante hebt sich mit 3 : 1 vom Raumton ab, weil
+// Schatten allein nicht als Rand zählen. Text auf der gehobenen Fläche erreicht 4,5 : 1.
+describe.each([
+  ['hell', light],
+  ['dunkel', { ...light, ...dark }],
+])('Raum (neumorph) im %s Modus', (_name, tokens) => {
+  const color = (token: string) => toHex(tokens[token] as string, tokens);
+
+  it('die Kante hebt sich vom Raumton mit mindestens 3 : 1 ab', () => {
+    expect(contrast(color('--raum-edge'), color('--raum-canvas'))).toBeGreaterThanOrEqual(3);
+  });
+
+  it('Text (--ink) auf der gehobenen Fläche erreicht mindestens 4,5 : 1', () => {
+    expect(contrast(color('--ink'), color('--raum-raised'))).toBeGreaterThanOrEqual(4.5);
+  });
+});

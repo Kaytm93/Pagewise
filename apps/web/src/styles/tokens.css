@@ -119,6 +119,25 @@
   /* Symbolfarbe auf der Fachfarbe (Häkchen der Farbauswahl): je Modus so dunkel bzw. hell,
      dass sie auf jeder der acht Fachfarben mindestens 3 : 1 erreicht */
   --on-subj: #ffffff;
+
+  /* Atelier (Glas, D-065): Fläche, Haarrand, Unschärfe und zwei Schattenstufen. Die Schatten
+     nehmen ihre Tönung aus der Schattenfarbe darunter. */
+  --glass-fill: rgba(255, 255, 255, 0.46);
+  --glass-edge: rgba(255, 255, 255, 0.7);
+  --glass-edge-side: rgba(255, 255, 255, 0.4);
+  --glass-blur: 20px;
+  --glass-shadow-near: 0 1px 2px rgba(var(--shadow), 0.08);
+  --glass-shadow-far: 0 16px 40px -16px rgba(var(--shadow), var(--shadow-a));
+  /* Raum (neumorph, D-066): Raumton, gehobene Fläche, Kante und Licht für die beiden Schatten */
+  --raum-canvas: #e7e3dc;
+  --raum-raised: #f0ede7;
+  --raum-edge: #7f7a72;
+  --raum-light: rgba(255, 255, 255, 0.7);
+  --raum-dark: rgba(60, 40, 15, 0.18);
+  /* Lagen-Akzente (D-067): Randlinie, Etikett und ein kräftigerer Heftfaden */
+  --margin: #c4877a;
+  --label: #f6f2ea;
+  --stitch-strong: #b5ad9b;
 }
 
 :root[data-theme="dark"] {
@@ -162,6 +181,24 @@
   --subj: #8f897d;
   --subj-glow: 11%;
   --on-subj: #2a2a28;
+
+  /* Atelier (Glas, D-065) */
+  --glass-fill: rgba(36, 36, 34, 0.52);
+  --glass-edge: rgba(255, 255, 255, 0.12);
+  --glass-edge-side: rgba(255, 255, 255, 0.08);
+  --glass-blur: 20px;
+  --glass-shadow-near: 0 1px 2px rgba(var(--shadow), 0.08);
+  --glass-shadow-far: 0 16px 40px -16px rgba(var(--shadow), var(--shadow-a));
+  /* Raum (neumorph, D-066) */
+  --raum-canvas: #1f1f1d;
+  --raum-raised: #262624;
+  --raum-edge: #73716b;
+  --raum-light: rgba(255, 255, 255, 0.05);
+  --raum-dark: rgba(0, 0, 0, 0.45);
+  /* Lagen-Akzente (D-067) */
+  --margin: #8c6058;
+  --label: #34332f;
+  --stitch-strong: #5e5c55;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -206,6 +243,24 @@
     --subj: #8f897d;
     --subj-glow: 11%;
     --on-subj: #2a2a28;
+
+    /* Atelier (Glas, D-065) */
+    --glass-fill: rgba(36, 36, 34, 0.52);
+    --glass-edge: rgba(255, 255, 255, 0.12);
+    --glass-edge-side: rgba(255, 255, 255, 0.08);
+    --glass-blur: 20px;
+    --glass-shadow-near: 0 1px 2px rgba(var(--shadow), 0.08);
+    --glass-shadow-far: 0 16px 40px -16px rgba(var(--shadow), var(--shadow-a));
+    /* Raum (neumorph, D-066) */
+    --raum-canvas: #1f1f1d;
+    --raum-raised: #262624;
+    --raum-edge: #73716b;
+    --raum-light: rgba(255, 255, 255, 0.05);
+    --raum-dark: rgba(0, 0, 0, 0.45);
+    /* Lagen-Akzente (D-067) */
+    --margin: #8c6058;
+    --label: #34332f;
+    --stitch-strong: #5e5c55;
   }
 }
 

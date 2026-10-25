@@ -217,6 +217,47 @@ describe('lagen.css: Fachkopf, Reiter, Chat, Einstellungen', () => {
   });
 });
 
+describe('lagen.css: Randlinie am Blatt, nicht am Heftfaden (Plan 17, D2)', () => {
+  const RAND = `${LAGEN} .lg-app[data-view='home'] .lg-sheet::before`;
+  const randlinie = lagenRules.filter((entry) => entry.selector.includes('.lg-sheet::before'));
+
+  it('zeichnet eine 1 px breite Linie in --margin als Pseudo-Element am Blatt, nur auf Start, Fachseite und Hefteintrag', () => {
+    expect(randlinie).toHaveLength(1);
+    const [regel] = randlinie;
+    const teile = (regel?.selector ?? '').split(',').map((teil) => teil.trim());
+    for (const teil of teile) {
+      expect(teil.startsWith(LAGEN), teil).toBe(true);
+      expect(teil, teil).toMatch(/\.lg-sheet::before$/);
+    }
+    expect(teile.map((teil) => /data-view='(\w+)'/.exec(teil)?.[1])).toEqual([
+      'home',
+      'subject',
+      'note',
+    ]);
+    expect(regel?.selector).not.toContain('chat');
+    expect(regel?.body).toContain('background: var(--margin)');
+    expect(regel?.body).toContain('width: 1px');
+    expect(regel?.body).toMatch(/left: min\(56px, /);
+  });
+
+  it('liegt nur ab „md“, denn auf dem Telefon beginnt der Text schon bei 22 px', () => {
+    const start = lagen.indexOf(RAND);
+    expect(start).toBeGreaterThan(-1);
+    const media = lagen.lastIndexOf('@media', start);
+    expect(lagen.slice(media, start)).toMatch(/^@media \(min-width: 768px\) \{[^}]*$/);
+  });
+
+  it('legt keine Linie auf den Heftfaden und die Streifen: dort kommt --margin nie vor', () => {
+    for (const sel of ['.lg-spine', '.lg-nav-marker', '.lg-nav-item']) {
+      const treffer = lagenRules.filter((entry) => entry.selector.includes(sel));
+      expect(treffer.length, sel).toBeGreaterThan(0);
+      for (const entry of treffer) {
+        expect(entry.body, sel).not.toContain('var(--margin)');
+      }
+    }
+  });
+});
+
 describe('motion.css: Ankunft des neuen Blatts in „Lagen“', () => {
   const zahlen = (text: string) =>
     [...text.matchAll(/\* (-?[0-9.]+)(%|deg|px)/g)].map((m) => Number(m[1]));
