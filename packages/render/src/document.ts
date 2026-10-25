@@ -18,7 +18,8 @@ const MAX = {
   heading: 120,
   paragraph: 1_200,
   items: 30,
-  item: 300,
+  // Ein Listenpunkt darf so lang sein wie ein Absatz: Das PDF bricht lange Punkte um.
+  item: 1_200,
 } as const;
 
 /**
@@ -93,7 +94,7 @@ const hasOnly = (value: Json, keys: string[]) =>
  * Text für ein Feld: nicht leer, nicht zu lang, ohne Steuerzeichen. Zeichen, die das PDF nicht setzt, bekommen
  * einen eigenen Fehlercode, damit das Modell (Korrekturanfrage) ein einfacheres Zeichen wählt.
  */
-function readText(value: unknown, max: number): Result<string> {
+function readText(value: unknown, max: number, field: 'text' | 'items' = 'text'): Result<string> {
   if (
     typeof value !== 'string' ||
     value.trim() === '' ||
@@ -101,7 +102,7 @@ function readText(value: unknown, max: number): Result<string> {
     hasControlChars(value) ||
     /[\r\n\t]/.test(value)
   ) {
-    return fail('invalid_document', 'text');
+    return fail('invalid_document', field);
   }
   if (!isPdfText(value)) return fail('unsupported_text');
   return ok(value);
@@ -124,7 +125,7 @@ function readPart(entry: unknown): Result<DocumentPart> {
     }
     const texts: string[] = [];
     for (const item of items) {
-      const text = readText(item, MAX.item);
+      const text = readText(item, MAX.item, 'items');
       if (!text.ok) return text;
       texts.push(text.value);
     }

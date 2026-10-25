@@ -44,6 +44,12 @@ describe('Dokument-Angabe', () => {
     expect(parseDocumentSpec(chemistry).ok).toBe(true);
   });
 
+  it('nimmt Listenpunkte so lang wie Absätze (lange Erklärungen im Arbeitsblatt)', () => {
+    const long = 'Warum es passiert: Ein Elektron wechselt in die d-Unterschale. '.repeat(15);
+    expect(long.length).toBeGreaterThan(300);
+    expect(parseDocumentSpec(doc({ parts: [{ type: 'list', items: [long] }] })).ok).toBe(true);
+  });
+
   it.each(['H₂O', 'Ag⁺ und NO₃⁻', 'SO₄²⁻', 'AgNO₃ + NaCl → AgCl + NaNO₃', '2 − 1 ≤ 3 ≥ 0 ≈ 1'])(
     'nimmt Indizes, Ladungen und Mathezeichen in %j',
     (text) => {
@@ -70,6 +76,7 @@ describe('Dokument-Angabe', () => {
     [doc({ parts: [{ type: 'list', items: [] }] }), 'invalid_document', 'items'],
     [doc({ parts: [{ type: 'paragraph', text: 'a\nb' }] }), 'invalid_document', 'text'],
     [doc({ parts: [{ type: 'paragraph', text: 'x'.repeat(1201) }] }), 'invalid_document', 'text'],
+    [doc({ parts: [{ type: 'list', items: ['x'.repeat(1201)] }] }), 'invalid_document', 'items'],
     [doc({ parts: [{ type: 'paragraph', text: 'Formel Δ H' }] }), 'unsupported_text', undefined],
     [doc({ parts: [{ type: 'list', items: ['Ziel ⇌ Ende'] }] }), 'unsupported_text', undefined],
     [doc({ parts: [{ type: 'paragraph', text: 'Steuer\u0007' }] }), 'invalid_document', 'text'],

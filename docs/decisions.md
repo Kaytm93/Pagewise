@@ -589,3 +589,11 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Verworfen:** Die Regel nur verschärfen. Das Modell hält sich daran nicht zuverlässig; die Erweiterung löst den Fall an der Quelle.
 - **Geprüft:** Render-Tests 230 (u. a. Reaktionen, Ladungen, `\pu`, `\href` in `\ce`), Prompt-Test, Web-Blöcke mit `\ce` im Text und als Absatz. Im headless Chromium gezeichnet: Reaktionspfeile, Fällungspfeil `↓`, Gleichgewichtspfeil, Ladungen, `\pu`.
 - **Nicht geprüft:** WebKit auf iPhone und iPad, die Mac-App.
+
+## D-066 Listenpunkte im Dokument-Block so lang wie Absätze (25. Oktober 2026)
+
+- **Anlass:** Ein Arbeitsblatt zu den Ausnahmen der Elektronenkonfiguration wurde mit „Der Aufbau des Dokuments passt nicht“ abgelehnt (`invalid_document`). Ein Listenpunkt hatte 321 Zeichen, die Grenze lag bei 300, Absätze bei 1.200. Der Hinweis nannte das Feld `text`, obwohl es ein Listenpunkt war.
+- **Entscheidung:** Listenpunkte dürfen 1.200 Zeichen lang sein wie Absätze (`packages/render/src/document.ts`). Das PDF bricht lange Punkte um. Die Gesamtgrenze von 16.384 Zeichen je Block bleibt. Die Fehlerangabe für Listenpunkte ist jetzt `items`.
+- **Verworfen:** Die Grenze auf 600 setzen. Ein Erklärungspunkt im Arbeitsblatt kann ohne Not länger sein, und die Gesamtgrenze begrenzt den Block ohnehin.
+- **Geprüft:** Das Dokument aus der Meldung wird angenommen. PDF: zwei A4-Seiten, der lange Punkt ist umgebrochen (Sichtprüfung). Render-Tests 232, mit einem neuen Test für einen 960-Zeichen-Punkt und einem für einen 1.201-Zeichen-Punkt mit Hinweis `items`.
+- **Nicht geprüft:** Vorschau im Browser und Download auf iPhone und iPad; die Antwort des Modells, die den Fehler ausgelöst hat, liegt nur als Block vor.
