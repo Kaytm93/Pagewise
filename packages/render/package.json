@@ -15,6 +15,7 @@
     "./smiles": "./src/smiles.ts",
     "./smiles-dom": "./src/smiles-dom.ts",
     "./sanitize": "./src/sanitize.ts",
+    "./quiz": "./src/quiz.ts",
     "./validate": "./src/validate.ts"
   },
   "scripts": {

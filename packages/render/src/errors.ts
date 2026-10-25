@@ -1,5 +1,5 @@
 /** Die Arten von Blöcken, die ein Hefteintrag außer Text enthalten kann. */
-export type BlockKind = 'math' | 'graph' | 'mol' | 'abc';
+export type BlockKind = 'math' | 'graph' | 'mol' | 'abc' | 'quiz';
 
 /**
  * Fehlercodes beim Prüfen und Zeichnen. Es sind nur feste Codes, nie Text aus dem Block oder aus einer
@@ -18,6 +18,7 @@ export type RenderErrorCode =
   | 'unknown_formula'
   | 'invalid_smiles'
   | 'invalid_abc'
+  | 'invalid_quiz'
   | 'render_failed';
 
 export class RenderError extends Error {
@@ -58,6 +59,7 @@ export const LIMITS = {
   graph: 8_192,
   mol: 1_024,
   abc: 8_192,
+  quiz: 8_192,
   expression: 200,
 } as const;
 

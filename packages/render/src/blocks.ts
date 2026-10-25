@@ -1,7 +1,7 @@
 import type { BlockKind } from './errors';
 
 export interface FenceBlock {
-  kind: Extract<BlockKind, 'graph' | 'mol' | 'abc'>;
+  kind: Extract<BlockKind, 'graph' | 'mol' | 'abc' | 'quiz'>;
   source: string;
   /** Nummer dieses Blocks unter den Blöcken derselben Art, ab 1. */
   index: number;
@@ -16,12 +16,12 @@ export interface MathBlock {
 
 export type Block = FenceBlock | MathBlock;
 
-const FENCE_LANGS = new Set(['graph', 'mol', 'abc']);
+const FENCE_LANGS = new Set(['graph', 'mol', 'abc', 'quiz']);
 const OPEN = /^ {0,3}(`{3,}|~{3,})\s*([^\s`]*)/;
 
 /**
  * Findet die Blöcke eines Markdown-Texts, so wie die Darstellung sie erkennt: umzäunte Blöcke der Sprachen
- * `graph`, `mol` und `abc` sowie Formeln (`$$…$$` als Anzeige, `$…$` im Text). Inhalt anderer umzäunter
+ * `graph`, `mol`, `abc` und `quiz` sowie Formeln (`$$…$$` als Anzeige, `$…$` im Text). Inhalt anderer umzäunter
  * Blöcke und Code im Text bleibt unberücksichtigt, dort steht ein Dollarzeichen nur als Zeichen.
  *
  * Das ist eine Prüfhilfe für den Server (ohne die Markdown-Bibliothek der Oberfläche) und bewusst etwas
@@ -29,7 +29,7 @@ const OPEN = /^ {0,3}(`{3,}|~{3,})\s*([^\s`]*)/;
  */
 export function extractBlocks(markdown: string): Block[] {
   const blocks: Block[] = [];
-  const counts: Record<BlockKind, number> = { math: 0, graph: 0, mol: 0, abc: 0 };
+  const counts: Record<BlockKind, number> = { math: 0, graph: 0, mol: 0, abc: 0, quiz: 0 };
   const lines = markdown.replace(/\r\n?/g, '\n').split('\n');
   const prose: string[] = [];
 

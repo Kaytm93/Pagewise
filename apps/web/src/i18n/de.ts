@@ -328,6 +328,7 @@ export const de = {
     graph: 'Funktionsgraph',
     mol: 'Strukturformel',
     abc: 'Noten',
+    quiz: 'Quiz',
     errorTitle: '{kind} konnte nicht gezeichnet werden.',
     errors: {
       empty: 'Der Block ist leer.',
@@ -341,6 +342,8 @@ export const de = {
         'Diese Summenformel kennt die Zeichnung nicht. Organische Stoffe lassen sich als SMILES angeben.',
       invalid_smiles: 'Die SMILES-Angabe lässt sich nicht lesen.',
       invalid_abc: 'Die Noten lassen sich nicht lesen.',
+      invalid_quiz:
+        'Der Aufbau des Quiz passt nicht: Fragen, Antworten und genau eine richtige Lösung müssen stimmen.',
       render_failed: 'Das Zeichnen ist fehlgeschlagen.',
     },
     callout: {
@@ -348,6 +351,19 @@ export const de = {
       beispiel: 'Beispiel',
       aufgabe: 'Aufgabe',
       definition: 'Definition',
+    },
+    quizView: {
+      questionOf: 'Frage {n} von {total}',
+      check: 'Prüfen',
+      again: 'Noch einmal',
+      pickFirst: 'Wähle erst eine Antwort, dann „Prüfen“.',
+      score: '{correct} von {total} richtig',
+      right: 'Richtig',
+      wrong: 'Falsch',
+      yourAnswer: 'Deine Wahl',
+      rightAnswer: 'Richtige Antwort: {answer}',
+      unanswered: 'Nicht beantwortet.',
+      explanation: 'Erklärung: {text}',
     },
   },
   notes: {
