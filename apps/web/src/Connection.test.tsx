@@ -179,4 +179,111 @@ describe('Verbindungs-Banner (Mac nicht erreichbar)', () => {
       expect(await screen.findByRole('heading', { name: 'Noch keine Fächer' })).toBeTruthy();
     });
   });
+
+  describe('Endet der Hinweis weit unten: Platzhalter hält die Höhe (M4-T037)', () => {
+    let y = 0;
+
+    class MockResizeObserver {
+      static last: MockResizeObserver | null = null;
+      fire: () => void;
+      constructor(cb: ResizeObserverCallback) {
+        this.fire = () => cb([], this as unknown as ResizeObserver);
+        MockResizeObserver.last = this;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {
+        if (MockResizeObserver.last === this) MockResizeObserver.last = null;
+      }
+    }
+
+    beforeEach(() => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      y = 0;
+      // jsdom scrollt nicht: der Stand kommt aus `y`, das Ereignis meldet ihn dem Hinweis.
+      Object.defineProperty(window, 'scrollY', { configurable: true, get: () => y });
+    });
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      delete (window as unknown as { scrollY?: unknown }).scrollY;
+    });
+
+    /** Lädt die Ansicht, lässt den Mac verschwinden und meldet dem Hinweis eine Höhe von 125 px. */
+    async function bannerHängt() {
+      const server = new FakeServer('unlocked');
+      mount(server);
+      await screen.findByRole('heading', { name: 'Noch keine Fächer' });
+      server.unreachable = true;
+      act(() => {
+        window.dispatchEvent(new Event('pageshow'));
+      });
+      const banner = await screen.findByTestId('connection-banner');
+      const wrapper = banner.closest('.cb-h') as HTMLElement;
+      Object.defineProperty(wrapper, 'offsetHeight', { configurable: true, value: 125 });
+      act(() => {
+        MockResizeObserver.last?.fire();
+      });
+      return server;
+    }
+
+    /** Der Mac ist zurück: „Erneut versuchen“, der Hinweis endet. */
+    async function hinweisEndet(server: FakeServer) {
+      server.unreachable = false;
+      await userEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
+      await waitFor(() => expect(screen.queryByTestId('connection-banner')).toBeNull());
+    }
+
+    function scrollTo(to: number) {
+      y = to;
+      act(() => {
+        window.dispatchEvent(new Event('scroll'));
+      });
+    }
+
+    it('lässt beim Ende weit unten einen Platzhalter in Höhe des Hinweises stehen', async () => {
+      const server = await bannerHängt();
+      scrollTo(630);
+      await hinweisEndet(server);
+
+      const platzhalter = screen.getByTestId('connection-platzhalter');
+      expect(platzhalter.classList.contains('cb-h')).toBe(true);
+      expect(document.documentElement.style.getPropertyValue('--cb-h')).toBe('125px');
+      expect(y).toBe(630);
+    });
+
+    it('bleibt beim Scrollen stehen und fällt erst weg, wenn die Seite wieder oben steht', async () => {
+      const server = await bannerHängt();
+      scrollTo(630);
+      await hinweisEndet(server);
+
+      scrollTo(400);
+      expect(screen.getByTestId('connection-platzhalter')).toBeTruthy();
+
+      scrollTo(0);
+      expect(screen.queryByTestId('connection-platzhalter')).toBeNull();
+      expect(document.documentElement.style.getPropertyValue('--cb-h')).toBe('');
+    });
+
+    it('fehlt, wenn der Hinweis oben endet, und die Variable verschwindet mit ihm', async () => {
+      const server = await bannerHängt();
+      await hinweisEndet(server);
+
+      expect(screen.queryByTestId('connection-platzhalter')).toBeNull();
+      expect(document.documentElement.style.getPropertyValue('--cb-h')).toBe('');
+    });
+
+    it('weicht dem Hinweis, wenn er wieder erscheint', async () => {
+      const server = await bannerHängt();
+      scrollTo(630);
+      await hinweisEndet(server);
+      expect(screen.getByTestId('connection-platzhalter')).toBeTruthy();
+
+      server.unreachable = true;
+      act(() => {
+        window.dispatchEvent(new Event('pageshow'));
+      });
+      await screen.findByTestId('connection-banner');
+      expect(screen.queryByTestId('connection-platzhalter')).toBeNull();
+    });
+  });
 });

@@ -1,5 +1,5 @@
 import { Loader2, WifiOff } from 'lucide-react';
-import { useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { messages as m } from '../i18n';
 import { Button } from '../ui/Button';
 import { useConnection } from './ConnectionProvider';
@@ -12,8 +12,8 @@ import { useConnection } from './ConnectionProvider';
 export const CONNECTION_BANNER_VAR = '--cb-h';
 
 /**
- * Hängt die Höhe des Hinweises an die Wurzel. Hängt nur, solange der Hinweis im Baum steht; beim
- * Aushängen (Mac wieder erreichbar) entfernt die Aufräumfunktion die Variable.
+ * Misst den Hinweis und hält die Variable aktuell. Die Variable entfernt nicht diese Funktion, sondern
+ * `ConnectionBanner`: Ein Platzhalter braucht die Höhe noch, wenn der Hinweis schon weg ist.
  */
 function BannerHeight() {
   const ref = useRef<HTMLDivElement>(null);
@@ -32,10 +32,7 @@ function BannerHeight() {
     if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(set);
     observer.observe(wrapper);
-    return () => {
-      observer.disconnect();
-      root.style.removeProperty(CONNECTION_BANNER_VAR);
-    };
+    return () => observer.disconnect();
   }, []);
   return <div ref={ref} className="sr-only" aria-hidden="true" />;
 }
@@ -45,10 +42,64 @@ function BannerHeight() {
  * die Seite lässt sich weiter lesen. Sobald der Server wieder antwortet, verschwindet er von selbst.
  * Er nimmt Platz im Dokumentfluss ein (M4-T008): oberhalb der Kopfzeile, die er nach unten schiebt;
  * die Kopfzeile hält beim Scrollen unter ihm (top: var(--cb-h, 0px)).
+ *
+ * Endet er, während die Seite gescrollt ist, bleibt seine Höhe als leerer Platzhalter stehen, bis die
+ * Seite wieder oben steht (M4-T037). Fiele die Höhe sofort aus dem Fluss, rückten Kopfzeile und Inhalt
+ * mitten im Lesen um die Hinweishöhe nach oben. Oben gibt es keinen Lesestand zu halten: dort entfällt
+ * der Platzhalter sofort.
  */
 export function ConnectionBanner() {
   const { status, checking, retry } = useConnection();
-  if (status === 'online') return null;
+  const hanging = status !== 'online';
+  const [holding, setHolding] = useState(false);
+  const wasHanging = useRef(hanging);
+
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    if (hanging) {
+      wasHanging.current = true;
+      setHolding(false);
+      return;
+    }
+    if (!wasHanging.current) return;
+    wasHanging.current = false;
+    if (window.scrollY > 0 && parseFloat(root.style.getPropertyValue(CONNECTION_BANNER_VAR)) > 0) {
+      setHolding(true);
+    } else {
+      root.style.removeProperty(CONNECTION_BANNER_VAR);
+    }
+  }, [hanging]);
+
+  useEffect(() => {
+    if (!holding) return;
+    const release = () => {
+      if (window.scrollY > 0) return;
+      setHolding(false);
+      document.documentElement.style.removeProperty(CONNECTION_BANNER_VAR);
+    };
+    window.addEventListener('scroll', release, { passive: true });
+    return () => window.removeEventListener('scroll', release);
+  }, [holding]);
+
+  useLayoutEffect(
+    () => () => {
+      document.documentElement.style.removeProperty(CONNECTION_BANNER_VAR);
+    },
+    [],
+  );
+
+  if (!hanging) {
+    if (!holding) return null;
+    // Leerer Platzhalter in Höhe des Hinweises: hält die Kopfzeile und den Inhalt an ihrer Stelle.
+    // Auf dem Mac transparent, dort gibt es keine Kopfzeile unter ihm.
+    return (
+      <div
+        data-testid="connection-platzhalter"
+        aria-hidden="true"
+        className="cb-h sticky top-0 z-40 h-[var(--cb-h,0px)] bg-desk md:bg-transparent"
+      />
+    );
+  }
   return (
     <div className="cb-h sticky top-0 z-40 flex justify-center px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
       <BannerHeight />
