@@ -69,6 +69,13 @@ describe('validateMarkdown', () => {
     expect(JSON.stringify(issues)).not.toMatch(/geheimnis|WichtigerText/);
   });
 
+  it('meldet ein Molekül mit unmöglichen Bindungen als Valenzfehler mit Atomnummer', async () => {
+    const issues = await validateMarkdown('```mol\nsmiles: C(C)(C)(C)(C)C\n```');
+    expect(issues.map((i) => [i.kind, i.index, i.code, i.detail])).toEqual([
+      ['mol', 1, 'invalid_valence', 'Atom 1'],
+    ]);
+  });
+
   it('prüft große Texte schnell', async () => {
     const start = Date.now();
     await validateMarkdown(Array.from({ length: 200 }, () => good).join('\n\n'));

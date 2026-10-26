@@ -627,3 +627,12 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Grenzen:** wie in D-067: höchstens 3 Suchen je Antwort, 10 je Minute, 8 Sekunden Zeitlimit, Abbruch bei „Stopp“, keine Weiterleitungen. Nur `http` und `https` in Treffern; Markup und Steuerzeichen entfernt; Titel höchstens 200, Auszug höchstens 300 Zeichen, höchstens 5 Treffer, Antwort höchstens 256 KB gelesen.
 - **Tests:** Tavily-Client mit gefälschtem `fetch` (POST, Kopf, Körper, Adresse, Fehlerabbildung, Länge, Abbruch, Zeitlimit, Schlüssel nie in Fehlern), Dienst, Routen, Chat mit Suche (Begriff sichtbar, Treffer als Daten, Schlüssel nicht gespeichert), Oberfläche (Schalter, Schlüssel, Prüfung, Hinweis im Chat).
 - **Nicht geprüft:** ein Live-Aufruf mit echtem Tavily-Schlüssel. Der Maintainer gibt den Schlüssel selbst ein. Vor dem Einschalten die Datenschutzerklärung von Tavily lesen.
+
+## D-069 Valenzprüfung für SMILES (26. Oktober 2026)
+
+- **Anlass:** SmilesDrawer prüft nur die Schreibweise. `C(C)(C)(C)(C)C` (Kohlenstoff mit fünf Bindungen) und `C1CC` (Ring nicht geschlossen) wurden angenommen und gezeichnet. Die Lücke betrifft alle Moleküle außerhalb der Tabelle in `mol/library.ts`, also jede organische Angabe über SMILES.
+- **Regel:** Die Bindungen je Atom, Wasserstoffe in eckigen Klammern mitgezählt, dürfen die Höchstzahl nicht übersteigen: B 3, C 4, N 3, O 2, P 5, S 6, H, F, Cl, Br, I 1. Zu wenige Bindungen sind erlaubt: Wasserstoff wird ergänzt, Radikale wie `[CH3]` bleiben möglich.
+- **Nicht geprüft:** aromatische Atome und Bindungen, Atome mit Ladung, Elemente außerhalb der Tabelle. Vollständige Valenzprüfung (Kekulé-Strukturen, Ladungen), zum Beispiel über RDKit.js, bleibt offen.
+- **Fehler:** `invalid_valence` mit der Nummer des ersten Atoms (ab 1) als Detail, nie Text aus der Angabe. Ein Ring ohne Schluss ergibt `invalid_smiles`. Die Korrekturanfrage nennt den Code wie bei den anderen Blöcken.
+- **Wo:** `packages/render/src/smiles-valence.ts`, aufgerufen aus `validateSmiles` nach SmilesDrawer. Zeichnen und Prüfen nutzen denselben Weg.
+- **Tests:** `smiles-valence.test.ts` (gültige Schulmoleküle und Ionen, Überschreitung je Element, Atomnummer über Punkte hinweg, Klammeratome, nicht zerlegbare Angaben, aromatische Atome), ein Fall in `validate.test.ts`.
