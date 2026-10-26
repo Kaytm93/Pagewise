@@ -343,6 +343,7 @@ export const de = {
       unknown_formula:
         'Diese Summenformel kennt die Zeichnung nicht. Organische Stoffe lassen sich als SMILES angeben.',
       invalid_smiles: 'Die SMILES-Angabe lässt sich nicht lesen.',
+      invalid_valence: 'Ein Atom hat mehr Bindungen, als es in der Schulchemie haben kann.',
       invalid_abc: 'Die Noten lassen sich nicht lesen.',
       invalid_quiz:
         'Der Aufbau des Quiz passt nicht: Fragen, Antworten und genau eine richtige Lösung müssen stimmen.',

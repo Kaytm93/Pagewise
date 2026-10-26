@@ -17,6 +17,7 @@ export type RenderErrorCode =
   | 'too_complex'
   | 'unknown_formula'
   | 'invalid_smiles'
+  | 'invalid_valence'
   | 'invalid_abc'
   | 'invalid_quiz'
   | 'invalid_document'
