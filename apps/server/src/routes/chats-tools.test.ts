@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { messages } from '../db/schema';
+import { TAVILY_SEARCH_URL } from '../search/tavily';
 import { createHarness, type Harness, type Session } from '../test-harness';
 
 // Fake-Schlüssel werden zur Laufzeit zusammengesetzt, damit der Secret-Scan den Quelltext nicht trifft.
@@ -78,7 +79,7 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
   let scripts: ((call: UpstreamCall, signal?: AbortSignal) => Response)[];
   let providerId: string;
   let subjectId: string;
-  let searchRequests: { url: string; token: string | null }[];
+  let searchRequests: { url: string; token: string | null; query: string | null }[];
   let searchReplies: (() => Response)[];
 
   async function build() {
@@ -101,21 +102,24 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
       init?: Parameters<typeof fetch>[1],
     ) => {
       const headers = init?.headers as Record<string, string> | undefined;
-      searchRequests.push({ url: String(input), token: headers?.['X-Subscription-Token'] ?? null });
+      const sent = JSON.parse(String(init?.body ?? '{}')) as { query?: string };
+      searchRequests.push({
+        url: String(input),
+        token: headers?.Authorization?.replace('Bearer ', '') ?? null,
+        query: sent.query ?? null,
+      });
       const next = searchReplies.shift();
       return next
         ? next()
         : new Response(
             JSON.stringify({
-              web: {
-                results: [
-                  {
-                    title: 'Photosynthese',
-                    url: 'https://beispiel.example.test/pflanzen',
-                    description: 'Pflanzen nutzen Licht.',
-                  },
-                ],
-              },
+              results: [
+                {
+                  title: 'Photosynthese',
+                  url: 'https://beispiel.example.test/pflanzen',
+                  content: 'Pflanzen nutzen Licht.',
+                },
+              ],
             }),
             { status: 200, headers: { 'content-type': 'application/json' } },
           );
@@ -561,9 +565,10 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
       );
       const { events } = await ask('Was gibt es Neues zur Photosynthese?');
 
-      // Der Suchdienst bekommt Begriff und Schlüssel im Kopf, der Schlüssel nie in der Adresse.
+      // Der Suchdienst bekommt den Begriff im Körper und den Schlüssel im Kopf, nie in der Adresse.
       expect(searchRequests).toHaveLength(1);
-      expect(new URL(searchRequests[0]?.url ?? '').searchParams.get('q')).toBe('Photosynthese');
+      expect(searchRequests[0]?.url).toBe(TAVILY_SEARCH_URL);
+      expect(searchRequests[0]?.query).toBe('Photosynthese');
       expect(searchRequests[0]?.token).toBe(SEARCH_KEY);
       expect(searchRequests[0]?.url).not.toContain(SEARCH_KEY);
 

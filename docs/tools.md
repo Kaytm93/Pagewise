@@ -25,10 +25,10 @@ Das Modell bekommt die Werkzeuge im Format der Schnittstelle (`tools`) und einen
 - Weder Argumente noch Ergebnisse stehen in Logs, Fehlermeldungen oder der Datenbank. Gespeichert wird nur Name, kurzes Ziel (`target`, zum Beispiel ein Wochentag) und Zustand.
 - Freitext aus Ergebnissen (Notizen, Themen) ist Fremdtext: Er steht als JSON-String in den Daten und löst nichts aus.
 
-## Websuche (`web_search`, D-067)
+## Websuche (`web_search`, D-067, D-068)
 
-- **Freigabe:** Der Schalter „KI darf im Internet suchen“ (Einstellungen, Voreinstellung aus), ein gespeicherter Schlüssel der Brave Search API und die Freigaben von Anbieter und Modell. Ohne Schalter und Schlüssel wird das Werkzeug nicht angeboten.
-- **Was geht hinaus:** Der Suchbegriff, den das Modell schreibt, an Brave Search. Nichts sonst. Der Begriff ist im Chat sichtbar („Websuche: …“), Treffer und Schlüssel nie.
+- **Freigabe:** Der Schalter „KI darf im Internet suchen“ (Einstellungen, Voreinstellung aus), ein gespeicherter Schlüssel der Tavily API und die Freigaben von Anbieter und Modell. Ohne Schalter und Schlüssel wird das Werkzeug nicht angeboten.
+- **Was geht hinaus:** Der Suchbegriff, den das Modell schreibt, an Tavily. Nichts sonst. Der Begriff ist im Chat sichtbar („Websuche: …“), Treffer und Schlüssel nie.
 - **Argumente:** `query` (1 bis 200 Zeichen), optional `count` (1 bis 5). E-Mail-Adressen, Telefonnummern und Zahlenfolgen ab sechs Ziffern werden abgelehnt, ohne dass gesucht wird.
 - **Grenzen:** Höchstens 3 Suchen je Antwort, 10 je Minute, 8 Sekunden Zeitlimit, Abbruch bei „Stopp“, keine Weiterleitungen. Treffer: nur `http` und `https`, Markup entfernt, Titel höchstens 200 und Auszug höchstens 300 Zeichen.
 - **Schlüssel:** im Secret-Speicher unter `search.key`, wie bei den Anbietern. Antworten nennen nur `hasKey` und die letzten vier Zeichen.

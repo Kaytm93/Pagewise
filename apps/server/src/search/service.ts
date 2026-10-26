@@ -3,7 +3,7 @@ import type { Db } from '../db/client';
 import { settings } from '../db/schema';
 import type { SecretStore } from '../storage/secret-store';
 import { ToolError } from '../tools/registry';
-import { BraveSearchError, braveSearch } from './brave';
+import { TavilyError, tavilySearch } from './tavily';
 import type { WebResult, WebSearch } from './types';
 
 /** Name des Schlüssels im Secret-Speicher, wie bei den Anbietern unter `provider.<id>.key` (D-026). */
@@ -103,9 +103,9 @@ export class WebSearchService implements WebSearch {
     if (!apiKey) throw new ToolError('not_configured');
     this.takeSlot();
     try {
-      return await braveSearch({ apiKey, query, count, fetch: this.options.fetch, signal });
+      return await tavilySearch({ apiKey, query, count, fetch: this.options.fetch, signal });
     } catch (error) {
-      if (error instanceof BraveSearchError) throw new ToolError(error.code);
+      if (error instanceof TavilyError) throw new ToolError(error.code);
       throw new ToolError('failed');
     }
   }

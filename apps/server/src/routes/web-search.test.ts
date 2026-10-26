@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TAVILY_SEARCH_URL } from '../search/tavily';
 import { createHarness, type Harness, type Session } from '../test-harness';
 
 // Fake-Schlüssel werden zur Laufzeit zusammengesetzt, damit der Secret-Scan den Quelltext nicht trifft.
@@ -14,7 +15,7 @@ describe('Websuche-Einstellungen (/api/web-search)', () => {
       async () =>
         new Response(
           JSON.stringify({
-            web: { results: [{ title: 'T', url: 'https://x.example.test/', description: 'd' }] },
+            results: [{ title: 'T', url: 'https://x.example.test/', content: 'd' }],
           }),
           {
             status: 200,
@@ -76,10 +77,12 @@ describe('Websuche-Einstellungen (/api/web-search)', () => {
     expect(ok.text).not.toContain(KEY);
 
     const [sentUrl, sentInit] = fetch.mock.calls[0] ?? [];
-    const sent = new URL(String(sentUrl));
-    expect(sent.searchParams.get('q')).toBe('Wikipedia');
-    expect(sent.searchParams.get('count')).toBe('1');
-    expect(sentInit?.headers).toMatchObject({ 'X-Subscription-Token': KEY });
+    expect(sentUrl).toBe(TAVILY_SEARCH_URL);
+    expect(JSON.parse(String(sentInit?.body))).toMatchObject({
+      query: 'Wikipedia',
+      max_results: 1,
+    });
+    expect(sentInit?.headers).toMatchObject({ Authorization: `Bearer ${KEY}` });
   });
 
   it('meldet einen Verbindungsfehler als Code, ohne Text des Dienstes', async () => {

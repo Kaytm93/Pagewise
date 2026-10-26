@@ -1154,7 +1154,7 @@ export const de = {
       points: [
         'Deine Daten liegen nur auf diesem Rechner, in einem Datenverzeichnis außerhalb des Programmordners.',
         'Pagewise sammelt nichts: keine Telemetrie, keine Konten, keine Analyse.',
-        'Daten verlassen den Rechner nur, wenn du sie an einen Anbieter schickst. Dann gehen Prompt, Verlauf und Bilder an den Anbieter, den du für das Fach oder den Chat gewählt hast. Kostenlose Modelle können Eingaben protokollieren, schick dort nichts Sensibles. Die Websuche der KI ist standardmäßig aus. Schaltest du sie ein, gehen die Suchbegriffe der KI an Brave Search.',
+        'Daten verlassen den Rechner nur, wenn du sie an einen Anbieter schickst. Dann gehen Prompt, Verlauf und Bilder an den Anbieter, den du für das Fach oder den Chat gewählt hast. Kostenlose Modelle können Eingaben protokollieren, schick dort nichts Sensibles. Die Websuche der KI ist standardmäßig aus. Schaltest du sie ein, gehen die Suchbegriffe der KI an Tavily.',
         'API-Schlüssel bleiben auf dem Server und werden in der Oberfläche nie angezeigt.',
       ],
       finish: 'Los geht’s',
@@ -1180,10 +1180,10 @@ export const de = {
     },
     webSearch: {
       title: 'Websuche für die KI',
-      lead: 'Die KI kann im Internet nach aktuellen Informationen suchen. Dafür braucht Pagewise einen Schlüssel der Brave Search API.',
+      lead: 'Die KI kann im Internet nach aktuellen Informationen suchen. Dafür braucht Pagewise einen Schlüssel der Tavily API.',
       label: 'KI darf im Internet suchen',
-      hint: 'Die Suchbegriffe, die die KI schreibt, gehen an Brave Search, einen Dienst außerhalb dieses Geräts. Im Chat siehst du jeden Suchbegriff. Standardmäßig aus.',
-      keyLabel: 'Schlüssel der Brave Search API',
+      hint: 'Die Suchbegriffe, die die KI schreibt, gehen an Tavily, einen Dienst außerhalb dieses Geräts. Im Chat siehst du jeden Suchbegriff. Standardmäßig aus.',
+      keyLabel: 'Schlüssel der Tavily API',
       keyHint: 'Wird auf diesem Gerät gespeichert und nie wieder angezeigt.',
       keyRequired: 'Gib einen Schlüssel ein.',
       keyInvalid:

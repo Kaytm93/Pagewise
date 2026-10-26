@@ -9,9 +9,7 @@ const KEY = ['beispiel', 'schluessel', 'abcdefghijklmnop'].join('-');
 const reply = () =>
   new Response(
     JSON.stringify({
-      web: {
-        results: [{ title: 'Treffer', url: 'https://beispiel.example.test/', description: 'x' }],
-      },
+      results: [{ title: 'Treffer', url: 'https://beispiel.example.test/', content: 'x' }],
     }),
     { status: 200, headers: { 'content-type': 'application/json' } },
   );

@@ -598,7 +598,7 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Geprüft:** Das Dokument aus der Meldung wird angenommen. PDF: zwei A4-Seiten, der lange Punkt ist umgebrochen (Sichtprüfung). Render-Tests 232, mit einem neuen Test für einen 960-Zeichen-Punkt und einem für einen 1.201-Zeichen-Punkt mit Hinweis `items`.
 - **Nicht geprüft:** Vorschau im Browser und Download auf iPhone und iPad; die Antwort des Modells, die den Fehler ausgelöst hat, liegt nur als Block vor.
 
-## D-067 Websuche für die KI: Brave Search, standardmäßig aus (26. Oktober 2026)
+## D-067 Websuche für die KI: Brave Search, standardmäßig aus (26. Oktober 2026, ersetzt durch D-068)
 
 - **Anlass:** Chat-Modelle sollen bei Fragen nach aktuellen oder allgemeinen Informationen im Internet suchen können. Der Maintainer hat den Plan mit diesen Entscheidungen am 25. Oktober 2026 bestätigt: Brave, Schalter standardmäßig aus, Suchbegriff sichtbar.
 - **Dienst:** Brave Search API, Web Search. Adresse fest `https://api.search.brave.com/res/v1/web/search`, Schlüssel im Kopf `X-Subscription-Token`, Suchbegriff als `q`, Anzahl als `count` (Pagewise nutzt höchstens 5 von möglichen 20). Quelle: <https://api-dashboard.search.brave.com/app/documentation/web-search/get-started>, geprüft am 25. Oktober 2026. Treffer unter `web.results` mit `title`, `url` und `description`. Ein Datumsfeld ist in der Doku nicht beschrieben, deshalb keines.
@@ -614,3 +614,16 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Prompt-Injection:** Treffer sind Daten. Test: ein Treffer mit „Ignoriere alle Regeln“ landet nur als Text im Ergebnis und löst nichts aus.
 - **Tests:** Brave-Client mit gefälschtem `fetch` (Kopf, Adresse, Fehlerabbildung, Länge, Abbruch, Zeitlimit, Schlüssel nie in Fehlern), Dienst (Schalter, Schlüssel, Grenzen je Minute), Werkzeug (Begriffsprüfung, Obergrenze je Antwort, Fehlercodes), Routen (Anmeldung, Schlüssel nie in Antworten), Chat mit Suche (Begriff sichtbar, Treffer als Daten, Schlüssel nicht gespeichert), Oberfläche (Schalter, Schlüssel, Prüfung, Hinweis im Chat).
 - **Nicht geprüft:** ein Live-Aufruf mit echtem Schlüssel. Der Maintainer gibt den Schlüssel selbst ein; Pagewise und der Agent sehen ihn nicht. Die Browser-Prüfung deckt nur die Oberfläche ab, nicht den Dienst.
+
+## D-068 Websuche über Tavily statt Brave Search (26. Oktober 2026)
+
+- **Anlass:** Der Maintainer hat am 26. Oktober 2026 entschieden, die Websuche von Brave Search auf Tavily umzustellen. Tavily ist für KI-Werkzeuge gebaut und liefert kurze Auszüge.
+- **Dienst:** Tavily Search API. Adresse fest `https://api.tavily.com/search`, `POST` mit JSON-Körper. Schlüssel im Kopf `Authorization: Bearer`, nie in Adresse oder Körper. Körper: `query` (Suchbegriff), `max_results` (1 bis 5), `search_depth: "basic"` (1 Credit je Suche). Quelle: <https://docs.tavily.com/documentation/api-reference/endpoint/search>, geprüft am 26. Oktober 2026. Treffer unter `results` mit `title`, `url` und `content` (Auszug).
+- **Preis:** Laut <https://tavily.com/pricing>, geprüft am 26. Oktober 2026: kostenloser Tarif mit 1.000 Credits im Monat, danach rund 0,008 US-Dollar je Credit. Die Preisseite kann sich ändern; vor größerer Nutzung prüfen.
+- **Fehler:** 401 und 403 Schlüssel (`auth_failed`), 429 Tempo (`rate_limited`), 432 und 433 Kontingent (`quota_exceeded`), 400 und 422 Anfrage (`invalid_request`), alles andere Ausfall (`unavailable`). Der Text der Antwort erscheint nie.
+- **Datenschutz (offen):** Die Datenschutzerklärung von Tavily (Stand 24. November 2025) erlaubt, Suchbegriffe an Anbieter von Suchindizes weiterzugeben, zum Beispiel an Google. Sie gilt allgemein, nicht nur für die API, und nennt keinen Speicherort in der EU. Vor dem Einschalten lesen.
+- **Ersetzt D-067 für den Dienst:** Die Brave-Anbindung ist entfernt. Schalter, Schlüssel (`search.key`), Grenzen, Begriffsprüfung und Anzeige im Chat bleiben gleich. Ein schon gespeicherter Brave-Schlüssel wird von Tavily abgelehnt (`auth_failed`); dann wird der Tavily-Schlüssel in den Einstellungen neu eingetragen.
+- **Verworfen:** Brave Search API (D-067). Die Preisangaben widersprachen sich, und die Speicherrechte des Search-Plans waren unklar.
+- **Grenzen:** wie in D-067: höchstens 3 Suchen je Antwort, 10 je Minute, 8 Sekunden Zeitlimit, Abbruch bei „Stopp“, keine Weiterleitungen. Nur `http` und `https` in Treffern; Markup und Steuerzeichen entfernt; Titel höchstens 200, Auszug höchstens 300 Zeichen, höchstens 5 Treffer, Antwort höchstens 256 KB gelesen.
+- **Tests:** Tavily-Client mit gefälschtem `fetch` (POST, Kopf, Körper, Adresse, Fehlerabbildung, Länge, Abbruch, Zeitlimit, Schlüssel nie in Fehlern), Dienst, Routen, Chat mit Suche (Begriff sichtbar, Treffer als Daten, Schlüssel nicht gespeichert), Oberfläche (Schalter, Schlüssel, Prüfung, Hinweis im Chat).
+- **Nicht geprüft:** ein Live-Aufruf mit echtem Tavily-Schlüssel. Der Maintainer gibt den Schlüssel selbst ein. Vor dem Einschalten die Datenschutzerklärung von Tavily lesen.

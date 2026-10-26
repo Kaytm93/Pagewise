@@ -35,9 +35,7 @@ describe('Einstellungen: Websuche für die KI', () => {
     const server = new FakeServer('unlocked');
     open(server, '/settings');
     const user = userEvent.setup();
-    const field = (await screen.findByLabelText(
-      /Schlüssel der Brave Search API/,
-    )) as HTMLInputElement;
+    const field = (await screen.findByLabelText(/Schlüssel der Tavily API/)) as HTMLInputElement;
     await user.type(field, SEARCH_KEY);
     await user.click(screen.getByRole('button', { name: 'Schlüssel speichern' }));
     expect(await screen.findByText('Schlüssel gespeichert, endet auf mnop')).toBeTruthy();
