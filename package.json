@@ -22,7 +22,7 @@
     "prepare": "node scripts/install-hooks.mjs"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.15",
-    "vitest": "^5.0.4"
+    "@biomejs/biome": "^2.6.2",
+    "vitest": "^5.0.5"
   }
 }
