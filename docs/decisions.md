@@ -536,6 +536,7 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Prompt-Platz (Abweichung von D-034):** Die technische Schicht war bei 1.463 Zeichen (Obergrenze 1.500). Die Zeilen für Dokument und Präsentation bringen sie auf 1.930. Die Obergrenze in `compose.test.ts` steht daher bei 2.000 Zeichen, das sind rund 120 Token mehr je Nachricht. **Offen für Kay:** bestätigen, oder die beiden Zeilen kürzen.
 
 - **Nachtrag (D-063):** Die Zeichenliste ist erweitert. Hoch- und Tiefstellung (₂, ⁺) und die Mathezeichen → − ≤ ≥ ≈ gehen jetzt ins PDF, die Regel „keine tiefgestellten Zeichen“ ist entfallen. Griechische Buchstaben, Emoji und ⇌ bleiben gesperrt.
+- **Nachtrag (D-063, Bindestriche und Zeichencodes):** Geschützte Bindestriche (U+2010, U+2011) werden vor der Prüfung zu „-“, weil Modelle sie oft statt „-“ schreiben. Die Ablehnung nennt die ersten drei Zeichencodes, zum Beispiel `unsupported_text: U+0394`, damit die Korrekturanfrage das Zeichen benennt. Der Text selbst bleibt aus dem Hinweis draußen.
 
 ## D-061 Präsentation als PPTX: pptxgenjs 4.0.1 (25. Oktober 2026)
 

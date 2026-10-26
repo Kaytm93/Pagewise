@@ -40,4 +40,15 @@ describe('Dokument im Chat', () => {
     );
     expect(container.textContent).toContain('Dokument konnte nicht gezeichnet werden.');
   });
+
+  it('zeichnet geschützte Bindestriche als normale und meldet keinen Fehler', async () => {
+    const text = JSON.stringify({
+      title: 'Kupfer',
+      parts: [{ type: 'paragraph', text: 'Das d‑Orbital ist voll.' }],
+    });
+    const { container } = show(`\`\`\`document\n${text}\n\`\`\``);
+    await waitFor(() => expect(container.querySelector('article')).not.toBeNull());
+    expect(screen.getByText('Das d-Orbital ist voll.')).toBeTruthy();
+    expect(container.querySelector('[data-block-error]')).toBeNull();
+  });
 });
