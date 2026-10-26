@@ -90,9 +90,24 @@ const isObject = (value: unknown): value is Json =>
 const hasOnly = (value: Json, keys: string[]) =>
   Object.keys(value).every((key) => keys.includes(key));
 
+/** Geschützte Bindestriche (U+2010, U+2011): Modelle schreiben sie oft statt „-“, das PDF setzt sie nicht. */
+const HYPHEN_LOOKALIKES = /[‐‑]/g;
+
+/** Zeichencodes (U+XXXX) der ersten drei Zeichen, die das PDF nicht setzt. Nie Text aus der Eingabe. */
+function unsupportedCodes(value: string): string {
+  const found = new Set<string>();
+  for (const char of value) {
+    if (isPdfText(char)) continue;
+    found.add(`U+${(char.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')}`);
+    if (found.size === 3) break;
+  }
+  return [...found].join(', ');
+}
+
 /**
- * Text für ein Feld: nicht leer, nicht zu lang, ohne Steuerzeichen. Zeichen, die das PDF nicht setzt, bekommen
- * einen eigenen Fehlercode, damit das Modell (Korrekturanfrage) ein einfacheres Zeichen wählt.
+ * Text für ein Feld: nicht leer, nicht zu lang, ohne Steuerzeichen. Geschützte Bindestriche werden zu „-“. Zeichen,
+ * die das PDF nicht setzt, bekommen einen eigenen Fehlercode mit ihrem Zeichencode, damit das Modell
+ * (Korrekturanfrage) ein einfacheres Zeichen wählt.
  */
 function readText(value: unknown, max: number, field: 'text' | 'items' = 'text'): Result<string> {
   if (
@@ -104,8 +119,9 @@ function readText(value: unknown, max: number, field: 'text' | 'items' = 'text')
   ) {
     return fail('invalid_document', field);
   }
-  if (!isPdfText(value)) return fail('unsupported_text');
-  return ok(value);
+  const text = value.replace(HYPHEN_LOOKALIKES, '-');
+  if (!isPdfText(text)) return fail('unsupported_text', unsupportedCodes(text));
+  return ok(text);
 }
 
 function readPart(entry: unknown): Result<DocumentPart> {

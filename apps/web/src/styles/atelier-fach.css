@@ -3,7 +3,7 @@
  *
  * Fachseite: Kopf mit großem, gezeichnetem Fachmotiv, Ledger (Kennzahlen als Tabelle), Untergruppen als Kacheln,
  * die zugleich Filter sind. Chat: das Randmotiv des Fachs neben der Lesespalte, Kopf mit Status, Composer mit
- * Radius 20 px und einem leisen Fachglühen im Fokus.
+ * Radius 22 px (Glas) und einem leisen Fachglühen im Fokus.
  *
  * Regeln, die hier gelten:
  *  - Farben, Schatten, Dauern nur aus Tokens (tokens.css, motion.css); die Fachfarbe `--subj` färbt Flächen
@@ -104,22 +104,33 @@
   }
 }
 
-/* ===== Ledger: Kennzahlen des Fachs als Tabelle ===== */
+/* ===== Ledger: Kennzahlen des Fachs als eine Zeile, durch Striche getrennt (keine Kacheln) ===== */
 
 :root[data-design="atelier"] .at-ledger {
+  display: flex;
+  flex-wrap: wrap;
   max-width: 44rem;
   margin: 28px 0 0;
   border-top: 1px solid var(--line-warm);
+  border-bottom: 1px solid var(--line-warm);
 }
 
 :root[data-design="atelier"] .at-ledger-row {
   display: grid;
-  grid-template-columns: 7.5rem minmax(0, 1fr);
-  align-items: center;
-  gap: 4px 12px;
+  flex: 1 1 12rem;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
   min-height: 56px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--line-warm);
+  padding: 12px 16px;
+}
+
+:root[data-design="atelier"] .at-ledger-row:first-child {
+  padding-left: 0;
+}
+
+:root[data-design="atelier"] .at-ledger-row + .at-ledger-row {
+  border-left: 1px solid var(--line-warm);
 }
 
 :root[data-design="atelier"] .at-ledger dt {
@@ -164,11 +175,17 @@
   font-size: 0.875rem;
 }
 
+/* Schmal: die Zeilen stehen untereinander, getrennt durch Linien statt Striche */
 @media (max-width: 479.98px) {
-  :root[data-design="atelier"] .at-ledger-row {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    padding-top: 10px;
+  :root[data-design="atelier"] .at-ledger-row,
+  :root[data-design="atelier"] .at-ledger-row:first-child {
+    flex-basis: 100%;
+    padding-inline: 0;
+  }
+
+  :root[data-design="atelier"] .at-ledger-row + .at-ledger-row {
+    border-left: 0;
+    border-top: 1px solid var(--line-warm);
   }
 
   :root[data-design="atelier"] .at-ledger-link {
@@ -176,64 +193,73 @@
   }
 }
 
-/* ===== Untergruppen: Kacheln, die zugleich Filter sind ===== */
+/* ===== Untergruppen: gruppierte Liste wie in den Einstellungen (eine Fläche, Zeilen, eingerückte Trennlinien,
+   Stift rechts). Kein Schatten pro Zeile; die Zeilen sind Schalter (aria-pressed), gewählt steht ein Balken in
+   der Fachfarbe am Rand. ===== */
 
 :root[data-design="atelier"] .at-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
-  gap: 14px;
+  display: block;
   margin: 14px 0 0;
   padding: 0;
   list-style: none;
+  overflow: hidden;
+  border-radius: 12px;
+  background-color: var(--surface);
 }
 
 :root[data-design="atelier"] .at-tile {
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: stretch;
   min-width: 0;
-  border: 1px solid var(--line-warm);
-  border-radius: 16px;
-  background-color: var(--surface);
-  box-shadow:
-    inset 0 1px 0 var(--rim),
-    0 1px 2px rgba(var(--shadow), 0.06),
-    0 8px 20px -10px rgba(var(--shadow), calc(var(--shadow-a) * 1.1));
-  transition:
-    transform var(--t-med) var(--spring-snap),
-    border-color var(--t-color),
-    background-color var(--t-color),
-    box-shadow var(--t-color);
+  transition: background-color var(--t-color);
 }
 
-/* Gewählt: Rand und Fläche in der Fachfarbe; dazu steht „Filter aktiv“ mit Haken in der Kachel */
+/* Trennlinie zwischen den Zeilen, eingerückt bis zur Schrift */
+:root[data-design="atelier"] .at-tile + .at-tile::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 0;
+  height: 1px;
+  background-color: var(--line-warm);
+}
+
+/* Gewählt: ein Balken in der Fachfarbe am linken Rand und eine leise Tönung; „Filter aktiv“ steht in der Zeile */
 :root[data-design="atelier"] .at-tile[data-pressed] {
-  border-color: var(--subj);
   background-color: color-mix(in srgb, var(--subj) 8%, var(--surface));
-  box-shadow:
-    inset 0 0 0 1px var(--subj),
-    0 8px 20px -10px rgba(var(--shadow), calc(var(--shadow-a) * 1.1));
+  box-shadow: inset 3px 0 0 var(--subj);
+}
+
+/* Ungewählte Zeilen zeigen den Hinweis „Filtern“ nur beim Darüberfahren, sonst bleibt die Liste ruhig */
+:root[data-design="atelier"] .at-tile:not([data-pressed]) .at-tile-go {
+  display: none;
 }
 
 @media (hover: hover) {
   :root[data-design="atelier"] .at-tile:hover {
-    transform: translateY(calc(var(--m) * -2px));
-    box-shadow:
-      inset 0 1px 0 var(--rim),
-      0 2px 4px rgba(var(--shadow), 0.05),
-      0 18px 40px -16px rgba(var(--shadow), calc(var(--shadow-a) * 1.6));
+    background-color: var(--paper);
+  }
+
+  :root[data-design="atelier"] .at-tile:not([data-pressed]):hover .at-tile-go {
+    display: inline-flex;
   }
 }
 
 :root[data-design="atelier"] .at-tile-main {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  min-height: 96px;
-  padding: 16px 18px 6px;
+  flex: 1 1 auto;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  min-width: 0;
+  min-height: 56px;
+  padding: 12px 8px 12px 16px;
   border: 0;
-  border-radius: 15px 15px 0 0;
+  border-radius: 0;
   background: none;
   color: var(--ink);
   text-align: left;
@@ -241,17 +267,17 @@
 }
 
 :root[data-design="atelier"] .at-tile-main:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--hue-ink);
   outline-offset: -4px;
 }
 
 :root[data-design="atelier"] .at-tile-name {
   max-width: 100%;
   font-family: var(--font-heading);
-  font-size: 1.375rem;
+  font-size: 1.0625rem;
   font-weight: 500;
-  line-height: 1.15;
-  letter-spacing: -0.3px;
+  line-height: 1.3;
+  letter-spacing: -0.1px;
   overflow-wrap: anywhere;
 }
 
@@ -266,18 +292,19 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: auto;
-  padding-top: 8px;
+  margin-inline-start: auto;
   font-size: 0.8125rem;
   font-weight: 500;
+  white-space: nowrap;
   color: var(--ink-secondary);
 }
 
 :root[data-design="atelier"] .at-tile-actions {
   display: flex;
+  flex: none;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 6px 4px 10px;
+  justify-content: flex-end;
+  padding: 0 4px 0 0;
 }
 
 :root[data-design="atelier"] .at-tile-open {
@@ -573,16 +600,13 @@
   background: linear-gradient(180deg, transparent, var(--canvas) 38%);
 }
 
-/* Das Feld: Radius 20 px, eine einzige Fläche; das Textfeld darin hat keinen eigenen Rahmen mehr */
+/* Das Feld: Radius 22 px (wie das Glas-Panel), schwebend unten als Glas. Fläche und Schatten kommen aus atelier.css
+   (Glasregel); hier nur Maße und Rand, damit das Glas nicht überschrieben wird. Das Textfeld darin hat keinen
+   eigenen Rahmen. */
 :root[data-design="atelier"] .lg-composer {
   padding: 8px 8px 8px 16px;
   border: 1px solid var(--control-edge);
-  border-radius: 20px;
-  background-color: var(--surface);
-  box-shadow:
-    inset 0 1px 0 var(--rim),
-    0 1px 2px rgba(var(--shadow), 0.06),
-    0 8px 20px -10px rgba(var(--shadow), calc(var(--shadow-a) * 1.1));
+  border-radius: 22px;
   transition:
     border-color var(--t-color),
     box-shadow var(--t-color);
@@ -600,9 +624,10 @@
 :root[data-design="atelier"] .lg-composer:focus-within {
   border-color: var(--accent);
   box-shadow:
-    inset 0 1px 0 var(--rim),
+    inset 0 1px 0 var(--glass-edge),
     0 0 0 4px color-mix(in srgb, var(--subj) 18%, transparent),
-    0 8px 20px -10px rgba(var(--shadow), calc(var(--shadow-a) * 1.1));
+    var(--glass-shadow-near),
+    var(--glass-shadow-far);
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }

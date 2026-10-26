@@ -26,16 +26,18 @@ function rule(selector: string): string {
 
 describe('Licht der Fachfarbe', () => {
   it('hängt an --at-k statt an festen Prozenten', () => {
-    for (const part of ['30%', '15%', '9%', '6%']) {
-      expect(css).toContain(`calc(${part} * var(--at-k))`);
-    }
-    // Grund und Lichtband tragen keine festen Anteile mehr (früher 22/12 % und 8/5 % in beiden Modi).
-    for (const selector of [
-      ":root[data-design='atelier'] .lg-app::before",
-      ":root[data-design='atelier'] .lg-app::after",
-    ]) {
-      expect(rule(selector)).not.toMatch(/var\(--subj\) \d+%/);
-    }
+    expect(css).toContain('calc(30% * var(--at-k))');
+    expect(css).toContain('calc(20% * var(--at-k))');
+    // Der Grund trägt keinen festen Anteil (früher 22/12 % und 8/5 % in beiden Modi).
+    expect(rule(":root[data-design='atelier'] .lg-app::before")).not.toMatch(/var\(--subj\) \d+%/);
+  });
+
+  it('ist ein einziges Lichtfeld: kein zweites Band, keine Drift', () => {
+    expect(css).not.toMatch(/\.lg-app::after/);
+    expect(css).not.toMatch(/atelier-drift/);
+    expect(rule(":root[data-design='atelier'] .lg-app::before").match(/radial-gradient\(/g)).toHaveLength(
+      1,
+    );
   });
 });
 
@@ -71,9 +73,42 @@ describe('Zeigerlicht', () => {
     expect(css.slice(0, at)).toContain('@media (pointer: fine)');
   });
 
-  it('nutzt weder backdrop-filter noch Inline-Zwang', () => {
-    expect(css).not.toMatch(/backdrop-filter/);
+  it('setzt backdrop-filter nur innerhalb der Glasklassen (.at-glass), mit --glass-blur, nie mit !important', () => {
+    // Deklarationen, keine @supports-Bedingung: die beginnt mit „(“ und zählt hier nicht.
+    const treffer = [...css.matchAll(/(^|[;{\s])(-webkit-)?backdrop-filter\s*:/g)];
+    expect(treffer.length).toBeGreaterThan(0);
+    for (const match of treffer) {
+      const open = css.lastIndexOf('{', (match.index ?? 0) + match[0].length);
+      const start =
+        Math.max(css.lastIndexOf('}', open), css.lastIndexOf(';', open), css.lastIndexOf('{', open - 1)) +
+        1;
+      expect(css.slice(start, open), 'backdrop-filter außerhalb der Glasklassen').toMatch(
+        /\.at-glass(?![\w-])/,
+      );
+    }
+    expect(css).toMatch(/backdrop-filter:\s*blur\(var\(--glass-blur\)\)/);
     expect(css).not.toMatch(/!important/);
+  });
+});
+
+describe('Radien (22 px, 12 px, Pille)', () => {
+  it('kennt in Atelier nur 0, 12 px, 22 px, Pille und Kreis (atelier-fach.test.ts)', () => {
+    const fach = readFileSync(join(dir, 'atelier-fach.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const erlaubt = new Set([
+      '0',
+      '12px',
+      '12px 12px 0 0',
+      '22px',
+      '22px 22px 0 0',
+      '50%',
+      '999px',
+      'inherit',
+    ]);
+    for (const quelle of [css, fach]) {
+      for (const match of quelle.matchAll(/border-radius:\s*([^;]+);/g)) {
+        expect(erlaubt.has((match[1] as string).trim()), `Radius ${match[1]}`).toBe(true);
+      }
+    }
   });
 });
 

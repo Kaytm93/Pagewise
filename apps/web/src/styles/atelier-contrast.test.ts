@@ -81,6 +81,22 @@ const kLight = strength(":root[data-design='atelier'] {");
 const kDark = strength(":root[data-design='atelier'][data-theme='dark'] {");
 const kDarkAuto = strength(":root[data-design='atelier']:not([data-theme='light']) {");
 
+/**
+ * Mitte des Lichtfelds: Fachfarbe × 30 % × --at-k (atelier.css, `calc(30% * var(--at-k))`). Die Mitte ist die
+ * stärkste Stelle des Feldes, darum rechnen alle Feldtests mit ihr.
+ */
+const CENTER = 0.3;
+
+/**
+ * Tokens je Modus mit den Atelier-Werten: die Atelier-Blöcke des Modus überschreiben die Basis aus tokens.css.
+ * `--ink-muted` und `--link` stehen im Hellen dunkler (Atelier-Root) und in beiden Dunkelblöcken auf dem dunklen Wert.
+ */
+const lightAtelier = block(atelierCss, ":root[data-design='atelier'] {");
+const darkAtelier = block(atelierCss, ":root[data-design='atelier'][data-theme='dark'] {");
+const darkAutoAtelier = block(atelierCss, ":root[data-design='atelier']:not([data-theme='light']) {");
+const lightA: Tokens = { ...light, ...lightAtelier };
+const darkA: Tokens = { ...dark, ...darkAtelier };
+
 /** Fachfarben 0 bis 7 plus das warme Licht ohne Fach (Start, Einstellungen), pro Modus. */
 function subjectHex(opener: (n: number) => string, source: string, fallback: string): string[] {
   const colors = Array.from({ length: 8 }, (_, n) =>
@@ -129,7 +145,9 @@ function grounds(tokens: Tokens, k: number, subjects: string[], cover = 1) {
   const tint: string[] = [];
   const icon: string[] = [];
   for (const subject of subjects) {
-    glow.push(over(over(canvas, subject, 0.3 * k * cover), subject, 0.09 * k));
+    // Das Lichtfeld mischt 30 % × k Fachfarbe auf den Grund (atelier.css). Das frühere zweite Lichtband (0,09 k)
+    // bleibt als Zuschlag in der Rechnung: CSS malt es nicht mehr, die Rechnung bleibt streng.
+    glow.push(over(over(canvas, subject, CENTER * k * cover), subject, 0.09 * k));
     tint.push(
       over(canvas, subject, 0.07),
       over(canvas, subject, 0.11),
@@ -194,9 +212,9 @@ describe('Stärke des Fachlichts (--at-k)', () => {
   // Die Spitze des Verlaufs liegt über dem sichtbaren Rand (Mittelpunkt bei −6 % Höhe); an Text, der unterhalb
   // der Seitenkante steht, kommt höchstens etwa 70 % davon an. Das Lichtband wird voll gerechnet.
   it('dunkel: Text bleibt auch unter dem Licht (Verlauf zu 70 %, Band voll) über 4,5 : 1', () => {
-    const { body } = grounds(dark, kDark, subjectsDark, 0.7);
+    const { body } = grounds(darkA, kDark, subjectsDark, 0.7);
     for (const name of ['--ink', '--ink-secondary', '--ink-muted', '--link', '--danger']) {
-      expect(worst(toHex(dark[name] as string, dark), body)).toBeGreaterThanOrEqual(4.5);
+      expect(worst(toHex(darkA[name] as string, darkA), body)).toBeGreaterThanOrEqual(4.5);
     }
   });
 
@@ -205,7 +223,7 @@ describe('Stärke des Fachlichts (--at-k)', () => {
   // Verhältnis zum Blatt hin verschoben (die Spitze des Lichts liegt über dem sichtbaren Rand).
   it('hell: Sekundär- und Fehlertext bleiben auf der skalierten Messfläche über 4,5 : 1', () => {
     const canvas = toHex(light['--canvas'] as string);
-    const scale = (0.3 * kLight) / 0.22;
+    const scale = (CENTER * kLight) / 0.22;
     const measured = channels('#ebe2d4');
     const base = channels(canvas);
     const ground = `#${measured
@@ -216,7 +234,7 @@ describe('Stärke des Fachlichts (--at-k)', () => {
       )
       .join('')}`;
     for (const name of ['--ink', '--ink-secondary', '--ink-muted', '--danger']) {
-      expect(contrast(toHex(light[name] as string, light), ground)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(toHex(lightA[name] as string, lightA), ground)).toBeGreaterThanOrEqual(4.5);
     }
   });
 });
@@ -237,13 +255,9 @@ describe('Dialoge in Atelier (S-01)', () => {
     expect(rule?.body).toMatch(/background-color:\s*var\(--sheet\)/);
   });
 
-  it('atelier.css macht den Dialog nie durchsichtig und hält die Fläche ausdrücklich', () => {
-    const rules = dialogCss(atelierCss);
-    expect(rules.length).toBeGreaterThan(0);
-    for (const rule of rules) {
-      expect(rule.body).not.toMatch(/transparent|background(-color)?:\s*none|opacity/);
-    }
-    expect(rules.some((rule) => /background-color:\s*var\(--sheet\)/.test(rule.body))).toBe(true);
+  it('atelier.css legt das Dialogblatt auf Glas (--glass-fill); ohne Glas bleiben 94 % --canvas', () => {
+    expect(atelierCss).toMatch(/\.lg-dialog[^{]*\{[^}]*background-color:\s*var\(--glass-fill\)/);
+    expect(atelierCss).toMatch(/color-mix\(in srgb, var\(--canvas\) 94%, transparent\)/);
   });
 
   it('der Dialog benutzt lg-dialog, nicht das (in Atelier durchsichtige) lg-sheet', () => {
@@ -266,4 +280,90 @@ describe('Dialoge in Atelier (S-01)', () => {
       }
     },
   );
+});
+
+/** Glas-Token `rgb(…)` oder `rgba(…)`: Kanäle 0 bis 255, Deckung als Zahl oder Prozent. */
+function glassToken(value: string): { rgb: number[]; alpha: number } {
+  const match = /^rgba?\((.+)\)$/.exec(value.trim());
+  if (!match) throw new Error(`Kein rgb-Wert: ${value}`);
+  const [r, g, b, a = '1'] = (match[1] as string).split(/[\s,\/]+/).filter(Boolean) as string[];
+  const alpha = a.endsWith('%') ? Number.parseFloat(a) / 100 : Number.parseFloat(a);
+  return { rgb: [Number(r), Number(g), Number(b)], alpha };
+}
+
+/** Die Glasfläche mit ihrer Deckung über `base` gelegt, als Hex. */
+function onGlass(glass: { rgb: number[]; alpha: number }, base: string): string {
+  const under = channels(base);
+  const mixed = glass.rgb.map((value, index) =>
+    Math.round(value * glass.alpha + (under[index] as number) * (1 - glass.alpha)),
+  );
+  return `#${mixed.map((value) => value.toString(16).padStart(2, '0')).join('')}`;
+}
+
+describe('Glas (D1): Text auf Glas über dem Lichtfeld', () => {
+  // Unter dem Glas liegt das Lichtfeld an seiner Spitze: Fachfarbe × 30 % × k auf dem Grund, für jede Fachfarbe und
+  // den warmen Ton ohne Fach. Geprüft wird jede Fläche, nicht nur die hellste: Dunkle Schrift leidet auf der
+  // dunkelsten, helle Schrift auf der hellsten Stelle, und im Hellen wie im Dunklen liegt die Schwäche je nach
+  // Fachfarbe auf einer anderen Seite. Die Glasdeckung steht fest (46 % hell, 52 % dunkel).
+  it.each([
+    ['hell', lightA, subjectsLight, 0.46, kLight],
+    ['dunkel', darkA, subjectsDark, 0.52, kDark],
+  ])(
+    'Text auf Glas im %s Modus erreicht auf jeder Fläche mindestens 4,5 : 1 (--ink, --ink-secondary, --ink-muted, --link, --danger)',
+    (_name, tokens, subjects, deckung, k) => {
+      const glass = glassToken(tokens['--glass-fill'] as string);
+      expect(glass.alpha).toBeCloseTo(deckung, 2);
+      const canvas = toHex(tokens['--canvas'] as string, tokens);
+      const surfaces = subjects.map((subject) => onGlass(glass, over(canvas, subject, CENTER * k)));
+      for (const name of ['--ink', '--ink-secondary', '--ink-muted', '--link', '--danger']) {
+        const color = toHex(tokens[name] as string, tokens);
+        for (const surface of surfaces) {
+          expect(contrast(color, surface), `${name} auf Glas`).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    },
+  );
+});
+
+// Text auf dem Lichtfeld selbst (kein Glas): die stärkste Stelle ist die Mitte des Feldes, 30 % × --at-k. Gemessen
+// wird im Browser das 20-Prozent-Perzentil der Pixel unter jeder Textzeile. Die Formel hier rechnet ohne Körnung
+// und liegt darum auf der sicheren Seite; sie fängt auf, wenn jemand das Feld wieder stärker macht oder einen
+// Atelier-Textton wieder heller stellt. Im Hellen steht --ink-muted auf 4,66 : 1, --link auf 4,62 : 1 (gerundet abwärts).
+describe('Text auf dem Feld (ohne Glas)', () => {
+  it.each([
+    ['hell', lightA, subjectsLight, kLight],
+    ['dunkel', darkA, subjectsDark, kDark],
+  ])(
+    '--ink, --ink-secondary, --ink-muted und --link erreichen im %s Modus auf der Mitte des Feldes 4,5 : 1',
+    (_name, tokens, subjects, k) => {
+      const canvas = toHex(tokens['--canvas'] as string, tokens);
+      for (const name of ['--ink', '--ink-secondary', '--ink-muted', '--link']) {
+        const color = toHex(tokens[name] as string, tokens);
+        for (const subject of subjects) {
+          expect(contrast(color, over(canvas, subject, CENTER * k)), `${name} auf dem Feld`).toBeGreaterThanOrEqual(
+            4.5,
+          );
+        }
+      }
+    },
+  );
+
+  // Ohne diese Zeilen käme im Dunkelmodus der helle Atelier-Wert an (gleiche Spezifität wie tokens.css,
+  // die Reihenfolge entschiede). Jeder Dunkelblock muss die beiden Töne selbst setzen.
+  it.each([
+    ['[data-theme=dark]', darkAtelier],
+    ['prefers-color-scheme: dark', darkAutoAtelier],
+  ])('der Dunkelblock (%s) setzt --ink-muted und --link selbst', (_name, block) => {
+    expect(block['--ink-muted']).toBeDefined();
+    expect(block['--link']).toBeDefined();
+  });
+
+  it('die Atelier-Werte im Hellen liegen dunkler als die Basis, und nur dort', () => {
+    expect(toHex(lightA['--ink-muted'] as string, lightA)).not.toBe(
+      toHex(light['--ink-muted'] as string, light),
+    );
+    expect(toHex(lightA['--link'] as string, lightA)).not.toBe(toHex(light['--link'] as string, light));
+    expect(toHex(darkA['--ink-muted'] as string, darkA)).toBe(toHex(dark['--ink-muted'] as string, dark));
+    expect(toHex(darkA['--link'] as string, darkA)).toBe(toHex(dark['--link'] as string, dark));
+  });
 });

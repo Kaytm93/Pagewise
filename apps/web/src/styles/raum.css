@@ -1,11 +1,15 @@
 /*
- * Designrichtung „Raum“ (D-045): ein Ordner auf dem Schreibtisch. Ein Rücken mit gestrichelter Heftung in
- * der Fachfarbe, die Seiten als Papierkanten, davor das Blatt. Die Seitenleiste ist flach, Fachfarbe zeigt
- * sich als Kante an Karten und Einträgen. Fensterlicht fällt schräg über den Schreibtisch.
+ * Designrichtung „Raum“ (neumorph, Designplan D3): ein Raumton, auf dem Gehobenes und Eingelassenes liegt.
+ * Gehobene Flächen tragen zwei Schatten, hell oben links und dunkel unten rechts. Eingelassene Flächen haben
+ * einen Innenschatten in beide Richtungen. Jedes Bedienelement hat eine 1 px Kante in --raum-edge, denn ein
+ * Schatten allein ist kein Rand. Die Fachfarbe steht als kleiner Punkt oder als Mulde, nie als Kante an einer
+ * Karte. Das Fensterlicht fällt schräg über den Raum und ist der einzige Verlauf. Einen Ordnerrücken gibt es nicht.
  *
  * Aufgebaut auf denselben Klassen wie „Lagen“ (lagen.css): hier wird nur überschrieben, was anders aussieht.
- * Farben aus tokens.css (--sheet, --subj …), Bewegung aus motion.css (--m, --t-*). Nur transform und opacity
- * bewegen sich. Die Parallaxe (--px, --py) setzt ui/parallax.ts: zwei Ebenen, geglättet, nur mit Maus und nur in Stufe „Voll“.
+ * Farben aus tokens.css (--raum-canvas, --raum-raised, --raum-edge, --raum-light, --raum-dark, --subj …),
+ * Bewegung aus motion.css (--m, --t-*). Bewegt werden nur transform und opacity; Schatten und Farbe wechseln
+ * über --t-color. Die Parallaxe (--px, --py) setzt ui/parallax.ts: zwei Ebenen, geglättet, nur mit Maus und nur
+ * in Stufe „Voll“.
  */
 
 /* Die Parallaxe setzt ui/parallax.ts per CSSOM auf .lg-app; gelesen wird sie erst im
@@ -23,48 +27,28 @@
   initial-value: 0;
 }
 
-/* ===== Tokens ===== */
+/* ===== Tokens =====
+   Die Schatten bestehen aus den Raum-Farben in tokens.css. Hell oben links (8 px, Stufe groß), dunkel unten rechts
+   (14 px, Stufe groß). Die kleine Stufe ist für Knöpfe und Zeilen, die große für Blatt und Karte. */
 :root[data-design="raum"] {
   /* Maße der Hülle (Mockup C): Seitenleiste 240 px, auf dem iPad (768–1099 px) 216 px; der Blattrand bleibt */
   --sidebar-w: 240px;
   --sheet-edge: 52px;
-  --desk-a: #f1eee8;
-  --desk-b: #dedad2;
-  --edge-1: #ece7dc;
-  --edge-2: #f8f5ee;
-  --edge-3: #e2dccf;
-  --cover-mix: 58%;
-  --cover-base: #2e2e2e;
-  /* Kanten des Ordnerrückens: Lichtkante oben, Schatten unten, schmaler Schimmer links, Heftung, Körnung */
-  --cover-rim: rgba(255, 255, 255, 0.2);
-  --cover-shade: rgba(0, 0, 0, 0.2);
-  --cover-lit: rgba(255, 255, 255, 0.06);
-  --cover-stitch: rgba(255, 255, 255, 0.3);
-  --cover-grain: 0.7;
   /* Die hellere Fläche der „Jetzt“-Karte (Mockup --page-hi) */
   --page-hi: #ffffff;
   /* Schatten wärmer und kräftiger als in tokens.css (Mockup C: Tönung 60, 40, 15; Stärke .22) */
   --shadow: 60, 40, 15;
   --shadow-a: 0.22;
-  --heft-shadow:
-    0 38px 48px -28px rgba(60, 40, 15, 0.5), 0 16px 22px -14px rgba(60, 40, 15, 0.32),
-    0 2px 3px rgba(60, 40, 15, 0.2);
+  /* Gehoben, klein (Knopf, Zeile, Auswahl) und groß (Blatt, Karte); eingelassen (Feld, Schiene, aktive Navigation) */
+  --raum-up-s: -4px -4px 8px var(--raum-light), 4px 4px 8px var(--raum-dark);
+  --raum-up-l: -8px -8px 16px var(--raum-light), 8px 8px 14px var(--raum-dark);
+  --raum-in: inset 4px 4px 8px var(--raum-dark), inset -4px -4px 8px var(--raum-light);
 }
 
 :root[data-design="raum"][data-theme="dark"] {
-  --desk-a: #1c1c1a;
-  --desk-b: #121211;
-  --edge-1: #2d2d2b;
-  --edge-2: #353532;
-  --edge-3: #292927;
-  --cover-mix: 34%;
-  --cover-base: #10100f;
   --page-hi: #2a2a28;
   --shadow: 0, 0, 0;
   --shadow-a: 0.5;
-  --heft-shadow:
-    0 40px 52px -26px rgba(0, 0, 0, 0.8), 0 16px 24px -14px rgba(0, 0, 0, 0.6),
-    0 2px 3px rgba(0, 0, 0, 0.5);
 }
 
 @media (min-width: 768px) and (max-width: 1099.98px) {
@@ -75,19 +59,9 @@
 
 @media (prefers-color-scheme: dark) {
   :root[data-design="raum"]:not([data-theme="light"]) {
-    --desk-a: #1c1c1a;
-    --desk-b: #121211;
-    --edge-1: #2d2d2b;
-    --edge-2: #353532;
-    --edge-3: #292927;
-    --cover-mix: 34%;
-    --cover-base: #10100f;
     --page-hi: #2a2a28;
     --shadow: 0, 0, 0;
     --shadow-a: 0.5;
-    --heft-shadow:
-      0 40px 52px -26px rgba(0, 0, 0, 0.8), 0 16px 24px -14px rgba(0, 0, 0, 0.6),
-      0 2px 3px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -99,9 +73,10 @@
     --win: color-mix(in srgb, var(--subj) 12%, var(--light));
   }
 
-  /* ===== Schreibtisch: Verlauf von oben nach unten, Körnung, Wandlicht in der Fachfarbe =====
-     Hintere Ebene der Parallaxe: Die Wand ist 24 px größer als das Fenster und gleitet nur wenig gegen den
-     Zeiger, damit an den Rändern nie ein Streifen aufblitzt. */
+  /* ===== Raumton: eine Fläche in --raum-canvas, darüber nur das Fensterlicht als Verlauf =====
+     Hintere Ebene der Parallaxe: Die Wand ist 24 px größer als das Fenster und gleitet nur wenig (3 und 2 px)
+     gegen den Zeiger, damit an den Rändern nie ein Streifen aufblitzt. Der schwache Schein der Fachfarbe bleibt
+     oben rechts; der zweite Verlauf unten ist entfallen. */
   :root[data-design="raum"] .lg-app::before {
     inset: -24px;
     background:
@@ -110,20 +85,19 @@
         color-mix(in srgb, var(--subj) 9%, transparent),
         transparent 70%
       ),
-      radial-gradient(90% 70% at 50% 110%, rgba(var(--shadow), 0.12), transparent 70%),
-      var(--grain), linear-gradient(180deg, var(--desk-a), var(--desk-b));
+      var(--grain),
+      var(--raum-canvas);
     background-size:
-      auto,
       auto,
       220px 220px,
       auto;
-    transform: translate3d(calc(var(--px) * -5px), calc(var(--py) * -3px), 0);
+    transform: translate3d(calc(var(--px) * -3px), calc(var(--py) * -2px), 0);
   }
 
   /* Fensterlicht (vordere Ebene): vier Scheiben in einem schrägen Fensterstock (Mockup C), das Licht fällt
      von oben rechts aus. Ein Zug im clip-path: die Scheiben hängen über Brücken ohne Fläche zusammen, die
-     Stege dazwischen bleiben dunkel. Die Parallaxe verschiebt über `transform`, das Atmen über `translate`
-     und `opacity`, so stören sich beide nicht. */
+     Stege dazwischen bleiben dunkel. Die Parallaxe verschiebt über `transform` (schwächer als vorher), das Atmen
+     über `translate` und `opacity`, so stören sich beide nicht. */
   :root[data-design="raum"] .lg-app::after {
     content: "";
     position: fixed;
@@ -157,7 +131,7 @@
       67.9% 49.3%,
       76.2% -1.9%
     );
-    transform: translate3d(calc(var(--px) * -14px), calc(var(--py) * 8px), 0);
+    transform: translate3d(calc(var(--px) * -8px), calc(var(--py) * 5px), 0);
     pointer-events: none;
   }
 
@@ -178,7 +152,7 @@
     will-change: transform;
   }
 
-  /* ===== Seitenleiste: flach, mit Körnung, ohne Heftrücken ===== */
+  /* ===== Seitenleiste: die Fläche des Raums, flach, mit einer Linie zum Blatt ===== */
   :root[data-design="raum"] .lg-aside {
     padding-block: 0;
   }
@@ -187,19 +161,12 @@
     border: 0;
     border-right: 1px solid var(--line);
     border-radius: 0;
-    background-color: var(--surface);
+    background-color: var(--raum-canvas);
     box-shadow: none;
   }
 
   :root[data-design="raum"] .lg-spine {
     display: none;
-  }
-
-  :root[data-design="raum"] .lg-nav-item[aria-current="page"],
-  :root[data-design="raum"] .lg-nav-item[data-current="true"] {
-    background-color: var(--paper);
-    border-color: transparent;
-    box-shadow: none;
   }
 
   :root[data-design="raum"] .lg-nav-item[aria-current="page"]::before,
@@ -210,154 +177,47 @@
     width: 3px;
   }
 
-  /* ===== Ordner: Rücken (p1), Papierkanten (p2), davor das Blatt =====
-     Der Platz links für den Rücken kommt vom Innenabstand von #main (unten, ohne @layer), nicht vom Rand des
-     Stapels: `mx-auto` (utilities) überstimmt jeden waagerechten Rand aus einer Schicht darunter. */
+  /* ===== Blatt: gehoben, kein Ordner mehr. Der Stapel bleibt als Hülle; Rücken, Papierkanten und
+     Heftung sind entfallen. ===== */
   :root[data-design="raum"] .lg-stack {
-    --stack-space: 26px;
-    margin-block: 12px 14px;
+    --stack-space: 0px;
+    margin-block: 0;
   }
 
   :root[data-design="raum"] .lg-ply {
-    border: 0;
-    opacity: 1;
-    background-image: none;
-    transition: none;
-  }
-
-  /* Rücken: auf dem Handy schmaler (Mockup: 14 px links), ab md 22 px */
-  :root[data-design="raum"] .lg-stack .lg-p1 {
-    inset: -6px -6px -8px -14px;
-    border-radius: 8px 14px 14px 8px;
-    background-color: color-mix(in srgb, var(--subj) var(--cover-mix), var(--cover-base));
-    background-image: none;
-    box-shadow: var(--heft-shadow);
-    transform: none;
-    transition: background-color var(--t-slow) var(--ease);
-  }
-
-  @media (min-width: 768px) {
-    :root[data-design="raum"] .lg-stack .lg-p1 {
-      inset: -9px -9px -11px -22px;
-    }
-  }
-
-  /* Gestrichelte Heftung am Rücken */
-  :root[data-design="raum"] .lg-stack .lg-p1::before {
-    content: "";
-    position: absolute;
-    left: 6px;
-    top: 16px;
-    bottom: 16px;
-    border-left: 2px dashed var(--cover-stitch);
-  }
-
-  @media (min-width: 768px) {
-    :root[data-design="raum"] .lg-stack .lg-p1::before {
-      left: 10px;
-    }
-  }
-
-  /* Körnung und Innenkanten (Mockup: Körnung .7): Lichtkante oben, Schatten unten, Schimmer links */
-  :root[data-design="raum"] .lg-stack .lg-p1::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background-image: var(--grain);
-    background-size: 220px 220px;
-    opacity: var(--cover-grain);
-    box-shadow:
-      inset 0 1px 0 var(--cover-rim),
-      inset 0 -2px 0 var(--cover-shade),
-      inset 2px 0 0 var(--cover-lit);
-    pointer-events: none;
-  }
-
-  :root[data-design="raum"] .lg-stack .lg-p2 {
-    border-radius: 3px 7px 7px 3px;
-    background-color: var(--edge-1);
-    box-shadow:
-      2px 2px 0 var(--edge-2),
-      4px 3px 0 var(--edge-3),
-      6px 5px 0 var(--edge-2),
-      8px 6px 0 var(--edge-1);
-    transform: none;
-  }
-
-  :root[data-design="raum"] .lg-stack .lg-p3 {
     display: none;
   }
 
-  :root[data-design="raum"] .lg-stack[data-depth] .lg-p1,
-  :root[data-design="raum"] .lg-stack[data-depth] .lg-p2 {
-    transform: none;
-  }
-
-  /* ===== Das Blatt =====
-     Eine Karte für sich (Anmeldung, Einrichtung): Rand und Schatten statt Ordner. */
-  :root[data-design="raum"] .lg-sheet {
-    border: 1px solid var(--line-warm);
-    border-radius: 10px;
-    box-shadow:
-      0 1px 2px rgba(var(--shadow), 0.08),
-      0 10px 24px -12px rgba(var(--shadow), var(--shadow-a));
-  }
-
-  /* Ein Blatt im Ordner: ruhig, links der Schatten der Heftung, daneben die Randlinie in der Fachfarbe.
-     Beides sind Hintergrundebenen des Blatts (kein ::before/::after): sie liegen unter dem Inhalt, nie
-     über Text, Feldern und Knöpfen, und folgen der Rundung. Die Linie steht bei --rule-x, immer links
-     vom Innenabstand des Blatts (22 px Handy, 32 px ab sm, 52 px ab md): 12, 16, 44 px.
-     `overflow: clip` statt `hidden` — ein Blatt mit `hidden` ist Rollbereich seiner Kinder, und `position:
-     sticky` (Eingabezeile im Chat) klebte nicht am Fenster (S-02). */
+  /* Ein Blatt im Stapel: gehoben, große Stufe, 1 px Kante. Keine Randlinie, kein Heftschatten. */
   :root[data-design="raum"] .lg-stack .lg-sheet {
-    --rule-x: 12px;
-    --bind-w: 34px;
-    border: 0;
-    border-radius: 3px 7px 7px 3px;
-    box-shadow: none;
+    border: 1px solid var(--raum-edge);
+    border-radius: 20px;
+    background-color: var(--raum-raised);
+    background-image: var(--grain);
+    background-size: 220px 220px;
+    background-position: 0 0;
+    background-repeat: repeat;
+    box-shadow: var(--raum-up-l);
     overflow: clip;
-    background-image:
-      linear-gradient(90deg, rgba(var(--shadow), 0.1), rgba(var(--shadow), 0.03) 45%, transparent),
-      linear-gradient(
-        color-mix(in srgb, var(--subj) 38%, transparent),
-        color-mix(in srgb, var(--subj) 38%, transparent)
-      ),
-      var(--grain);
-    background-size:
-      var(--bind-w) 100%,
-      1px 100%,
-      220px 220px;
-    background-position:
-      0 0,
-      var(--rule-x) 0,
-      0 0;
-    background-repeat: no-repeat, no-repeat, repeat;
   }
 
-  @media (min-width: 640px) {
-    :root[data-design="raum"] .lg-stack .lg-sheet {
-      --rule-x: 16px;
-    }
-  }
-
-  @media (min-width: 768px) {
-    :root[data-design="raum"] .lg-stack .lg-sheet {
-      --rule-x: 44px;
-      --bind-w: 60px;
-    }
-  }
-
-  /* Chat: das Blatt trägt keinen eigenen Innenabstand (Kopf, Verlauf und Eingabe haben 16 px und mehr), die
-     Linie rückt an den äußersten Rand. */
+  /* Chat: die Lesefläche ist flach, ohne Schatten; sie hat nur die Kante. */
   :root[data-design="raum"]
     .lg-app:is([data-view="chat"], [data-view="default-chat"])
     .lg-stack
     .lg-sheet {
-    --rule-x: 10px;
+    box-shadow: none;
   }
 
-  /* Die Anmeldung ist kein Blatt im Ordner: weder Randlinie noch Heftschatten, auch nicht in einem Stapel. */
+  /* Eine Karte für sich (Anmeldung, Einrichtung): gehoben, große Stufe. */
+  :root[data-design="raum"] .lg-sheet {
+    border: 1px solid var(--line-warm);
+    border-radius: 20px;
+    background-color: var(--raum-raised);
+    box-shadow: var(--raum-up-l);
+  }
+
+  /* Die Anmeldung: Körnung wie das Blatt, ohne Randlinie und ohne Heftschatten. */
   :root[data-design="raum"] .lg-sheet.lg-sheet-auth {
     background-image: var(--grain);
     background-size: 220px 220px;
@@ -365,52 +225,34 @@
     background-repeat: repeat;
   }
 
-  /* Zettel: flache Karte mit Fachfarbe als Kante, ohne Neigung */
+  /* Zettel: der „Nächste Test“ als großer gehobener Block. Die Fachfarbe ist ein Punkt, keine Kante. */
   :root[data-design="raum"] .lg-slip {
+    position: relative;
     padding: 20px 22px 18px;
-    border: 0;
-    border-radius: 8px;
-    background-color: var(--surface);
-    box-shadow: inset 3px 0 0 var(--subj);
+    border: 1px solid var(--raum-edge);
+    border-radius: 20px;
+    background-color: var(--raum-raised);
+    box-shadow: var(--raum-up-l);
     transform: none;
+  }
+
+  :root[data-design="raum"] .lg-slip::before {
+    content: "";
+    position: absolute;
+    top: 22px;
+    right: 22px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--subj);
+    box-shadow: inset 2px 2px 3px var(--raum-dark), inset -1px -1px 2px var(--raum-light);
   }
 
   :root[data-design="raum"] .lg-tape {
     display: none;
   }
 
-  /* Hover nur mit echter Maus (Muster: lagen.css): Touch bleibt ohne Kleben */
-  @media (hover: hover) {
-    :root[data-design="raum"] .lg-slip:hover {
-      transform: none;
-      background-color: var(--paper);
-    }
-
-    /* Zeilen: Fachkante statt Verschieben des ganzen Blocks */
-    :root[data-design="raum"] .lg-row:hover {
-      background-color: var(--paper);
-      box-shadow: none;
-      transform: translateX(calc(var(--m) * 3px));
-    }
-  }
-}
-
-/* Das Licht atmet über `translate` (eigene Eigenschaft), die Parallaxe über `transform`: keine Variable
-   in den Schlüsselbildern, nur --m (0 bei „Reduziert“). */
-@keyframes raum-breathe {
-  from {
-    opacity: 0.78;
-    translate: 0 0;
-  }
-
-  to {
-    opacity: 1;
-    translate: calc(var(--m) * -14px) calc(var(--m) * 8px);
-  }
-}
-
-@layer components {
-  /* ===== Startseite in „Raum“: Zeitachse mit Zeiten links, Stunden als Karten, „Jetzt“-Marke ===== */
+  /* ===== Startseite und Stundenplan ===== */
   .rm-start-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -482,6 +324,19 @@
     margin-block: 24px 32px;
   }
 
+  /* Die Schiene der Tageslinie: eingelassen, eine Bahn zwischen Zeitspalte und Karten. */
+  .rm-plan-list::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--tl-time) + var(--tl-gap) / 2 - 3px);
+    width: 6px;
+    border-radius: 999px;
+    background-color: var(--raum-canvas);
+    box-shadow: inset 2px 2px 3px var(--raum-dark), inset -2px -2px 3px var(--raum-light);
+  }
+
   .rm-plan-item,
   .rm-plan-break {
     position: absolute;
@@ -505,30 +360,49 @@
     color: var(--ink-muted);
   }
 
+  /* Eine Stunde: gehoben, kleine Stufe, 12 px Radius. Die Fachfarbe ist eine kleine Mulde links in der Karte. */
   .rm-plan-card {
+    position: relative;
     display: block;
     height: 100%;
     min-width: 0;
-    padding: 6px 12px 6px 14px;
+    padding: 6px 12px 6px 28px;
     overflow: hidden;
-    border-radius: 8px;
-    background-color: var(--surface);
-    box-shadow: inset 3px 0 0 var(--subj);
+    border: 1px solid var(--raum-edge);
+    border-radius: 12px;
+    background-color: var(--raum-raised);
+    box-shadow: var(--raum-up-s);
     transition:
       transform var(--t-med) var(--ease),
       background-color var(--t-color) ease,
       box-shadow var(--t-color) ease;
   }
 
+  .rm-plan-card::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    width: 8px;
+    height: 8px;
+    margin-top: -4px;
+    border-radius: 50%;
+    background-color: var(--subj);
+    box-shadow: inset 1px 1px 2px var(--raum-dark), inset -1px -1px 1px var(--raum-light);
+  }
+
   .rm-plan-name {
     color: var(--ink);
   }
 
+  /* Vergangenes ist flach: nur die Kante, die Mulde gedämpft */
   .rm-plan-item[data-state="past"] .rm-plan-card {
     background-color: transparent;
-    box-shadow:
-      inset 0 0 0 1px var(--line),
-      inset 3px 0 0 color-mix(in srgb, var(--subj) 50%, transparent);
+    box-shadow: none;
+  }
+
+  .rm-plan-item[data-state="past"] .rm-plan-card::before {
+    opacity: 0.5;
   }
 
   .rm-plan-item[data-state="past"] .rm-plan-name {
@@ -537,11 +411,7 @@
 
   .rm-plan-item[data-state="now"] .rm-plan-card {
     background-color: var(--page-hi);
-    box-shadow:
-      inset 4px 0 0 var(--subj),
-      inset 0 0 0 1px var(--line-warm),
-      0 1px 2px rgba(var(--shadow), 0.08),
-      0 10px 24px -12px rgba(var(--shadow), var(--shadow-a));
+    box-shadow: var(--raum-up-s);
     transform: translateX(calc(var(--m) * 4px));
   }
 
@@ -556,7 +426,7 @@
 
   @media (max-width: 420px) {
     .rm-plan-card {
-      padding-inline: 12px 10px;
+      padding-inline: 24px 10px;
     }
   }
 
@@ -588,10 +458,10 @@
     padding: 14px 2px;
   }
 
-  /* Die „Jetzt“-Marke: Punkt auf der Kante zwischen Zeitspalte und Karten, Linie quer über die Achse,
-     Zettel mit Uhrzeit in der Zeitspalte. Sie sitzt bei --now Minuten (nur transform bewegt), wandert
-     bei jedem Takt der Uhr und beachtet die Effektstufe über --t-slow. Der Zettel liegt in der
-     Zeitspalte, nie über den Karten, und weicht den Startzeiten aus (--now-shift aus timeline.ts). */
+  /* Die „Jetzt“-Marke: ein kleiner gehobener Kreis auf der Schiene, mit weichem Schatten. Sie sitzt bei --now
+     Minuten (nur transform bewegt), wandert bei jedem Takt der Uhr und beachtet die Effektstufe über --t-slow.
+     Der Zettel mit der Uhrzeit liegt in der Zeitspalte, nie über den Karten, und weicht den Startzeiten aus
+     (--now-shift aus timeline.ts). */
   .rm-plan-now {
     position: absolute;
     z-index: 2;
@@ -625,26 +495,33 @@
     height: 10px;
     border-radius: 50%;
     background: var(--accent);
-    box-shadow: 0 0 0 3px var(--sheet);
+    box-shadow: var(--raum-up-s);
   }
 
+  /* Die Linie quer über die Achse entfällt: die Marke steht für sich auf der Schiene. */
   .rm-plan-now-line {
-    position: absolute;
-    top: -1px;
-    right: 0;
-    left: calc(var(--tl-time) + var(--tl-gap) / 2);
-    height: 2px;
-    border-radius: 2px;
-    background: var(--accent);
-    transform-origin: left center;
-    animation: line-in var(--t-slow) var(--ease) both;
+    display: none;
+  }
+}
+
+/* Das Licht atmet über `translate` (eigene Eigenschaft), die Parallaxe über `transform`: keine Variable
+   in den Schlüsselbildern, nur --m (0 bei „Reduziert“). */
+@keyframes raum-breathe {
+  from {
+    opacity: 0.78;
+    translate: 0 0;
+  }
+
+  to {
+    opacity: 1;
+    translate: calc(var(--m) * -14px) calc(var(--m) * 8px);
   }
 }
 
 @layer components {
   /* ===== Fachseite in „Raum“: Register am rechten Blattrand, Ringe hinter dem Fachmotiv =====
      Beides ist Zier (aria-hidden): kein Fortschritt, keine Zahl, keine Bedienung. Farben kommen aus
-     tokens.css und werden mit color-mix gemischt, Bewegung nur über transform/opacity. */
+     tokens.css, Bewegung nur über transform/opacity. */
 
   /* Bezugsrahmen für die schmale Blattbreite ist das Blatt selbst. Nur ein Blatt, das ein Register
      trägt, wird zum Container — Chat, Notiz und die anderen Blätter bleiben unberührt. */
@@ -675,10 +552,11 @@
     }
   }
 
-  /* Eine Zunge: hochkant beschriftet, mit der Kante in der Fachfarbe. Die Zungen liegen versetzt
-     gestapelt — jede ein paar Pixel tiefer als die davor (--reg-i). */
+  /* Eine Zunge: hochkant beschriftet, gehoben mit kleiner Stufe, die Fachfarbe als Mulde oben. Die Zungen
+     liegen versetzt gestapelt — jede ein paar Pixel tiefer als die davor (--reg-i). */
   .rm-reg-tab {
     --reg-i: 0;
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -686,18 +564,33 @@
     height: 6.5rem;
     margin-top: calc(var(--reg-i) * 5px);
     padding: 4px 0;
-    border-left: 3px solid var(--subj);
-    border-radius: 7px 0 0 7px;
-    background-color: color-mix(in srgb, var(--subj) 12%, transparent);
+    border: 1px solid var(--raum-edge);
+    border-right-width: 0;
+    border-radius: 12px 0 0 12px;
+    background-color: transparent;
     color: var(--ink-muted);
     font-family: var(--font-heading);
     font-size: 0.75rem;
     letter-spacing: 0.04em;
     writing-mode: vertical-rl;
     transition:
-      background-color var(--t-fast) var(--ease),
-      color var(--t-fast) var(--ease),
+      background-color var(--t-color) ease,
+      box-shadow var(--t-color) ease,
+      color var(--t-color) ease,
       transform var(--t-med) var(--ease);
+  }
+
+  .rm-reg-tab::before {
+    content: "";
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    margin-left: -3px;
+    border-radius: 50%;
+    background-color: var(--subj);
+    box-shadow: inset 1px 1px 1px var(--raum-dark), inset -1px -1px 1px var(--raum-light);
   }
 
   .rm-reg-tab:nth-child(1) {
@@ -716,9 +609,10 @@
     --reg-i: 3;
   }
 
-  /* Der gewählte Reiter steht hervor, die anderen bleiben gedämpft. */
+  /* Der gewählte Reiter steht gehoben hervor, die anderen liegen flach auf dem Blatt. */
   .rm-reg-tab[data-active="true"] {
-    background-color: color-mix(in srgb, var(--subj) 30%, transparent);
+    background-color: var(--raum-raised);
+    box-shadow: var(--raum-up-s);
     color: var(--ink);
     transform: translateX(calc(var(--m) * -6px));
   }
@@ -777,12 +671,12 @@
  * ===== Regeln ohne @layer =====
  * Alles bis hierher steht in @layer components und verliert gegen Utility-Klassen (Tailwind, Schicht
  * `utilities`) und gegen die ungeschichteten Regeln aus motion.css. Was gegen genau diese gewinnen muss,
- * steht hier: Randabstand von #main (S-02 b), Blattwechsel (S-02 e), Zeilenradius, Startseite und Chat.
+ * steht hier: Bedienelemente (Knöpfe, Felder, Zeilen, Navigation), Innenabstand von #main, Blattwechsel,
+ * Startseite und Chat.
  */
 
-/* Platz für den Ordnerrücken: Er ragt 14 px (Handy) beziehungsweise 22 px (ab md) links über das Blatt und
-   braucht diesen Raum im Innenabstand von #main. Vorher stand er als Rand am Stapel und wurde von `mx-auto`
-   überstimmt, der Rücken ragte auf dem iPhone rund 10 px aus dem Fenster. Rechts: Papierkanten 8 px. */
+/* Innenabstand von #main: der Blattstapel hat keinen Rücken mehr. Die Luft links und rechts bleibt, damit das
+   Blatt nicht am Fensterrand klebt (S-02 b). Auf dem Handy 16 px rechts, 20 px links. */
 :root[data-design="raum"] #main {
   padding-right: max(16px, env(safe-area-inset-right));
   padding-left: max(20px, env(safe-area-inset-left));
@@ -795,11 +689,177 @@
   }
 }
 
-/* Blattwechsel (S-02 e). Die Schlüsselbilder aus motion.css (`dive-in`, `rise-in`, `sheet-arrive`) vergrößern
-   das Blatt (perspective + translateZ) oder drehen und verschieben es: es ragte kurz über den Rand, und die
-   Feder schoss über. Hier nur Verschieben um wenige Pixel und eine Skalierung kleiner als 1, mit dem Easing
-   ohne Überschwingen. Die Deckkraft beginnt bei .55: der Inhalt ist nie unsichtbar. `--m` stellt auf
-   „Reduziert“ alles Verschieben ab. */
+/* ===== Bedienelemente =====
+   Jedes Bedienelement hat eine 1 px Kante in --raum-edge; die Schatten allein zählen nicht. Gehoben ist die
+   kleine Stufe, gedrückt ist es eingelassen mit 1 px Verschieben. Übergänge über --t-color (D-058). */
+
+/* Knöpfe (ui/Button.tsx und die Knöpfe der Eingabe): gehoben. Der Primärknopf bleibt Pille in Graphit. */
+:root[data-design="raum"] .mo-press {
+  border: 1px solid var(--raum-edge);
+  box-shadow: var(--raum-up-s);
+  transition:
+    transform var(--t-fast) var(--ease),
+    box-shadow var(--t-color) ease,
+    background-color var(--t-color) ease,
+    color var(--t-color) ease;
+}
+
+:root[data-design="raum"] .mo-press:not(.lg-btn-primary) {
+  border-radius: 12px;
+  background-color: var(--raum-raised);
+}
+
+/* Gedrückt: eingelassen und 1 px nach unten. Überschreibt scale aus motion.css über die höhere Spezifität. */
+:root[data-design="raum"] .mo-press:active {
+  box-shadow: var(--raum-in);
+  transform: translateY(1px);
+}
+
+@media (hover: hover) {
+  :root[data-design="raum"] .mo-press:not(.lg-btn-primary):hover {
+    background-color: var(--paper);
+  }
+}
+
+/* Die Knöpfe an der Eingabezeile des Chats: rund (Kreis), gehoben, mit Kante. */
+:root[data-design="raum"] .lg-composer button:not(.lg-btn-primary) {
+  border: 1px solid var(--raum-edge);
+  background-color: var(--raum-raised);
+  box-shadow: var(--raum-up-s);
+}
+
+/* Eingabefelder: eingelassen, mit Kante und Innenschatten */
+:root[data-design="raum"] .rm-start-dock form > div {
+  border: 1px solid var(--raum-edge);
+  border-radius: 12px;
+  padding-left: 14px;
+  background-color: var(--raum-canvas);
+  box-shadow: var(--raum-in);
+}
+
+:root[data-design="raum"] .rm-start-dock form > div:focus-within {
+  border-color: var(--accent);
+}
+
+/* Navigation: jeder Eintrag mit Kante; der aktive Eintrag ist eingelassen (aktive Navigation). */
+:root[data-design="raum"] .lg-nav-item {
+  border: 1px solid var(--raum-edge);
+  border-radius: 12px;
+  background-color: transparent;
+  transition:
+    box-shadow var(--t-color) ease,
+    background-color var(--t-color) ease,
+    color var(--t-color) ease;
+}
+
+:root[data-design="raum"] .lg-nav-item[aria-current="page"],
+:root[data-design="raum"] .lg-nav-item[data-current="true"] {
+  border-color: var(--raum-edge);
+  background-color: var(--raum-canvas);
+  box-shadow: var(--raum-in);
+}
+
+/* Zeilen (Fächer, Zuletzt genutzt): eingelassene Mulden mit Kante, durch den Abstand der Liste getrennt. */
+:root[data-design="raum"] .lg-row {
+  border: 1px solid var(--raum-edge);
+  border-radius: 12px;
+  background-color: var(--raum-canvas);
+  box-shadow: var(--raum-in);
+  transition:
+    box-shadow var(--t-color) ease,
+    background-color var(--t-color) ease,
+    color var(--t-color) ease;
+}
+
+/* Die Fächer der Startseite: die Liste hat keinen Rand mehr, die Mulden trennen sich durch den Abstand. */
+:root[data-design="raum"] .rm-start-side section[aria-labelledby="home-subjects"] ul {
+  display: grid;
+  gap: 8px;
+  border-top: 0;
+}
+
+:root[data-design="raum"] .rm-start-side section[aria-labelledby="home-subjects"] li {
+  border-bottom: 0;
+}
+
+/* Die Eingabe im Chat: eingelassen, Kante, Radius 12 px */
+:root[data-design="raum"] .lg-composer textarea {
+  border: 1px solid var(--raum-edge);
+  background-color: var(--raum-canvas);
+  box-shadow: var(--raum-in);
+}
+
+:root[data-design="raum"] .lg-composer textarea:focus {
+  border-color: var(--accent);
+  box-shadow: var(--raum-in), 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* Werkzeugzeile des Agenten: eine Zeile mit Kante, flach, weil sie zum Lesebereich gehört */
+:root[data-design="raum"] .lg-agent-head {
+  width: 100%;
+  padding: 6px 12px;
+  border: 1px solid var(--raum-edge);
+  border-radius: 12px;
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--ink-secondary);
+  font-size: 0.875rem;
+  transition:
+    background-color var(--t-color) ease,
+    border-color var(--t-color) ease,
+    color var(--t-color) ease;
+}
+
+:root[data-design="raum"] .lg-agent-head:hover {
+  background-color: var(--paper);
+  color: var(--ink);
+}
+
+:root[data-design="raum"] .lg-agent-head[data-state="error"] {
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--raum-edge));
+}
+
+/* Segmentschiene (Untergruppen der Fachseite, ui/Tabs.tsx): die Schiene eingelassen, die Auswahl gehoben */
+:root[data-design="raum"] [role="tablist"] {
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--raum-edge);
+  border-radius: 12px;
+  background-color: var(--raum-canvas);
+  box-shadow: var(--raum-in);
+}
+
+:root[data-design="raum"] [role="tablist"] > [role="tab"] {
+  border: 1px solid transparent;
+  padding-inline: 16px;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+:root[data-design="raum"] [role="tablist"] > [role="tab"][aria-selected="true"] {
+  border-color: var(--raum-edge);
+  background-color: var(--raum-raised);
+  box-shadow: var(--raum-up-s);
+}
+
+/* Hover von Zeilen und Karten: nur mit echter Maus (Muster: lagen.css); zwei Regeln, nicht mehr */
+@media (hover: hover) {
+  :root[data-design="raum"] .lg-slip:hover {
+    background-color: var(--raum-raised);
+    transform: none;
+  }
+
+  :root[data-design="raum"] .lg-row:hover {
+    background-color: var(--raum-raised);
+    box-shadow: var(--raum-up-s);
+  }
+}
+
+/* Die Schlüsselbilder aus motion.css (`dive-in`, `rise-in`, `sheet-arrive`) vergrößern das Blatt
+   (perspective + translateZ) oder drehen und verschieben es: es ragte kurz über den Rand, und die Feder schoss
+   über. Hier nur Verschieben um wenige Pixel und eine Skalierung kleiner als 1, mit dem Easing ohne
+   Überschwingen. Die Deckkraft beginnt bei .55: der Inhalt ist nie unsichtbar. `--m` stellt auf „Reduziert“
+   alles Verschieben ab. */
 @keyframes raum-leaf-fwd {
   from {
     opacity: 0.55;
@@ -837,12 +897,7 @@
   animation: raum-leaf-same var(--t-med) var(--ease) both;
 }
 
-/* Zeilen runder als in „Lagen“ (Mockup C: 8 px), auch dort, wo andere Dateien `rounded-[2px]` setzen */
-:root[data-design="raum"] .lg-row {
-  border-radius: 8px;
-}
-
-/* ----- Startseite: Blatt füllt die Höhe, die Eingabe sitzt unten und bleibt beim Scrollen am Fenster ----- */
+/* Startseite: Blatt füllt die Höhe, die Eingabe sitzt unten und bleibt beim Scrollen am Fenster */
 :root[data-design="raum"] .lg-stack .lg-sheet:has(.rm-start) {
   display: flex;
   flex-direction: column;
@@ -879,7 +934,7 @@
   padding-top: 8px;
   padding-bottom: max(14px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
-  background-color: var(--sheet);
+  background-color: var(--raum-raised);
 }
 
 .rm-start-dock form {
@@ -887,8 +942,8 @@
   margin-top: 0;
 }
 
-/* ----- Chat in „Raum“ (Mockup C): nur Gestaltung über Klassen und Elemente, die schon da sind. Der
-   Lesebereich bleibt ruhig: keine Bewegung, kein Licht dahinter (siehe oben, pausiert im Chat). ----- */
+/* ----- Chat in „Raum“: Gestaltung über Klassen und Elemente, die schon da sind. Der Lesebereich bleibt ruhig:
+   keine Bewegung, kein Licht dahinter (siehe oben, pausiert im Chat). ----- */
 :root[data-design="raum"]
   .lg-app:is([data-view="chat"], [data-view="default-chat"])
   .lg-sheet
@@ -907,57 +962,17 @@
   letter-spacing: -0.01em;
 }
 
-/* Eingabezeile: klebt unten am Fenster (das Blatt ist `overflow: clip`, nicht `hidden`), Rundung wie das Blatt */
+/* Eingabezeile: klebt unten am Fenster, die Rundung folgt dem Blatt */
 :root[data-design="raum"] .lg-sheet > div:has(.lg-composer) {
   border-top-color: var(--line);
-  border-radius: 0 0 7px 3px;
-}
-
-:root[data-design="raum"] .lg-composer textarea {
-  border-radius: 14px;
-  border-color: var(--control-edge);
-  background-color: var(--canvas);
-}
-
-/* Fachfarbe als Kante am Eingabefeld, wenn das Fach eine hat (data-subj) */
-:root[data-design="raum"] .lg-composer[data-subj] textarea {
-  border-left-width: 3px;
-  border-left-color: var(--subj);
-}
-
-:root[data-design="raum"] .lg-composer textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 0 0 20px 20px;
 }
 
 :root[data-design="raum"] .lg-composer button {
   border-radius: 50%;
 }
 
-/* Werkzeugzeile des Agenten: eine Zeile wie im Mockup, Rand in Papierfarbe, Fläche leicht abgesetzt */
-:root[data-design="raum"] .lg-agent-head {
-  width: 100%;
-  padding: 6px 12px;
-  border: 1px solid var(--line-warm);
-  border-radius: 10px;
-  background-color: var(--surface);
-  color: var(--ink-secondary);
-  font-size: 0.875rem;
-  transition:
-    background-color var(--t-color) ease,
-    border-color var(--t-color) ease,
-    color var(--t-color) ease;
-}
-
-:root[data-design="raum"] .lg-agent-head:hover {
-  background-color: var(--paper);
-  color: var(--ink);
-}
-
-:root[data-design="raum"] .lg-agent-head[data-state="error"] {
-  border-color: color-mix(in srgb, var(--danger) 55%, var(--line-warm));
-}
-
+/* Werkzeugzeile des Agenten und Erklärung der Effektstufen: Zier, die die Richtung nicht neu erfindet */
 :root[data-design="raum"] .lg-tool-check {
   color: var(--ink-secondary);
 }
@@ -967,3 +982,4 @@
   padding-left: 14px;
   border-left: 2px solid var(--line-warm);
 }
+

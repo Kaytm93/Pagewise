@@ -77,8 +77,8 @@ describe('Dokument-Angabe', () => {
     [doc({ parts: [{ type: 'paragraph', text: 'a\nb' }] }), 'invalid_document', 'text'],
     [doc({ parts: [{ type: 'paragraph', text: 'x'.repeat(1201) }] }), 'invalid_document', 'text'],
     [doc({ parts: [{ type: 'list', items: ['x'.repeat(1201)] }] }), 'invalid_document', 'items'],
-    [doc({ parts: [{ type: 'paragraph', text: 'Formel Δ H' }] }), 'unsupported_text', undefined],
-    [doc({ parts: [{ type: 'list', items: ['Ziel ⇌ Ende'] }] }), 'unsupported_text', undefined],
+    [doc({ parts: [{ type: 'paragraph', text: 'Formel Δ H' }] }), 'unsupported_text', 'U+0394'],
+    [doc({ parts: [{ type: 'list', items: ['Ziel ⇌ Ende'] }] }), 'unsupported_text', 'U+21CC'],
     [doc({ parts: [{ type: 'paragraph', text: 'Steuer\u0007' }] }), 'invalid_document', 'text'],
   ])('lehnt %j ab (%s, Hinweis %s)', (source, code, detail) => {
     const result = parseDocumentSpec(source);
@@ -87,6 +87,24 @@ describe('Dokument-Angabe', () => {
       expect(result.error.code).toBe(code);
       expect(result.error.detail).toBe(detail);
     }
+  });
+
+  it('nennt als Hinweis die Zeichencodes der ersten drei Fremdzeichen, nie den Text', () => {
+    const result = parseDocumentSpec(doc({ parts: [{ type: 'paragraph', text: 'Δ ⇌ ∑ Δ' }] }));
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'unsupported_text', detail: 'U+0394, U+21CC, U+2211' },
+    });
+  });
+
+  it('macht geschützte Bindestriche zu normalen, die das PDF setzt', () => {
+    const result = parseDocumentSpec(
+      doc({ parts: [{ type: 'paragraph', text: 'd‑Orbital und s‐Block' }] }),
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      value: { parts: [{ type: 'paragraph', text: 'd-Orbital und s-Block' }] },
+    });
   });
 
   it('begrenzt die Anzahl der Abschnitte und die Größe', () => {
@@ -123,7 +141,12 @@ describe('Dokument im Text', () => {
       `\`\`\`document\n${doc({ parts: [{ type: 'paragraph', text: 'Δ H' }] })}\n\`\`\``,
     );
     expect(issues).toEqual([
-      expect.objectContaining({ kind: 'document', index: 1, code: 'unsupported_text' }),
+      expect.objectContaining({
+        kind: 'document',
+        index: 1,
+        code: 'unsupported_text',
+        detail: 'U+0394',
+      }),
     ]);
   });
 });

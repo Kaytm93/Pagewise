@@ -1218,3 +1218,71 @@ details[open] > summary .mo-arrow {
 :root[data-design="lagen"].fx-off .lg-motif-stroke {
   stroke-dasharray: none;
 }
+
+/*
+ * ===== Akzente am Block (Plan 17, D2) =====
+ *
+ * Der Block bleibt, wie er ist: Lochung, Heftfaden, Zettel und Blattstapel. Dazu kommen nur Akzente: ein
+ * kräftigerer Heftfaden, die Randlinie an den Innenseiten, das Etikett „Pagewise“ im Umschlag, eine feine
+ * Kante an den Blattstapeln und ein deutlicherer Fachpunkt. Alles unter dem Richtungs-Selektor; die Farben
+ * kommen aus tokens.css (die Dunkel-Werte stehen dort).
+ */
+
+/* Heftfaden: Stiche 2 px, Farbe eine Stufe stärker. Die Stichreihe bleibt gestrichelt. */
+:root[data-design="lagen"] .lg-spine::after {
+  width: 2px;
+  background: repeating-linear-gradient(to bottom, var(--stitch-strong) 0 7px, transparent 7px 13px);
+}
+
+/*
+ * Randlinie an den Innenseiten (Start, Fachseite, Hefteintrag): ein Pseudo-Element am Blatt, 1 px, Farbe
+ * --margin. Sie liegt 56 px vom inneren Blattrand und hält immer 12 px Abstand zum Text (Blattrand
+ * --sheet-under plus Innenabstand --sheet-edge). Schmale iPads (768–1023 px) haben den kleineren Innenabstand,
+ * dort rückt die Linie auf 38 px. Ab „md“ gilt das; auf dem Telefon beginnt der Text schon bei 22 px, dort
+ * entfällt die Linie. Im Chat entfällt sie ebenfalls: der Text steht dort bei rund 56 px. Der Heftfaden
+ * und die Streifen bekommen keine Linie, sie bleibt am Blatt.
+ */
+@media (min-width: 768px) {
+  :root[data-design="lagen"] .lg-app[data-view="home"] .lg-sheet::before,
+  :root[data-design="lagen"] .lg-app[data-view="subject"] .lg-sheet::before,
+  :root[data-design="lagen"] .lg-app[data-view="note"] .lg-sheet::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: min(56px, calc(var(--sheet-under) + var(--sheet-edge) - 12px));
+    width: 1px;
+    background: var(--margin);
+    pointer-events: none;
+  }
+}
+
+/* Blattkanten des Stapels: eine feine Kante als zusätzliche, schmale Stufe, damit sich die Lagen lesen lassen. */
+:root[data-design="lagen"] .lg-ply {
+  box-shadow:
+    0 1px 0 rgba(var(--shadow), 0.07),
+    0 1px 2px rgba(var(--shadow), 0.08),
+    0 6px 14px -6px rgba(var(--shadow), calc(var(--shadow-a) * 0.8));
+}
+
+/*
+ * Etikett: das Markenwort „Pagewise“ im Umschlag bekommt die Optik eines Schildchens. Nur Fläche, Rand,
+ * Radius und Innenmaß ändern sich; der Name, die Marke und die Schrift bleiben. Der Rand ist die Kante eines
+ * Bedienelements und hält 3 : 1 gegen den Heftrücken. Die Mindesthöhe von 48 px (Tailwind) bleibt.
+ */
+:root[data-design="lagen"] .lg-brand {
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--control-edge);
+  border-radius: 2px;
+  background-color: var(--label);
+}
+
+/* Fachpunkt neben dem Fachnamen: etwas größer, mit einem kräftigeren Ring in der Fachfarbe. Der graue Standard bleibt grau. */
+:root[data-design="lagen"] .lg-dot {
+  width: 10px;
+  height: 10px;
+}
+
+:root[data-design="lagen"] .lg-dot:not([data-state="default"]) {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--subj) 32%, transparent);
+}

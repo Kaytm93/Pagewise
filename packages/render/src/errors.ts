@@ -4,8 +4,8 @@ export type BlockKind = 'math' | 'graph' | 'mol' | 'abc' | 'quiz' | 'document' |
 /**
  * Fehlercodes beim Prüfen und Zeichnen. Es sind nur feste Codes, nie Text aus dem Block oder aus einer
  * Bibliothek: Der Fehlertext kann Eingaben des Modells enthalten (und damit Anweisungen oder Markup), und er
- * wird einmal an das Modell zurückgegeben (Retry). Genaueres steht, wenn überhaupt, in `detail` (nur Zahlen
- * und Feldnamen, die dieses Paket selbst erzeugt).
+ * wird einmal an das Modell zurückgegeben (Retry). Genaueres steht, wenn überhaupt, in `detail` (nur Zahlen,
+ * Feldnamen und Zeichencodes wie U+0394, die dieses Paket selbst erzeugt).
  */
 export type RenderErrorCode =
   | 'empty'

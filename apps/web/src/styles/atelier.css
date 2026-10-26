@@ -1,7 +1,7 @@
 /*
- * Designrichtung „Atelier“ (D-045): klar und produktnah. Kein Blattstapel, keine Hülle um den Inhalt: Der Text
- * steht groß auf dem Grund, über dem das Licht der Fachfarbe liegt (zwei weiche Lichtbänder, Körnung). Die
- * Seitenleiste ist flach, Karten haben Rand und Schatten, die Fachfarbe zeigt sich als Licht und Linie.
+ * Designrichtung „Atelier“ (D-045, D-062): klar und produktnah. Kein Blattstapel, keine Hülle um den Inhalt: Der
+ * Text steht groß auf dem Grund, darüber liegt ein einziges Lichtfeld der Fachfarbe und die Körnung. Glas gibt es
+ * nur hier (Seitenleiste, Composer, Dialogblatt, Kopfzeile, Testkarte); Radien sind 22 px, 12 px und Pille.
  *
  * Wie „Raum“ aufgebaut auf den Klassen aus lagen.css: überschrieben wird nur, was anders aussieht. Farben aus
  * tokens.css, Bewegung aus motion.css (nur transform und opacity). Im Chat steht das Licht still.
@@ -24,8 +24,14 @@
 :root[data-design="atelier"] {
   --sidebar-w: 264px;
   --sheet-edge: clamp(20px, 5vw, 72px);
-  /* Stärke des Lichts der Fachfarbe (Mockup B: hell .78, dunkel .5); der Kontrast prüft atelier-contrast.test.ts */
+  /* Stärke des Lichtfelds: Fachfarbe × 30 % × --at-k, also hell 23,4 % (0,78) und dunkel 15 % (0,5) auf dem Grund.
+     Das ist die erste Fassung. Die Läufe dazwischen hatten das Feld auf 15 % bzw. 12 % geschwächt, weil gedämpfter
+     Text und Link darauf unter 4,5 : 1 fielen. Darum stehen --ink-muted und --link im Hellen etwas dunkler, nur hier
+     (tokens.css bleibt unberührt). Die Dunkelblöcke setzen beide Werte auf die dunklen Grundwerte zurück. Der
+     Kontrast prüft atelier-contrast.test.ts. */
   --at-k: 0.78;
+  --ink-muted: #5f5e67;
+  --link: #145bc2;
   /* Kern des Zeigerscheins (ui/pointer-glow.ts): hell fast weiß, dunkel ein Hauch warmes Licht */
   --at-glow-base: rgb(255 255 255 / 0.9);
   /* Fachtext-Ton: die Fachfarbe als Textfarbe (Kennzahl, Symbole, Marken), je Fach eigener Wert, AA-geprüft.
@@ -41,12 +47,16 @@
 
 :root[data-design="atelier"][data-theme="dark"] {
   --at-k: 0.5;
+  --ink-muted: var(--color-night-ink-muted);
+  --link: var(--color-night-link);
   --at-glow-base: rgb(255 244 225 / 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
   :root[data-design="atelier"]:not([data-theme="light"]) {
     --at-k: 0.5;
+    --ink-muted: var(--color-night-ink-muted);
+    --link: var(--color-night-link);
     --at-glow-base: rgb(255 244 225 / 0.08);
   }
 }
@@ -156,81 +166,105 @@
   }
 
   /* ===== Grund: Papier, darüber das Licht der Fachfarbe und die Körnung ===== */
+  /* Ein einziges Lichtfeld: eine große Form, Mittelpunkt im oberen Drittel (30 %, 28 %). Sie reicht über die
+     Seitenleiste und den oberen Hauptbereich, damit Glas und Karte „Anstehend“ darüber liegen. Nach unten
+     läuft sie aus; die Stärke fällt von 30 % (Mitte) auf 20 % (halber Radius) bis 0 am Rand, jeweils × --at-k.
+     Es liegt fest hinter allem (position: fixed in lagen.css), darum sieht das Glas die Fachfarbe. Die Körnung
+     liegt darunter; im Chat steht das Licht still. Ohne Fach (warmes Sand) gilt dieselbe Form mit --subj. */
   :root[data-design="atelier"] .lg-app::before {
     background:
       radial-gradient(
-        62% 52% at 18% -6%,
-        color-mix(in srgb, var(--subj) calc(30% * var(--at-k)), transparent),
-        transparent 74%
-      ),
-      radial-gradient(
-        38% 40% at 98% 4%,
-        color-mix(in srgb, var(--subj) calc(15% * var(--at-k)), transparent),
-        transparent 72%
+        ellipse 100% 110% at 30% 28%,
+        color-mix(in srgb, var(--subj) calc(30% * var(--at-k)), transparent) 0%,
+        color-mix(in srgb, var(--subj) calc(20% * var(--at-k)), transparent) 50%,
+        transparent 100%
       ),
       var(--grain), var(--canvas);
     background-size:
-      auto,
       auto,
       180px 180px,
       auto;
   }
 
-  /* Lichtband: schräg, langsam wandernd (nur Stufe „Voll“, nicht im Chat) */
-  :root[data-design="atelier"] .lg-app::after {
-    content: "";
-    position: fixed;
-    z-index: -1;
-    top: -30%;
-    left: 8%;
-    width: 90%;
-    height: 160%;
-    background: linear-gradient(
-      90deg,
-      transparent 4%,
-      color-mix(in srgb, var(--subj) calc(9% * var(--at-k)), transparent) 22%,
-      transparent 40%,
-      transparent 54%,
-      color-mix(in srgb, var(--subj) calc(6% * var(--at-k)), transparent) 70%,
-      transparent 88%
-    );
-    transform: skewX(-30deg);
-    pointer-events: none;
+  /* ===== Glas (D1, D-062): nur in „Atelier“, nur an diesen Hüllen =====
+     Die Glasfläche steht in dieser einen Regel, damit backdrop-filter nur an einer Stelle vorkommt. Die Hüllen
+     tragen dafür keine neue Klasse im Markup: Seitenleiste (.lg-binder), Composer (.lg-composer), Dialogblatt
+     (.lg-dialog), die Kopfzeile der schmalen Breite (header.sticky im md:hidden) und die Testkarte (.at-test).
+     Höchstens drei Glasflächen gleichzeitig. Auf Text und Chat-Fließtext liegt nie Glas. Der Rand steckt im
+     Haarstrich des Schattens, nicht in einer Linie. */
+  :root[data-design="atelier"] .at-glass,
+  :root[data-design="atelier"] .lg-binder,
+  :root[data-design="atelier"] .lg-composer,
+  :root[data-design="atelier"] .lg-dialog,
+  :root[data-design="atelier"] .at-test,
+  :root[data-design="atelier"] header.sticky.md\:hidden {
+    background-color: var(--glass-fill);
+    box-shadow:
+      inset 0 0 0 1px var(--glass-edge-side),
+      inset 0 1px 0 var(--glass-edge),
+      var(--glass-shadow-near),
+      var(--glass-shadow-far);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
   }
 
-  .fx-full[data-design="atelier"] .lg-app:not([data-view="chat"])::after {
-    animation: atelier-drift 110s ease-in-out infinite alternate;
+  /* Ohne backdrop-filter (ältere Geräte): deckende Fläche aus dem Grund, 94 % */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :root[data-design="atelier"] .at-glass,
+    :root[data-design="atelier"] .lg-binder,
+    :root[data-design="atelier"] .lg-composer,
+    :root[data-design="atelier"] .lg-dialog,
+    :root[data-design="atelier"] .at-test {
+      background-color: color-mix(in srgb, var(--canvas) 94%, transparent);
+    }
   }
 
-  .tab-hidden[data-design="atelier"] .lg-app::after {
-    animation-play-state: paused;
+  /* Radius 22 px für das Panel; die Testkarte hat denselben Radius und Innenabstand im 4er-Raster */
+  :root[data-design="atelier"] .at-glass,
+  :root[data-design="atelier"] .at-test {
+    border-radius: 22px;
   }
 
-  /* ===== Seitenleiste: flach auf dem Arbeitsgrund ===== */
+  :root[data-design="atelier"] .at-test {
+    padding: 22px;
+  }
+
+  /* ===== Seitenleiste: Glas von oben bis unten, die Auswahl als Glaspille ===== */
   :root[data-design="atelier"] .lg-aside {
     padding-block: 0;
   }
 
+  /* Eine Kante, kein Panel: der Trennstrich rechts ist der Haarstrich des Glases */
   :root[data-design="atelier"] .lg-binder {
     border: 0;
-    border-right: 1px solid var(--line-warm);
     border-radius: 0;
-    background-color: var(--workspace);
     background-image: none;
-    box-shadow: none;
+    box-shadow: inset -1px 0 0 var(--glass-edge-side);
+  }
+
+  /* Kein Schimmer auf Glas: der Zeigerschein bleibt an Zeilen, Kacheln und Stunden */
+  :root[data-design="atelier"] .lg-binder::after {
+    display: none;
   }
 
   :root[data-design="atelier"] .lg-spine {
     display: none;
   }
 
+  /* Auswahl als Glaspille. Sie gleitet nicht; ihre Farbe wechselt über --t-color. Kein eigenes backdrop-filter,
+     weil sie auf dem Glas der Seitenleiste liegt (verschachteltes Glas kostet auf älteren iPads Bilder). */
   :root[data-design="atelier"] .lg-nav-item[aria-current="page"],
-  :root[data-design="atelier"] .lg-nav-item[data-current="true"] {
-    background-color: var(--paper);
+  :root[data-design="atelier"] .lg-nav-item[data-current="true"],
+  :root[data-design="atelier"] .at-glass-pill {
     border-color: transparent;
+    background-color: var(--glass-fill);
     box-shadow:
-      inset 0 0 0 1px var(--line-warm),
-      inset 0 1px 0 var(--rim);
+      inset 0 0 0 1px var(--glass-edge-side),
+      inset 0 1px 0 var(--glass-edge),
+      var(--glass-shadow-near);
+    transition:
+      background-color var(--t-color) ease,
+      box-shadow var(--t-color) ease;
   }
 
   :root[data-design="atelier"] .lg-nav-item[aria-current="page"]::before,
@@ -255,7 +289,7 @@
   :root[data-design="atelier"] .lg-slip {
     padding: 20px 22px 18px;
     border: 1px solid var(--line-warm);
-    border-radius: 16px;
+    border-radius: 12px;
     background-color: var(--surface);
     box-shadow:
       inset 0 1px 0 var(--rim),
@@ -305,16 +339,6 @@
       box-shadow: none;
       transform: translateX(calc(var(--m) * 2px));
     }
-  }
-}
-
-@keyframes atelier-drift {
-  from {
-    transform: skewX(-30deg) translate3d(calc(var(--m) * -3%), 0, 0);
-  }
-
-  to {
-    transform: skewX(-30deg) translate3d(calc(var(--m) * 8%), 0, 0);
   }
 }
 
@@ -437,12 +461,7 @@
     }
   }
 
-  /* Dialoge (ui/modal.tsx, lagen.css) bleiben in allen Richtungen eine deckende Fläche auf --sheet: Text darin
-     liegt nie auf dem Licht oder dem Grund dahinter. Hier wird sie nie durchsichtig gemacht (anders als das
-     Blatt oben); atelier-contrast.test.ts hält das fest. */
-  :root[data-design="atelier"] .lg-dialog {
-    background-color: var(--sheet);
-  }
+  /* Dialogblatt: Glas (Glasregel oben, ohne Glas 94 % --canvas). Den Text darauf hält atelier-contrast.test.ts fest. */
 }
 
 /*
@@ -880,7 +899,7 @@
     min-height: 44px;
     padding: 0 18px;
     border: 1px solid transparent;
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 0.95rem;
     font-weight: 500;
     text-decoration: none;
@@ -891,7 +910,7 @@
   }
 
   .at-btn:active {
-    transform: scale(calc(1 - var(--m) * 0.02));
+    transform: scale(calc(1 - var(--m) * 0.03));
   }
 
   .at-btn-primary {
@@ -962,21 +981,33 @@
   min-width: min(100%, 22rem);
 }
 
-/* Die drei Effektstufen als ruhige Liste: Name links, Wirkung rechts, Linien dazwischen (Mockup B) */
+/* Die drei Effektstufen als gruppierte Liste: eine Fläche, Name links, Wirkung rechts, eingerückte Trennlinien */
 :root[data-design="atelier"] .lg-fx-list {
   gap: 0;
   max-width: 40rem;
   margin-top: 1.125rem;
-  border-top: 1px solid var(--line-warm);
+  overflow: hidden;
+  border-radius: 12px;
+  background-color: var(--surface);
   font-size: 0.9rem;
 }
 
 :root[data-design="atelier"] .lg-fx-list li {
+  position: relative;
   display: grid;
   grid-template-columns: 7rem minmax(0, 1fr);
   gap: 12px;
-  padding-block: 12px;
-  border-bottom: 1px solid var(--line-warm);
+  padding: 12px 16px;
+}
+
+:root[data-design="atelier"] .lg-fx-list li + li::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 0;
+  height: 1px;
+  background: var(--line-warm);
 }
 
 :root[data-design="atelier"] .lg-fx-list b {
@@ -1024,4 +1055,88 @@
     .lg-row:hover {
     background-color: color-mix(in srgb, var(--subj) 8%, var(--surface));
   }
+}
+
+/*
+ * Ohne @layer: diese Regeln überstimmen, was Tailwind-Utilities in den Bausteinen setzen (die liegen im
+ * Utilities-Layer und schlagen @layer components). Alle hängen an data-design="atelier".
+ */
+
+/* Kopfzeile der schmalen Breite: die Utility bg-desk würde das Glas sonst überdecken */
+:root[data-design="atelier"] header.sticky.md\:hidden {
+  background-color: var(--glass-fill);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-design="atelier"] header.sticky.md\:hidden {
+    background-color: color-mix(in srgb, var(--canvas) 94%, transparent);
+  }
+}
+
+/* Runde Ecken nur 22 px, 12 px und Pille: Bausteine setzen 6, 8, 9 und 10 px */
+:root[data-design="atelier"] :is(.rounded-box, .rounded-control, [class*="rounded-[9px]"], [class*="rounded-[10px]"]) {
+  border-radius: 12px;
+}
+
+:root[data-design="atelier"] :is(.lg-nav-item[aria-current="page"], .lg-nav-item[data-current="true"], .at-glass-pill) {
+  border-radius: 999px;
+}
+
+/* Dialogblatt: 22 px oben als Bottom-Sheet, ab 640 px rundum; die Knopfleiste bleibt als Fläche unten */
+:root[data-design="atelier"] .lg-dialog {
+  border-radius: 22px 22px 0 0;
+}
+
+@media (min-width: 640px) {
+  :root[data-design="atelier"] .lg-dialog {
+    border-radius: 22px;
+  }
+}
+
+:root[data-design="atelier"] .lg-dialog-foot {
+  background-color: color-mix(in srgb, var(--canvas) 94%, transparent);
+  border-top-color: var(--line-warm);
+}
+
+/* Fokusring: 2 px in der Fachfarbe, im Text-Ton (mindestens 3 : 1 gegen das Glas). Der Composer zeigt seinen Ring selbst. */
+:root[data-design="atelier"] :is(a, button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--hue-ink);
+  outline-offset: 2px;
+}
+
+:root[data-design="atelier"] .lg-composer textarea:focus-visible {
+  outline: none;
+}
+
+/* Segmentsteuerung (Wochenart, Darstellung, Effektstufe): Pille, der Schieber ist eine Glaspille */
+:root[data-design="atelier"] .lg-seg {
+  border-radius: 999px;
+}
+
+:root[data-design="atelier"] .lg-seg::before {
+  border-radius: 999px;
+  background: var(--glass-fill);
+  box-shadow:
+    inset 0 0 0 1px var(--glass-edge-side),
+    var(--glass-shadow-near);
+}
+
+/* Fächer in der Seitenleiste: eingerückte Trennlinien zwischen den Zeilen, bis unter den Text */
+:root[data-design="atelier"] .lg-liste li[data-subj] {
+  position: relative;
+}
+
+:root[data-design="atelier"] .lg-liste li[data-subj] + li[data-subj]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 44px;
+  right: 12px;
+  height: 1px;
+  background: var(--line-warm);
+}
+
+/* Zeiten, Zählwerte und Termine: Ziffern gleich breit, die Spalten springen nicht */
+:root[data-design="atelier"] :is(time, .at-time, .at-count-num, .at-meta, .at-ledger-sub) {
+  font-variant-numeric: tabular-nums;
 }

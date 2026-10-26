@@ -85,7 +85,7 @@ describe('Fachmotiv', () => {
 
 describe('Bedienflächen', () => {
   it.each([
-    ['.at-tile-main', 'min-height: 96px'],
+    ['.at-tile-main', 'min-height: 56px'],
     ['.at-tile-open', 'min-height: 44px'],
     ['.at-tile-edit', 'width: 44px'],
     ['.at-ledger-link', 'min-height: 44px'],
@@ -95,17 +95,22 @@ describe('Bedienflächen', () => {
     expect(body(`${A} ${selector}`)).toContain(deklaration);
   });
 
-  it('färbt die gewählte Kachel in der Fachfarbe, ohne Text zu färben', () => {
+  it('kennzeichnet die gewählte Zeile mit einem Balken in der Fachfarbe, ohne Text zu färben', () => {
     const rule = body(`${A} .at-tile[data-pressed]`);
-    expect(rule).toContain('border-color: var(--subj)');
+    expect(rule).toContain('inset 3px 0 0 var(--subj)');
     expect(rule).not.toMatch(/(^|[;\s])color:/);
+  });
+
+  it('zeigt in der Liste der Untergruppen keinen Schatten pro Zeile', () => {
+    expect(body(`${A} .at-tile`)).not.toMatch(/box-shadow/);
+    expect(body(`${A} .at-tiles`)).toContain('background-color: var(--surface)');
   });
 });
 
 describe('Composer', () => {
   it('hat Radius 20 px und wechselt Rand und Schatten mit --t-color', () => {
     const rule = body(`${A} .lg-composer`);
-    expect(rule).toContain('border-radius: 20px');
+    expect(rule).toContain('border-radius: 22px');
     expect(rule).toContain('border-color var(--t-color)');
     expect(rule).toContain('box-shadow var(--t-color)');
   });

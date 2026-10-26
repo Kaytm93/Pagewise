@@ -536,6 +536,7 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Prompt-Platz (Abweichung von D-034):** Die technische Schicht war bei 1.463 Zeichen (Obergrenze 1.500). Die Zeilen für Dokument und Präsentation bringen sie auf 1.930. Die Obergrenze in `compose.test.ts` steht daher bei 2.000 Zeichen, das sind rund 120 Token mehr je Nachricht. **Offen für Kay:** bestätigen, oder die beiden Zeilen kürzen.
 
 - **Nachtrag (D-063):** Die Zeichenliste ist erweitert. Hoch- und Tiefstellung (₂, ⁺) und die Mathezeichen → − ≤ ≥ ≈ gehen jetzt ins PDF, die Regel „keine tiefgestellten Zeichen“ ist entfallen. Griechische Buchstaben, Emoji und ⇌ bleiben gesperrt.
+- **Nachtrag (D-063, Bindestriche und Zeichencodes):** Geschützte Bindestriche (U+2010, U+2011) werden vor der Prüfung zu „-“, weil Modelle sie oft statt „-“ schreiben. Die Ablehnung nennt die ersten drei Zeichencodes, zum Beispiel `unsupported_text: U+0394`, damit die Korrekturanfrage das Zeichen benennt. Der Text selbst bleibt aus dem Hinweis draußen.
 
 ## D-061 Präsentation als PPTX: pptxgenjs 4.0.1 (25. Oktober 2026)
 
@@ -636,3 +637,40 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Fehler:** `invalid_valence` mit der Nummer des ersten Atoms (ab 1) als Detail, nie Text aus der Angabe. Ein Ring ohne Schluss ergibt `invalid_smiles`. Die Korrekturanfrage nennt den Code wie bei den anderen Blöcken.
 - **Wo:** `packages/render/src/smiles-valence.ts`, aufgerufen aus `validateSmiles` nach SmilesDrawer. Zeichnen und Prüfen nutzen denselben Weg.
 - **Tests:** `smiles-valence.test.ts` (gültige Schulmoleküle und Ionen, Überschreitung je Element, Atomnummer über Punkte hinweg, Klammeratome, nicht zerlegbare Angaben, aromatische Atome), ein Fall in `validate.test.ts`.
+
+## D-070 Glas nur im Atelier (25. Oktober 2026)
+
+- **Anlass:** Kay wünscht das Atelier stärker an Glas im Apple-Stil angelehnt, mit mehr Material und Tiefe. Entscheidung D1 im Design-Plan „Atelier, Raum, Lagen“ (Datei 17): Glas nur im Atelier, Raum und Lagen bleiben ohne Glas.
+- **Ausnahme zu `docs/design.md`:** Die Regel „Keine großen `backdrop-filter`“ gilt für die Glasklassen im Atelier nicht mehr. Außerhalb von `.glass` bleibt `backdrop-filter` verboten, Raum und Lagen bleiben ohne Glas. Die Zeile in `docs/design.md` ist noch unverändert und wird beim Nachzug durch diesen Eintrag ersetzt.
+- **Grenzen:** Höchstens drei Glasflächen gleichzeitig sichtbar. Blur 20 px, Sättigung 160 %. Fallback ohne Blur: eine deckende Fläche (`--canvas`, 94 %) per `@supports`. Glas bewegt sich nicht; Zustände wechseln über `--t-color`.
+- **Glas liegt nur dort, wo etwas darunter liegt:** Seitenleiste, Kopfzeile beim Scrollen, schwebender Composer und Dialogblatt. Chat-Text, Fließtext, Startseiten-Listen und Karten im Lesebereich bleiben ohne Glas.
+- **Material (Tokens in `tokens.css`, hell und dunkel):** `--glass-fill` (hell Weiß 58 %, dunkel Graphit 62 %), `--glass-edge` (Haarrand), `--glass-edge-side` (Seiten), `--glass-blur`, `--glass-shadow-near`, `--glass-shadow-far`.
+- **Begründung:** Eine Glasfläche liegt über etwas. Ohne diesen Bezug wird Glas zum Dekor. Die Grenze von drei Flächen hält die Leistung auf älteren Geräten im Rahmen.
+- **Status:** umgesetzt in Arbeitskopie, Messung offen. In der Arbeitskopie stehen bisher nur die Tokens. Die Glasklassen folgen in Phase 1.
+- **Messwerte:** offen, nach Messung. Blur-Kosten auf älteren iPads, Bildrate beim Scrollen unter Glas, Textkontrast auf Glas gegen die hellste Fachfarbe bei 58 % Deckung (Ziel 4,5 : 1, Test in `atelier-contrast.test.ts` noch nicht erweitert).
+- **Ist bei Messung schlecht:** Blur bleibt nur an der Seitenleiste (Plan, Abschnitt 9).
+- **Nicht geprüft:** Anmutung am Bild (Kay), iPad und iPhone in Safari, WebKit-Läufe.
+
+## D-071 Raum neumorph (25. Oktober 2026)
+
+- **Anlass:** Der dunkle Ordnerrücken in der Fachfarbe wirkte schwer, und die Fachfarbe als Kante an Karten gilt als typischer KI-Tell. Entscheidung D3 im Design-Plan: neumorph, nach Empfehlung.
+- **Aufbau:** Der Ordnerrücken entfällt. Ein Raumton (`--raum-canvas`), gehobene Flächen (`--raum-raised`) für Karten, Knöpfe und Auswahl mit Doppelschatten aus `--raum-light` und `--raum-dark`, eingelassene Flächen (Eingabefelder, Schiene der Tageslinie, aktive Navigation) mit Innenschatten. Tageslinie, Fensterlicht und Parallaxe bleiben, die Parallaxe schwächer.
+- **Fachfarbe:** ein Punkt in der gehobenen Fläche oder eine eingelassene Mulde mit Fachlicht. Keine Kante, keine Register.
+- **Kante Pflicht:** Jedes Bedienelement hat eine 1 px Kante in `--raum-edge`, mindestens 3 : 1 gegen `--raum-canvas`. Schatten allein zählen nicht als Rand.
+- **Grenzen:** Höchstens zwei große gehobene Karten pro Bildschirm. Kleine Knöpfe sind frei. Text liegt nie auf einem Schattenverlauf.
+- **Tokens (hell / dunkel):** `--raum-canvas` #e7e3dc / #1f1f1d, `--raum-raised` #f0ede7 / #262624, `--raum-edge` #7f7a72 / #73716b, `--raum-light` Weiß 70 % / Weiß 5 %, `--raum-dark` warm 18 % / Schwarz 45 %.
+- **Geprüft (`tokens.test.ts`, hell und dunkel):** Kante gegen Raumton 3,33 : 1 hell und 3,38 : 1 dunkel. Text (`--ink`) auf gehobener Fläche 11,6 : 1 hell und 12,5 : 1 dunkel (Mindestwert 4,5 : 1).
+- **Status:** umgesetzt in Arbeitskopie, Messung offen. In der Arbeitskopie stehen bisher nur die Tokens. Der Ausbau in `raum.css` folgt in Phase 1.
+- **Messwerte:** offen, nach Messung. Wirkung der Kante und der Doppelschatten am Bild, Squint-Test, Tiefe der Parallaxe mit echter Maus.
+- **Nicht geprüft:** Ob der Neumorphismus am Bild nach KI-Slop aussieht (Kay entscheidet), iPad und iPhone, WebKit.
+
+## D-072 Lagen mit Akzenten am bestehenden Block (25. Oktober 2026)
+
+- **Anlass:** Die Seiten von Lagen wirkten leer, dem Block fehlten Akzente. Entscheidung D2 im Design-Plan: Der Block bleibt, Vollflächen-Linienpapier entfällt.
+- **Bleibt unverändert:** Ringbuch-Lochung, Heftfaden, Zettel mit Washi-Tape, Blattstapel, Umschlag.
+- **Akzente (neu):** Randlinie als 1 px Linie in `--margin` an den Innenseiten, etwa 56 px vom Blattrand, nur außen am Blatt (Start, Fachseite, Hefteintrag; im Chat keine Akzente unter dem Text). Heftfaden eine Stufe kräftiger in `--stitch-strong`. Etikett „Pagewise“ als schmales Schildchen in `--label`, 2 px Radius. Feine zweite Schattenstufe an den Blattkanten. Fachpunkt neben dem Fachnamen etwas kräftiger. Keine Kante, keine Register, keine geknickte Ecke.
+- **Tokens (hell / dunkel):** `--margin` #c4877a / #8c6058 (gedämpftes Warmrot), `--label` #f6f2ea / #34332f, `--stitch-strong` #b5ad9b / #5e5c55. Ein Token `--cover` ist nicht angelegt, der Lagen-Block bleibt ohne neues Token.
+- **Regel:** `lagen.fine.test.ts` verbietet Hintergründe am Heftfaden und an den Streifen. Die Randlinie kommt deshalb als Pseudo-Element am Blatt und bekommt einen eigenen Test (Phase 1).
+- **Status:** umgesetzt in Arbeitskopie, Messung offen. In der Arbeitskopie stehen bisher nur die Tokens. Die Akzente in `lagen.css` folgen in Phase 1.
+- **Messwerte:** offen, nach Messung. Stärke der Akzente am Bild (Kay entscheidet: zu zurückhaltend oder zu viel), Sichtbarkeit der Randlinie auf der Körnung.
+- **Geprüft:** Gleichheit der Tokens hell und dunkel (bestehende Tests in `tokens.test.ts`). Die Akzente selbst sind noch nicht am Bild geprüft.
