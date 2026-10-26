@@ -1226,7 +1226,7 @@ export const de = {
         lagen: 'Lagen',
         atelier: 'Atelier',
         help: {
-          raum: 'Ein Ordner mit Rücken und Heftung auf dem Schreibtisch, die Startseite zeigt den Tag als Linie mit „Jetzt“-Marke.',
+          raum: 'Ein ruhiger Raum aus Licht und Schatten, die Startseite zeigt den Tag als Linie mit „Jetzt“-Marke.',
           lagen:
             'Ein Heft mit Heftrücken und Blattstapel: Wer tiefer geht, legt ein Blatt mehr auf.',
           atelier:

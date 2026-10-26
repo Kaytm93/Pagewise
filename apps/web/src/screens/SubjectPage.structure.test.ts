@@ -66,3 +66,25 @@ describe('Fachname (H1) bricht nicht mitten im Wort (subject#06)', () => {
     expect(quelle).toContain('min-h-11');
   });
 });
+
+/*
+ * D-073 („Raum neu“, Kay-Freigabe): Das Register am Blattrand und die Ringe hinter dem Fachmotiv
+ * entfallen in allen Richtungen. Die frühere Prüfung im Render-Test (SubjectFrame.test.tsx) ist mit
+ * der Komponente entfallen; diese Quelltext-Prüfung hält den neuen Zustand fest.
+ */
+describe('Fachseite in „Raum“: kein Register am Blattrand, keine Ringe (D-073)', () => {
+  it('bindet weder das Register noch die Ringe ein', () => {
+    expect(quelle).not.toContain('SheetRegister');
+    expect(quelle).not.toContain('SubjectRings');
+    expect(quelle).not.toContain('./raum/SubjectFrame');
+  });
+
+  it('trägt keine Klassen des Registers oder der Ringe mehr', () => {
+    expect(quelle).not.toMatch(/rm-reg|rm-rings/);
+  });
+
+  it('behält Zierstreifen und Fachmotiv unverändert', () => {
+    expect(quelle).toContain('lg-tape');
+    expect(quelle).toContain('<SubjectIcon');
+  });
+});

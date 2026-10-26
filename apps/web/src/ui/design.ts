@@ -1,7 +1,7 @@
 /**
  * Designrichtung (D-045): drei Gestaltungen derselben Oberfläche, wählbar wie hell und dunkel.
  *
- * - `raum`: ein Ordner mit Rücken und Heftung auf dem Schreibtisch, Tageslinie auf der Startseite.
+ * - `raum`: ein ruhiger Raum aus Licht und Schatten, Tageslinie auf der Startseite.
  * - `lagen`: ein Heft mit Heftrücken und Blattstapel.
  * - `atelier`: klar und produktnah, große Typografie, Fachfarbe als Licht und Linie.
  *

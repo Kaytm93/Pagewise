@@ -84,6 +84,16 @@ describe('Fachseite: Reiter Chats und Hefteinträge', () => {
     expect(document.activeElement).toBe(chats);
   });
 
+  it('steht bei einem Aufruf über die Adresse schon auf dem Reiter Hefteinträge', async () => {
+    const { server, subject } = setup();
+    open(server, notesPath(subject.id));
+    const tabs = await screen.findByRole('tablist', { name: 'Inhalt' });
+    const notes = within(tabs).getByRole('tab', { name: 'Hefteinträge' });
+    const chats = within(tabs).getByRole('tab', { name: 'Chats' });
+    expect(notes.getAttribute('aria-selected')).toBe('true');
+    expect(chats.getAttribute('aria-selected')).toBe('false');
+  });
+
   it('öffnet die Hefteinträge direkt über die Adresse, auch in einer Untergruppe', async () => {
     const { server, subject, group } = setup();
     server.addNote(subject.id, { title: 'Allgemein-Eintrag' });

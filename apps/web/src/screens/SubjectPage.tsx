@@ -26,7 +26,6 @@ import { SubjectHead } from './lagen/SubjectHead';
 import { NotFoundPage } from './NotFoundPage';
 import { NoteList } from './notes/NoteList';
 import { PromptRow } from './prompts/PromptRow';
-import { SheetRegister, SubjectRings } from './raum/SubjectFrame';
 import { SubjectDialog } from './SubjectDialog';
 import { subjectMeta } from './subject-meta';
 
@@ -45,7 +44,6 @@ export function SubjectPage({
   const design = useDesign();
   const lagen = design === 'lagen';
   const atelier = design === 'atelier';
-  const raum = design === 'raum';
   const [dialog, setDialog] = useState<Dialog>(null);
   // „Atelier“: die gewählte Untergruppe als Filter für Chats und Hefteinträge (nur dort, nur auf der Fachseite).
   const [filter, setFilter] = useState<{ subjectId: string; groupId: string } | null>(null);
@@ -171,8 +169,6 @@ export function SubjectPage({
       {!lagen && (
         <>
           <span aria-hidden="true" className="lg-tape top-5 left-5 [--r:-1.8deg] md:left-11" />
-          {/* „Raum“ legt zwei Ringe hinter das Fachmotiv — Zier, zusätzlich zum bisherigen Symbol. */}
-          {raum && !builtin && <SubjectRings />}
           {!builtin &&
             !arbeitsplatz &&
             (atelier ? (
@@ -180,9 +176,6 @@ export function SubjectPage({
             ) : (
               <SubjectIcon icon={subject.icon} strokeWidth={0.4} className={motivKlasse} />
             ))}
-          {/* Register am rechten Blattrand: dieselbe Wahl wie die Reiterleiste unten, aber nur Darstellung
-              (aria-hidden, ohne Fokus, ohne Klick) — es schaltet nichts um. */}
-          {raum && <SheetRegister active={tab === 'notes' ? 'notes' : 'chats'} />}
         </>
       )}
       {group && (

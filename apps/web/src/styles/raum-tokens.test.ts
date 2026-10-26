@@ -66,26 +66,27 @@ function rule(source: string, selector: string): string {
   return source.slice(start, source.indexOf('}', start));
 }
 
-describe('Raum: hellere Fläche der „Jetzt“-Karte (--page-hi)', () => {
-  const lightRaum = declarations(raum, ":root[data-design='raum'] {");
-  const darkRaum = declarations(raum, ":root[data-design='raum'][data-theme='dark'] {");
-  const darkAutoRaum = declarations(raum, ":root[data-design='raum']:not([data-theme='light']) {");
-
-  it('ist im Dunkeln heller als --surface, wie im Mockup (#2a2a28)', () => {
-    expect(darkRaum['--page-hi']).toBe('#2a2a28');
-    expect(darkAutoRaum['--page-hi']).toBe('#2a2a28');
-    const surface = toHex(dark['--surface'] as string, { ...light, ...dark });
-    expect(luminance(darkRaum['--page-hi'] as string)).toBeGreaterThan(luminance(surface));
+describe('Raum: Blatt (--raum-raised) und Text darauf', () => {
+  // Das Blatt ist --raum-raised (tokens.css). --page-hi entfällt: die Karte der Jetzt-Zeit liegt auf dem Blatt.
+  it('ist im Dunkeln heller als der Raumton (--raum-canvas)', () => {
+    const scope = { ...light, ...dark };
+    expect(luminance(toHex(dark['--raum-raised'] as string, scope))).toBeGreaterThan(
+      luminance(toHex(dark['--raum-canvas'] as string, scope)),
+    );
   });
 
-  for (const [name, page, scope] of [
-    ['hell', lightRaum['--page-hi'], light],
-    ['dunkel', darkRaum['--page-hi'], { ...light, ...dark }],
+  it('gibt es in raum.css keinen --page-hi-Ersatz mehr', () => {
+    expect(raum).not.toMatch(/--page-hi/);
+  });
+
+  for (const [name, surface, scope] of [
+    ['hellen', light['--raum-raised'], light],
+    ['dunklen', dark['--raum-raised'], { ...light, ...dark }],
   ] as const) {
     for (const text of ['--ink', '--ink-secondary', '--ink-muted', '--link']) {
-      it(`${text} auf --page-hi erreicht im ${name}en Modus 4,5 : 1`, () => {
+      it(`${text} auf --raum-raised erreicht im ${name}en Modus 4,5 : 1`, () => {
         expect(
-          contrast(toHex(scope[text] as string, scope), page as string),
+          contrast(toHex(scope[text] as string, scope), toHex(surface as string, scope)),
         ).toBeGreaterThanOrEqual(4.5);
       });
     }
@@ -114,13 +115,73 @@ describe('Raum: Schatten wie im Mockup, nur in Raum', () => {
 });
 
 describe('Raum: Fensterlicht', () => {
-  it('zeichnet vier Scheiben in einem Zug (clip-path), die Stege bleiben frei', () => {
+  // Der Stock der Demo (22 Punkte, Anteile in %), vor der Spiegelung an der senkrechten Achse.
+  const demo = [
+    [46.9, -1.9],
+    [73.8, -1.9],
+    [65.7, 45],
+    [34.9, 45],
+    [46.9, -1.9],
+    [76.2, -1.9],
+    [103.1, -1.9],
+    [99.4, 45],
+    [68.6, 45],
+    [76.2, -1.9],
+    [67.9, 49.3],
+    [99, 49.3],
+    [95.3, 96.2],
+    [60.2, 96.2],
+    [67.9, 49.3],
+    [33.8, 49.3],
+    [65, 49.3],
+    [57, 96.2],
+    [21.9, 96.2],
+    [33.8, 49.3],
+    [67.9, 49.3],
+    [76.2, -1.9],
+  ] as const;
+
+  const points = () => {
     const body = rule(raum, ":root[data-design='raum'] .lg-app::after");
     const polygon = /clip-path:\s*polygon\(([^)]*)\)/.exec(body);
     expect(polygon).not.toBeNull();
-    const points = (polygon?.[1] ?? '').split(',').map((point) => point.trim());
+    return (polygon?.[1] ?? '').split(',').map((point) =>
+      point
+        .trim()
+        .split(/\s+/)
+        .map((part) => Number.parseFloat(part)),
+    );
+  };
+
+  it('zeichnet vier Scheiben in einem Zug (clip-path), die Stege bleiben frei', () => {
     // 4 Scheiben je 4 Ecken + Rückkehr zur ersten + 2 Brückenpunkte zurück
-    expect(points).toHaveLength(22);
+    expect(points()).toHaveLength(22);
+  });
+
+  it('ist die Demo an der senkrechten Achse gespiegelt (jedes x wird 100 % − x)', () => {
+    const mirrored = points();
+    demo.forEach(([x, y], index) => {
+      expect(mirrored[index]?.[0]).toBeCloseTo(100 - (x as number), 5);
+      expect(mirrored[index]?.[1]).toBeCloseTo(y as number, 5);
+    });
+  });
+
+  it('sitzt oben links: left 0, right auto, top 0 (Lichtrichtung wie die Schatten)', () => {
+    const body = rule(raum, ":root[data-design='raum'] .lg-app::after");
+    expect(body).toMatch(/\btop:\s*0;/);
+    expect(body).toMatch(/\bleft:\s*0;/);
+    expect(body).toMatch(/\bright:\s*auto;/);
+  });
+
+  it('nimmt das Licht mit einer Maske weich auf (mask-image, linear und radial verschnitten)', () => {
+    const body = rule(raum, ":root[data-design='raum'] .lg-app::after");
+    expect(body).toContain('mask-image:');
+    expect(body).toMatch(/radial-gradient\(/);
+    expect(body).toMatch(/mask-composite: intersect/);
+  });
+
+  it('nutzt keinen filter (im Dunkeln wirkt ein Weichzeichner grau, die Maske reicht)', () => {
+    expect(rule(raum, ":root[data-design='raum'] .lg-app::after")).not.toMatch(/\bfilter:/);
   });
 
   it('läuft nur bei „Voll“ und sichtbarem Tab und steht im Chat still', () => {
@@ -187,13 +248,14 @@ describe('Raum: Blatt im Stapel (S-02 a, c)', () => {
     expect(raum).not.toMatch(/\.lg-sheet::(before|after)/);
   });
 
-  it('gibt der Anmeldung die Karte mit Körnung, ohne Stapelrand (S-02 d)', () => {
-    expect(rule(raum, ":root[data-design='raum'] .lg-sheet.lg-sheet-auth")).toContain(
-      'background-image: var(--grain)',
-    );
-    // Eine Karte für sich mit Kante und Schatten
+  it('gibt der Anmeldung eine gehobene Karte ohne Körnung und ohne Randlinie (S-02 d, Freigabe 1)', () => {
+    // Körnung liegt nur auf dem Raumton (.lg-app::before). Die Karte ist eine Fläche mit Licht und Schatten.
     const card = rule(raum, ":root[data-design='raum'] .lg-sheet");
-    expect(card).toContain('border: 1px solid var(--line-warm)');
+    expect(card).toContain('border: 0');
+    expect(card).toContain('border-radius: var(--raum-r-big)');
+    expect(card).toContain('box-shadow: var(--raum-up-l)');
+    expect(card).not.toContain('--grain');
+    expect(raum).toMatch(/--raum-r-big:\s*20px/);
   });
 });
 
@@ -246,14 +308,80 @@ describe('Raum: Startseite und Chat', () => {
   });
 
   it('teilt die Startseite nach Blattbreite in zwei Spalten', () => {
+    // Das Blatt ist der Container „blatt“. Ohne diese Regel fragt die Spalten-Abfrage nichts ab, und die Startseite bleibt einspaltig.
+    expect(raum).toMatch(
+      /:root\[data-design='raum'\] \.lg-sheet:has\(\.rm-start\)\s*\{[^}]*container-type: inline-size[^}]*container-name: blatt/,
+    );
     expect(raum).toMatch(
       /@container blatt \(min-width: 760px\)\s*\{\s*\.rm-start-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1\.02fr\) minmax\(0, 0\.98fr\)/,
     );
   });
 
-  it('zieht die Tintenlinie unter den Fachtitel nur per ::after', () => {
-    const body = rule(raum, ":root[data-design='raum'] .lg-sheet h1[lang='de']::after");
-    expect(body).toContain("content: ''");
-    expect(body).toContain('var(--subj)');
+  it('hat keine Tintenlinie unter dem Fachtitel mehr (Freigabe 3)', () => {
+    expect(raum).not.toMatch(/h1\[lang='de'\]/);
+  });
+});
+
+describe('Raum: Fachmotiv (Medaille)', () => {
+  it('hat keinen Innenabstand in Prozent (der bezieht sich auf die Breite des Containers)', () => {
+    expect(rule(raum, ":root[data-design='raum'] .lg-motif")).not.toMatch(/padding:[^;]*%/);
+  });
+
+  it('misst 104 px mit 21 px Innenabstand am Blatt und 84 px mit 17 px auf dem Telefon', () => {
+    expect(raum).toMatch(
+      /@media \(min-width: 768px\)\s*\{\s*:root\[data-design='raum'\] \.lg-motif\s*\{\s*width: 104px;\s*height: 104px;\s*padding: 21px;/,
+    );
+    expect(raum).toMatch(
+      /@media \(max-width: 767\.98px\)\s*\{\s*:root\[data-design='raum'\] \.lg-motif\s*\{\s*width: 84px;\s*height: 84px;\s*padding: 17px;/,
+    );
+  });
+});
+
+describe('Raum: Strichstärke des Fachsymbols und Kopfzeile auf dem Telefon', () => {
+  it('setzt die Strichstärke des Fachsymbols auf 0,8 (schlägt das Attribut strokeWidth 0,4)', () => {
+    expect(rule(raum, ":root[data-design='raum'] .lg-motif")).toContain('stroke-width: 0.8');
+  });
+
+  it('gibt der Telefon-Kopfzeile den Raumton, ohne Rand und ohne Schatten (überstimmt bg-desk)', () => {
+    const body = rule(raum, ":root[data-design='raum'] .lg-app header.md\\:hidden");
+    expect(body).toContain('background-color: var(--raum-canvas)');
+    expect(body).toContain('border: 0');
+    expect(body).toContain('box-shadow: none');
+  });
+});
+
+describe('Raum: Listen und Trennlinien', () => {
+  it('macht eine Liste aus Zeilen zur Mulde mit 56 px hohen Zeilen', () => {
+    expect(rule(raum, ":root[data-design='raum'] ul:has(> li > .lg-row)")).toContain(
+      'box-shadow: var(--raum-in-m)',
+    );
+    expect(rule(raum, ":root[data-design='raum'] .lg-row")).toContain('min-height: 56px');
+  });
+
+  it('verschachtelt kein :has in :has (ungültig: der Browser verwürfe die ganze Regel)', () => {
+    // Jede Auswahl (bis zur geschweiften Klammer) enthält höchstens ein :has(.
+    for (const prelude of raum.split('{').map((part) => part.split(/[}]/).pop() ?? '')) {
+      expect(prelude, prelude).not.toMatch(/:has\([^;,]*:has\(/);
+    }
+  });
+
+  it('zeichnet die Trennlinie mit harten Stopps: 1 px dunkel, 1 px hell, zusammen 2 px', () => {
+    const divider = rule(
+      raum,
+      ":root[data-design='raum'] :is(li + li > .lg-row, .lg-row + .lg-row)::before",
+    );
+    expect(divider).toContain('height: 2px');
+    expect(divider).toContain('linear-gradient(var(--raum-dark) 1px, var(--raum-light) 1px)');
+    // Dock und Chat-Eingabe tragen dieselbe Linie; keine zwei Verläufe mehr übereinander.
+    expect(
+      raum.match(/linear-gradient\(var\(--raum-dark\) 1px, var\(--raum-light\) 1px\)/g),
+    ).toHaveLength(2);
+    expect(raum).not.toMatch(/top \/ 100% 1px/);
+  });
+
+  it('macht den Bearbeiten-Knopf neben einer Zeile rund, die Zeile selbst nicht', () => {
+    expect(raum).toMatch(
+      /:root\[data-design='raum'\] li:has\(> \.lg-row\) > button:not\(\.lg-row\)\s*\{[^}]*border-radius: 50%/,
+    );
   });
 });

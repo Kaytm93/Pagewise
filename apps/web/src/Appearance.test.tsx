@@ -201,7 +201,7 @@ describe('Einstellungen: Darstellung', () => {
     const group = within(await screen.findByRole('group', { name: 'Designrichtung' }));
     // Voreinstellung: Raum
     expect((group.getByRole('radio', { name: 'Raum' }) as HTMLInputElement).checked).toBe(true);
-    expect(screen.getByText(/Ein Ordner mit Rücken und Heftung/)).toBeTruthy();
+    expect(screen.getByText(/Ein ruhiger Raum aus Licht und Schatten/)).toBeTruthy();
 
     await user.click(group.getByRole('radio', { name: 'Atelier' }));
     expect(document.documentElement.getAttribute('data-design')).toBe('atelier');
