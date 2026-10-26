@@ -46,7 +46,7 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | „Alles löschen“ leert jede Tabelle außer Anmeldung, Sitzungen und Migrationsprotokoll (auch künftige) | umgesetzt, siehe D-038 |
 | Verschlüsselte Backups und Export | geplant |
 | Werkzeugzugriff der KI: nur lesend, geprüfte Argumente, begrenzte Ausgabe, Schalter global und je Anbieter, nur Name und Zustand gespeichert | umgesetzt (Welle 3), siehe D-044 und [tools.md](tools.md) |
-| Websuche der KI: standardmäßig aus, Suchbegriff im Chat sichtbar, Schlüssel nur im Secret-Speicher, Begriffsprüfung gegen E-Mail, Telefonnummer und lange Zahlen, Grenzen je Antwort und Minute, Treffer als Daten | umgesetzt, siehe D-067 und [tools.md](tools.md) |
+| Websuche der KI: standardmäßig aus, Suchbegriff im Chat sichtbar, Schlüssel nur im Secret-Speicher, Begriffsprüfung gegen E-Mail, Telefonnummer und lange Zahlen, Grenzen je Antwort und Minute, Treffer als Daten | umgesetzt, siehe D-068 und [tools.md](tools.md) |
 | Mac-App: Fenster mit Sandkasten, getrenntem Kontext und ohne Node, Hauptfenster ohne Preload, alle Berechtigungen der Seite abgelehnt, Navigation nur zur eigenen Herkunft | umgesetzt (Mac-Hülle), im echten Electron gemessen, siehe D-053 |
 | Mac-App: Server als Unterprozess mit Allowlist-Umgebung und leerer Argumentliste, Status und Einrichtungscode nur über IPC, nie über HTTP | umgesetzt, siehe D-050, D-051, D-053 |
 | Mac-App: Hüllen-Fenster nur mit festen Funktionen im Preload, IPC nur von eigenen lokalen Seiten (Sender und Frame-URL geprüft), strenge CSP ohne Inline-Skript und -Style | umgesetzt, siehe D-053, D-054 |

@@ -1,6 +1,6 @@
 # Werkzeuge der KI (Tool Calling)
 
-Stand: 26. Oktober 2026 (D-044, D-067). Chat-Modelle können kleine, **nur lesende** Werkzeuge aufrufen. Heute: `get_timetable` und `get_exams` (Stundenplan und Tests) sowie `web_search` (Websuche, eigener Schalter, standardmäßig aus, siehe unten). Das Register ist allgemein gebaut, der Agent-Modus für API-Modelle (Phase 3) nutzt es wieder.
+Stand: 26. Oktober 2026 (D-044, D-067, D-068). Chat-Modelle können kleine, **nur lesende** Werkzeuge aufrufen. Heute: `get_timetable` und `get_exams` (Stundenplan und Tests) sowie `web_search` (Websuche, eigener Schalter, standardmäßig aus, siehe unten). Das Register ist allgemein gebaut, der Agent-Modus für API-Modelle (Phase 3) nutzt es wieder.
 
 ## Wann ein Modell Werkzeuge bekommt
 
