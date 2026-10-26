@@ -44,13 +44,59 @@ export function BlockError({
   );
 }
 
-/** Das gezeichnete SVG; gesetzt wird der bereinigte Text über das Element, nie aus Rohtext. */
-function SvgHost({ svg, label }: { svg: string; label: string }) {
+/** Voreinstellung der Blattbreite, bevor gemessen ist: volle Graphenbreite (36rem), also keine Kompensation. */
+const SHEET_DEFAULT_WIDTH = 576;
+
+/**
+ * Das gezeichnete SVG; gesetzt wird der bereinigte Text über das Element, nie aus Rohtext. Der Graph bekommt
+ * die gemessene Breite seines Blatts: Die Achsenbeschriftung wird dann so gezeichnet, dass sie auf schmalen
+ * Blättern (Handy) ihre Mindestgröße behält, statt mit dem viewBox zu schrumpfen. Vor dem ersten Messwert
+ * gilt die volle Breite (36rem, der Wert des breiten Blatts). Graph allein: Molekül und Noten skalieren
+ * nicht auf die Blattbreite.
+ */
+function SvgHost({
+  svg,
+  label,
+  kind,
+  sheetWidth,
+  onSheetWidth,
+}: {
+  svg: string;
+  label: string;
+  kind: SvgBlockKind;
+  sheetWidth: number | null;
+  onSheetWidth: (width: number) => void;
+}) {
   const host = useRef<HTMLDivElement>(null);
+  const graph = kind === 'graph';
+
   useLayoutEffect(() => {
     if (host.current) host.current.innerHTML = svg;
   }, [svg]);
-  return <div ref={host} role="img" aria-label={label} className="pg-svg" />;
+
+  useLayoutEffect(() => {
+    const element = host.current;
+    if (!graph || !element) return;
+    const measure = () => {
+      const width = element.getBoundingClientRect().width;
+      if (width > 0) onSheetWidth(Math.round(width));
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [graph, onSheetWidth]);
+
+  return (
+    <div
+      ref={host}
+      role="img"
+      aria-label={label}
+      className="pg-svg"
+      data-sheet-width={graph ? Math.round(sheetWidth ?? SHEET_DEFAULT_WIDTH) : undefined}
+    />
+  );
 }
 
 /** Graph, Molekül oder Noten: lädt die Zeichenbibliothek bei Bedarf und zeigt Ladezustand, Bild oder Fehler. */
@@ -64,12 +110,13 @@ export default function BlockView({
   final: boolean;
 }) {
   const [state, setState] = useState<State>({ status: 'loading' });
+  const [sheetWidth, setSheetWidth] = useState<number | null>(null);
   const label = m.blocks[kind];
 
   useEffect(() => {
     let cancelled = false;
     setState((current) => (current.status === 'ready' ? current : { status: 'loading' }));
-    renderBlock(kind, source).then(
+    renderBlock(kind, source, sheetWidth).then(
       (svg) => {
         if (!cancelled) setState({ status: 'ready', svg });
       },
@@ -85,7 +132,7 @@ export default function BlockView({
     return () => {
       cancelled = true;
     };
-  }, [kind, source]);
+  }, [kind, source, sheetWidth]);
 
   if (state.status === 'error') {
     return <BlockError label={label} code={state.code} source={source} final={final} />;
@@ -101,7 +148,13 @@ export default function BlockView({
   }
   return (
     <figure className={`pg-figure pg-${kind} my-4`}>
-      <SvgHost svg={state.svg} label={label} />
+      <SvgHost
+        svg={state.svg}
+        label={label}
+        kind={kind}
+        sheetWidth={sheetWidth}
+        onSheetWidth={setSheetWidth}
+      />
     </figure>
   );
 }

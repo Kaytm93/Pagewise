@@ -7,6 +7,26 @@ const H = 320;
 const M = { left: 42, right: 16, top: 16, bottom: 30 };
 const SAMPLES = 640;
 
+/**
+ * Die Zeichnung hat einen festen viewBox (480 × 320) und wird im Blatt auf die Breite skaliert; Text im SVG
+ * schrumpft mit (auf einem schmalen Handyblatt von 320 px bleiben aus 11 px etwa 9 px). Für die
+ * Achsenbeschriftung zählt die gerenderte Größe: `labelFontSize` rechnet aus der gemessenen Blattbreite die
+ * Schriftgröße im SVG aus, mit der sie auf dem Blatt konstant 13,2 px misst wie heute auf dem großen
+ * Bildschirm (11 px · 576/480) — mindestens 12 px also, bis zur vollen Graphenbreite (576 px = 36rem),
+ * darüber wird nicht vergrößert; unter 240 px (Vorschau-Spalte im Editor, schmale Spalten) bleibt der Wert
+ * bei der Grenze, damit die Beschriftung nicht in die Zeichnung wächst. Ohne Blattbreite (Server, spätere
+ * PDF-Zeichnung) bleibt alles beim bisherigen Wert 11: gleiche Eingabe, gleicher Text.
+ */
+const LABEL_SIZE = 11;
+const SHEET_MAX = 576;
+const SHEET_MIN = 240;
+
+export function labelFontSize(sheetWidth?: number | null): number {
+  if (sheetWidth === undefined || sheetWidth === null) return LABEL_SIZE;
+  const sheet = Math.max(SHEET_MIN, Math.min(SHEET_MAX, sheetWidth));
+  return Math.round(((LABEL_SIZE * SHEET_MAX) / sheet) * 100) / 100;
+}
+
 const escapeXml = (value: string) => value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 /** Zahlen im Text immer gleich schreiben (Dezimalkomma, keine Rundungsreste), damit die Ausgabe stabil ist. */
@@ -65,10 +85,11 @@ function autoRange(samples: Sampled[], points: GraphSpec['points']): [number, nu
  * enthält keine Stilangaben und kein Skript: Aussehen über Klassen (`pg-*`), mit `currentColor` als Rückfall,
  * damit sie auch ohne Stylesheet sichtbar ist (zum Beispiel im PDF).
  *
- * Wirft `RenderError` bei ungültigen Ausdrücken. Kurven werden bei Unstetigkeiten (Polstellen, Lücken)
- * unterbrochen, nicht verbunden.
+ * Mit `sheetWidth` (Blattbreite in Pixeln, von der Oberfläche gemessen) wird die Achsenbeschriftung für
+ * schmale Blätter vergrößert gezeichnet; ohne sie bleibt die Zeichnung unverändert. Wirft `RenderError` bei
+ * ungültigen Ausdrücken. Kurven werden bei Unstetigkeiten (Polstellen, Lücken) unterbrochen, nicht verbunden.
  */
-export function renderGraphSvg(spec: GraphSpec): string {
+export function renderGraphSvg(spec: GraphSpec, sheetWidth?: number | null): string {
   const [x0, x1] = spec.x;
   const xs = Array.from({ length: SAMPLES + 1 }, (_, i) => x0 + ((x1 - x0) * i) / SAMPLES);
   const compiled = spec.functions.map((entry) => compileExpression(entry.expr));
@@ -78,6 +99,8 @@ export function renderGraphSvg(spec: GraphSpec): string {
   const px = (x: number) => M.left + ((x - x0) / (x1 - x0)) * (W - M.left - M.right);
   const py = (y: number) => H - M.bottom - ((y - y0) / (y1 - y0)) * (H - M.top - M.bottom);
   const yRange = y1 - y0;
+  const labelFont = labelFontSize(sheetWidth);
+  const labelScale = labelFont / LABEL_SIZE;
   const body: string[] = [];
 
   if (spec.grid) {
@@ -104,14 +127,14 @@ export function renderGraphSvg(spec: GraphSpec): string {
     if (Math.abs(tick) < 1e-9) continue;
     body.push(
       `<line class="pg-tick" stroke="currentColor" x1="${num(px(tick))}" y1="${num(axisX - 3)}" x2="${num(px(tick))}" y2="${num(axisX + 3)}"/>`,
-      `<text class="pg-label" fill="currentColor" x="${num(px(tick))}" y="${H - M.bottom + 15}" text-anchor="middle" font-size="11">${escapeXml(label(tick))}</text>`,
+      `<text class="pg-label" fill="currentColor" x="${num(px(tick))}" y="${H - M.bottom + 15}" text-anchor="middle" font-size="${fmt(labelFont)}">${escapeXml(label(tick))}</text>`,
     );
   }
   for (const tick of niceTicks(y0, y1, 6)) {
     if (Math.abs(tick) < 1e-9) continue;
     body.push(
       `<line class="pg-tick" stroke="currentColor" x1="${num(axisY - 3)}" y1="${num(py(tick))}" x2="${num(axisY + 3)}" y2="${num(py(tick))}"/>`,
-      `<text class="pg-label" fill="currentColor" x="${M.left - 6}" y="${num(py(tick) + 4)}" text-anchor="end" font-size="11">${escapeXml(label(tick))}</text>`,
+      `<text class="pg-label" fill="currentColor" x="${M.left - 6}" y="${num(py(tick) + 4)}" text-anchor="end" font-size="${fmt(labelFont)}">${escapeXml(label(tick))}</text>`,
     );
   }
 
@@ -147,7 +170,7 @@ export function renderGraphSvg(spec: GraphSpec): string {
     );
     if (point.label) {
       body.push(
-        `<text class="pg-label" fill="currentColor" x="${num(cx + 7)}" y="${num(cy - 7)}" font-size="12">${escapeXml(point.label)}</text>`,
+        `<text class="pg-label" fill="currentColor" x="${num(cx + 7)}" y="${num(cy - 7)}" font-size="${num(12 * labelScale)}">${escapeXml(point.label)}</text>`,
       );
     }
   });
@@ -158,7 +181,7 @@ export function renderGraphSvg(spec: GraphSpec): string {
     const y = M.top + 12 + index * 16;
     body.push(
       `<line class="pg-fn pg-fn-${index % 6}" stroke="currentColor" stroke-width="2" x1="${W - M.right - 90}" y1="${y - 4}" x2="${W - M.right - 70}" y2="${y - 4}"/>`,
-      `<text class="pg-label" fill="currentColor" x="${W - M.right - 64}" y="${y}" font-size="12">${escapeXml(entry.label)}</text>`,
+      `<text class="pg-label" fill="currentColor" x="${W - M.right - 64}" y="${y}" font-size="${num(12 * labelScale)}">${escapeXml(entry.label)}</text>`,
     );
   });
 

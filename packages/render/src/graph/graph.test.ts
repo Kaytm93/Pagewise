@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { RenderError } from '../errors';
 import { compileExpression } from './expression';
 import { renderGraph, validateGraph } from './index';
-import { niceTicks } from './plot';
+import { labelFontSize, niceTicks } from './plot';
 import { parseGraphSpec } from './spec';
 
 const f = (source: string, x: number) => compileExpression(source)(x);
@@ -204,6 +204,44 @@ describe('Zeichnung', () => {
     expect(() => draw({ functions: ['foo(x)'] })).toThrowError(
       expect.objectContaining({ code: 'invalid_expression' }),
     );
+  });
+
+  it('zeichnet mit Blattbreite weiterhin ohne Stilangaben und Skripte', () => {
+    const svg = renderGraph('{"functions":["x"],"x":[-4,4],"grid":true}', 320);
+    expect(svg).not.toMatch(/<style|<script|style=|href=|onload|onerror|javascript:/i);
+  });
+
+  it('misst die Achsenbeschriftung auf dem Blatt mindestens 12 px (Befund blocks#2)', () => {
+    // Ohne Blattbreite (Server, spätere PDF-Zeichnung): unverändert 11 px im SVG.
+    expect(labelFontSize(null)).toBe(11);
+    expect(labelFontSize(undefined)).toBe(11);
+    // Kleinstes Handyblatt: kompensiert auf die übliche Größe des breiten Blatts.
+    expect(labelFontSize(320)).toBe(19.8);
+    // Unter 240 px (Vorschau-Spalte im Editor) bleibt der Wert an der Grenze.
+    expect(labelFontSize(200)).toBe(26.4);
+    expect(labelFontSize(240)).toBe(26.4);
+    expect(labelFontSize(1000)).toBe(11);
+    expect(labelFontSize(576)).toBe(11);
+    // Gerendert gilt auf jedem Blatt bis 576 px dieselbe Größe: 11 · (576/Breite) · (Breite/480) = 13,2 px.
+    const source = '{"functions":["x"],"x":[-4,4],"y":[-6,6],"grid":true}';
+    for (const sheetWidth of [320, 340, 375, 390, 420, 480, 576]) {
+      const svg = renderGraph(source, sheetWidth);
+      const font = Number(/font-size="([\d.]+)"/.exec(svg)?.[1]);
+      const rendered = (font * sheetWidth) / 480;
+      expect(rendered).toBeGreaterThanOrEqual(12);
+      expect(Math.round(rendered * 10) / 10).toBe(13.2);
+    }
+  });
+
+  it('ändert an der Zeichnung selbst nichts: Kurve, Achsen, Ticks, Gitter und Punkte bleiben gleich', () => {
+    const source =
+      '{"functions":[{"expr":"x^2-4","label":"f"}],"x":[-4,4],"y":[-6,6],"points":[{"x":2,"y":0,"label":"N"}],"grid":true}';
+    // font-size der Labels ist der einzige Unterschied zwischen schmalem Blatt und ohne Breite.
+    const stripFonts = (svg: string) => svg.replace(/font-size="[\d.]+"/g, 'font-size=""');
+    expect(stripFonts(renderGraph(source, 320))).toBe(stripFonts(renderGraph(source)));
+    // und der Zeichnungsteil (alles vor dem ersten Label-Text) ist buchstabengleich.
+    const drawing = (svg: string) => svg.slice(0, svg.indexOf('<text'));
+    expect(drawing(renderGraph(source, 320))).toBe(drawing(renderGraph(source)));
   });
 });
 
