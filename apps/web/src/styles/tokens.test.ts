@@ -292,19 +292,45 @@ describe('Fachfarben (D-043)', () => {
   });
 });
 
-// Raum (neumorph, D-071): jede Bedienelement-Kante hebt sich mit 3 : 1 vom Raumton ab, weil
-// Schatten allein nicht als Rand zählen. Text auf der gehobenen Fläche erreicht 4,5 : 1.
+// Raum (neumorph, D-073): Licht und Schatten statt Rahmen. Den Rand gibt es nur am Textfeld, als
+// Bodenlinie in --raum-edge (WCAG 1.4.11: 3 : 1 gegen den Raumton). Tinte erreicht 4,5 : 1 auf dem
+// Raumton und auf dem Blatt, die Fachfarben als LED 3 : 1 auf dem Blatt.
 describe.each([
-  ['hell', light],
-  ['dunkel', { ...light, ...dark }],
-])('Raum (neumorph) im %s Modus', (_name, tokens) => {
+  ['hell', light, subjectsLight],
+  ['dunkel', { ...light, ...dark }, subjectsDark],
+])('Raum (neumorph) im %s Modus', (_name, tokens, subjects) => {
   const color = (token: string) => toHex(tokens[token] as string, tokens);
 
-  it('die Kante hebt sich vom Raumton mit mindestens 3 : 1 ab', () => {
+  it('der Rand am Textfeld (--raum-edge) hebt sich vom Raumton mit mindestens 3 : 1 ab', () => {
     expect(contrast(color('--raum-edge'), color('--raum-canvas'))).toBeGreaterThanOrEqual(3);
   });
 
-  it('Text (--ink) auf der gehobenen Fläche erreicht mindestens 4,5 : 1', () => {
-    expect(contrast(color('--ink'), color('--raum-raised'))).toBeGreaterThanOrEqual(4.5);
-  });
+  it.each(['--ink', '--ink-secondary', '--ink-muted'])(
+    '%s erreicht auf dem Raumton und auf dem Blatt mindestens 4,5 : 1',
+    (text) => {
+      for (const surface of ['--raum-canvas', '--raum-raised']) {
+        expect(contrast(color(text), color(surface))).toBeGreaterThanOrEqual(4.5);
+      }
+    },
+  );
+
+  it.each(['--raum-raised', '--raum-canvas'])(
+    'die Fachfarben heben sich von %s mit mindestens 3 : 1 ab',
+    (surface) => {
+      for (const subject of subjects) {
+        expect(contrast(subject, color(surface))).toBeGreaterThanOrEqual(3);
+      }
+    },
+  );
+});
+
+describe('Raum-Tokens in allen drei Blöcken', () => {
+  it.each(['--raum-rim-hi', '--raum-rim-lo', '--raum-sheen', '--raum-pane', '--raum-pane-a'])(
+    '%s steht in hell, dunkel und automatisch dunkel, und die beiden dunklen Werte sind gleich',
+    (token) => {
+      expect(light[token]).toBeDefined();
+      expect(dark[token]).toBeDefined();
+      expect(darkAuto[token]).toBe(dark[token]);
+    },
+  );
 });

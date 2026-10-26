@@ -655,12 +655,12 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 
 - **Anlass:** Der dunkle Ordnerrücken in der Fachfarbe wirkte schwer, und die Fachfarbe als Kante an Karten gilt als typischer KI-Tell. Entscheidung D3 im Design-Plan: neumorph, nach Empfehlung.
 - **Aufbau:** Der Ordnerrücken entfällt. Ein Raumton (`--raum-canvas`), gehobene Flächen (`--raum-raised`) für Karten, Knöpfe und Auswahl mit Doppelschatten aus `--raum-light` und `--raum-dark`, eingelassene Flächen (Eingabefelder, Schiene der Tageslinie, aktive Navigation) mit Innenschatten. Tageslinie, Fensterlicht und Parallaxe bleiben, die Parallaxe schwächer.
-- **Fachfarbe:** ein Punkt in der gehobenen Fläche oder eine eingelassene Mulde mit Fachlicht. Keine Kante, keine Register.
-- **Kante Pflicht:** Jedes Bedienelement hat eine 1 px Kante in `--raum-edge`, mindestens 3 : 1 gegen `--raum-canvas`. Schatten allein zählen nicht als Rand.
+- **Fachfarbe:** ein Punkt in der gehobenen Fläche oder eine eingelassene Mulde mit Fachlicht. Keine Kante, keine Register. (ersetzt durch D-073)
+- **Kante Pflicht (ersetzt durch D-073):** Jedes Bedienelement hat eine 1 px Kante in `--raum-edge`, mindestens 3 : 1 gegen `--raum-canvas`. Schatten allein zählen nicht als Rand.
 - **Grenzen:** Höchstens zwei große gehobene Karten pro Bildschirm. Kleine Knöpfe sind frei. Text liegt nie auf einem Schattenverlauf.
 - **Tokens (hell / dunkel):** `--raum-canvas` #e7e3dc / #1f1f1d, `--raum-raised` #f0ede7 / #262624, `--raum-edge` #7f7a72 / #73716b, `--raum-light` Weiß 70 % / Weiß 5 %, `--raum-dark` warm 18 % / Schwarz 45 %.
 - **Geprüft (`tokens.test.ts`, hell und dunkel):** Kante gegen Raumton 3,33 : 1 hell und 3,38 : 1 dunkel. Text (`--ink`) auf gehobener Fläche 11,6 : 1 hell und 12,5 : 1 dunkel (Mindestwert 4,5 : 1).
-- **Status:** umgesetzt in Arbeitskopie, Messung offen. In der Arbeitskopie stehen bisher nur die Tokens. Der Ausbau in `raum.css` folgt in Phase 1.
+- **Status:** umgesetzt in Arbeitskopie, Messung offen. In der Arbeitskopie stehen bisher nur die Tokens. Der Ausbau in `raum.css` folgt in Phase 1. Teile ersetzt durch D-073: Kante Pflicht, Tokens, Register.
 - **Messwerte:** offen, nach Messung. Wirkung der Kante und der Doppelschatten am Bild, Squint-Test, Tiefe der Parallaxe mit echter Maus.
 - **Nicht geprüft:** Ob der Neumorphismus am Bild nach KI-Slop aussieht (Kay entscheidet), iPad und iPhone, WebKit.
 
@@ -674,3 +674,15 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Status:** umgesetzt in Arbeitskopie, Messung offen. In der Arbeitskopie stehen bisher nur die Tokens. Die Akzente in `lagen.css` folgen in Phase 1.
 - **Messwerte:** offen, nach Messung. Stärke der Akzente am Bild (Kay entscheidet: zu zurückhaltend oder zu viel), Sichtbarkeit der Randlinie auf der Körnung.
 - **Geprüft:** Gleichheit der Tokens hell und dunkel (bestehende Tests in `tokens.test.ts`). Die Akzente selbst sind noch nicht am Bild geprüft.
+
+## D-073 Raum neu: Licht und Schatten statt Rahmen (26. Oktober 2026)
+
+- **Anlass:** Der Raum aus D-071 wirkte wie ein Drahtmodell: Umrandung an jedem Element, Kästen in Kästen, Körnung auf dem Blatt, Reiter und Ringe als Zier. Kay sah die Demo (Artifact „Pagewise Raum Entwurf“) und gab am 26. Oktober 2026 frei.
+- **Entscheidungen:** (1) Rand nur am Textfeld als 2 px Linie am Boden in `--raum-edge`. Bei `prefers-contrast: more` kehrt eine 1 px Umrandung an Bedienelementen zurück. Das ersetzt „Kante Pflicht“ aus D-071. WCAG 1.4.11: Knöpfe sind durch ihre Beschriftung erkennbar, das Textfeld durch die Bodenlinie. (2) Fensterlicht von oben links statt oben rechts, passend zu den Schatten (Licht oben links, Schatten unten rechts). (3) Reiter am Blattrand, Ringe hinter dem Fachmotiv und die Tintenlinie unter dem Fachtitel entfallen.
+- **Aufbau:** Ein Raumton, eine Lichtrichtung. Gehobenes und Eingelassenes entsteht nur aus Licht und Schatten. Jede Schattenliste hat vier Schichten in fester Reihenfolge (außen hell, außen dunkel, innen 1, innen 2), damit `transition: box-shadow` weich überblendet. Radien 28 px (Blatt), 20 px (große Bauteile), 16 px (kleine Bauteile), Pille für Knöpfe. Nur Aktives ist eingelassen. Zusammengehörige Zeilen teilen sich eine Mulde mit eingravierten Trennlinien. Die Fachfarbe ist ein leuchtender Punkt in einer Fassung (LED). Die Körnung liegt nur auf dem Raumton. `--raum-d` ist ein Tiefe-Faktor ohne eigene Oberfläche.
+- **Tokens (hell / dunkel):** `--raum-canvas` #e7e3dc / #232220, `--raum-raised` #ece9e2 / #292826, `--raum-edge` #7f7a72 / #8b867d, `--raum-light` Weiß 86 % / Weiß 5,5 %, `--raum-dark` warm 30 % / Schwarz 55 %, `--raum-rim-hi` Weiß 72 % / Weiß 7,5 %, `--raum-rim-lo` warm 7 % / Schwarz 30 %, `--raum-sheen` Weiß 55 % / Weiß 5 %, `--raum-pane` #fff6e0 / #ffe9bd, `--raum-pane-a` 0,8 / 0,13. Die Schatten-Tokens (`--raum-up-*`, `--raum-in-*`) stehen in `raum.css`. Fachfarben 2 und 3 (hell) leicht abgedunkelt (#6f8f55 → #6a8a50, #b0883a → #a27829), damit alle acht gegen Blatt und Raumton mindestens 3 : 1 erreichen; gilt für alle drei Richtungen.
+- **Regeln:** Keine festen Farben außer Tokens. Bewegt wird nur `transform` und `opacity`. Hover nur mit `hover: hover`. Kein `backdrop-filter`, kein `style`-Attribut. Ziele mindestens 44 px. Text liegt nie auf einem Schattenverlauf.
+- **Status:** umgesetzt in Arbeitskopie `design/raum-neu`, ungeprüft am Bild in der App, Messung offen.
+- **Geprüft (`tokens.test.ts`, hell und dunkel):** Rand `--raum-edge` gegen Raumton 3,33 : 1 hell und 4,39 : 1 dunkel (Mindestwert 3 : 1). `--ink`, `--ink-secondary` und `--ink-muted` gegen Raumton und Blatt: kleinster Wert 4,70 : 1 hell (`--ink-muted` auf dem Raumton) und 5,65 : 1 dunkel (Mindestwert 4,5 : 1). Fachfarben gegen Blatt und Raumton (Mindestwert 3 : 1): hell kleinster Wert 3,06 : 1 (`data-subj="2"` gegen den Raumton), dunkel alle über 5,3 : 1.
+- **Messwerte:** offen, nach Messung. Wirkung von Licht und Schatten am Bild, Sichtbarkeit der Bodenlinie am Textfeld auf der Körnung.
+- **Nicht geprüft:** Safari/WebKit, iPad und iPhone, Anmutung am Bild (Kay).
