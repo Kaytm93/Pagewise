@@ -11,6 +11,34 @@ import { Modal, ModalFooter } from './modal';
  * gesperrt, und der Fokus kehrt zum Auslöser zurück. Alle Namen und Texte sind erfunden.
  */
 
+function Weg() {
+  const [offen, setOffen] = useState(false);
+  const [da, setDa] = useState(true);
+  return (
+    <>
+      <main id="main" tabIndex={-1}>
+        Inhalt
+      </main>
+      {da && (
+        <button type="button" onClick={() => setOffen(true)}>
+          Auslöser
+        </button>
+      )}
+      {offen && (
+        <Modal
+          title="Weg"
+          onClose={() => {
+            setDa(false);
+            setOffen(false);
+          }}
+        >
+          <p>Text</p>
+        </Modal>
+      )}
+    </>
+  );
+}
+
 function Stapel({ long = 'Kurz' }: { long?: string }) {
   const [unten, setUnten] = useState(false);
   const [oben, setOben] = useState(false);
@@ -115,33 +143,6 @@ describe('Dialog-Stapel (ui/modal.tsx)', () => {
 
   it('fällt auf den Hauptbereich zurück, wenn der Auslöser nicht mehr im DOM steht', async () => {
     const user = userEvent.setup();
-    function Weg() {
-      const [offen, setOffen] = useState(false);
-      const [da, setDa] = useState(true);
-      return (
-        <>
-          <main id="main" tabIndex={-1}>
-            Inhalt
-          </main>
-          {da && (
-            <button type="button" onClick={() => setOffen(true)}>
-              Auslöser
-            </button>
-          )}
-          {offen && (
-            <Modal
-              title="Weg"
-              onClose={() => {
-                setDa(false);
-                setOffen(false);
-              }}
-            >
-              <p>Text</p>
-            </Modal>
-          )}
-        </>
-      );
-    }
     render(<Weg />);
     await user.click(screen.getByRole('button', { name: 'Auslöser' }));
     await user.keyboard('{Escape}');

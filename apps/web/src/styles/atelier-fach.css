@@ -233,6 +233,17 @@
   box-shadow: inset 3px 0 0 var(--subj);
 }
 
+:root[data-design="atelier"] .at-tile-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline-start: auto;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--ink-secondary);
+}
+
 /* Ungewählte Zeilen zeigen den Hinweis „Filtern“ nur beim Darüberfahren, sonst bleibt die Liste ruhig */
 :root[data-design="atelier"] .at-tile:not([data-pressed]) .at-tile-go {
   display: none;
@@ -286,17 +297,6 @@
   font-size: 0.875rem;
   color: var(--ink-muted);
   overflow-wrap: anywhere;
-}
-
-:root[data-design="atelier"] .at-tile-go {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-inline-start: auto;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  white-space: nowrap;
-  color: var(--ink-secondary);
 }
 
 :root[data-design="atelier"] .at-tile-actions {

@@ -67,16 +67,16 @@ describe('Ausdrücke', () => {
   });
 
   it('begrenzt Länge, Tiefe und Knotenzahl', () => {
-    expect(() => compileExpression('x+'.repeat(150) + 'x')).toThrowError(
+    expect(() => compileExpression(`${'x+'.repeat(150)}x`)).toThrowError(
       expect.objectContaining({ code: 'too_large' }),
     );
     expect(() => compileExpression(`${'('.repeat(60)}x${')'.repeat(60)}`)).toThrowError(
       expect.objectContaining({ code: 'too_complex' }),
     );
-    expect(() => compileExpression('-'.repeat(60) + 'x')).toThrowError(
+    expect(() => compileExpression(`${'-'.repeat(60)}x`)).toThrowError(
       expect.objectContaining({ code: 'too_complex' }),
     );
-    expect(() => compileExpression('x^'.repeat(60) + 'x')).toThrowError(
+    expect(() => compileExpression(`${'x^'.repeat(60)}x`)).toThrowError(
       expect.objectContaining({ code: 'too_complex' }),
     );
     expect(() => compileExpression('2x'.repeat(99))).toThrowError(

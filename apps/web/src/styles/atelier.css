@@ -1074,11 +1074,13 @@
 }
 
 /* Runde Ecken nur 22 px, 12 px und Pille: Bausteine setzen 6, 8, 9 und 10 px */
-:root[data-design="atelier"] :is(.rounded-box, .rounded-control, [class*="rounded-[9px]"], [class*="rounded-[10px]"]) {
+:root[data-design="atelier"]
+  :is(.rounded-box, .rounded-control, [class*="rounded-[9px]"], [class*="rounded-[10px]"]) {
   border-radius: 12px;
 }
 
-:root[data-design="atelier"] :is(.lg-nav-item[aria-current="page"], .lg-nav-item[data-current="true"], .at-glass-pill) {
+:root[data-design="atelier"]
+  :is(.lg-nav-item[aria-current="page"], .lg-nav-item[data-current="true"], .at-glass-pill) {
   border-radius: 999px;
 }
 

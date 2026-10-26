@@ -85,8 +85,7 @@
         color-mix(in srgb, var(--subj) 9%, transparent),
         transparent 70%
       ),
-      var(--grain),
-      var(--raum-canvas);
+      var(--grain), var(--raum-canvas);
     background-size:
       auto,
       220px 220px,
@@ -188,6 +187,14 @@
     display: none;
   }
 
+  /* Eine Karte für sich (Anmeldung, Einrichtung): gehoben, große Stufe. */
+  :root[data-design="raum"] .lg-sheet {
+    border: 1px solid var(--line-warm);
+    border-radius: 20px;
+    background-color: var(--raum-raised);
+    box-shadow: var(--raum-up-l);
+  }
+
   /* Ein Blatt im Stapel: gehoben, große Stufe, 1 px Kante. Keine Randlinie, kein Heftschatten. */
   :root[data-design="raum"] .lg-stack .lg-sheet {
     border: 1px solid var(--raum-edge);
@@ -207,14 +214,6 @@
     .lg-stack
     .lg-sheet {
     box-shadow: none;
-  }
-
-  /* Eine Karte für sich (Anmeldung, Einrichtung): gehoben, große Stufe. */
-  :root[data-design="raum"] .lg-sheet {
-    border: 1px solid var(--line-warm);
-    border-radius: 20px;
-    background-color: var(--raum-raised);
-    box-shadow: var(--raum-up-l);
   }
 
   /* Die Anmeldung: Körnung wie das Blatt, ohne Randlinie und ohne Heftschatten. */
@@ -245,7 +244,9 @@
     height: 10px;
     border-radius: 50%;
     background-color: var(--subj);
-    box-shadow: inset 2px 2px 3px var(--raum-dark), inset -1px -1px 2px var(--raum-light);
+    box-shadow:
+      inset 2px 2px 3px var(--raum-dark),
+      inset -1px -1px 2px var(--raum-light);
   }
 
   :root[data-design="raum"] .lg-tape {
@@ -334,7 +335,9 @@
     width: 6px;
     border-radius: 999px;
     background-color: var(--raum-canvas);
-    box-shadow: inset 2px 2px 3px var(--raum-dark), inset -2px -2px 3px var(--raum-light);
+    box-shadow:
+      inset 2px 2px 3px var(--raum-dark),
+      inset -2px -2px 3px var(--raum-light);
   }
 
   .rm-plan-item,
@@ -388,7 +391,9 @@
     margin-top: -4px;
     border-radius: 50%;
     background-color: var(--subj);
-    box-shadow: inset 1px 1px 2px var(--raum-dark), inset -1px -1px 1px var(--raum-light);
+    box-shadow:
+      inset 1px 1px 2px var(--raum-dark),
+      inset -1px -1px 1px var(--raum-light);
   }
 
   .rm-plan-name {
@@ -590,7 +595,9 @@
     margin-left: -3px;
     border-radius: 50%;
     background-color: var(--subj);
-    box-shadow: inset 1px 1px 1px var(--raum-dark), inset -1px -1px 1px var(--raum-light);
+    box-shadow:
+      inset 1px 1px 1px var(--raum-dark),
+      inset -1px -1px 1px var(--raum-light);
   }
 
   .rm-reg-tab:nth-child(1) {
@@ -791,7 +798,9 @@
 
 :root[data-design="raum"] .lg-composer textarea:focus {
   border-color: var(--accent);
-  box-shadow: var(--raum-in), 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow:
+    var(--raum-in),
+    0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 /* Werkzeugzeile des Agenten: eine Zeile mit Kante, flach, weil sie zum Lesebereich gehört */
@@ -982,4 +991,3 @@
   padding-left: 14px;
   border-left: 2px solid var(--line-warm);
 }
-

@@ -35,9 +35,9 @@ describe('Licht der Fachfarbe', () => {
   it('ist ein einziges Lichtfeld: kein zweites Band, keine Drift', () => {
     expect(css).not.toMatch(/\.lg-app::after/);
     expect(css).not.toMatch(/atelier-drift/);
-    expect(rule(":root[data-design='atelier'] .lg-app::before").match(/radial-gradient\(/g)).toHaveLength(
-      1,
-    );
+    expect(
+      rule(":root[data-design='atelier'] .lg-app::before").match(/radial-gradient\(/g),
+    ).toHaveLength(1);
   });
 });
 
@@ -80,8 +80,11 @@ describe('Zeigerlicht', () => {
     for (const match of treffer) {
       const open = css.lastIndexOf('{', (match.index ?? 0) + match[0].length);
       const start =
-        Math.max(css.lastIndexOf('}', open), css.lastIndexOf(';', open), css.lastIndexOf('{', open - 1)) +
-        1;
+        Math.max(
+          css.lastIndexOf('}', open),
+          css.lastIndexOf(';', open),
+          css.lastIndexOf('{', open - 1),
+        ) + 1;
       expect(css.slice(start, open), 'backdrop-filter außerhalb der Glasklassen').toMatch(
         /\.at-glass(?![\w-])/,
       );
@@ -93,7 +96,10 @@ describe('Zeigerlicht', () => {
 
 describe('Radien (22 px, 12 px, Pille)', () => {
   it('kennt in Atelier nur 0, 12 px, 22 px, Pille und Kreis (atelier-fach.test.ts)', () => {
-    const fach = readFileSync(join(dir, 'atelier-fach.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const fach = readFileSync(join(dir, 'atelier-fach.css'), 'utf8').replace(
+      /\/\*[\s\S]*?\*\//g,
+      '',
+    );
     const erlaubt = new Set([
       '0',
       '12px',

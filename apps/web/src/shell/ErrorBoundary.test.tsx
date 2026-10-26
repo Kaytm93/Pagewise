@@ -9,6 +9,20 @@ function Broken({ message }: { message: string }): never {
   throw new Error(message);
 }
 
+function Host() {
+  const [key, setKey] = useState('a');
+  return (
+    <>
+      <button type="button" onClick={() => setKey('b')}>
+        weiter
+      </button>
+      <ErrorBoundary resetKey={key}>
+        {key === 'a' ? <Broken message="kaputt" /> : <p>Wieder da</p>}
+      </ErrorBoundary>
+    </>
+  );
+}
+
 afterEach(() => vi.restoreAllMocks());
 
 describe('ErrorBoundary', () => {
@@ -53,19 +67,6 @@ describe('ErrorBoundary', () => {
 
   it('setzt den Fehler zurück, wenn sich der Schlüssel ändert', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    function Host() {
-      const [key, setKey] = useState('a');
-      return (
-        <>
-          <button type="button" onClick={() => setKey('b')}>
-            weiter
-          </button>
-          <ErrorBoundary resetKey={key}>
-            {key === 'a' ? <Broken message="kaputt" /> : <p>Wieder da</p>}
-          </ErrorBoundary>
-        </>
-      );
-    }
     render(<Host />);
     expect(screen.getByRole('alert')).toBeTruthy();
     await userEvent.setup().click(screen.getByRole('button', { name: 'weiter' }));

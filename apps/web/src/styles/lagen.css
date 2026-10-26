@@ -1231,7 +1231,11 @@ details[open] > summary .mo-arrow {
 /* Heftfaden: Stiche 2 px, Farbe eine Stufe stärker. Die Stichreihe bleibt gestrichelt. */
 :root[data-design="lagen"] .lg-spine::after {
   width: 2px;
-  background: repeating-linear-gradient(to bottom, var(--stitch-strong) 0 7px, transparent 7px 13px);
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--stitch-strong) 0 7px,
+    transparent 7px 13px
+  );
 }
 
 /*

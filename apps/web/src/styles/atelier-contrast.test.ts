@@ -93,7 +93,10 @@ const CENTER = 0.3;
  */
 const lightAtelier = block(atelierCss, ":root[data-design='atelier'] {");
 const darkAtelier = block(atelierCss, ":root[data-design='atelier'][data-theme='dark'] {");
-const darkAutoAtelier = block(atelierCss, ":root[data-design='atelier']:not([data-theme='light']) {");
+const darkAutoAtelier = block(
+  atelierCss,
+  ":root[data-design='atelier']:not([data-theme='light']) {",
+);
 const lightA: Tokens = { ...light, ...lightAtelier };
 const darkA: Tokens = { ...dark, ...darkAtelier };
 
@@ -286,7 +289,7 @@ describe('Dialoge in Atelier (S-01)', () => {
 function glassToken(value: string): { rgb: number[]; alpha: number } {
   const match = /^rgba?\((.+)\)$/.exec(value.trim());
   if (!match) throw new Error(`Kein rgb-Wert: ${value}`);
-  const [r, g, b, a = '1'] = (match[1] as string).split(/[\s,\/]+/).filter(Boolean) as string[];
+  const [r, g, b, a = '1'] = (match[1] as string).split(/[\s,/]+/).filter(Boolean) as string[];
   const alpha = a.endsWith('%') ? Number.parseFloat(a) / 100 : Number.parseFloat(a);
   return { rgb: [Number(r), Number(g), Number(b)], alpha };
 }
@@ -340,9 +343,10 @@ describe('Text auf dem Feld (ohne Glas)', () => {
       for (const name of ['--ink', '--ink-secondary', '--ink-muted', '--link']) {
         const color = toHex(tokens[name] as string, tokens);
         for (const subject of subjects) {
-          expect(contrast(color, over(canvas, subject, CENTER * k)), `${name} auf dem Feld`).toBeGreaterThanOrEqual(
-            4.5,
-          );
+          expect(
+            contrast(color, over(canvas, subject, CENTER * k)),
+            `${name} auf dem Feld`,
+          ).toBeGreaterThanOrEqual(4.5);
         }
       }
     },
@@ -362,8 +366,12 @@ describe('Text auf dem Feld (ohne Glas)', () => {
     expect(toHex(lightA['--ink-muted'] as string, lightA)).not.toBe(
       toHex(light['--ink-muted'] as string, light),
     );
-    expect(toHex(lightA['--link'] as string, lightA)).not.toBe(toHex(light['--link'] as string, light));
-    expect(toHex(darkA['--ink-muted'] as string, darkA)).toBe(toHex(dark['--ink-muted'] as string, dark));
+    expect(toHex(lightA['--link'] as string, lightA)).not.toBe(
+      toHex(light['--link'] as string, light),
+    );
+    expect(toHex(darkA['--ink-muted'] as string, darkA)).toBe(
+      toHex(dark['--ink-muted'] as string, dark),
+    );
     expect(toHex(darkA['--link'] as string, darkA)).toBe(toHex(dark['--link'] as string, dark));
   });
 });
