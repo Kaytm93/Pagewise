@@ -3,6 +3,7 @@ import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../App';
 import { ApiClient } from '../api/client';
+import { messages } from '../i18n';
 import { FakeServer, json } from '../test/fake-server';
 
 /*
@@ -14,6 +15,7 @@ import { FakeServer, json } from '../test/fake-server';
 const LISTE = '#home-subjects';
 const ALS_NAECHSTES = '#next-up-heading';
 const ZULETZT = '#recent-chats-heading';
+const TAGESPLAN = '.rm-plan';
 
 function createServer() {
   const server = new FakeServer('unlocked');
@@ -24,9 +26,13 @@ function createServer() {
 
 /**
  * Hält Stundenplan, Tests und Chatlisten zurück, bis `release` aufgerufen wird. Mit `plannerFails` antwortet der
- * Stundenplan sofort mit einem Fehler.
+ * Stundenplan sofort mit einem Fehler. Mit `plannerOpen` kommen Stundenplan und Tests sofort, nur die Chatlisten
+ * bleiben zurück.
  */
-function gatedFetch(server: FakeServer, options: { plannerFails?: boolean } = {}) {
+function gatedFetch(
+  server: FakeServer,
+  options: { plannerFails?: boolean; plannerOpen?: boolean } = {},
+) {
   let release: () => void = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -37,6 +43,8 @@ function gatedFetch(server: FakeServer, options: { plannerFails?: boolean } = {}
     if (method === 'GET' && /\/api\/(timetable|exams|chats)(\?|$)/.test(path)) {
       if (options.plannerFails && /\/api\/timetable$/.test(path))
         return json(500, { error: 'nicht erreichbar' });
+      if (options.plannerOpen && /\/api\/(timetable|exams)(\?|$)/.test(path))
+        return server.fetch(input, init);
       await gate;
     }
     return server.fetch(input, init);
@@ -78,6 +86,11 @@ afterEach(() => {
 });
 
 describe('Startbereich wartet auf Planer und „Zuletzt genutzt“', () => {
+  // Der Tagesplan erscheint nur in „Raum“ (StartPlan prüft die Richtung ausdrücklich), daher hier festgelegt.
+  beforeEach(() => {
+    document.documentElement.setAttribute('data-design', 'raum');
+  });
+
   it('zeigt vor ready nur die Kopfzeile und nach ready den ganzen Startbereich', async () => {
     const server = createServer();
     const { fetch, release } = gatedFetch(server);
@@ -96,6 +109,7 @@ describe('Startbereich wartet auf Planer und „Zuletzt genutzt“', () => {
     release();
     await settle();
     expect(document.querySelector(LISTE)).not.toBeNull();
+    expect(document.querySelector(TAGESPLAN)).not.toBeNull();
     expect(document.querySelector(ALS_NAECHSTES)).not.toBeNull();
     expect(document.querySelector(ZULETZT)).not.toBeNull();
   });
@@ -119,6 +133,7 @@ describe('Startbereich wartet auf Planer und „Zuletzt genutzt“', () => {
     expect(document.querySelector(LISTE)).not.toBeNull();
     expect(document.querySelector(ALS_NAECHSTES)).toBeNull();
     expect(document.querySelector(ZULETZT)).toBeNull();
+    expect(document.querySelector(TAGESPLAN)).toBeNull();
   });
 
   it('zeigt bei einem Planer-Fehler sofort den Startbereich ohne die beiden Bereiche', async () => {
@@ -130,10 +145,12 @@ describe('Startbereich wartet auf Planer und „Zuletzt genutzt“', () => {
     expect(document.querySelector(LISTE)).not.toBeNull();
     expect(document.querySelector(ALS_NAECHSTES)).toBeNull();
     expect(document.querySelector(ZULETZT)).toBeNull();
+    expect(document.querySelector(TAGESPLAN)).toBeNull();
 
     await run(2500);
     expect(document.querySelector(ALS_NAECHSTES)).toBeNull();
     expect(document.querySelector(ZULETZT)).toBeNull();
+    expect(document.querySelector(TAGESPLAN)).toBeNull();
   });
 
   it('zählt die Zeitgrenze ab dem Seitenaufruf, wenn die Startseite erst später erscheint', async () => {
@@ -166,5 +183,44 @@ describe('Startbereich wartet auf Planer und „Zuletzt genutzt“', () => {
     await settle();
     expect(document.querySelector(LISTE)).not.toBeNull();
     expect(document.querySelector(ZULETZT)).not.toBeNull();
+  });
+
+  it('zeigt den Tagesplan mit dem übrigen Startbereich, wenn der Planer vor 2 s kommt', async () => {
+    const server = createServer();
+    const { fetch, release } = gatedFetch(server, { plannerOpen: true });
+    renderHome(fetch);
+    await settle();
+    expect(document.querySelector(TAGESPLAN)).toBeNull();
+
+    await run(2000);
+    expect(document.querySelector(LISTE)).not.toBeNull();
+    expect(document.querySelector(TAGESPLAN)).not.toBeNull();
+    expect(document.querySelector(ZULETZT)).toBeNull();
+
+    release();
+    await settle();
+    expect(document.querySelector(TAGESPLAN)).not.toBeNull();
+    expect(document.querySelector(ZULETZT)).toBeNull();
+  });
+
+  it('lässt den Tagesplan weg, wenn der Planer nach 2 s kommt, und verschiebt die Fächerliste nicht', async () => {
+    const server = createServer();
+    const { fetch, release } = gatedFetch(server);
+    renderHome(fetch);
+    await settle();
+
+    await run(2100);
+    expect(document.querySelector(LISTE)).not.toBeNull();
+    expect(document.querySelector(TAGESPLAN)).toBeNull();
+    const liste = document.querySelector(LISTE);
+
+    release();
+    await settle();
+    expect(document.querySelector(TAGESPLAN)).toBeNull();
+    expect(document.querySelector(ALS_NAECHSTES)).toBeNull();
+    expect(document.querySelector(ZULETZT)).toBeNull();
+    expect(document.querySelector(LISTE)).toBe(liste);
+    // Die Überschrift kommt aus dem Plan und bleibt deshalb beim festen Text.
+    expect(document.querySelector('h1')?.textContent).toBe(messages.home.heading);
   });
 });

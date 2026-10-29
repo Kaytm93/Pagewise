@@ -38,34 +38,41 @@ const START_WAIT_MS = 2000;
  */
 type StartReveal = 'waiting' | 'full' | 'short';
 
+/**
+ * Ergebnis der Entscheidung. `plan` gehört dazu: Der Tagesplan erscheint nur, wenn der Planer zum Zeitpunkt der
+ * Entscheidung geladen war. Kommt er später, bleibt er für diesen Seitenaufruf weg (Fächerliste springt nicht).
+ */
+type StartState = { reveal: StartReveal; plan: boolean };
+
 function useStartReveal(
   plannerStatus: 'loading' | 'ready' | 'error',
   recentLoaded: boolean,
-): StartReveal {
-  const [reveal, setReveal] = useState<StartReveal>('waiting');
+): StartState {
+  const [timeUp, setTimeUp] = useState(false);
+  const [state, setState] = useState<StartState>({ reveal: 'waiting', plan: false });
 
   // Die Zeitgrenze zählt ab dem Seitenaufruf: Beim ersten Einblenden der Startseite ist davon schon die Zeit
   // seit dem Seitenbeginn vergangen (Arbeitsbereich lädt davor). Später zählt sie ab dem Einblenden.
-  // Sie ändert sich nicht, wenn Daten nachkommen.
   useEffect(() => {
     const elapsed = performance.now();
     const left = elapsed < START_WAIT_MS ? START_WAIT_MS - elapsed : START_WAIT_MS;
-    const timer = setTimeout(
-      () => setReveal((current) => (current === 'waiting' ? 'short' : current)),
-      left,
-    );
+    const timer = setTimeout(() => setTimeUp(true), left);
     return () => clearTimeout(timer);
   }, []);
 
+  // Einmal entschieden, dann nie wieder: Die Entscheidung nimmt den Stand zu diesem Zeitpunkt.
   useEffect(() => {
+    if (state.reveal !== 'waiting') return;
     if (plannerStatus === 'error') {
-      setReveal((current) => (current === 'waiting' ? 'short' : current));
+      setState({ reveal: 'short', plan: false });
     } else if (plannerStatus === 'ready' && recentLoaded) {
-      setReveal((current) => (current === 'waiting' ? 'full' : current));
+      setState({ reveal: 'full', plan: true });
+    } else if (timeUp) {
+      setState({ reveal: 'short', plan: plannerStatus === 'ready' });
     }
-  }, [plannerStatus, recentLoaded]);
+  }, [state.reveal, plannerStatus, recentLoaded, timeUp]);
 
-  return reveal;
+  return state;
 }
 
 export function HomePage() {
@@ -73,7 +80,7 @@ export function HomePage() {
   const { status, entries, exams, weekAnchor, now } = usePlanner();
   const design = useDesign();
   const recent = useRecentChats();
-  const reveal = useStartReveal(status, recent !== null);
+  const { reveal, plan } = useStartReveal(status, recent !== null);
   const [creating, setCreating] = useState(false);
   const dialog = creating && <SubjectDialog onClose={() => setCreating(false)} />;
 
@@ -97,9 +104,11 @@ export function HomePage() {
     );
   }
 
-  // Die Überschrift nennt Stunden und Test von heute, sobald der Plan geladen ist; sonst der feste Text.
+  // Die Überschrift nennt Stunden und Test von heute, sobald der Plan geladen ist; sonst der feste Text. Sie folgt
+  // derselben Entscheidung wie der Tagesplan (`plan`): Käme der Plan nach der Zeitgrenze, würde die Zeile darüber
+  // der Fächerliste nachträglich die Höhe ändern.
   const heading =
-    status === 'ready'
+    plan && status === 'ready'
       ? startHeadingFor({
           entries,
           exams,
@@ -214,7 +223,7 @@ export function HomePage() {
           {reveal !== 'waiting' && (
             <>
               <div className="rm-start-grid">
-                <StartPlan />
+                {plan && <StartPlan />}
                 <div className="rm-start-side">
                   {reveal === 'full' && <NextUp />}
                   {/* „Zuletzt genutzt“ steht in allen Richtungen, sobald es Chats gibt (gleiche Klassen `lg-*`). */}
