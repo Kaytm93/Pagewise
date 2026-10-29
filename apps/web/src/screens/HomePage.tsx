@@ -1,5 +1,5 @@
 import { MessageCircle, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { messages as m } from '../i18n';
 import { NextUp } from '../planning/NextUp';
 import { usePlanner } from '../planning/PlannerProvider';
@@ -14,7 +14,7 @@ import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { StartAtelier } from './atelier/StartAtelier';
 import { AskForm } from './home/AskForm';
 import { startHeadingFor } from './home/start-heading';
-import { RecentChats } from './lagen/RecentChats';
+import { RecentChats, useRecentChats } from './lagen/RecentChats';
 import { StartGrid } from './lagen/StartGrid';
 import { StartPlan } from './raum/StartPlan';
 import { SubjectDialog } from './SubjectDialog';
@@ -26,10 +26,54 @@ const dateFormat = new Intl.DateTimeFormat('de-DE', {
   month: 'long',
 });
 
+/** Zeitgrenze für den Startbereich: „Warten mit Zeitgrenze, 2 Sekunden“ (Entscheidung von Kay, 29.10.). */
+const START_WAIT_MS = 2000;
+
+/**
+ * Wann der Startbereich erscheint:
+ * - `waiting`: nur die Kopfzeile, bis Planer und „Zuletzt genutzt“ geladen sind.
+ * - `full`: alle Bereiche, mit „Als Nächstes“ und „Zuletzt genutzt“.
+ * - `short`: ohne „Als Nächstes“ und „Zuletzt genutzt“. Das gilt nach der Zeitgrenze und sofort bei einem
+ *   Planer-Fehler. Die Entscheidung bleibt für diesen Seitenaufruf, damit die Fächerliste nicht springt.
+ */
+type StartReveal = 'waiting' | 'full' | 'short';
+
+function useStartReveal(
+  plannerStatus: 'loading' | 'ready' | 'error',
+  recentLoaded: boolean,
+): StartReveal {
+  const [reveal, setReveal] = useState<StartReveal>('waiting');
+
+  // Die Zeitgrenze zählt ab dem Seitenaufruf: Beim ersten Einblenden der Startseite ist davon schon die Zeit
+  // seit dem Seitenbeginn vergangen (Arbeitsbereich lädt davor). Später zählt sie ab dem Einblenden.
+  // Sie ändert sich nicht, wenn Daten nachkommen.
+  useEffect(() => {
+    const elapsed = performance.now();
+    const left = elapsed < START_WAIT_MS ? START_WAIT_MS - elapsed : START_WAIT_MS;
+    const timer = setTimeout(
+      () => setReveal((current) => (current === 'waiting' ? 'short' : current)),
+      left,
+    );
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (plannerStatus === 'error') {
+      setReveal((current) => (current === 'waiting' ? 'short' : current));
+    } else if (plannerStatus === 'ready' && recentLoaded) {
+      setReveal((current) => (current === 'waiting' ? 'full' : current));
+    }
+  }, [plannerStatus, recentLoaded]);
+
+  return reveal;
+}
+
 export function HomePage() {
   const { subjects } = useWorkspace();
   const { status, entries, exams, weekAnchor, now } = usePlanner();
   const design = useDesign();
+  const recent = useRecentChats();
+  const reveal = useStartReveal(status, recent !== null);
   const [creating, setCreating] = useState(false);
   const dialog = creating && <SubjectDialog onClose={() => setCreating(false)} />;
 
@@ -167,16 +211,20 @@ export function HomePage() {
       <Sheet width="wide">
         <div className="rm-start">
           {head}
-          <div className="rm-start-grid">
-            <StartPlan />
-            <div className="rm-start-side">
-              <NextUp />
-              {/* „Zuletzt genutzt“ steht in allen Richtungen, sobald es Chats gibt (gleiche Klassen `lg-*`). */}
-              <RecentChats />
-              {subjectList}
-            </div>
-          </div>
-          {ask}
+          {reveal !== 'waiting' && (
+            <>
+              <div className="rm-start-grid">
+                <StartPlan />
+                <div className="rm-start-side">
+                  {reveal === 'full' && <NextUp />}
+                  {/* „Zuletzt genutzt“ steht in allen Richtungen, sobald es Chats gibt (gleiche Klassen `lg-*`). */}
+                  {reveal === 'full' && <RecentChats chats={recent} />}
+                  {subjectList}
+                </div>
+              </div>
+              {ask}
+            </>
+          )}
         </div>
         {dialog}
       </Sheet>
@@ -186,11 +234,15 @@ export function HomePage() {
   return (
     <Sheet width="wide">
       {head}
-      {ask}
-      {design === 'lagen' ? <StartGrid /> : <StartAtelier />}
-      {/* „Zuletzt genutzt“ steht in allen Richtungen, sobald es Chats gibt (gleiche Klassen `lg-*`). */}
-      <RecentChats />
-      {subjectList}
+      {reveal !== 'waiting' && (
+        <>
+          {ask}
+          {design === 'lagen' ? <StartGrid /> : <StartAtelier />}
+          {/* „Zuletzt genutzt“ steht in allen Richtungen, sobald es Chats gibt (gleiche Klassen `lg-*`). */}
+          {reveal === 'full' && <RecentChats chats={recent} />}
+          {subjectList}
+        </>
+      )}
       {dialog}
     </Sheet>
   );

@@ -12,12 +12,10 @@ import { formatWhen } from '../chat/when';
 const MAX_CHATS = 4;
 
 /**
- * „Zuletzt genutzt“ auf der Startseite in allen Richtungen (M1-T1): die vier zuletzt geänderten
- * Chats über alle Fächer. In „Lagen“ trägt der Fachname die Zeile und der erste Eintrag ist groß (lagen.css,
- * `.lg-recent*`); die anderen Richtungen behalten das bisherige Bild. Die Liste entsteht aus den vorhandenen Chat-Endpunkten; ein Fach, dessen
- * Abfrage scheitert, wird übersprungen. Ohne Chats bleibt der Abschnitt ganz weg.
+ * Die vier zuletzt geänderten Chats über alle Fächer; `null`, solange sie laden. Die Startseite wartet darauf,
+ * bevor sie den Abschnitt zeigt (siehe HomePage).
  */
-export function RecentChats() {
+export function useRecentChats(): Chat[] | null {
   const { api } = useSession();
   const { subjects } = useWorkspace();
   const [chats, setChats] = useState<Chat[] | null>(null);
@@ -44,6 +42,18 @@ export function RecentChats() {
       cancelled = true;
     };
   }, [api, subjects]);
+
+  return chats;
+}
+
+/**
+ * „Zuletzt genutzt“ auf der Startseite in allen Richtungen (M1-T1): die vier zuletzt geänderten
+ * Chats über alle Fächer. In „Lagen“ trägt der Fachname die Zeile und der erste Eintrag ist groß (lagen.css,
+ * `.lg-recent*`); die anderen Richtungen behalten das bisherige Bild. Die Liste entsteht aus den vorhandenen Chat-Endpunkten; ein Fach, dessen
+ * Abfrage scheitert, wird übersprungen. Ohne Chats bleibt der Abschnitt ganz weg.
+ */
+export function RecentChats({ chats }: { chats: Chat[] | null }) {
+  const { subjects } = useWorkspace();
 
   if (!chats || chats.length === 0) return null;
 
