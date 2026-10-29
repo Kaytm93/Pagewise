@@ -104,10 +104,13 @@ export default function BlockView({
   kind,
   source,
   final,
+  size,
 }: {
   kind: SvgBlockKind;
   source: string;
   final: boolean;
+  /** Größenklassen (Seitenverhältnis oder feste Höhe) aus Markdown.tsx: gleich für Platzhalter und Bild. */
+  size: string;
 }) {
   const [state, setState] = useState<State>({ status: 'loading' });
   const [sheetWidth, setSheetWidth] = useState<number | null>(null);
@@ -140,14 +143,14 @@ export default function BlockView({
   if (state.status === 'loading') {
     return (
       <figure
-        className="pg-figure mo-shimmer my-4 h-32 rounded-box bg-paper"
+        className={`pg-figure mo-shimmer my-4 rounded-box bg-paper ${size}`}
         aria-busy="true"
         aria-label={m.blocks.loading}
       />
     );
   }
   return (
-    <figure className={`pg-figure pg-${kind} my-4`}>
+    <figure className={`pg-figure pg-${kind} my-4 ${size}`}>
       <SvgHost
         svg={state.svg}
         label={label}

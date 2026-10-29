@@ -70,11 +70,24 @@ function CodeBlock({ children }: { children?: ReactNode }) {
   );
 }
 
-function BlockFallback() {
+/**
+ * Größe der Blöcke, bevor sie da sind, und danach: Platzhalter und fertiges Bild bekommen dieselben Klassen,
+ * sonst springt der Text. Graph: Seitenverhältnis 3 : 2 (Zeichnung 480 × 320), höchstens 36 rem breit. Noten:
+ * Seitenverhältnis der Zeichnung (710 × 107,31), höchstens 44 rem breit. Molekül: feste Höhe 125 px, die
+ * Zeichnung passt sich hinein. Formel als Anzeige: 81 px (gemessen).
+ */
+export const BLOCK_SIZE = {
+  graph: 'aspect-3/2 max-w-[36rem]',
+  mol: 'h-[125px] [&_.pg-svg]:h-full [&_svg]:h-full',
+  abc: 'aspect-[710/107.31] max-w-[44rem]',
+  math: 'h-[81px]',
+} as const;
+
+function BlockFallback({ size = 'h-24' }: { size?: string }) {
   return (
     <span
       role="status"
-      className="pg-figure mo-shimmer my-4 block h-24 rounded-box bg-paper"
+      className={`pg-figure mo-shimmer my-4 block ${size} rounded-box bg-paper`}
       aria-busy="true"
     >
       <span className="sr-only">{m.blocks.loading}</span>
@@ -91,7 +104,7 @@ function PreBlock({ children }: { children?: ReactNode }) {
     const source = textOf(child.props.children).replace(/\n$/, '');
     if (className.includes('math-display')) {
       return (
-        <Suspense fallback={<BlockFallback />}>
+        <Suspense fallback={<BlockFallback size={BLOCK_SIZE.math} />}>
           <MathView latex={source} display final={final} />
         </Suspense>
       );
@@ -99,8 +112,8 @@ function PreBlock({ children }: { children?: ReactNode }) {
     const kind = /\blanguage-(graph|mol|abc|quiz|document|slides)\b/.exec(className)?.[1];
     if (kind === 'graph' || kind === 'mol' || kind === 'abc') {
       return (
-        <Suspense fallback={<BlockFallback />}>
-          <BlockView kind={kind} source={source} final={final} />
+        <Suspense fallback={<BlockFallback size={BLOCK_SIZE[kind]} />}>
+          <BlockView kind={kind} source={source} final={final} size={BLOCK_SIZE[kind]} />
         </Suspense>
       );
     }

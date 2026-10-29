@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, waitFor } from '@testing-library/react';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { Markdown } from './screens/chat/Markdown';
+import { BLOCK_SIZE, Markdown } from './screens/chat/Markdown';
 
 beforeAll(async () => {
   // Die Blöcke sind nachgeladene Pakete; in Tests vorab laden, damit sie nicht an der Wartezeit scheitern.
@@ -117,6 +117,33 @@ describe('Graph, Molekül, Noten', () => {
     // Kein gezeichnetes SVG (das Symbol des Kopierknopfs ist kein Teil des Blocks)
     expect(container.querySelector('.pg-svg, pre svg')).toBeNull();
     expect(getAllByRole('button', { name: 'Code kopieren' })).toHaveLength(2);
+  });
+});
+
+describe('Größe vor dem Zeichnen', () => {
+  // Der Platz steht schon im Platzhalter fest: Das fertige Bild muss dieselben Größenklassen tragen, sonst
+  // springt der Text (CSS-Größen sind in jsdom nicht messbar, deshalb hier die Klassen; die Messung im Browser
+  // liegt in den Belegen).
+  it('gibt dem Graphen das Seitenverhältnis 3 : 2 schon im Platzhalter', async () => {
+    const { container } = show('```graph\n{"functions":["x^2-4"],"x":[-4,4],"y":[-6,6]}\n```');
+    expect(BLOCK_SIZE.graph).toContain('aspect-3/2');
+    expect(container.querySelector('[aria-busy="true"]')?.className).toContain(BLOCK_SIZE.graph);
+    await waitFor(() => expect(container.querySelector('svg.pg-graph')).not.toBeNull());
+    expect(container.querySelector('figure.pg-graph')?.className).toContain(BLOCK_SIZE.graph);
+  });
+
+  it('hält das Molekül auf 125 Pixeln Höhe, vor und nach dem Zeichnen', async () => {
+    const { container } = show('```mol\nH2O\n```');
+    expect(BLOCK_SIZE.mol).toContain('h-[125px]');
+    expect(container.querySelector('[aria-busy="true"]')?.className).toContain('h-[125px]');
+    await waitFor(() => expect(container.querySelector('svg.pg-mol')).not.toBeNull());
+    expect(container.querySelector('figure.pg-mol')?.className).toContain('h-[125px]');
+  });
+
+  it('gibt den Noten das Seitenverhältnis der Zeichnung schon im Platzhalter', () => {
+    const { container } = show('```abc\nX:1\nM:4/4\nL:1/8\nK:C\nCDEF GABc|c2 B2 A2 G2|\n```');
+    expect(BLOCK_SIZE.abc).toContain('aspect-[710/107.31]');
+    expect(container.querySelector('[aria-busy="true"]')?.className).toContain(BLOCK_SIZE.abc);
   });
 });
 
