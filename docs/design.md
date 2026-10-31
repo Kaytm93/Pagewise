@@ -1,6 +1,6 @@
 # Gestaltung
 
-Stand: 26. Oktober 2026 (D-043, D-045, D-058, D-073).
+Stand: 31. Oktober 2026 (D-043, D-045, D-058, D-073, D-074).
 
 ## Designrichtungen (D-045)
 
@@ -19,6 +19,14 @@ Die drei Mockups (A „Lagen“, B „Atelier“, C „Raum“) wurden mit dem B
 - **Bewegung:** neue Ausnahme für Bedienelemente, siehe unten (`--t-color`).
 - **Nachgetragen (25. Oktober, später):** feste Fußzeile (`ModalFooter`) auch in `ProviderDialog` und im Umbenennen-Dialog des Chats; Linienmotiv neben der Eingabe auf der Atelier-Startseite (`screens/atelier/StartMotif.tsx`, ab 820 px Breite); Kopfzeile je Antwort in Atelier (`screens/atelier/BotHead.tsx`: Zeichen in Fachfarbe, Name, Modell, Zustand; rein optisch, `aria-hidden`).
 - **Offen:** Befehlsleiste, Zahlen für Chats und Hefteinträge im Atelier-Ledger (keine Daten ohne neue Abfrage), Zähler an den Lagen-Reitern.
+
+## Entscheidungen vom 31. Oktober 2026 (D-074)
+
+- **Bewegung:** Es bleibt bei der Ausnahme aus D-058 (siehe „Bewegung und Effektstufen“): kurze Farb-, Rand- und Schattenwechsel nur an Bedienelementen, `transition` mit `var(--t-color)`. Flächen bewegen sich nur per `transform` und `opacity`. Die Übergänge werden nicht auf Überblendungen umgebaut.
+- **Editor-Kopf:** Die Marke „Oberkante des Textfelds unter der halben Bildschirmhöhe“ gilt nicht. Titel, 44-px-Aktionszeile und Hülle belegen zusammen 270 bis 290 px. Verbindlich ist: Mindestens eine Zeile des Textfelds ist ohne Scrollen sichtbar.
+- **Atelier, Eingabezeile im Chat:** Gewollt als eigene Fläche mit runden unteren Ecken auf dem durchsichtigen Blatt. Heute ist sie eine Glasfläche (D-070).
+- **Mac-Hülle:** `apps/desktop/src/shell/shell.css` hat eine eigene Palette und folgt nur dem System, nicht der Darstellung in der App. Im Dunkelmodus weicht sie bewusst leicht von `tokens.css` ab (Text `#f2efe9` statt `#ece9e3`, Gedimmt `#b3afa7` statt `#a3a09a`). Alle Kontraste der Hülle liegen bei 5,29 bis 15,33 : 1, die Fensterfarbe entspricht `shell.css`.
+- **Quiz:** Bleibt in Hefteinträgen interaktiv. Der Antwortschlüssel soll für Schülerinnen und Schüler verborgen werden; die Umsetzung ist offen (M10-T009, siehe D-059 und D-074).
 
 ## Lagen (D-043)
 
