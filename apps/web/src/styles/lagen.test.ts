@@ -59,3 +59,71 @@ describe('lagen.css: Deko-Schiefe ist eingeklemmt (M4-T035)', () => {
     }
   });
 });
+
+/*
+ * Kopf der schmalen Breite in „Lagen“ (D-076, Befund B-18): in Ruhe ohne Fläche, nach wenigen Pixeln Scrollen
+ * deckend im Ton des bisherigen Bandes. Den Zustand setzt `ui/scrolled.ts` als Attribut `data-scrolled`.
+ * Die Basisregel `.lg-mobilkopf` (var(--desk)) bleibt für Raum und Atelier, die darauf aufbauen.
+ */
+describe('lagen.css: Kopf der schmalen Breite bekommt die Fläche erst beim Scrollen (D-076)', () => {
+  const kopf = ':root[data-design="lagen"] .lg-mobilkopf';
+  const flaeche = `${kopf}::before`;
+  const gescrollt = `${kopf}[data-scrolled]::before`;
+
+  it('lässt den Kopf in Lagen in Ruhe ohne Fläche, Rand und Schatten', () => {
+    const body = regelBlock(lagen, kopf) ?? '';
+    expect(body).toMatch(/background-color:\s*transparent\b/);
+    expect(body).toMatch(/border:\s*0\b/);
+    expect(body).toMatch(/box-shadow:\s*none\b/);
+  });
+
+  it('legt die Fläche als Ebene hinter den Inhalt des Kopfes, in Ruhe unsichtbar', () => {
+    const body = regelBlock(lagen, flaeche) ?? '';
+    expect(body).toContain('content: ""');
+    expect(body).toMatch(/position:\s*absolute\b/);
+    expect(body).toMatch(/inset:\s*0\b/);
+    expect(body).toMatch(/z-index:\s*-1\b/);
+    expect(body).toContain('background-color: var(--desk)');
+    expect(body).toMatch(/opacity:\s*0\b/);
+    expect(body).toMatch(/pointer-events:\s*none\b/);
+  });
+
+  it('macht die Fläche mit data-scrolled deckend', () => {
+    const body = regelBlock(lagen, gescrollt) ?? '';
+    expect(body).toMatch(/opacity:\s*1\b/);
+  });
+
+  it('animiert die Fläche nur über opacity, mit --t-color (0 ms bei „Reduziert“ und „Aus“)', () => {
+    const body = regelBlock(lagen, flaeche) ?? '';
+    const transitions = [...body.matchAll(/transition:\s*([^;]+);/g)].map((match) =>
+      match[1]?.trim(),
+    );
+    expect(transitions).toEqual(['opacity var(--t-color)']);
+    expect(body).not.toMatch(/\b\d+(\.\d+)?m?s\b/);
+  });
+
+  it('nutzt für die Fläche nur Tokens, keine festen Farben', () => {
+    for (const selector of [kopf, flaeche, gescrollt]) {
+      expect(regelBlock(lagen, selector) ?? '').not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
+    }
+  });
+
+  it('behält die Basisfläche var(--desk) für Raum und Atelier, die darauf aufbauen', () => {
+    expect(regelBlock(lagen, '.lg-mobilkopf')).toContain('background-color: var(--desk)');
+  });
+
+  it('gilt nur in Lagen: Raum und Atelier kennen weder das Attribut noch die Ebene', () => {
+    for (const file of ['raum.css', 'atelier.css']) {
+      const css = readFileSync(join(dir, file), 'utf8');
+      expect(css, `${file} nennt data-scrolled`).not.toContain('data-scrolled');
+      expect(css, `${file} setzt .lg-mobilkopf::before`).not.toMatch(/\.lg-mobilkopf::before/);
+    }
+  });
+
+  it('wird in der AppShell am Kopf gestartet, der die Klasse lg-mobilkopf trägt', () => {
+    const shell = readFileSync(join(dir, '../shell/AppShell.tsx'), 'utf8');
+    expect(shell).toContain("import { startScrolledState } from '../ui/scrolled'");
+    expect(shell).toContain("querySelector<HTMLElement>('.lg-mobilkopf')");
+    expect(shell).toContain('startScrolledState(header)');
+  });
+});

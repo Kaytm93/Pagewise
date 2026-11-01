@@ -13,6 +13,7 @@ import { SubjectPage } from '../screens/SubjectPage';
 import { startParallax } from '../ui/parallax';
 import { usePointerGlow } from '../ui/pointer-glow';
 import { Sheet } from '../ui/Sheet';
+import { startScrolledState } from '../ui/scrolled';
 import { subjectColorAttr } from '../ui/subject-color';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { Drawer } from './Drawer';
@@ -158,6 +159,13 @@ function Shell() {
   }, [key, depth, dir]);
 
   useEffect(() => (app.current ? startParallax(app.current) : undefined), []);
+  // `data-scrolled` am Kopf der schmalen Breite (Klasse lg-mobilkopf): Lagen und später Atelier legen ihre Fläche erst
+  // darunter, wenn die Seite gescrollt ist (D-076). Der Kopf wird über seine Klasse gefunden, damit sein Markup
+  // (eine Zeile mit Klassen, vom Strukturtest gelesen) unverändert bleibt.
+  useEffect(() => {
+    const header = app.current?.querySelector<HTMLElement>('.lg-mobilkopf');
+    return header ? startScrolledState(header) : undefined;
+  }, []);
   usePointerGlow();
 
   useEffect(() => {

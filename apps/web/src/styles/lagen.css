@@ -90,12 +90,38 @@
   }
 
   /* ===== Kopfzeile der schmalen Breite (AppShell, md:hidden, D-076) =====
-     Basisregel: die Fläche des Schreibtischs, wie bisher (vorher die Utility bg-desk). Die Positionierung
-     (sticky unter dem Verbindungsbanner, `--cb-h`) und die Sicherheitsränder stehen als Utilities im Markup.
-     Raum überstimmt die Fläche mit dem Raumton und einer eingravierten Doppellinie (raum.css), Atelier mit Glas
-     (atelier.css, Regel auf header.sticky.md:hidden). Lagen: Fläche erst beim Scrollen folgt (D-076, offen). */
+     Basisregel: die Fläche des Schreibtischs (vorher die Utility bg-desk). Sie dient den Richtungen, die darauf
+     aufbauen: Raum überstimmt sie mit dem Raumton und einer eingravierten Doppellinie (raum.css), Atelier mit Glas
+     (atelier.css, Regel auf header.sticky.md:hidden). Die Positionierung (sticky unter dem Verbindungsbanner,
+     `--cb-h`) und die Sicherheitsränder stehen als Utilities im Markup. */
   .lg-mobilkopf {
     background-color: var(--desk);
+  }
+
+  /* Lagen: in Ruhe ohne Fläche und ohne Rand, der Kopf liegt auf dem Schreibtisch. Nach wenigen Pixeln Scrollen
+     setzt ui/scrolled.ts `data-scrolled` an den Kopf; dann liegt die deckende Fläche im Ton des bisherigen Bandes
+     (var(--desk)) hinter Menüknopf und Wortmarke, damit der Text nicht durch beide läuft. Die Fläche ist eine
+     Ebene (::before) hinter dem Inhalt des Kopfes (der Kopf ist sticky mit z-index, also ein eigener
+     Stapelkontext) und blendet nur über opacity ein (140 ms bei „Voll“, sonst 0, D-058/D-074). */
+  :root[data-design="lagen"] .lg-mobilkopf {
+    background-color: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  :root[data-design="lagen"] .lg-mobilkopf::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-color: var(--desk);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--t-color);
+  }
+
+  :root[data-design="lagen"] .lg-mobilkopf[data-scrolled]::before {
+    opacity: 1;
   }
 
   /* ===== Heftrücken (Seitenleiste) ===== */
