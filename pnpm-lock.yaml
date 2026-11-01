@@ -104,6 +104,9 @@ importers:
       '@pagewise/render':
         specifier: workspace:*
         version: link:../../packages/render
+      fflate:
+        specifier: 0.8.3
+        version: 0.8.3
       jspdf:
         specifier: 4.2.1
         version: 4.2.1

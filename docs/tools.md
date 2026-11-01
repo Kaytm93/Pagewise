@@ -1,6 +1,6 @@
 # Werkzeuge der KI (Tool Calling)
 
-Stand: 26. Oktober 2026 (D-044, D-067, D-068). Chat-Modelle können kleine Werkzeuge aufrufen. Heute: `get_timetable` und `get_exams` (Stundenplan und Tests, nur lesend), `web_search` (Websuche, eigener Schalter, standardmäßig aus, siehe unten) sowie `create_document` und `create_presentation` (Dateien, siehe unten, D-074). Das Register ist allgemein gebaut, der Agent-Modus für API-Modelle (Phase 3) nutzt es wieder.
+Stand: 26. Oktober 2026 (D-044, D-067, D-068). Chat-Modelle können kleine Werkzeuge aufrufen. Heute: `get_timetable` und `get_exams` (Stundenplan und Tests, nur lesend), `web_search` (Websuche, eigener Schalter, standardmäßig aus, siehe unten) sowie `create_document`, `create_presentation` und `create_spreadsheet` (Dateien, siehe unten, D-074 und D-077). Das Register ist allgemein gebaut, der Agent-Modus für API-Modelle (Phase 3) nutzt es wieder.
 
 ## Wann ein Modell Werkzeuge bekommt
 
@@ -25,9 +25,9 @@ Das Modell bekommt die Werkzeuge im Format der Schnittstelle (`tools`) und einen
 - Weder Argumente noch Ergebnisse stehen in Logs, Fehlermeldungen oder der Datenbank. Gespeichert wird nur Name, kurzes Ziel (`target`, zum Beispiel ein Wochentag) und Zustand.
 - Freitext aus Ergebnissen (Notizen, Themen) ist Fremdtext: Er steht als JSON-String in den Daten und löst nichts aus.
 
-## Dateien (`create_document`, `create_presentation`, D-074)
+## Dateien (`create_document`, `create_presentation`, `create_spreadsheet`, D-074, D-077)
 
-- **Wofür:** Das Modell legt ein Dokument (PDF) oder eine Präsentation (PowerPoint) an, wenn die Person danach fragt. Die Argumente sind dieselbe Spezifikation wie bei den Blöcken `document` und `slides` im Chat.
+- **Wofür:** Das Modell legt ein Dokument (PDF oder Word), eine Präsentation (PowerPoint) oder eine Tabelle (Excel oder CSV, ohne Formeln) an, wenn die Person danach fragt. Die Argumente sind dieselbe Spezifikation wie bei den Blöcken `document` und `slides` im Chat.
 - **Ablauf:** Der Server prüft die Spezifikation, speichert sie (Tabelle `artifacts`) und meldet dem Modell nur Kennung und Titel, bei einem Fehler nur einen Code (`unsupported_text: U+0394`). Unter der Antwort erscheinen Vorschau und Download; die Datei entsteht erst dort im Gerät.
 - **Freigabe:** Schalter „KI darf Dateien erstellen“ (Einstellungen, Voreinstellung an), Freigabe des Anbieters und das Flag „Werkzeuge“ am Modell. Der Schalter ist unabhängig von „Stundenplan und Tests“.
 - **Abbildungen (D-075):** In Dokumenten gibt es `table`, `graph`, `molecule` und `notes`, auf Folien ein `figure`. Das Modell beschreibt sie (Funktionen, Summenformel oder SMILES, ABC-Notation), die App zeichnet sie; SMILES und Noten werden schon im Werkzeug geprüft, damit ein Fehler im selben Zug zurückkommt.

@@ -331,6 +331,7 @@ export const de = {
     quiz: 'Quiz',
     document: 'Dokument',
     slides: 'Präsentation',
+    sheet: 'Tabelle',
     errorTitle: '{kind} konnte nicht gezeichnet werden.',
     errors: {
       empty: 'Der Block ist leer.',
@@ -351,6 +352,8 @@ export const de = {
         'Der Aufbau des Dokuments passt nicht: Titel, Abschnitte und Texte müssen stimmen.',
       invalid_slides:
         'Der Aufbau der Präsentation passt nicht: Titel, Folien, Stichpunkte und Absätze müssen stimmen.',
+      invalid_sheet:
+        'Der Aufbau der Tabelle passt nicht: Blattnamen, Kopfzeile, Zeilen und Zellen müssen stimmen.',
       unsupported_text:
         'Das Dokument enthält Zeichen, die das PDF nicht darstellt. Griechische Buchstaben und andere Sonderzeichen bitte als Wort schreiben, zum Beispiel „Delta“ statt Δ.',
       render_failed: 'Das Zeichnen ist fehlgeschlagen.',
@@ -376,8 +379,17 @@ export const de = {
     },
     documentView: {
       download: 'Als PDF herunterladen',
+      downloadDocx: 'Als Word herunterladen',
       making: 'PDF wird erstellt …',
       failed: 'Das PDF konnte nicht erstellt werden. Versuche es noch einmal.',
+    },
+    sheetView: {
+      downloadXlsx: 'Als Excel herunterladen',
+      downloadCsv: 'Als CSV herunterladen',
+      making: 'Datei wird erstellt …',
+      failed: 'Die Datei konnte nicht erstellt werden. Versuche es noch einmal.',
+      moreRows: '… und {count} weitere Zeilen',
+      sheetOf: 'Blatt {name}',
     },
     slidesView: {
       slideOf: 'Folie {n} von {total}',
@@ -673,6 +685,7 @@ export const de = {
       web_search: 'Websuche',
       create_document: 'Dokument erstellt',
       create_presentation: 'Präsentation erstellt',
+      create_spreadsheet: 'Tabelle erstellt',
     },
     artifacts: {
       label: 'Dateien dieser Antwort',

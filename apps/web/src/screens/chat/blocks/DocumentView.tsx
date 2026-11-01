@@ -31,12 +31,17 @@ function Document({ spec }: { spec: DocumentSpec }) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  const download = async () => {
+  const download = async (format: 'pdf' | 'docx') => {
     setBusy(true);
     setFailed(false);
     try {
-      const blob = await buildPdf(spec);
-      saveBlob(blob, fileName(spec.title, 'pdf'));
+      if (format === 'pdf') {
+        saveBlob(await buildPdf(spec), fileName(spec.title, 'pdf'));
+      } else {
+        // Word wird erst beim Klicken geladen, wie das PDF.
+        const { buildDocx } = await import('./docx');
+        saveBlob(await buildDocx(spec), fileName(spec.title, 'docx'));
+      }
     } catch {
       setFailed(true);
     } finally {
@@ -128,8 +133,11 @@ function Document({ spec }: { spec: DocumentSpec }) {
         })}
       </article>
       <figcaption className="mt-3 flex flex-wrap items-center gap-3">
-        <Button variant="secondary" busy={busy} onClick={() => void download()}>
+        <Button variant="secondary" busy={busy} onClick={() => void download('pdf')}>
           {busy ? m.blocks.documentView.making : m.blocks.documentView.download}
+        </Button>
+        <Button variant="ghost" disabled={busy} onClick={() => void download('docx')}>
+          {m.blocks.documentView.downloadDocx}
         </Button>
         {failed && (
           <span role="status" className="text-sm text-danger">

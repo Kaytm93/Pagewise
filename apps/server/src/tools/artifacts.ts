@@ -1,5 +1,6 @@
 import type { RenderError, Result } from '@pagewise/render';
 import { parseDocumentSpec } from '@pagewise/render/document';
+import { parseSheetSpec } from '@pagewise/render/sheet';
 import { parseSlidesSpec } from '@pagewise/render/slides';
 import { validateDocumentFigures, validateSlidesFigures } from '@pagewise/render/validate';
 import { z } from 'zod';
@@ -176,4 +177,46 @@ export const createPresentation: ToolDefinition<SpecArgs> = {
   target: titleOf,
   available,
   run: (args, context) => store('slides', args, context, parseSlidesSpec, validateSlidesFigures),
+};
+
+export const createSpreadsheet: ToolDefinition<SpecArgs> = {
+  name: 'create_spreadsheet',
+  description:
+    'Legt eine Tabellendatei an, die die Person als Excel (XLSX) oder CSV herunterladen kann (Notenliste, Vokabeltabelle, Messwerte). Nutze es nur, wenn die Person eine Tabelle als Datei möchte. Zellen sind Text oder Zahlen; Formeln gibt es nicht, rechne selbst.',
+  parameters: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'Titel der Datei (bis 120 Zeichen).' },
+      sheets: {
+        type: 'array',
+        description: 'Blätter (höchstens 5).',
+        items: {
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string',
+              description: 'Name des Blatts (bis 31 Zeichen, ohne [ ] : * ? / \\).',
+            },
+            header: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Kopfzeile (gleich viele Zellen wie jede Zeile).',
+            },
+            rows: {
+              type: 'array',
+              description: 'Zeilen (höchstens 200 mit je höchstens 12 Zellen).',
+              items: { type: 'array', items: { type: ['string', 'number'] } },
+            },
+          },
+          required: ['name', 'rows'],
+        },
+      },
+    },
+    required: ['title', 'sheets'],
+  },
+  schema: Spec,
+  maxArgumentCharacters: MAX_FILE_ARGUMENT_CHARACTERS,
+  target: titleOf,
+  available,
+  run: (args, context) => store('sheet', args, context, parseSheetSpec, async () => null),
 };

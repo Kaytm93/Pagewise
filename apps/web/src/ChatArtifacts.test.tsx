@@ -43,6 +43,7 @@ beforeAll(async () => {
   await import('./screens/chat/ChatPage');
   await import('./screens/chat/blocks/DocumentView');
   await import('./screens/chat/blocks/SlidesView');
+  await import('./screens/chat/blocks/SheetView');
 }, 30_000);
 beforeEach(() => window.history.replaceState(null, '', '/'));
 afterEach(() => window.history.replaceState(null, '', '/'));
@@ -86,6 +87,44 @@ describe('Chat: vom Modell angelegte Dateien', () => {
     expect(
       await screen.findByRole('button', { name: 'Als PowerPoint herunterladen' }),
     ).toBeTruthy();
+  });
+
+  it('zeigt eine Tabellendatei mit Excel- und CSV-Knopf', async () => {
+    const { server, subject, chat } = setup();
+    const sheet = {
+      title: 'Beispiel-Noten',
+      sheets: [{ name: 'Tabelle1', header: ['Name', 'Punkte'], rows: [['Beispiel A', 12.5]] }],
+    };
+    server.artifacts.set('t1', {
+      id: 't1',
+      kind: 'sheet',
+      title: sheet.title,
+      version: 1,
+      spec: JSON.stringify(sheet),
+    });
+    server.addMessage(chat.id, 'assistant', 'Die Tabelle steht bereit.', {
+      artifacts: [{ id: 't1', kind: 'sheet', title: sheet.title, version: 1 }],
+    });
+    open(server, chatPath(subject.id, chat.id));
+    expect(await screen.findByRole('button', { name: 'Als Excel herunterladen' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Als CSV herunterladen' })).toBeTruthy();
+    expect(screen.getByText('Beispiel A')).toBeTruthy();
+  });
+
+  it('bietet beim Dokument auch Word an', async () => {
+    const { server, subject, chat } = setup();
+    server.artifacts.set('d2', {
+      id: 'd2',
+      kind: 'document',
+      title: DOCUMENT.title,
+      version: 1,
+      spec: JSON.stringify(DOCUMENT),
+    });
+    server.addMessage(chat.id, 'assistant', 'Hier.', {
+      artifacts: [{ id: 'd2', kind: 'document', title: DOCUMENT.title, version: 1 }],
+    });
+    open(server, chatPath(subject.id, chat.id));
+    expect(await screen.findByRole('button', { name: 'Als Word herunterladen' })).toBeTruthy();
   });
 
   it('meldet, wenn die Datei nicht geladen werden kann', async () => {

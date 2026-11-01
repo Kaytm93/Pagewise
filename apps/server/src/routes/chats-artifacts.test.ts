@@ -180,7 +180,11 @@ describe('Chats mit Datei-Werkzeugen (Dokument, Präsentation)', () => {
   it('bietet Stundenplan-Werkzeuge nicht an, wenn nur dieser Schalter aus ist', async () => {
     await session.call('PUT', '/api/tool-settings', { enabled: false });
     await ask('Hallo');
-    expect(toolNames(requests[0])).toEqual(['create_document', 'create_presentation']);
+    expect(toolNames(requests[0])).toEqual([
+      'create_document',
+      'create_presentation',
+      'create_spreadsheet',
+    ]);
   });
 
   it('begrenzt die Dateien je Antwort', async () => {
@@ -269,5 +273,40 @@ describe('Chats mit Datei-Werkzeugen (Dokument, Präsentation)', () => {
     const { events } = await ask('Folien.');
     const message = (events.at(-1) as SseEvent).data.message as { artifacts: unknown[] };
     expect(message.artifacts).toHaveLength(1);
+  });
+
+  it('legt eine Tabellendatei an und lehnt Formeln als Formeln ab (bleiben Text)', async () => {
+    const sheet = {
+      title: 'Beispiel-Noten',
+      sheets: [
+        {
+          name: 'Tabelle1',
+          header: ['Name', 'Punkte'],
+          rows: [
+            ['Beispiel A', 12.5],
+            ['=1+1', 3],
+          ],
+        },
+      ],
+    };
+    scripts.push(
+      () => toolCall('call_1', 'create_spreadsheet', JSON.stringify(sheet)),
+      () => text('Die Tabelle steht bereit.'),
+    );
+    const { events } = await ask('Tabelle bitte.');
+    const message = (events.at(-1) as SseEvent).data.message as { artifacts: { kind: string }[] };
+    expect(message.artifacts.map((a) => a.kind)).toEqual(['sheet']);
+  });
+
+  it('meldet einen falschen Blattnamen als Code', async () => {
+    const sheet = { title: 'T', sheets: [{ name: 'A/B', rows: [['x']] }] };
+    scripts.push(
+      () => toolCall('call_1', 'create_spreadsheet', JSON.stringify(sheet)),
+      () => text('Korrigiert.'),
+    );
+    await ask('Tabelle.');
+    expect(JSON.parse(requests[1]?.messages.at(-1)?.content ?? '{}').error).toBe(
+      'invalid_sheet: name',
+    );
   });
 });

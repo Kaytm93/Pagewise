@@ -1,4 +1,4 @@
-import { createDocument, createPresentation } from './artifacts';
+import { createDocument, createPresentation, createSpreadsheet } from './artifacts';
 import { getExams, getTimetable } from './planner';
 import { ToolRegistry } from './registry';
 import { webSearch } from './web-search';
@@ -18,7 +18,8 @@ export function createToolRegistry(): ToolRegistry {
     .register(getExams)
     .register(webSearch)
     .register(createDocument)
-    .register(createPresentation);
+    .register(createPresentation)
+    .register(createSpreadsheet);
 }
 
 export { WEEKDAY_NAMES } from './planner';

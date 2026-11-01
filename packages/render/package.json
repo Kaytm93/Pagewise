@@ -18,6 +18,7 @@
     "./smiles-dom": "./src/smiles-dom.ts",
     "./sanitize": "./src/sanitize.ts",
     "./slides": "./src/slides.ts",
+    "./sheet": "./src/sheet.ts",
     "./quiz": "./src/quiz.ts",
     "./validate": "./src/validate.ts"
   },

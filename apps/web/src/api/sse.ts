@@ -107,7 +107,7 @@ function asAssets(value: unknown): ChatAsset[] {
   });
 }
 
-const ARTIFACT_KINDS = ['document', 'slides'];
+const ARTIFACT_KINDS = ['document', 'slides', 'sheet'];
 
 function asArtifacts(value: unknown): ChatArtifact[] {
   if (!Array.isArray(value)) return [];

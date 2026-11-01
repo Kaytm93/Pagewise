@@ -232,7 +232,7 @@ export interface ChatAsset {
 /** Eine Datei, die das Modell über ein Werkzeug angelegt hat. Die Spezifikation holt `api.artifact(id)`. */
 export interface ChatArtifact {
   id: string;
-  kind: 'document' | 'slides';
+  kind: 'document' | 'slides' | 'sheet';
   title: string;
   version: number;
 }

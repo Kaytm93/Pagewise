@@ -12,6 +12,7 @@ const MODEL_TOOLS = new Set([
   'web_search',
   'create_document',
   'create_presentation',
+  'create_spreadsheet',
 ]);
 
 export const isModelTool = (entry: ActivityEntry): boolean => MODEL_TOOLS.has(entry.tool);

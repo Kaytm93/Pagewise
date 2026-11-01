@@ -196,6 +196,7 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
       'get_exams',
       'create_document',
       'create_presentation',
+      'create_spreadsheet',
     ]);
     const system = requests[0]?.messages[0];
     expect(system?.role).toBe('system');
@@ -442,6 +443,7 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
         'get_exams',
         'create_document',
         'create_presentation',
+        'create_spreadsheet',
       ]);
       expect(last(events).event).toBe('done');
     });
@@ -572,6 +574,7 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
         'web_search',
         'create_document',
         'create_presentation',
+        'create_spreadsheet',
       ]);
       expect(requests[1]?.messages[0]?.content).toContain('web_search');
     });

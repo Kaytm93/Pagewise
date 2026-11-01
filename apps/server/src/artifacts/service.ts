@@ -8,8 +8,8 @@ import { type ArtifactRow, artifacts } from '../db/schema';
  * aus, was in einer Spezifikation steht, und liefert sie nur an die Oberfläche zurück.
  */
 
-export type ArtifactKind = 'document' | 'slides';
-export const ARTIFACT_KINDS: readonly ArtifactKind[] = ['document', 'slides'];
+export type ArtifactKind = 'document' | 'slides' | 'sheet';
+export const ARTIFACT_KINDS: readonly ArtifactKind[] = ['document', 'slides', 'sheet'];
 
 /** Höchstzahl der Dateien, die eine Antwort anlegen darf. */
 export const MAX_ARTIFACTS_PER_REPLY = 4;
