@@ -1,10 +1,12 @@
 import { parseSlidesSpec, type SlidesSpec } from '@pagewise/render/slides';
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { format, messages as m } from '../../../i18n';
 import { Button } from '../../../ui/Button';
 import { BlockError } from './BlockView';
 import { fileName, saveBlob } from './download';
 import { buildPptx } from './pptx';
+
+const BlockView = lazy(() => import('./BlockView'));
 
 /**
  * Präsentation im Chat: jede Folie als Karte im Format 16:9 (Vorschau aus Text, ohne Netz), darunter der Knopf
@@ -58,6 +60,21 @@ function Slides({ spec }: { spec: SlidesSpec }) {
                 </ul>
               )}
               {slide.text !== undefined && <p className="text-sm leading-relaxed">{slide.text}</p>}
+              {slide.figure && (
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  <Suspense fallback={<div className="h-16" />}>
+                    <BlockView
+                      kind={slide.figure.kind}
+                      source={slide.figure.source}
+                      final
+                      size="max-h-40"
+                    />
+                  </Suspense>
+                  {slide.figure.caption && (
+                    <p className="text-center text-xs text-ink-secondary">{slide.figure.caption}</p>
+                  )}
+                </div>
+              )}
             </section>
           </li>
         ))}

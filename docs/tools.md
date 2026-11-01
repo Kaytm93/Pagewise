@@ -30,6 +30,7 @@ Das Modell bekommt die Werkzeuge im Format der Schnittstelle (`tools`) und einen
 - **Wofür:** Das Modell legt ein Dokument (PDF) oder eine Präsentation (PowerPoint) an, wenn die Person danach fragt. Die Argumente sind dieselbe Spezifikation wie bei den Blöcken `document` und `slides` im Chat.
 - **Ablauf:** Der Server prüft die Spezifikation, speichert sie (Tabelle `artifacts`) und meldet dem Modell nur Kennung und Titel, bei einem Fehler nur einen Code (`unsupported_text: U+0394`). Unter der Antwort erscheinen Vorschau und Download; die Datei entsteht erst dort im Gerät.
 - **Freigabe:** Schalter „KI darf Dateien erstellen“ (Einstellungen, Voreinstellung an), Freigabe des Anbieters und das Flag „Werkzeuge“ am Modell. Der Schalter ist unabhängig von „Stundenplan und Tests“.
+- **Abbildungen (D-075):** In Dokumenten gibt es `table`, `graph`, `molecule` und `notes`, auf Folien ein `figure`. Das Modell beschreibt sie (Funktionen, Summenformel oder SMILES, ABC-Notation), die App zeichnet sie; SMILES und Noten werden schon im Werkzeug geprüft, damit ein Fehler im selben Zug zurückkommt.
 - **Grenzen:** 4 Dateien je Antwort, 100 je Chat. Die Werkzeuge schreiben nur in Pagewises eigene Tabelle, nie in Daten der Person.
 
 ## Websuche (`web_search`, D-067, D-068)

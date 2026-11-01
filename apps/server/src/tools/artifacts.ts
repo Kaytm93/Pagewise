@@ -1,6 +1,7 @@
 import type { RenderError, Result } from '@pagewise/render';
 import { parseDocumentSpec } from '@pagewise/render/document';
 import { parseSlidesSpec } from '@pagewise/render/slides';
+import { validateDocumentFigures, validateSlidesFigures } from '@pagewise/render/validate';
 import { z } from 'zod';
 import { type ArtifactKind, MAX_ARTIFACTS_PER_REPLY } from '../artifacts/service';
 import { type ToolContext, type ToolDefinition, ToolError } from './registry';
@@ -12,8 +13,8 @@ import { type ToolContext, type ToolDefinition, ToolError } from './registry';
  * Pagewises eigenen Speicher (Tabelle `artifacts`), nie in Daten der Person.
  */
 
-/** Größte Argumentzeichenfolge: die Spezifikation darf 16.384 Zeichen haben, dazu kommt Maskierung. */
-const MAX_FILE_ARGUMENT_CHARACTERS = 24_576;
+/** Größte Argumentzeichenfolge: die Spezifikation darf 24.576 Zeichen haben, dazu kommt Maskierung. */
+const MAX_FILE_ARGUMENT_CHARACTERS = 32_768;
 
 const Spec = z.record(z.string(), z.unknown());
 type SpecArgs = z.infer<typeof Spec>;
@@ -34,16 +35,20 @@ function parseError(error: RenderError): ToolError {
   return new ToolError(error.detail ? `${error.code}: ${error.detail}` : error.code);
 }
 
-function store<T extends { title: string }>(
+async function store<T extends { title: string }>(
   kind: ArtifactKind,
   args: SpecArgs,
   context: ToolContext,
   parse: (source: string) => Result<T>,
+  /** Prüft Abbildungen so tief wie das Zeichnen (SMILES, Noten); der erste Fehler zählt. */
+  deep: (spec: T) => Promise<RenderError | null>,
 ) {
   if (!context.artifacts) throw new ToolError('unavailable');
   if (context.budget.files >= MAX_ARTIFACTS_PER_REPLY) throw new ToolError('too_many_files');
   const parsed = parse(JSON.stringify(args));
   if (!parsed.ok) throw parseError(parsed.error);
+  const deepError = await deep(parsed.value);
+  if (deepError) throw parseError(deepError);
   const created = context.artifacts.create(kind, parsed.value.title, JSON.stringify(parsed.value));
   if (!created) throw new ToolError('chat_full');
   context.budget.files += 1;
@@ -56,10 +61,33 @@ function store<T extends { title: string }>(
   };
 }
 
+/** Felder einer Abbildung (Graph, Molekül, Noten); gleich für Dokumente und Folien. */
+const FIGURE_PROPERTIES = {
+  graph: {
+    type: 'object',
+    description:
+      'Funktionsgraph: {"functions":["x^2-4"],"x":[-4,4],"y":[-6,6],"points":[{"x":2,"y":0,"label":"N"}]}. Ausdrücke nur mit x, Zahlen, + - * / ^, Klammern, sin, cos, tan, sqrt, abs, ln, log, exp, pi, e.',
+  },
+  formula: {
+    type: 'string',
+    description: 'Summenformel eines Schulmoleküls, zum Beispiel H2O, CO2, CH4, NH3.',
+  },
+  smiles: {
+    type: 'string',
+    description:
+      'SMILES eines organischen Stoffs, zum Beispiel CCO. Die App zeichnet die Skelettformel.',
+  },
+  abc: {
+    type: 'string',
+    description: 'Noten in ABC-Notation mit den Zeilen X:, M:, L: und K:.',
+  },
+  caption: { type: 'string', description: 'Bildunterschrift (kurz).' },
+} as const;
+
 export const createDocument: ToolDefinition<SpecArgs> = {
   name: 'create_document',
   description:
-    'Legt ein Dokument an, das die Person als PDF herunterladen kann (Arbeitsblatt, Zusammenfassung, Lernzettel). Nutze es nur, wenn die Person eine Datei oder ein Blatt möchte. Aufbau wie der Block "document".',
+    'Legt ein Dokument an, das die Person als PDF herunterladen kann (Arbeitsblatt, Zusammenfassung, Lernzettel). Nutze es nur, wenn die Person eine Datei oder ein Blatt möchte. Abschnitte: heading, paragraph, list, table sowie Abbildungen: graph (Funktionsgraph), molecule (Strukturformel) und notes (Noten). Die App zeichnet Abbildungen selbst, erfinde keine Koordinaten.',
   parameters: {
     type: 'object',
     properties: {
@@ -70,13 +98,27 @@ export const createDocument: ToolDefinition<SpecArgs> = {
         items: {
           type: 'object',
           properties: {
-            type: { type: 'string', enum: ['heading', 'paragraph', 'list'] },
+            type: {
+              type: 'string',
+              enum: ['heading', 'paragraph', 'list', 'table', 'graph', 'molecule', 'notes'],
+            },
             text: { type: 'string', description: 'Text einer Überschrift oder eines Absatzes.' },
             items: {
               type: 'array',
               items: { type: 'string' },
               description: 'Punkte einer Liste (höchstens 30).',
             },
+            header: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Kopfzeile einer Tabelle (gleich viele Zellen wie jede Zeile).',
+            },
+            rows: {
+              type: 'array',
+              items: { type: 'array', items: { type: 'string' } },
+              description: 'Zeilen einer Tabelle (höchstens 30 Zeilen mit je höchstens 6 Zellen).',
+            },
+            ...FIGURE_PROPERTIES,
           },
           required: ['type'],
         },
@@ -88,13 +130,14 @@ export const createDocument: ToolDefinition<SpecArgs> = {
   maxArgumentCharacters: MAX_FILE_ARGUMENT_CHARACTERS,
   target: titleOf,
   available,
-  run: (args, context) => store('document', args, context, parseDocumentSpec),
+  run: (args, context) =>
+    store('document', args, context, parseDocumentSpec, validateDocumentFigures),
 };
 
 export const createPresentation: ToolDefinition<SpecArgs> = {
   name: 'create_presentation',
   description:
-    'Legt eine Präsentation an, die die Person als PowerPoint herunterladen kann (Referat, Vortrag). Nutze es nur, wenn die Person Folien möchte. Aufbau wie der Block "slides".',
+    'Legt eine Präsentation an, die die Person als PowerPoint herunterladen kann (Referat, Vortrag). Nutze es nur, wenn die Person Folien möchte. Eine Folie hat Titel, Stichpunkte, einen Absatz und höchstens eine Abbildung (figure): Funktionsgraph, Strukturformel oder Noten. Die App zeichnet Abbildungen selbst, erfinde keine Koordinaten.',
   parameters: {
     type: 'object',
     properties: {
@@ -112,6 +155,15 @@ export const createPresentation: ToolDefinition<SpecArgs> = {
               description: 'Stichpunkte (höchstens 6, je 120 Zeichen).',
             },
             text: { type: 'string', description: 'Ein kurzer Absatz (bis 500 Zeichen).' },
+            figure: {
+              type: 'object',
+              description: 'Eine Abbildung für diese Folie.',
+              properties: {
+                type: { type: 'string', enum: ['graph', 'molecule', 'notes'] },
+                ...FIGURE_PROPERTIES,
+              },
+              required: ['type'],
+            },
           },
           required: ['title'],
         },
@@ -123,5 +175,5 @@ export const createPresentation: ToolDefinition<SpecArgs> = {
   maxArgumentCharacters: MAX_FILE_ARGUMENT_CHARACTERS,
   target: titleOf,
   available,
-  run: (args, context) => store('slides', args, context, parseSlidesSpec),
+  run: (args, context) => store('slides', args, context, parseSlidesSpec, validateSlidesFigures),
 };

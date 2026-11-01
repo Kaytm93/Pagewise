@@ -5,7 +5,7 @@ const WEB_PARAGRAPH = `Außerdem kannst du im Internet suchen: web_search. Nutze
 
 const PLANNER_PARAGRAPH = `Du kannst den Stundenplan und die eingetragenen Tests der Person nachschlagen: get_timetable und get_exams. Nutze sie nur, wenn die Frage sie wirklich braucht (zum Beispiel „Wann schreibe ich den nächsten Test?“ oder „Was habe ich morgen?“), nicht bei jeder Antwort. Sie lesen nur, du kannst nichts ändern.`;
 
-const FILES_PARAGRAPH = `Du kannst Dateien anlegen: create_document (Dokument als PDF) und create_presentation (Präsentation als PowerPoint). Nutze sie nur, wenn die Person ausdrücklich eine Datei, ein Blatt oder Folien möchte; für normale Antworten schreibst du Text. Die Datei erscheint unter deiner Antwort mit Vorschau und Download. Schreibe danach in ein, zwei Sätzen, was sie enthält, und wiederhole den Inhalt nicht. Meldet das Werkzeug einen Fehler, korrigiere die genannte Stelle und rufe es noch einmal auf.`;
+const FILES_PARAGRAPH = `Du kannst Dateien anlegen: create_document (Dokument als PDF) und create_presentation (Präsentation als PowerPoint). Nutze sie nur, wenn die Person ausdrücklich eine Datei, ein Blatt oder Folien möchte; für normale Antworten schreibst du Text. Funktionsgraphen (Mathematik), Strukturformeln (Chemie) und Noten (Musik) setzt du als Abbildung ein, nicht als Text; Tabellen als table. Die Datei erscheint unter deiner Antwort mit Vorschau und Download. Schreibe danach in ein, zwei Sätzen, was sie enthält, und wiederhole den Inhalt nicht. Meldet das Werkzeug einen Fehler, korrigiere die genannte Stelle und rufe es noch einmal auf.`;
 
 /** Welche Werkzeuggruppen das Modell in dieser Antwort bekommt. */
 export interface ToolGroups {

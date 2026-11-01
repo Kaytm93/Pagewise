@@ -86,8 +86,8 @@ const MAX_REPLY_CHARACTERS = 200_000;
 const MAX_ERROR_BODY_BYTES = 4096;
 const MAX_TOOL_CALLS = 8;
 // Dateien (Dokument, Präsentation) kommen als Argumente eines Werkzeugs; die Obergrenze der Spezifikation
-// liegt bei 16.384 Zeichen, mit Maskierung im JSON braucht sie mehr Platz.
-const MAX_TOOL_ARGUMENT_CHARACTERS = 32_768;
+// liegt bei 24.576 Zeichen, mit Maskierung im JSON braucht sie mehr Platz.
+const MAX_TOOL_ARGUMENT_CHARACTERS = 40_960;
 const TOOL_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 
 type Json = unknown;

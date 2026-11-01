@@ -1,10 +1,10 @@
 import { type Block, extractBlocks } from './blocks';
-import { validateDocument } from './document';
+import { type DocumentSpec, validateDocument } from './document';
 import { type BlockIssue, RenderError } from './errors';
 import { validateGraph } from './graph';
 import { parseMolSpec, validateFormulaSpec } from './mol';
 import { validateQuiz } from './quiz';
-import { validateSlides } from './slides';
+import { type SlidesSpec, validateSlides } from './slides';
 
 function issue(
   block: Block,
@@ -18,6 +18,48 @@ function issue(
     ...(error.detail !== undefined && { detail: error.detail }),
     severity,
   };
+}
+
+/**
+ * Prüft den Quelltext einer Abbildung (Graph, Molekül, Noten) so tief wie das Zeichnen: Die schweren Bibliotheken
+ * (SmilesDrawer, abcjs) werden erst geladen, wenn die Art vorkommt. `null`, wenn sich die Abbildung zeichnen lässt.
+ */
+export async function validateFigureSource(
+  kind: 'graph' | 'mol' | 'abc',
+  source: string,
+): Promise<RenderError | null> {
+  if (kind === 'graph') return validateGraph(source);
+  if (kind === 'mol') {
+    const spec = parseMolSpec(source);
+    if (!spec.ok) return spec.error;
+    if (spec.value.kind === 'smiles') {
+      const { validateSmiles } = await import('./smiles');
+      return validateSmiles(spec.value.value);
+    }
+    return validateFormulaSpec(spec.value);
+  }
+  const { checkAbc } = await import('./abc');
+  return checkAbc(source).error;
+}
+
+/** Prüft alle Abbildungen eines Dokuments tief. Der erste Fehler zählt; `null`, wenn alle sich zeichnen lassen. */
+export async function validateDocumentFigures(spec: DocumentSpec): Promise<RenderError | null> {
+  for (const part of spec.parts) {
+    if (part.type !== 'figure') continue;
+    const error = await validateFigureSource(part.kind, part.source);
+    if (error) return error;
+  }
+  return null;
+}
+
+/** Prüft alle Abbildungen einer Präsentation tief. */
+export async function validateSlidesFigures(spec: SlidesSpec): Promise<RenderError | null> {
+  for (const slide of spec.slides) {
+    if (!slide.figure) continue;
+    const error = await validateFigureSource(slide.figure.kind, slide.figure.source);
+    if (error) return error;
+  }
+  return null;
 }
 
 /**

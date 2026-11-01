@@ -1,9 +1,19 @@
 import type { SlidesSpec } from '@pagewise/render/slides';
+import { rasterizeBlock } from './raster';
 
 /** Schrift und Farben der Datei: fest, damit sie auf jedem Rechner gleich aussieht (Arial, Graphit). */
 const FONT = 'Arial';
 const INK = '2E2E2E';
 const PPTX_TYPE = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+
+/** Zeichnet eine Abbildung für die Folie; lässt sie sich nicht zeichnen, bleibt die Folie ohne sie (die Datei entsteht trotzdem). */
+async function rasterOrNull(kind: 'graph' | 'mol' | 'abc', source: string) {
+  try {
+    return await rasterizeBlock(kind, source);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Baut aus den geprüften Folien eine PowerPoint-Datei (16:9). pptxgenjs wird erst beim Herunterladen geladen.
@@ -19,6 +29,10 @@ export async function buildPptx(spec: SlidesSpec): Promise<Blob> {
 
   for (const slide of spec.slides) {
     const page = pptx.addSlide();
+    // Mit Abbildung teilt sich die Folie: links Stichpunkte und Absatz, rechts die Zeichnung (D-075).
+    const figure = slide.figure ? await rasterOrNull(slide.figure.kind, slide.figure.source) : null;
+    const split = figure !== null && (slide.bullets.length > 0 || slide.text !== undefined);
+    const textWidth = split ? 6.2 : 11.9;
     page.addText(slide.title, {
       x: 0.7,
       y: 0.5,
@@ -38,7 +52,7 @@ export async function buildPptx(spec: SlidesSpec): Promise<Blob> {
         {
           x: 0.9,
           y: 1.9,
-          w: 11.5,
+          w: split ? 5.9 : 11.5,
           h: 3.3,
           fontFace: FONT,
           fontSize: 22,
@@ -52,13 +66,43 @@ export async function buildPptx(spec: SlidesSpec): Promise<Blob> {
       page.addText(slide.text, {
         x: 0.7,
         y: textY,
-        w: 11.9,
+        w: textWidth,
         h: 1.4,
         fontFace: FONT,
         fontSize: 20,
         color: INK,
         valign: 'top',
       });
+    }
+    if (figure && slide.figure) {
+      const box = split ? { x: 7.2, y: 1.9, w: 5.4, h: 4.4 } : { x: 0.7, y: 1.8, w: 11.9, h: 4.8 };
+      const caption = slide.figure.caption;
+      const room = caption ? box.h - 0.5 : box.h;
+      const fit =
+        figure.ratio > box.w / room
+          ? { w: box.w, h: box.w / figure.ratio }
+          : { w: room * figure.ratio, h: room };
+      const x = box.x + (box.w - fit.w) / 2;
+      page.addImage({
+        data: figure.dataUrl.replace(/^data:/, ''),
+        x,
+        y: box.y,
+        w: fit.w,
+        h: fit.h,
+        altText: caption ?? slide.title,
+      });
+      if (caption) {
+        page.addText(caption, {
+          x: box.x,
+          y: box.y + fit.h + 0.1,
+          w: box.w,
+          h: 0.4,
+          fontFace: FONT,
+          fontSize: 12,
+          color: INK,
+          align: 'center',
+        });
+      }
     }
   }
 

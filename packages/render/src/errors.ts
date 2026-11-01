@@ -64,8 +64,8 @@ export const LIMITS = {
   mol: 1_024,
   abc: 8_192,
   quiz: 8_192,
-  document: 16_384,
-  slides: 16_384,
+  document: 24_576,
+  slides: 24_576,
   expression: 200,
 } as const;
 

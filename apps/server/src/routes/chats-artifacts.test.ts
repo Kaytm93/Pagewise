@@ -201,4 +201,73 @@ describe('Chats mit Datei-Werkzeugen (Dokument, Präsentation)', () => {
     );
     expect(missing.status).toBe(404);
   });
+
+  it('legt ein Dokument mit Graph, Strukturformel, Noten und Tabelle an', async () => {
+    const rich = {
+      title: 'Beispiel-Lernzettel',
+      parts: [
+        {
+          type: 'graph',
+          graph: { functions: ['x^2-4'], x: [-4, 4], y: [-6, 6] },
+          caption: 'Parabel',
+        },
+        { type: 'molecule', smiles: 'CCO' },
+        { type: 'molecule', formula: 'H2O' },
+        { type: 'notes', abc: 'X:1\nM:4/4\nL:1/4\nK:C\nCDEF|' },
+        { type: 'table', header: ['Stoff', 'Formel'], rows: [['Wasser', 'H₂O']] },
+      ],
+    };
+    scripts.push(
+      () => toolCall('call_1', 'create_document', JSON.stringify(rich)),
+      () => text('Der Lernzettel steht bereit.'),
+    );
+    await ask('Lernzettel mit Abbildungen.');
+    const result = JSON.parse(requests[1]?.messages.at(-1)?.content ?? '{}');
+    expect(result.ok).toBe(true);
+    const spec = JSON.parse(
+      ((await session.call('GET', `/api/artifacts/${result.id}`)).body.spec as string) ?? '{}',
+    );
+    expect(spec.parts.map((part: { type: string }) => part.type)).toEqual([
+      'figure',
+      'figure',
+      'figure',
+      'figure',
+      'table',
+    ]);
+    expect(spec.parts[0]).toMatchObject({ kind: 'graph', caption: 'Parabel' });
+    expect(spec.parts[1]).toMatchObject({ kind: 'mol', source: 'smiles: CCO' });
+  });
+
+  it('meldet eine SMILES-Zeichenfolge, die sich nicht zeichnen lässt, als Code', async () => {
+    const broken = { title: 'Beispiel', parts: [{ type: 'molecule', smiles: 'C(C' }] };
+    scripts.push(
+      () => toolCall('call_1', 'create_document', JSON.stringify(broken)),
+      () => text('Ich korrigiere das.'),
+    );
+    const { events } = await ask('Formel bitte.');
+    const result = JSON.parse(requests[1]?.messages.at(-1)?.content ?? '{}');
+    expect(result.error).toBe('invalid_smiles');
+    const message = (events.at(-1) as SseEvent).data.message as { artifacts: unknown[] };
+    expect(message.artifacts).toEqual([]);
+  });
+
+  it('legt Folien mit einer Abbildung an', async () => {
+    const slides = {
+      title: 'Beispiel-Vortrag',
+      slides: [
+        {
+          title: 'Parabel',
+          bullets: ['Nullstellen'],
+          figure: { type: 'graph', graph: { functions: ['x^2-4'], x: [-4, 4] } },
+        },
+      ],
+    };
+    scripts.push(
+      () => toolCall('call_1', 'create_presentation', JSON.stringify(slides)),
+      () => text('Die Folien stehen bereit.'),
+    );
+    const { events } = await ask('Folien.');
+    const message = (events.at(-1) as SseEvent).data.message as { artifacts: unknown[] };
+    expect(message.artifacts).toHaveLength(1);
+  });
 });
