@@ -328,6 +328,45 @@ describe('Glas (D1): Text auf Glas über dem Lichtfeld', () => {
   );
 });
 
+// Kopf der schmalen Breite (D-076): Glas erst beim Scrollen. Menüsymbol und Wortmarke stehen in --ink. In Ruhe liegen
+// sie ohne Glas auf dem Lichtfeld, nach dem Scrollen auf Glas über Feld und Seite. Beide Zustände rechnen hier mit
+// der stärksten Stelle des Feldes; der Kopf sitzt am oberen Rand, wo das Feld schwächer ist. Im Browser gemessen:
+// schlechtester Pixel hinter der Schrift (S-02, 1.3b).
+describe('Kopf der schmalen Breite: Menüsymbol und Wortmarke in Ruhe (Feld) und beim Scrollen (Glas)', () => {
+  it('beide stehen in --ink: das Symbol über text-ink, die Wortmarke erbt die Schriftfarbe', () => {
+    const shell = readFileSync(join(dir, '../shell/AppShell.tsx'), 'utf8');
+    const header = /<header className="lg-mobilkopf[\s\S]*?<\/header>/.exec(shell)?.[0] ?? '';
+    expect(header).toMatch(/<button[\s\S]*?className="[^"]*\btext-ink\b/);
+    const wortmarke = /<p title=\{title\} className="([^"]*)"/.exec(header)?.[1] ?? '';
+    // `text-xl` ist die Schriftgröße; eine Farb-Utility (text-ink-muted, text-link …) wäre ein anderer Ton als --ink.
+    expect(wortmarke).not.toMatch(/\btext-(?!(xs|sm|base|lg|xl|[2-9]xl)\b)/);
+  });
+
+  it.each([
+    ['hell', lightA, subjectsLight, 0.46, kLight],
+    ['dunkel', darkA, subjectsDark, 0.52, kDark],
+  ])(
+    '--ink erreicht im %s Modus in Ruhe auf dem Feld und beim Scrollen auf dem Glas 4,5 : 1 (Wortmarke) und 3 : 1 (Symbol)',
+    (_name, tokens, subjects, deckung, k) => {
+      const ink = toHex(tokens['--ink'] as string, tokens);
+      const canvas = toHex(tokens['--canvas'] as string, tokens);
+      const glass = glassToken(tokens['--glass-fill'] as string);
+      expect(glass.alpha).toBeCloseTo(deckung, 2);
+      for (const subject of subjects) {
+        const feld = over(canvas, subject, CENTER * k);
+        for (const [zustand, flaeche] of [
+          ['Ruhe', feld],
+          ['gescrollt', onGlass(glass, feld)],
+        ] as const) {
+          const verhaeltnis = contrast(ink, flaeche);
+          expect(verhaeltnis, `Wortmarke ${zustand}`).toBeGreaterThanOrEqual(4.5);
+          expect(verhaeltnis, `Symbol ${zustand}`).toBeGreaterThanOrEqual(3);
+        }
+      }
+    },
+  );
+});
+
 // Text auf dem Lichtfeld selbst (kein Glas): die stärkste Stelle ist die Mitte des Feldes, 30 % × --at-k. Gemessen
 // wird im Browser das 20-Prozent-Perzentil der Pixel unter jeder Textzeile. Die Formel hier rechnet ohne Körnung
 // und liegt darum auf der sicheren Seite; sie fängt auf, wenn jemand das Feld wieder stärker macht oder einen

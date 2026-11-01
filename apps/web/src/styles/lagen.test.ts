@@ -112,10 +112,17 @@ describe('lagen.css: Kopf der schmalen Breite bekommt die Fläche erst beim Scro
     expect(regelBlock(lagen, '.lg-mobilkopf')).toContain('background-color: var(--desk)');
   });
 
-  it('gilt nur in Lagen: Raum und Atelier kennen weder das Attribut noch die Ebene', () => {
+  // Seit Schritt 1.3b (D-076) hängt auch Atelier sein Glas an `data-scrolled` (Regel auf `header.sticky.md:hidden::before`,
+  // geprüft in `atelier.test.ts`). Die Erwartung „Atelier kennt das Attribut nicht“ war damit durch die Entscheidung
+  // veraltet. Raum bleibt ohne Attribut; die Ebene `.lg-mobilkopf::before` setzt weiterhin nur Lagen.
+  it('gilt das Attribut nur in Lagen und Atelier: Raum kennt es nicht', () => {
+    const raum = readFileSync(join(dir, 'raum.css'), 'utf8');
+    expect(raum, 'raum.css nennt data-scrolled').not.toContain('data-scrolled');
+  });
+
+  it('setzt die Ebene .lg-mobilkopf::before nur in Lagen: Raum und Atelier nicht', () => {
     for (const file of ['raum.css', 'atelier.css']) {
       const css = readFileSync(join(dir, file), 'utf8');
-      expect(css, `${file} nennt data-scrolled`).not.toContain('data-scrolled');
       expect(css, `${file} setzt .lg-mobilkopf::before`).not.toMatch(/\.lg-mobilkopf::before/);
     }
   });

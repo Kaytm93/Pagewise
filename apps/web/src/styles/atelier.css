@@ -189,7 +189,8 @@
   /* ===== Glas (D1, D-062): nur in „Atelier“, nur an diesen Hüllen =====
      Die Glasfläche steht in dieser einen Regel, damit backdrop-filter nur an einer Stelle vorkommt. Die Hüllen
      tragen dafür keine neue Klasse im Markup: Seitenleiste (.lg-binder), Composer (.lg-composer), Dialogblatt
-     (.lg-dialog), die Kopfzeile der schmalen Breite (header.sticky im md:hidden) und die Testkarte (.at-test).
+     (.lg-dialog), die Kopfzeile der schmalen Breite (header.sticky im md:hidden, dort als Ebene ::before, die erst
+     mit data-scrolled sichtbar wird, D-076) und die Testkarte (.at-test).
      Höchstens drei Glasflächen gleichzeitig. Auf Text und Chat-Fließtext liegt nie Glas. Der Rand steckt im
      Haarstrich des Schattens, nicht in einer Linie. */
   :root[data-design="atelier"] .at-glass,
@@ -197,7 +198,7 @@
   :root[data-design="atelier"] .lg-composer,
   :root[data-design="atelier"] .lg-dialog,
   :root[data-design="atelier"] .at-test,
-  :root[data-design="atelier"] header.sticky.md\:hidden {
+  :root[data-design="atelier"] header.sticky.md\:hidden::before {
     background-color: var(--glass-fill);
     box-shadow:
       inset 0 0 0 1px var(--glass-edge-side),
@@ -1062,13 +1063,36 @@
  * Utilities-Layer und schlagen @layer components). Alle hängen an data-design="atelier".
  */
 
-/* Kopfzeile der schmalen Breite: die Utility bg-desk würde das Glas sonst überdecken */
+/* Kopfzeile der schmalen Breite (D-076, Befund B-18): Glas erst beim Scrollen. In Ruhe liegt der Kopf ohne Fläche,
+   ohne Filter und ohne Rand auf dem Fachlicht (die Basisfläche var(--desk) aus lagen.css entfällt hier). Das Glas
+   selbst ist die Ebene ::before hinter dem Inhalt des Kopfes (Füllung, Haarstrich, Schatten und backdrop-filter
+   stehen in der Glasregel oben). Der Kopf ist sticky mit z-index, also ein eigener Stapelkontext; die Ebene liegt
+   mit z-index: -1 darin über der Seite und unter Menüknopf und Wortmarke. ui/scrolled.ts setzt data-scrolled,
+   sobald die Seite gescrollt ist; dann blendet die Ebene über opacity ein (var(--t-color): 140 ms bei „Voll“,
+   sonst 0). opacity läuft nur an dieser Ebene, nie am Kopf oder an einem Vorfahren: ein Vorfahr mit opacity unter 1
+   nähme dem Glas den Blur. */
 :root[data-design="atelier"] header.sticky.md\:hidden {
-  background-color: var(--glass-fill);
+  background-color: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+:root[data-design="atelier"] header.sticky.md\:hidden::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-color);
+}
+
+:root[data-design="atelier"] header.sticky.md\:hidden[data-scrolled]::before {
+  opacity: 1;
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root[data-design="atelier"] header.sticky.md\:hidden {
+  :root[data-design="atelier"] header.sticky.md\:hidden::before {
     background-color: color-mix(in srgb, var(--canvas) 94%, transparent);
   }
 }
