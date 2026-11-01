@@ -851,7 +851,7 @@ describe('ProviderClient.streamChat: Werkzeugaufrufe', () => {
       'invalid_response',
     );
     expect(
-      (await run([call(0, { id: 'c', function: { name: 'a', arguments: 'x'.repeat(17_000) } })]))
+      (await run([call(0, { id: 'c', function: { name: 'a', arguments: 'x'.repeat(33_000) } })]))
         .code,
     ).toBe('invalid_response');
   });

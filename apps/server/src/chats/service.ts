@@ -5,6 +5,7 @@ import { formatTranscript, withAgentInstructions } from '../agents/instructions'
 import type { EngineProfileService } from '../agents/profiles';
 import type { AgentOutcome, AgentRunner } from '../agents/runner';
 import type { WorkspaceManager } from '../agents/workspace';
+import type { ArtifactService, ArtifactView } from '../artifacts/service';
 import type { Db } from '../db/client';
 import {
   type ChatRow,
@@ -92,6 +93,8 @@ export interface ChatServiceOptions {
   agents?: AgentRunner;
   /** Dateien, die Agenten erzeugt haben (für Anzeige und Aufräumen). */
   assets?: AssetService;
+  /** Dateien, die Modelle über Werkzeuge anlegen (Spezifikationen). Ohne Angabe gibt es keine Datei-Werkzeuge. */
+  artifacts?: ArtifactService;
   /** Wie viele Agenten gleichzeitig arbeiten dürfen (schwerer als eine Modellantwort). */
   maxAgents?: number;
   /** Werkzeuge, die Modelle aufrufen dürfen (Stundenplan, Tests). Ohne Angabe gibt es keine. */
@@ -135,7 +138,11 @@ function speedOf(tokens: number | null, generationMs: number | null): number | n
   return Math.round((tokens * 10_000) / generationMs) / 10;
 }
 
-function toMessage(row: MessageRow, assets: AssetView[] = []): MessageView {
+function toMessage(
+  row: MessageRow,
+  assets: AssetView[] = [],
+  artifacts: ArtifactView[] = [],
+): MessageView {
   return {
     id: row.id,
     seq: row.seq,
@@ -148,6 +155,7 @@ function toMessage(row: MessageRow, assets: AssetView[] = []): MessageView {
     errorCode: row.errorCode as ChatErrorCode | null,
     activity: parseActivity(row.activity),
     assets,
+    artifacts,
     reasoning: row.reasoning || null,
     tokensPerSecond: speedOf(row.completionTokens, row.generationMs),
     costUsd: row.costUsd,
@@ -177,6 +185,7 @@ export class ChatService {
   private readonly engines: EngineProfileService | null;
   private readonly agents: AgentRunner | null;
   private readonly assets: AssetService | null;
+  private readonly artifacts: ArtifactService | null;
   private readonly maxAgents: number;
   private readonly activeAgents = new Set<string>();
   private readonly tools: ToolRegistry | null;
@@ -199,6 +208,7 @@ export class ChatService {
     this.engines = options.engines ?? null;
     this.agents = options.agents ?? null;
     this.assets = options.assets ?? null;
+    this.artifacts = options.artifacts ?? null;
     this.maxAgents = options.maxAgents ?? 2;
     this.tools = options.tools ?? null;
     this.toolSettings = options.toolSettings ?? null;
@@ -272,12 +282,16 @@ export class ChatService {
       .where(eq(messages.chatId, id))
       .orderBy(asc(messages.seq))
       .all();
-    const files = this.assets?.forMessages(rows.map((message) => message.id)) ?? new Map();
+    const ids = rows.map((message) => message.id);
+    const files = this.assets?.forMessages(ids) ?? new Map();
+    const made = this.artifacts?.forMessages(ids) ?? new Map();
     return {
       ok: true,
       value: {
         ...this.toChat(row),
-        messages: rows.map((message) => toMessage(message, files.get(message.id) ?? [])),
+        messages: rows.map((message) =>
+          toMessage(message, files.get(message.id) ?? [], made.get(message.id) ?? []),
+        ),
       },
     };
   }
@@ -793,27 +807,36 @@ export class ChatService {
         started = null;
 
         const registry = this.tools;
-        const toolsOn =
-          registry !== null &&
-          (this.toolSettings?.enabled() ?? true) &&
-          resolved.allowTools &&
-          resolved.model.tools;
+        // Jede Werkzeuggruppe hat ihren eigenen Schalter; der Anbieter und das Modell müssen Werkzeuge erlauben.
+        const toolsOn = registry !== null && resolved.allowTools && resolved.model.tools;
+        const filesOn = this.artifacts !== null && (this.toolSettings?.filesEnabled() ?? true);
+        const artifactStore = this.artifacts;
         // Der Kontext gehört zu dieser Antwort; nur die Werkzeuge, die gerade verfügbar sind, gehen an das Modell.
         const toolContext: ToolContext = {
           db: this.db,
           now: this.now,
           signal: generation.abort.signal,
           web: this.web,
-          budget: { webSearches: 0 },
+          planner: this.toolSettings?.enabled() ?? true,
+          budget: { webSearches: 0, files: 0 },
+          artifacts:
+            filesOn && artifactStore
+              ? {
+                  create: (kind, title, spec) =>
+                    artifactStore.create(generation.chatId, assistantId, kind, title, spec),
+                }
+              : undefined,
         };
         const offered = toolsOn && registry ? await registry.specs(toolContext) : [];
+        // Ohne angebotenes Werkzeug laufen auch keine Aufrufe, die ein Modell trotzdem schickt.
+        const toolsActive = offered.length > 0;
         const system =
           offered.length > 0
-            ? withToolInstructions(
-                input.system,
-                this.now(),
-                offered.some((spec) => spec.name === 'web_search'),
-              )
+            ? withToolInstructions(input.system, this.now(), {
+                planner: offered.some((spec) => spec.name === 'get_timetable'),
+                web: offered.some((spec) => spec.name === 'web_search'),
+                files: offered.some((spec) => spec.name === 'create_document'),
+              })
             : input.system;
         // Bilder im Verlauf: nur ein Modell mit Bildverstehen bekommt sie; alle anderen lesen den Text.
         const vision = resolved.model.vision === true;
@@ -846,8 +869,7 @@ export class ChatService {
                 model: selection.model,
                 messages: conversation,
                 // In der letzten Runde ohne Werkzeuge: Das Modell muss mit dem antworten, was es hat.
-                tools:
-                  toolsOn && offered.length > 0 && rounds < MAX_TOOL_ROUNDS ? offered : undefined,
+                tools: toolsActive && rounds < MAX_TOOL_ROUNDS ? offered : undefined,
               },
               generation.abort.signal,
             );
@@ -885,7 +907,7 @@ export class ChatService {
               }
             }
 
-            if (!requested || !toolsOn || !registry) break;
+            if (!requested || !toolsActive || !registry) break;
             rounds += 1;
             usedTools = true;
             conversation.push({ role: 'assistant', content: roundText, toolCalls: requested });
@@ -1034,7 +1056,13 @@ export class ChatService {
         .from(messages)
         .where(eq(messages.id, generation.assistantId))
         .get();
-      view = row ? toMessage(row, agent?.assets ?? []) : null;
+      view = row
+        ? toMessage(
+            row,
+            agent?.assets ?? [],
+            this.artifacts?.forMessages([row.id]).get(row.id) ?? [],
+          )
+        : null;
     } catch {
       view = null;
     }
@@ -1051,6 +1079,7 @@ export class ChatService {
       errorCode: code,
       activity: agent?.activity ?? [],
       assets: agent?.assets ?? [],
+      artifacts: [],
       reasoning: generation.reasoning || null,
       tokensPerSecond: speedOf(usage?.completionTokens ?? null, usage?.generationMs ?? null),
       costUsd: usage?.costUsd ?? null,

@@ -278,6 +278,36 @@ export const assets = sqliteTable(
 );
 
 /**
+ * Dateien, die ein Modell über ein Werkzeug anlegt (Dokument, Präsentation …). Gespeichert ist nur die
+ * geprüfte Spezifikation (JSON), nicht die Datei: Sie entsteht erst beim Anzeigen und Herunterladen im Gerät,
+ * dort sind Zeichnen, Schriften und Bilder verfügbar (D-074). Mit dem Chat oder der Nachricht verschwindet die
+ * Zeile. `version` zählt, wie oft das Modell die Datei überarbeitet hat.
+ */
+export const artifacts = sqliteTable(
+  'artifacts',
+  {
+    id: id(),
+    chatId: text('chat_id')
+      .notNull()
+      .references(() => chats.id, { onDelete: 'cascade' }),
+    messageId: text('message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    /** Art der Datei: document, slides, sheet oder figure. */
+    kind: text('kind').notNull(),
+    title: text('title').notNull(),
+    /** Geprüfte Spezifikation als JSON-Text. */
+    spec: text('spec').notNull(),
+    version: integer('version').notNull().default(1),
+    ...timestamps,
+  },
+  (table) => [
+    index('artifacts_message').on(table.messageId),
+    index('artifacts_chat').on(table.chatId),
+  ],
+);
+
+/**
  * Stundenplan: eine Zeile je Stunde und Woche (Welle 3). Zeiten sind frei (`HH:MM`), kein festes Raster. Das Fach
  * ist optional und bleibt leer, wenn es gelöscht wird (die Stunde im Plan besteht weiter). `week` kennt die
  * Wochenart „jede“, „A“ oder „B“.
@@ -397,6 +427,7 @@ export type ProviderRow = typeof providers.$inferSelect;
 export type ChatRow = typeof chats.$inferSelect;
 export type EngineProfileRow = typeof engineProfiles.$inferSelect;
 export type AssetRow = typeof assets.$inferSelect;
+export type ArtifactRow = typeof artifacts.$inferSelect;
 export type TimetableRow = typeof timetableEntries.$inferSelect;
 export type ExamRow = typeof exams.$inferSelect;
 export type NoteRow = typeof notes.$inferSelect;

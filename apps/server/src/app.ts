@@ -7,6 +7,7 @@ import { secureHeaders } from 'hono/secure-headers';
 import { csrfGuard, loadSession, requireSession } from './auth/http';
 import { originGuard } from './http/origin';
 import type { AppEnv } from './http/types';
+import { artifactRoutes } from './routes/artifacts';
 import { assetRoutes } from './routes/assets';
 import { authRoutes } from './routes/auth';
 import { chatRoutes } from './routes/chats';
@@ -85,6 +86,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
       '/api/model-settings',
       '/api/engines',
       '/api/assets',
+      '/api/artifacts',
       '/api/timetable',
       '/api/exams',
       '/api/notes',
@@ -103,6 +105,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     app.route('/api', providerRoutes(services.providers));
     app.route('/api', engineRoutes(services));
     app.route('/api', assetRoutes(services.assets));
+    app.route('/api', artifactRoutes(services.artifacts));
     app.route('/api', plannerRoutes(db));
     app.route('/api', noteRoutes(db, 'Hefteintrag'));
     app.route('/api', toolSettingsRoutes(services.toolSettings));

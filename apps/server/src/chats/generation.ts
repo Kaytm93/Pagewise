@@ -1,5 +1,6 @@
 import { type ActivityEntry, upsertActivity } from '../agents/activity';
 import type { AssetView } from '../agents/assets';
+import type { ArtifactView } from '../artifacts/service';
 import type { ProviderErrorCode } from '../providers/errors';
 
 /** Fehler, die nur beim Antworten über einen Agenten (Agent-CLI) vorkommen. */
@@ -38,6 +39,8 @@ export interface MessageView {
   activity: ActivityEntry[];
   /** Dateien, die der Agent erzeugt hat. */
   assets: AssetView[];
+  /** Dateien, die das Modell über Werkzeuge angelegt hat (Dokument, Präsentation …), ohne Spezifikation. */
+  artifacts: ArtifactView[];
   /** Denkprozess des Modells, nur wenn der Anbieter ihn liefert; sonst `null`. */
   reasoning: string | null;
   /** Tokens je Sekunde, nur wenn der Anbieter die Zahl der Tokens meldet; sonst `null`. */

@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import type { ArtifactKind } from '../artifacts/service';
 import type { Db } from '../db/client';
 import type { WebSearch } from '../search/types';
 
@@ -17,6 +18,13 @@ import type { WebSearch } from '../search/types';
 /** Zähler je Antwort: Was ein Werkzeug in dieser Antwort schon getan hat. */
 export interface ToolBudget {
   webSearches: number;
+  /** Dateien, die diese Antwort schon angelegt hat. */
+  files: number;
+}
+
+/** Legt eine Datei an die laufende Antwort (D-074). Gibt `null` zurück, wenn der Chat voll ist. */
+export interface ArtifactSink {
+  create(kind: ArtifactKind, title: string, spec: string): { id: string } | null;
 }
 
 export interface ToolContext {
@@ -25,10 +33,14 @@ export interface ToolContext {
   now: () => Date;
   /** Bricht Werkzeuge mit Netzzugriff ab, wenn die Person „Stopp“ drückt. */
   signal?: AbortSignal;
+  /** Ob Stundenplan und Tests abgefragt werden dürfen (globaler Schalter). Ohne Angabe: ja. */
+  planner?: boolean;
   /** Websuche. Ohne Angabe ist `web_search` nicht verfügbar. */
   web?: WebSearch;
   /** Zähler dieser Antwort über alle Runden hinweg. */
   budget: ToolBudget;
+  /** Legt Dateien an die Antwort. Ohne Angabe sind die Datei-Werkzeuge nicht verfügbar. */
+  artifacts?: ArtifactSink;
 }
 
 export interface ToolDefinition<Args = unknown> {
@@ -39,6 +51,8 @@ export interface ToolDefinition<Args = unknown> {
   parameters: Record<string, unknown>;
   /** Strenge Prüfung der Argumente. Unbekannte Felder werden abgelehnt. */
   schema: z.ZodType<Args>;
+  /** Größte Argumentzeichenfolge dieses Werkzeugs. Ohne Angabe {@link MAX_ARGUMENT_CHARACTERS}. */
+  maxArgumentCharacters?: number;
   /** Kurzer Hinweis für die Oberfläche („Montag“), nie Inhalte. */
   target: (args: Args) => string | null;
   /** Ob das Werkzeug gerade angeboten wird (zum Beispiel nur mit gespeichertem Schlüssel). Ohne Angabe immer. */
@@ -142,7 +156,8 @@ export class ToolRegistry {
       content: errorContent('invalid_arguments'),
       target: null,
     };
-    if (rawArguments.length > MAX_ARGUMENT_CHARACTERS) return invalid;
+    if (rawArguments.length > (tool.maxArgumentCharacters ?? MAX_ARGUMENT_CHARACTERS))
+      return invalid;
     let input: unknown = {};
     if (rawArguments.trim() !== '') {
       try {

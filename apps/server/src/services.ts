@@ -7,6 +7,7 @@ import { ClaudeCodeEngine, type EngineOptions } from './agents/engine';
 import { EngineProfileService } from './agents/profiles';
 import { AgentRunner } from './agents/runner';
 import { WorkspaceManager } from './agents/workspace';
+import { ArtifactService } from './artifacts/service';
 import { AttemptLimiter } from './auth/attempt-limiter';
 import { AuthService } from './auth/auth-service';
 import type { ScryptParams } from './auth/passcode';
@@ -46,6 +47,8 @@ export interface Services {
   workspaces: WorkspaceManager;
   /** Von Agenten erzeugte Dateien (`assets/`). */
   assets: AssetService;
+  /** Vom Modell über Werkzeuge angelegte Dateien (Spezifikationen, D-074). */
+  artifacts: ArtifactService;
   /** Räumt beim Löschen von Fächern und Untergruppen Dateien und Arbeitsordner der Agenten auf. */
   cleanup: AgentCleanup;
   /** Vorlagen für Fächer (Katalog), aus `config/subject-catalog.json`. */
@@ -123,6 +126,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
   const engines = new EngineProfileService(database.db, secrets);
   const storage = new LocalStorage(paths.assets);
   const assets = new AssetService(database.db, storage);
+  const artifacts = new ArtifactService(database.db);
   const workspaces = new WorkspaceManager(paths.workspaces);
   const cliPath = new CliPathSetting(database.db);
   const cli = new CliDetector({
@@ -148,6 +152,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     engines,
     agents: runner,
     assets,
+    artifacts,
     tools,
     toolSettings,
     web: webSearch,
@@ -169,6 +174,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     cliPath,
     workspaces,
     assets,
+    artifacts,
     cleanup,
     catalog,
     defaults,

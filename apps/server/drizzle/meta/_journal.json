@@ -92,6 +92,13 @@
       "when": 1792939449221,
       "tag": "0012_message_reasoning_cost",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1793550728442,
+      "tag": "0013_artifacts",
+      "breakpoints": true
     }
   ]
 }

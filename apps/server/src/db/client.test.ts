@@ -50,6 +50,7 @@ describe('Datenbank', () => {
       .prepare("select name from sqlite_master where type = 'table' and name not like '%drizzle%'")
       .all() as { name: string }[];
     expect(tables.map((t) => t.name).sort()).toEqual([
+      'artifacts',
       'assets',
       'auth_credentials',
       'chats',
