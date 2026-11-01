@@ -38,8 +38,10 @@ function Figure({ spec }: { spec: FigureArtifact }) {
       const { rasterizeBlock, svgOfBlock } = await import('./raster');
       if (kind === 'png') {
         const raster = await rasterizeBlock(spec.figure.kind, spec.figure.source, 4);
-        const bytes = await (await fetch(raster.dataUrl)).blob();
-        saveBlob(bytes, fileName(spec.title, 'png'));
+        // Kein `fetch` auf die Daten-Adresse: `connect-src 'self'` der CSP verbietet das.
+        const { bytesOfDataUrl } = await import('./ooxml');
+        const bytes = bytesOfDataUrl(raster.dataUrl);
+        saveBlob(new Blob([bytes as BlobPart], { type: 'image/png' }), fileName(spec.title, 'png'));
       } else {
         const svg = await svgOfBlock(spec.figure.kind, spec.figure.source);
         saveBlob(new Blob([svg], { type: 'image/svg+xml' }), fileName(spec.title, 'svg'));

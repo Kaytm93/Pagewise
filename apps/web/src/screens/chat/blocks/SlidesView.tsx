@@ -61,13 +61,13 @@ function Slides({ spec }: { spec: SlidesSpec }) {
               )}
               {slide.text !== undefined && <p className="text-sm leading-relaxed">{slide.text}</p>}
               {slide.figure && (
-                <div className="min-h-0 flex-1 overflow-hidden">
+                <div className="min-h-0 flex-1 overflow-hidden [&_svg]:mx-auto [&_svg]:h-auto [&_svg]:max-h-36 [&_svg]:w-auto [&_svg]:max-w-full">
                   <Suspense fallback={<div className="h-16" />}>
                     <BlockView
                       kind={slide.figure.kind}
                       source={slide.figure.source}
                       final
-                      size="max-h-40"
+                      size=""
                     />
                   </Suspense>
                   {slide.figure.caption && (
