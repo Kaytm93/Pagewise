@@ -220,12 +220,22 @@
     --raum-surf: var(--raum-canvas);
   }
 
-  :root[data-design="raum"] .lg-binder {
+  :root[data-design="raum"] .lg-aside .lg-binder {
     border: 0;
     border-radius: 0;
     background-color: transparent;
     background-image: none;
     box-shadow: none;
+  }
+
+  /* Schublade auf dem iPhone (D-075, B-03): dieselbe deckende Fläche wie die Seitenleiste am Mac, mit den
+     eingelassenen Zeilen darin. Der Schatten des Panels (Drawer.tsx) bleibt und trennt es vom Inhalt, darum
+     kein box-shadow hier. */
+  :root[data-design="raum"] .lg-scrim .lg-binder {
+    --raum-surf: var(--raum-canvas);
+    border: 0;
+    background-color: var(--raum-canvas);
+    background-image: none;
   }
 
   :root[data-design="raum"] .lg-liste {

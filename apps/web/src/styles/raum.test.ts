@@ -231,3 +231,48 @@ describe('raum.css: Stapel und Parallaxe bleiben unverändert', () => {
     );
   });
 });
+
+describe('raum.css: Schublade hat den Raumton, Seitenleiste bleibt durchsichtig (D-075, B-03)', () => {
+  it('macht den Heftrücken nur in der Seitenleiste durchsichtig und ohne Schatten', () => {
+    const transparent = all.filter(
+      (rule) =>
+        rule.selector.includes('.lg-binder') && rule.body.includes('background-color: transparent'),
+    );
+    expect(transparent.map((rule) => rule.selector)).toEqual([
+      ":root[data-design='raum'] .lg-aside .lg-binder",
+    ]);
+    expect(transparent[0]?.body).toContain('box-shadow: none');
+  });
+
+  it('nimmt den Schatten nur in der Seitenleiste weg', () => {
+    const shadowless = all.filter(
+      (rule) => rule.selector.includes('.lg-binder') && /box-shadow:\s*none/.test(rule.body),
+    );
+    expect(shadowless.length).toBeGreaterThan(0);
+    for (const rule of shadowless) {
+      expect(
+        rule.selector,
+        `Schatten entfernt außerhalb der Seitenleiste: ${rule.selector}`,
+      ).toContain('.lg-aside');
+    }
+  });
+
+  it('gibt der Schublade eine deckende Fläche in --raum-canvas, ohne box-shadow: none', () => {
+    const drawer = all.find(
+      (rule) => rule.selector === ":root[data-design='raum'] .lg-scrim .lg-binder",
+    );
+    expect(drawer, 'keine Regel für die Schublade (.lg-scrim .lg-binder)').toBeDefined();
+    expect(drawer?.body).toContain('background-color: var(--raum-canvas)');
+    expect(drawer?.body).toContain('background-image: none');
+    expect(drawer?.body).toMatch(/border:\s*0;/);
+    expect(drawer?.body).not.toMatch(/box-shadow/);
+    expect(drawer?.body).not.toContain('transparent');
+  });
+
+  it('setzt --raum-surf in der Schublade auf den Raumton wie in der Seitenleiste', () => {
+    const drawer = all.find(
+      (rule) => rule.selector === ":root[data-design='raum'] .lg-scrim .lg-binder",
+    );
+    expect(drawer?.body).toContain('--raum-surf: var(--raum-canvas);');
+  });
+});

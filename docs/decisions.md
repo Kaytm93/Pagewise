@@ -697,3 +697,13 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Quiz (M10-T008 a, b):** Das Quiz bleibt in Hefteinträgen interaktiv, wie in D-059 gebaut. Der Antwortschlüssel `answer` soll für Schülerinnen und Schüler verborgen werden. Wie, ist offen, weil die Auswertung bisher ohne Netz im Block selbst steckt (D-059); die Aufgabe steht als M10-T009 in der Queue. Der Download von PDF und PPTX auf iPhone und iPad (c) bleibt ein Gerätetest.
 - **Autostart und Container (W0-3):** Es wird weder ein eigenes `launchd`-Skript noch ein `docker compose`-Setup gebaut. Den Start beim Anmelden bietet die Mac-App („Bei Anmeldung starten“). `self-hosting.md` und `acceptance-1a.md` sagen das jetzt statt „folgt“.
 - **Geprüft:** Nur Texte geändert, kein Test und keine Messung nötig. Die Werte der Hüllen-Palette stammen aus `shell.css` und `tokens.css` (am 31. Oktober gelesen), die Kontraste aus der Messung `mac-shell.json` #5.
+
+## D-075 Raum-Schublade in Raumton (1. November 2026)
+
+- **Anlass:** Auf dem iPhone war die Schublade der Navigation in „Raum“ durchsichtig. Der Seiteninhalt lag unter den Einträgen: „Fächer“ 2,24 : 1, „Standard“ 3,57 : 1 (Befund B-03, Schwere 2, Aufgabe S-02). Ursache: Die Regel `.lg-binder` in `raum.css` (durchsichtig, ohne Schatten) galt für die Seitenleiste am Mac und auch für das Panel der Schublade (`shell/Drawer.tsx`), das dieselbe Klasse trägt.
+- **Entscheidung:** Kay hat am 1. November 2026 die Schublade in Raumton gewählt (GF-08, Variante A): Sie hat dieselbe deckende Fläche wie die Seitenleiste am Mac. Der vorhandene Schatten des Panels trennt sie vom Inhalt. Die Variante „gehobene Fläche“ wurde nicht gewählt.
+- **Umsetzung:** `raum.css`: Die Regel ohne Fläche gilt nur noch unter `.lg-aside`. Neu: `.lg-scrim .lg-binder` mit `--raum-canvas` als Fläche, ohne Rand, ohne Hintergrundbild und ohne `box-shadow`. Dazu `--raum-surf` auf `--raum-canvas`, damit die eingelassenen Zeilen in der Schublade wie in der Seitenleiste liegen.
+- **Wirkung:** Auf dem iPhone deckt die Schublade den Inhalt ab. „Fächer“ steht bei 4,70 : 1, „Standard“ bei 7,50 : 1 (Chromium und WebKit). Die Seitenleiste am Mac bleibt bis auf JPEG-Rauschen gleich (größte Abweichung 6 von 255). Lagen und Atelier unverändert.
+- **Prüfung:** Strukturtest in `raum.test.ts` (Fläche nur in der Seitenleiste, Schublade deckend mit `--raum-canvas`, Schatten nur in der Seitenleiste entfernt). Messung im Browser, Chromium und WebKit, mit Pixelvergleich gegen die Vorher-Bilder der Teil-A-Bestandsaufnahme (Belege unter `shots/S-02/1.1/`).
+- **Offen:** Atelier, Schublade hell: „Fächer“ und „Fach hinzufügen“ je 4,02 : 1 (unverändert, nicht Teil von B-03).
+- **Bezug:** B-03 (S-02, Schritt 1.1), GF-08.
