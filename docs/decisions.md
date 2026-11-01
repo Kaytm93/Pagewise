@@ -707,3 +707,18 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Prüfung:** Strukturtest in `raum.test.ts` (Fläche nur in der Seitenleiste, Schublade deckend mit `--raum-canvas`, Schatten nur in der Seitenleiste entfernt). Messung im Browser, Chromium und WebKit, mit Pixelvergleich gegen die Vorher-Bilder der Teil-A-Bestandsaufnahme (Belege unter `shots/S-02/1.1/`).
 - **Offen:** Atelier, Schublade hell: „Fächer“ und „Fach hinzufügen“ je 4,02 : 1 (unverändert, nicht Teil von B-03).
 - **Bezug:** B-03 (S-02, Schritt 1.1), GF-08.
+
+## D-076 Mobil-Kopf je Richtung (1. November 2026)
+
+- **Stand:** umgesetzt: Raum. Offen: Lagen (Schritt 1.3a), Atelier (Schritt 1.3b). Die späteren Schritte aktualisieren diesen Eintrag.
+- **Anlass:** Auf dem iPhone (Breite unter 768 px) stand der Kopf mit Menüknopf und Wortmarke als flaches Band quer über der Seite und hob sich vom Grund ab (Befund B-18, Schwere 3, Aufgabe S-02; R-05 in Raum, L-07 in Lagen). Ursache: `shell/AppShell.tsx` gab dem Kopf die Utility `bg-desk`, eine deckende, flache Fläche ohne Körnung und ohne Fensterlicht. Raum überstimmte sie mit dem ebenso flachen `--raum-canvas`.
+- **Entscheidung:** Kay hat am 1. November 2026 „je Richtung“ gewählt (GF-03, Variante A), für Lagen danach „Fläche erst beim Scrollen“:
+  - **Raum:** Der Kopf trägt den Raumton wie die Seite (`--raum-canvas`, deckend) und zum Inhalt hin eine eingravierte Doppellinie statt eines Bandes: oben 1 px Schattenlinie (`--raum-dark`), darunter 1 px Lichtlinie (`--raum-light`), wie am Dock. Kein Rand, kein Schatten am Kopf.
+  - **Lagen:** In Ruhe keine eigene Fläche, der Kopf liegt auf dem Schreibtisch (kein Band, kein Rand). Nach wenigen Pixeln Scrollen wird er deckend im Ton des bisherigen Bandes. Grund: Ohne Fläche läuft der Text beim Scrollen durch Menüknopf und Wortmarke (gemessen: Überlagerung ab etwa 32 px Scrollen auf Start und Einstellungen, ab etwa 84 px auf der Fachseite).
+  - **Atelier:** Glas erst beim Scrollen, nach demselben Muster wie Lagen.
+  - Lagen und Atelier brauchen dafür einen kleinen gemeinsamen Scroll-Zustand; er gehört nicht in diesen Schritt.
+- **Umgesetzt (Schritt 1.2, Raum):** `AppShell.tsx`: der Kopf trägt die Klasse `lg-mobilkopf` statt `bg-desk`; `sticky` und `md:hidden` bleiben, damit die Glasregel des Atelier (`header.sticky.md\:hidden`) weiter greift. `lagen.css`: Basisregel `.lg-mobilkopf` mit der bisherigen Fläche `var(--desk)`. `raum.css`: Regel auf `.lg-mobilkopf` (Raumton) und `.lg-mobilkopf::after` (Doppellinie am unteren Rand, 2 px hoch, ändert die Kopfhöhe nicht, nur Raum-Tokens). Der Kopf bleibt deckend, damit der Inhalt beim Scrollen nicht durch Menüknopf und Wortmarke läuft.
+- **Wirkung:** Raum: kein Band mehr, der Kopf trennt sich mit der Doppellinie vom Inhalt. Lagen und Atelier sehen danach aus wie vorher; der Mac (ab 768 px), der Menüknopf, das Verbindungsbanner (`--cb-h`) und die Sicherheitsränder bleiben unberührt.
+- **Prüfung:** Strukturtests in `raum-tokens.test.ts` (Klasse statt `bg-desk`, Raumton, Doppellinie nur aus Raum-Tokens, Basisfläche, Atelier-Selektor trifft weiter). Der vorhandene Test der Kopfregel (alter Selektor `header.md:hidden`) und die Zählung der Doppellinien-Verläufe (zwei auf drei) wurden an diese Entscheidung angepasst, nicht abgeschwächt. Messung im Browser, Chromium und WebKit (Belege unter `shots/S-02/1.2/`).
+- **Offen:** Lagen: Fläche erst beim Scrollen (1.3a). Atelier: Glas erst beim Scrollen (1.3b).
+- **Bezug:** B-18 (S-02, Schritt 1.2), GF-03, R-05, L-07, F-097.

@@ -89,6 +89,15 @@
     pointer-events: none;
   }
 
+  /* ===== Kopfzeile der schmalen Breite (AppShell, md:hidden, D-076) =====
+     Basisregel: die Fläche des Schreibtischs, wie bisher (vorher die Utility bg-desk). Die Positionierung
+     (sticky unter dem Verbindungsbanner, `--cb-h`) und die Sicherheitsränder stehen als Utilities im Markup.
+     Raum überstimmt die Fläche mit dem Raumton und einer eingravierten Doppellinie (raum.css), Atelier mit Glas
+     (atelier.css, Regel auf header.sticky.md:hidden). Lagen: Fläche erst beim Scrollen folgt (D-076, offen). */
+  .lg-mobilkopf {
+    background-color: var(--desk);
+  }
+
   /* ===== Heftrücken (Seitenleiste) ===== */
   .lg-aside {
     padding-block: 0.875rem;
