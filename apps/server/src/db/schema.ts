@@ -69,6 +69,8 @@ export const providers = sqliteTable(
      * Daten gehen nie an den Anbieter. Wirkt zusätzlich zum globalen Schalter und zum Werkzeug-Flag des Modells.
      */
     allowTools: integer('allow_tools', { mode: 'boolean' }).notNull().default(true),
+    /** Darf die KI über diesen Anbieter Dateien anlegen (Dokument, Präsentation …)? D-074. */
+    allowFiles: integer('allow_files', { mode: 'boolean' }).notNull().default(true),
     position: integer('position').notNull().default(0),
     ...timestamps,
   },

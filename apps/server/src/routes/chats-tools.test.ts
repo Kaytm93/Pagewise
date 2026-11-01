@@ -197,6 +197,7 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
       'create_document',
       'create_presentation',
       'create_spreadsheet',
+      'create_figure',
     ]);
     const system = requests[0]?.messages[0];
     expect(system?.role).toBe('system');
@@ -308,8 +309,9 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
     it('wenn der Anbieter es nicht erlaubt', async () => {
       const patched = await session.call('PATCH', `/api/providers/${providerId}`, {
         allowTools: false,
+        allowFiles: false,
       });
-      expect(patched.body).toMatchObject({ allowTools: false });
+      expect(patched.body).toMatchObject({ allowTools: false, allowFiles: false });
       await ask('Wann ist der Test?');
       expectNoTools();
     });
@@ -444,6 +446,7 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
         'create_document',
         'create_presentation',
         'create_spreadsheet',
+        'create_figure',
       ]);
       expect(last(events).event).toBe('done');
     });
@@ -575,6 +578,7 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
         'create_document',
         'create_presentation',
         'create_spreadsheet',
+        'create_figure',
       ]);
       expect(requests[1]?.messages[0]?.content).toContain('web_search');
     });

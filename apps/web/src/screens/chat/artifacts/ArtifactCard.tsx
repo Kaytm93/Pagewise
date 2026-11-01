@@ -6,6 +6,7 @@ import { useSession } from '../../../session/SessionProvider';
 const DocumentView = lazy(() => import('../blocks/DocumentView'));
 const SlidesView = lazy(() => import('../blocks/SlidesView'));
 const SheetView = lazy(() => import('../blocks/SheetView'));
+const FigureView = lazy(() => import('../blocks/FigureView'));
 
 type Load = { state: 'loading' } | { state: 'failed' } | { state: 'ready'; spec: string };
 
@@ -60,6 +61,8 @@ function ArtifactCard({ artifact }: { artifact: ChatArtifact }) {
         <DocumentView source={load.spec} final />
       ) : artifact.kind === 'sheet' ? (
         <SheetView source={load.spec} final />
+      ) : artifact.kind === 'figure' ? (
+        <FigureView source={load.spec} final />
       ) : (
         <SlidesView source={load.spec} final />
       )}

@@ -122,6 +122,8 @@ export interface Provider {
   sendImages: boolean;
   /** Darf das Modell Stundenplan und Tests über Werkzeuge einsehen? Aus: diese Daten gehen nie an den Anbieter. */
   allowTools: boolean;
+  /** Darf die KI über diesen Anbieter Dateien anlegen? */
+  allowFiles: boolean;
   hasKey: boolean;
   /** Letzte vier Zeichen, nur bei langen Schlüsseln. Der Schlüssel selbst kommt nie an. */
   keyHint: string | null;
@@ -143,6 +145,7 @@ export interface ProviderInput {
   models?: ModelEntry[];
   sendImages?: boolean;
   allowTools?: boolean;
+  allowFiles?: boolean;
 }
 
 export interface ProviderPatch {
@@ -151,6 +154,7 @@ export interface ProviderPatch {
   models?: ModelEntry[];
   sendImages?: boolean;
   allowTools?: boolean;
+  allowFiles?: boolean;
   apiKey?: string;
   clearKey?: boolean;
 }
@@ -232,7 +236,7 @@ export interface ChatAsset {
 /** Eine Datei, die das Modell über ein Werkzeug angelegt hat. Die Spezifikation holt `api.artifact(id)`. */
 export interface ChatArtifact {
   id: string;
-  kind: 'document' | 'slides' | 'sheet';
+  kind: 'document' | 'slides' | 'sheet' | 'figure';
   title: string;
   version: number;
 }

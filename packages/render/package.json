@@ -19,6 +19,7 @@
     "./sanitize": "./src/sanitize.ts",
     "./slides": "./src/slides.ts",
     "./sheet": "./src/sheet.ts",
+    "./chart": "./src/chart.ts",
     "./quiz": "./src/quiz.ts",
     "./validate": "./src/validate.ts"
   },

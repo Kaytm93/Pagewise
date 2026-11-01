@@ -328,6 +328,7 @@ export const de = {
     graph: 'Funktionsgraph',
     mol: 'Strukturformel',
     abc: 'Noten',
+    chart: 'Diagramm',
     quiz: 'Quiz',
     document: 'Dokument',
     slides: 'Präsentation',
@@ -352,6 +353,8 @@ export const de = {
         'Der Aufbau des Dokuments passt nicht: Titel, Abschnitte und Texte müssen stimmen.',
       invalid_slides:
         'Der Aufbau der Präsentation passt nicht: Titel, Folien, Stichpunkte und Absätze müssen stimmen.',
+      invalid_chart:
+        'Der Aufbau des Diagramms passt nicht: Art, Rubriken und Werte müssen stimmen.',
       invalid_sheet:
         'Der Aufbau der Tabelle passt nicht: Blattnamen, Kopfzeile, Zeilen und Zellen müssen stimmen.',
       unsupported_text:
@@ -382,6 +385,12 @@ export const de = {
       downloadDocx: 'Als Word herunterladen',
       making: 'PDF wird erstellt …',
       failed: 'Das PDF konnte nicht erstellt werden. Versuche es noch einmal.',
+    },
+    figureView: {
+      downloadPng: 'Als PNG herunterladen',
+      downloadSvg: 'Als SVG herunterladen',
+      making: 'Bild wird erstellt …',
+      failed: 'Das Bild konnte nicht erstellt werden. Versuche es noch einmal.',
     },
     sheetView: {
       downloadXlsx: 'Als Excel herunterladen',
@@ -686,6 +695,7 @@ export const de = {
       create_document: 'Dokument erstellt',
       create_presentation: 'Präsentation erstellt',
       create_spreadsheet: 'Tabelle erstellt',
+      create_figure: 'Abbildung erstellt',
     },
     artifacts: {
       label: 'Dateien dieser Antwort',
@@ -885,9 +895,12 @@ export const de = {
         'Stundenplan und Tests nur, wenn das Modell sie über ein Werkzeug abfragt (und es Werkzeuge kann), nie mit jeder Nachricht. Im Chat steht dann „Stundenplan eingesehen“.',
       sentNever:
         'Nie gesendet: dein Passcode, die Schlüssel anderer Anbieter und Chats, die du nicht gerade offen hast.',
-      allowTools: 'Stundenplan und Tests einsehen lassen',
+      allowTools: 'Stundenplan, Tests und Websuche nutzen lassen',
       allowToolsHint:
         'Aus: Diese Daten gehen nie an diesen Anbieter, auch wenn der Schalter in den Einstellungen an ist.',
+      allowFiles: 'Dateien erstellen lassen',
+      allowFilesHint:
+        'Aus: Die KI legt über diesen Anbieter keine Dokumente, Präsentationen, Tabellen oder Abbildungen an. Die Dateien bleiben auf diesem Gerät, auch wenn sie an ist.',
       delete: 'Anbieter löschen',
       test: 'Verbindung testen',
       testing: 'Wird geprüft …',

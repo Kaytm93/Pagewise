@@ -44,6 +44,7 @@ beforeAll(async () => {
   await import('./screens/chat/blocks/DocumentView');
   await import('./screens/chat/blocks/SlidesView');
   await import('./screens/chat/blocks/SheetView');
+  await import('./screens/chat/blocks/FigureView');
 }, 30_000);
 beforeEach(() => window.history.replaceState(null, '', '/'));
 afterEach(() => window.history.replaceState(null, '', '/'));
@@ -125,6 +126,28 @@ describe('Chat: vom Modell angelegte Dateien', () => {
     });
     open(server, chatPath(subject.id, chat.id));
     expect(await screen.findByRole('button', { name: 'Als Word herunterladen' })).toBeTruthy();
+  });
+
+  it('zeigt eine einzelne Abbildung mit PNG- und SVG-Knopf', async () => {
+    const { server, subject, chat } = setup();
+    const figure = {
+      title: 'Beispiel-Parabel',
+      figure: { type: 'graph', graph: { functions: ['x^2'], x: [-2, 2] }, caption: 'Parabel' },
+    };
+    server.artifacts.set('f1', {
+      id: 'f1',
+      kind: 'figure',
+      title: figure.title,
+      version: 1,
+      spec: JSON.stringify(figure),
+    });
+    server.addMessage(chat.id, 'assistant', 'Die Abbildung steht bereit.', {
+      artifacts: [{ id: 'f1', kind: 'figure', title: figure.title, version: 1 }],
+    });
+    open(server, chatPath(subject.id, chat.id));
+    expect(await screen.findByRole('button', { name: 'Als PNG herunterladen' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Als SVG herunterladen' })).toBeTruthy();
+    expect(screen.getByText('Parabel')).toBeTruthy();
   });
 
   it('meldet, wenn die Datei nicht geladen werden kann', async () => {

@@ -7,7 +7,7 @@ const INK = '2E2E2E';
 const PPTX_TYPE = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
 /** Zeichnet eine Abbildung für die Folie; lässt sie sich nicht zeichnen, bleibt die Folie ohne sie (die Datei entsteht trotzdem). */
-async function rasterOrNull(kind: 'graph' | 'mol' | 'abc', source: string) {
+async function rasterOrNull(kind: 'graph' | 'mol' | 'abc' | 'chart', source: string) {
   try {
     return await rasterizeBlock(kind, source);
   } catch {

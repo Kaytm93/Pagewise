@@ -74,6 +74,7 @@ describe('Chats mit Datei-Werkzeugen (Dokument, Präsentation)', () => {
   let requests: UpstreamCall[];
   let scripts: ((call: UpstreamCall) => Response)[];
   let subjectId: string;
+  let providerId: string;
 
   beforeEach(async () => {
     requests = [];
@@ -97,6 +98,7 @@ describe('Chats mit Datei-Werkzeugen (Dokument, Präsentation)', () => {
       apiKey: KEY,
       models: [{ id: 'modell-a', tools: true }],
     });
+    providerId = provider.body.id as string;
     await session.call('PUT', '/api/model-settings', {
       default: { providerId: provider.body.id, model: 'modell-a' },
       fallback: [],
@@ -184,6 +186,7 @@ describe('Chats mit Datei-Werkzeugen (Dokument, Präsentation)', () => {
       'create_document',
       'create_presentation',
       'create_spreadsheet',
+      'create_figure',
     ]);
   });
 
@@ -308,5 +311,78 @@ describe('Chats mit Datei-Werkzeugen (Dokument, Präsentation)', () => {
     expect(JSON.parse(requests[1]?.messages.at(-1)?.content ?? '{}').error).toBe(
       'invalid_sheet: name',
     );
+  });
+
+  it('legt ein Dokument mit einem Diagramm an und meldet ein falsches Diagramm als Code', async () => {
+    const chart = {
+      type: 'bar',
+      categories: ['Mo', 'Di'],
+      series: [{ name: 'Regen', values: [3, 5] }],
+    };
+    const good = { title: 'Beispiel', parts: [{ type: 'chart', chart, caption: 'Regen' }] };
+    const bad = {
+      title: 'Beispiel',
+      parts: [{ type: 'chart', chart: { ...chart, type: 'donut' } }],
+    };
+    scripts.push(
+      () => toolCall('call_1', 'create_document', JSON.stringify(bad)),
+      () => toolCall('call_2', 'create_document', JSON.stringify(good)),
+      () => text('Fertig.'),
+    );
+    const { events } = await ask('Diagramm bitte.');
+    expect(JSON.parse(requests[1]?.messages.at(-1)?.content ?? '{}').error).toBe(
+      'invalid_chart: type',
+    );
+    const message = (events.at(-1) as SseEvent).data.message as { artifacts: unknown[] };
+    expect(message.artifacts).toHaveLength(1);
+  });
+
+  it('legt eine einzelne Abbildung an (create_figure)', async () => {
+    const figure = {
+      title: 'Beispiel-Parabel',
+      figure: { type: 'graph', graph: { functions: ['x^2'], x: [-2, 2] } },
+    };
+    scripts.push(
+      () => toolCall('call_1', 'create_figure', JSON.stringify(figure)),
+      () => text('Die Abbildung steht bereit.'),
+    );
+    const { events } = await ask('Zeichne eine Parabel.');
+    const message = (events.at(-1) as SseEvent).data.message as {
+      artifacts: { kind: string; title: string }[];
+    };
+    expect(message.artifacts).toEqual([
+      expect.objectContaining({ kind: 'figure', title: 'Beispiel-Parabel' }),
+    ]);
+  });
+
+  it('meldet eine nicht zeichenbare Abbildung als Code (create_figure)', async () => {
+    const figure = { title: 'Beispiel', figure: { type: 'molecule', smiles: 'C(C' } };
+    scripts.push(
+      () => toolCall('call_1', 'create_figure', JSON.stringify(figure)),
+      () => text('Ich korrigiere.'),
+    );
+    await ask('Molekül.');
+    expect(JSON.parse(requests[1]?.messages.at(-1)?.content ?? '{}').error).toBe('invalid_smiles');
+  });
+
+  it('bietet die Datei-Werkzeuge nicht an, wenn der Anbieter Dateien nicht erlaubt', async () => {
+    const patched = await session.call('PATCH', `/api/providers/${providerId}`, {
+      allowFiles: false,
+    });
+    expect(patched.body).toMatchObject({ allowFiles: false, allowTools: true });
+    await ask('Hallo');
+    expect(toolNames(requests[0])).toEqual(['get_timetable', 'get_exams']);
+    expect(requests[0]?.messages[0]?.content).not.toContain('create_document');
+  });
+
+  it('bietet Dateien weiter an, wenn nur Stundenplan und Websuche für den Anbieter aus sind', async () => {
+    await session.call('PATCH', `/api/providers/${providerId}`, { allowTools: false });
+    await ask('Hallo');
+    expect(toolNames(requests[0])).toEqual([
+      'create_document',
+      'create_presentation',
+      'create_spreadsheet',
+      'create_figure',
+    ]);
   });
 });

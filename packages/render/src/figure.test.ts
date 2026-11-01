@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { type DocumentSpec, parseDocumentSpec } from './document';
+import { parseFigureArtifact } from './figure';
 import { parseSlidesSpec, type SlidesSpec } from './slides';
 import { validateDocumentFigures, validateSlidesFigures } from './validate';
 
@@ -142,5 +143,22 @@ describe('Tiefe Prüfung der Abbildungen', () => {
     expect(result.ok).toBe(true);
     const spec = (result as { ok: true; value: SlidesSpec }).value;
     expect((await validateSlidesFigures(spec))?.code).toBe('invalid_smiles');
+  });
+});
+
+describe('Einzelne Abbildung als Datei', () => {
+  const art = (value: unknown) => parseFigureArtifact(JSON.stringify(value));
+
+  it('liest Titel und Abbildung und den Rundlauf', () => {
+    const first = art({ title: 'Parabel', figure: { type: 'graph', graph: GRAPH, caption: 'f' } });
+    expect(first.ok && first.value.figure.kind).toBe('graph');
+    if (first.ok) expect(parseFigureArtifact(JSON.stringify(first.value)).ok).toBe(true);
+  });
+
+  it('lehnt fehlenden Titel, fremde Felder und Unsinn ab', () => {
+    expect(art({ figure: { type: 'graph', graph: GRAPH } }).ok).toBe(false);
+    expect(art({ title: 'T', figure: { type: 'graph', graph: GRAPH }, x: 1 }).ok).toBe(false);
+    expect(art({ title: 'T', figure: { type: 'heading', text: 'x' } }).ok).toBe(false);
+    expect(parseFigureArtifact('kaputt').ok).toBe(false);
   });
 });

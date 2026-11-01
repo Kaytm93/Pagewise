@@ -13,6 +13,7 @@ const MODEL_TOOLS = new Set([
   'create_document',
   'create_presentation',
   'create_spreadsheet',
+  'create_figure',
 ]);
 
 export const isModelTool = (entry: ActivityEntry): boolean => MODEL_TOOLS.has(entry.tool);

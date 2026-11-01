@@ -495,6 +495,7 @@ export class FakeServer {
       models: [],
       sendImages: true,
       allowTools: true,
+      allowFiles: true,
       hasKey: false,
       keyHint: null,
       warning: null,
@@ -570,6 +571,7 @@ export class FakeServer {
         models: this.withFree(models),
         sendImages: data.sendImages !== false,
         allowTools: data.allowTools !== false,
+        allowFiles: data.allowFiles !== false,
         warning: /\/api\/coding(\/|$)/.test(baseUrl) ? 'coding_plan' : null,
       });
       if (typeof data.apiKey === 'string') {
@@ -622,6 +624,7 @@ export class FakeServer {
       if (Array.isArray(data.models)) provider.models = this.withFree(data.models as ModelEntry[]);
       if (typeof data.sendImages === 'boolean') provider.sendImages = data.sendImages;
       if (typeof data.allowTools === 'boolean') provider.allowTools = data.allowTools;
+      if (typeof data.allowFiles === 'boolean') provider.allowFiles = data.allowFiles;
       if (typeof data.apiKey === 'string') {
         this.secrets.set(provider.id, data.apiKey);
         provider.hasKey = true;

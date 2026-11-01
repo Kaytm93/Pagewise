@@ -531,7 +531,9 @@ describe('Stundenplan und Tests für diesen Anbieter', () => {
     await user.click(await screen.findByRole('button', { name: 'Anbieter hinzufügen' }));
     let dialog = await screen.findByRole('dialog', { name: 'Anbieter hinzufügen' });
     const box = () =>
-      within(dialog).getByRole('checkbox', { name: /Stundenplan und Tests einsehen lassen/ });
+      within(dialog).getByRole('checkbox', {
+        name: /Stundenplan, Tests und Websuche nutzen lassen/,
+      });
     expect((box() as HTMLInputElement).checked).toBe(true);
     // Die Übersicht „Was an diesen Anbieter geht“ nennt es ausdrücklich.
     expect(

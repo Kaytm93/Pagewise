@@ -1,6 +1,8 @@
 import { type Block, extractBlocks } from './blocks';
+import { validateChart } from './chart';
 import { type DocumentSpec, validateDocument } from './document';
 import { type BlockIssue, RenderError } from './errors';
+import type { FigureArtifact } from './figure';
 import { validateGraph } from './graph';
 import { parseMolSpec, validateFormulaSpec } from './mol';
 import { validateQuiz } from './quiz';
@@ -25,10 +27,11 @@ function issue(
  * (SmilesDrawer, abcjs) werden erst geladen, wenn die Art vorkommt. `null`, wenn sich die Abbildung zeichnen lässt.
  */
 export async function validateFigureSource(
-  kind: 'graph' | 'mol' | 'abc',
+  kind: 'graph' | 'mol' | 'abc' | 'chart',
   source: string,
 ): Promise<RenderError | null> {
   if (kind === 'graph') return validateGraph(source);
+  if (kind === 'chart') return validateChart(source);
   if (kind === 'mol') {
     const spec = parseMolSpec(source);
     if (!spec.ok) return spec.error;
@@ -40,6 +43,11 @@ export async function validateFigureSource(
   }
   const { checkAbc } = await import('./abc');
   return checkAbc(source).error;
+}
+
+/** Prüft die Abbildung einer einzelnen Abbildungsdatei tief. */
+export async function validateFigureArtifact(spec: FigureArtifact): Promise<RenderError | null> {
+  return validateFigureSource(spec.figure.kind, spec.figure.source);
 }
 
 /** Prüft alle Abbildungen eines Dokuments tief. Der erste Fehler zählt; `null`, wenn alle sich zeichnen lassen. */

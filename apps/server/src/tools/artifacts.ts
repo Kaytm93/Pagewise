@@ -1,8 +1,13 @@
 import type { RenderError, Result } from '@pagewise/render';
 import { parseDocumentSpec } from '@pagewise/render/document';
+import { parseFigureArtifact } from '@pagewise/render/figure';
 import { parseSheetSpec } from '@pagewise/render/sheet';
 import { parseSlidesSpec } from '@pagewise/render/slides';
-import { validateDocumentFigures, validateSlidesFigures } from '@pagewise/render/validate';
+import {
+  validateDocumentFigures,
+  validateFigureArtifact,
+  validateSlidesFigures,
+} from '@pagewise/render/validate';
 import { z } from 'zod';
 import { type ArtifactKind, MAX_ARTIFACTS_PER_REPLY } from '../artifacts/service';
 import { type ToolContext, type ToolDefinition, ToolError } from './registry';
@@ -82,13 +87,18 @@ const FIGURE_PROPERTIES = {
     type: 'string',
     description: 'Noten in ABC-Notation mit den Zeilen X:, M:, L: und K:.',
   },
+  chart: {
+    type: 'object',
+    description:
+      'Diagramm: {"type":"bar"|"line"|"pie","categories":["Mo","Di"],"series":[{"name":"Regen","values":[3,5]}],"unit":"mm"}. Kreis: genau eine Reihe, Werte nicht negativ. Höchstens 24 Rubriken und 4 Reihen.',
+  },
   caption: { type: 'string', description: 'Bildunterschrift (kurz).' },
 } as const;
 
 export const createDocument: ToolDefinition<SpecArgs> = {
   name: 'create_document',
   description:
-    'Legt ein Dokument an, das die Person als PDF herunterladen kann (Arbeitsblatt, Zusammenfassung, Lernzettel). Nutze es nur, wenn die Person eine Datei oder ein Blatt möchte. Abschnitte: heading, paragraph, list, table sowie Abbildungen: graph (Funktionsgraph), molecule (Strukturformel) und notes (Noten). Die App zeichnet Abbildungen selbst, erfinde keine Koordinaten.',
+    'Legt ein Dokument an, das die Person als PDF herunterladen kann (Arbeitsblatt, Zusammenfassung, Lernzettel). Nutze es nur, wenn die Person eine Datei oder ein Blatt möchte. Abschnitte: heading, paragraph, list, table sowie Abbildungen: graph (Funktionsgraph), molecule (Strukturformel), notes (Noten) und chart (Balken-, Linien- oder Kreisdiagramm). Die App zeichnet Abbildungen selbst, erfinde keine Koordinaten.',
   parameters: {
     type: 'object',
     properties: {
@@ -101,7 +111,16 @@ export const createDocument: ToolDefinition<SpecArgs> = {
           properties: {
             type: {
               type: 'string',
-              enum: ['heading', 'paragraph', 'list', 'table', 'graph', 'molecule', 'notes'],
+              enum: [
+                'heading',
+                'paragraph',
+                'list',
+                'table',
+                'graph',
+                'molecule',
+                'notes',
+                'chart',
+              ],
             },
             text: { type: 'string', description: 'Text einer Überschrift oder eines Absatzes.' },
             items: {
@@ -138,7 +157,7 @@ export const createDocument: ToolDefinition<SpecArgs> = {
 export const createPresentation: ToolDefinition<SpecArgs> = {
   name: 'create_presentation',
   description:
-    'Legt eine Präsentation an, die die Person als PowerPoint herunterladen kann (Referat, Vortrag). Nutze es nur, wenn die Person Folien möchte. Eine Folie hat Titel, Stichpunkte, einen Absatz und höchstens eine Abbildung (figure): Funktionsgraph, Strukturformel oder Noten. Die App zeichnet Abbildungen selbst, erfinde keine Koordinaten.',
+    'Legt eine Präsentation an, die die Person als PowerPoint herunterladen kann (Referat, Vortrag). Nutze es nur, wenn die Person Folien möchte. Eine Folie hat Titel, Stichpunkte, einen Absatz und höchstens eine Abbildung (figure): Funktionsgraph, Strukturformel, Noten oder Diagramm. Die App zeichnet Abbildungen selbst, erfinde keine Koordinaten.',
   parameters: {
     type: 'object',
     properties: {
@@ -160,7 +179,7 @@ export const createPresentation: ToolDefinition<SpecArgs> = {
               type: 'object',
               description: 'Eine Abbildung für diese Folie.',
               properties: {
-                type: { type: 'string', enum: ['graph', 'molecule', 'notes'] },
+                type: { type: 'string', enum: ['graph', 'molecule', 'notes', 'chart'] },
                 ...FIGURE_PROPERTIES,
               },
               required: ['type'],
@@ -219,4 +238,32 @@ export const createSpreadsheet: ToolDefinition<SpecArgs> = {
   target: titleOf,
   available,
   run: (args, context) => store('sheet', args, context, parseSheetSpec, async () => null),
+};
+
+export const createFigure: ToolDefinition<SpecArgs> = {
+  name: 'create_figure',
+  description:
+    'Legt eine einzelne Abbildung als Datei an, die die Person als PNG oder SVG herunterladen kann: Funktionsgraph, Strukturformel, Noten oder Diagramm. Nutze es, wenn die Person die Zeichnung allein haben möchte (für ein Heft, eine Folie oder ein Blatt); für Dokumente und Folien setzt du Abbildungen direkt dort ein.',
+  parameters: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'Titel der Abbildung (bis 120 Zeichen).' },
+      figure: {
+        type: 'object',
+        description: 'Die Abbildung.',
+        properties: {
+          type: { type: 'string', enum: ['graph', 'molecule', 'notes', 'chart'] },
+          ...FIGURE_PROPERTIES,
+        },
+        required: ['type'],
+      },
+    },
+    required: ['title', 'figure'],
+  },
+  schema: Spec,
+  maxArgumentCharacters: MAX_FILE_ARGUMENT_CHARACTERS,
+  target: titleOf,
+  available,
+  run: (args, context) =>
+    store('figure', args, context, parseFigureArtifact, validateFigureArtifact),
 };

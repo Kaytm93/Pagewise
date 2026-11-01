@@ -235,7 +235,7 @@ export async function buildPdf(spec: DocumentSpec): Promise<Blob> {
    * Bildunterschrift. Lässt sich die Abbildung nicht zeichnen, steht stattdessen ein Hinweis; die Datei entsteht trotzdem.
    */
   const drawFigure = async (
-    kind: 'graph' | 'mol' | 'abc',
+    kind: 'graph' | 'mol' | 'abc' | 'chart',
     source: string,
     caption: string | undefined,
   ) => {

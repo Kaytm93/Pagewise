@@ -1,6 +1,6 @@
 import type { RenderError } from '@pagewise/render';
 
-export type SvgBlockKind = 'graph' | 'mol' | 'abc';
+export type SvgBlockKind = 'graph' | 'mol' | 'abc' | 'chart';
 
 const cache = new Map<string, string>();
 const CACHE_LIMIT = 120;
@@ -21,6 +21,10 @@ async function draw(
     const { renderGraph } = await import('@pagewise/render/graph');
     return renderGraph(source, sheetWidth);
   }
+  if (kind === 'chart') {
+    const { renderChart } = await import('@pagewise/render/chart');
+    return renderChart(source);
+  }
   if (kind === 'abc') {
     const { renderAbc } = await import('@pagewise/render/abc-dom');
     return renderAbc(source);
@@ -36,7 +40,7 @@ async function draw(
 }
 
 /**
- * Zeichnet einen Block (Graph, Molekül, Noten) zu bereinigtem SVG-Text. Alles geht durch dieselbe
+ * Zeichnet einen Block (Graph, Molekül, Noten, Diagramm) zu bereinigtem SVG-Text. Alles geht durch dieselbe
  * Bereinigung (`sanitizeSvg`), auch die eigenen Zeichnungen. Die Bibliotheken werden erst geladen, wenn ein
  * Block der Art vorkommt. Wirft `RenderError` mit einem festen Code.
  */

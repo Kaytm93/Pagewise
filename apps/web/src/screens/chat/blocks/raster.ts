@@ -109,6 +109,16 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
+/**
+ * Die Abbildung als eigenständiges SVG mit Druckfarben (für den Download als SVG-Datei). Es enthält keine
+ * Skripte und keine Verweise: derselbe bereinigte Text wie im Chat, nur mit Farben als Attribute.
+ */
+export async function svgOfBlock(kind: SvgBlockKind, source: string): Promise<string> {
+  const printed = printSvg(await renderBlock(kind, source));
+  if (!printed) throw new Error('raster: kein SVG');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n${printed.text}`;
+}
+
 /** Größte Kantenlänge der Leinwand in Pixeln: groß genug für Druck, klein genug für Telefone. */
 const MAX_EDGE = 2400;
 
@@ -152,6 +162,6 @@ export async function rasterizeBlock(
 }
 
 /** Zeichenblock-Art einer Abbildung. */
-export function blockKindOf(kind: 'graph' | 'mol' | 'abc'): SvgBlockKind {
+export function blockKindOf(kind: 'graph' | 'mol' | 'abc' | 'chart'): SvgBlockKind {
   return kind;
 }

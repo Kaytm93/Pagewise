@@ -1,3 +1,4 @@
+import { validateChart } from './chart';
 import { fail, hasControlChars, LIMITS, ok, type Result } from './errors';
 import { validateGraph } from './graph';
 import { parseMolSpec, validateFormulaSpec } from './mol';
@@ -8,7 +9,7 @@ import { parseMolSpec, validateFormulaSpec } from './mol';
  * mit denselben Zeichnern wie im Chat. Die Formen unten sind die Eingabe des Modells; geprüft und gespeichert
  * wird immer die einheitliche Form `{ type: 'figure', kind, source, caption? }`.
  */
-export type FigureKind = 'graph' | 'mol' | 'abc';
+export type FigureKind = 'graph' | 'mol' | 'abc' | 'chart';
 
 export interface Figure {
   type: 'figure';
@@ -31,6 +32,7 @@ const INPUT = {
   graph: { kind: 'graph', keys: ['graph', 'source'] },
   molecule: { kind: 'mol', keys: ['formula', 'smiles', 'source'] },
   notes: { kind: 'abc', keys: ['abc', 'source'] },
+  chart: { kind: 'chart', keys: ['chart', 'source'] },
 } as const;
 
 /** `true`, wenn der Eintrag eine Abbildung beschreibt (Eingabeform oder einheitliche Form). */
@@ -57,7 +59,12 @@ export function readFigure(
   if (type === 'figure') {
     if (!hasOnly(entry, ['type', 'kind', 'source', 'caption']))
       return fail('invalid_spec', 'figure');
-    if (entry.kind !== 'graph' && entry.kind !== 'mol' && entry.kind !== 'abc') {
+    if (
+      entry.kind !== 'graph' &&
+      entry.kind !== 'mol' &&
+      entry.kind !== 'abc' &&
+      entry.kind !== 'chart'
+    ) {
       return fail('invalid_spec', 'kind');
     }
     kind = entry.kind;
@@ -71,7 +78,7 @@ export function readFigure(
     if (given.length !== 1) return fail('invalid_spec', type);
     const key = given[0] as string;
     const value = entry[key];
-    if (kind === 'graph') {
+    if (kind === 'graph' || kind === 'chart') {
       if (typeof value === 'string') source = value;
       else if (isObject(value)) source = JSON.stringify(value);
       else return fail('invalid_spec', key);
@@ -86,7 +93,8 @@ export function readFigure(
     return fail('invalid_spec', 'type');
   }
 
-  const limit = kind === 'graph' ? LIMITS.graph : kind === 'mol' ? LIMITS.mol : LIMITS.abc;
+  const limit =
+    kind === 'graph' || kind === 'chart' ? LIMITS.graph : kind === 'mol' ? LIMITS.mol : LIMITS.abc;
   if (source.trim() === '') return fail('empty', kind);
   if (source.length > limit) return fail('too_large', kind);
   if (hasControlChars(source)) return fail('invalid_spec', kind);
@@ -94,6 +102,9 @@ export function readFigure(
   // Sofort prüfbar, ohne schwere Bibliothek: Graph und Summenformel. SMILES und Noten prüft der zweite Schritt.
   if (kind === 'graph') {
     const error = validateGraph(source);
+    if (error) return { ok: false, error };
+  } else if (kind === 'chart') {
+    const error = validateChart(source);
     if (error) return { ok: false, error };
   } else if (kind === 'mol') {
     if (source.includes('\n')) return fail('invalid_spec', 'mol');
@@ -112,4 +123,42 @@ export function readFigure(
     caption = read.value;
   }
   return ok({ type: 'figure', kind, source, caption });
+}
+
+/** Eine einzelne Abbildung als eigene Datei (`create_figure`, D-078): Titel und die Abbildung. */
+export interface FigureArtifact {
+  title: string;
+  figure: Figure;
+}
+
+/**
+ * Liest die Spezifikation einer einzelnen Abbildung: `{"title": …, "figure": {"type": "graph"|"molecule"|"notes"|"chart"|"figure", …}}`.
+ * Fehler tragen nur Feldnamen. Die tiefe Prüfung (SMILES, Noten) übernimmt `validateFigureSource`.
+ */
+export function parseFigureArtifact(source: string): Result<FigureArtifact> {
+  if (source.trim() === '') return fail('empty');
+  if (source.length > LIMITS.document) return fail('too_large');
+  let json: unknown;
+  try {
+    json = JSON.parse(source);
+  } catch {
+    return fail('invalid_json');
+  }
+  if (!isObject(json) || !hasOnly(json, ['title', 'figure'])) return fail('invalid_spec');
+  if (typeof json.title !== 'string' || json.title.trim() === '' || json.title.length > 120) {
+    return fail('invalid_spec', 'title');
+  }
+  if (hasControlChars(json.title) || /[\r\n\t]/.test(json.title))
+    return fail('invalid_spec', 'title');
+  if (!isObject(json.figure) || !isFigureEntry(json.figure)) return fail('invalid_spec', 'figure');
+  const figure = readFigure(json.figure, (value) =>
+    typeof value === 'string' &&
+    value.length <= 200 &&
+    !hasControlChars(value) &&
+    !/[\r\n\t]/.test(value)
+      ? ok(value)
+      : fail('invalid_spec', 'caption'),
+  );
+  if (!figure.ok) return figure;
+  return ok({ title: json.title.trim(), figure: figure.value });
 }

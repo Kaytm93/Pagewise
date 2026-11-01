@@ -33,6 +33,7 @@ export interface ProviderView {
   sendImages: boolean;
   /** Darf das Modell Stundenplan und Tests über Werkzeuge einsehen? Aus bedeutet: diese Daten gehen nie an den Anbieter. */
   allowTools: boolean;
+  allowFiles: boolean;
   hasKey: boolean;
   /** Letzte vier Zeichen, nur bei langen Schlüsseln. Der Schlüssel selbst verlässt den Server nie. */
   keyHint: string | null;
@@ -76,6 +77,7 @@ export interface CreateProviderInput {
   models?: ModelEntry[];
   sendImages?: boolean;
   allowTools?: boolean;
+  allowFiles?: boolean;
 }
 
 export interface UpdateProviderInput {
@@ -84,6 +86,7 @@ export interface UpdateProviderInput {
   models?: ModelEntry[];
   sendImages?: boolean;
   allowTools?: boolean;
+  allowFiles?: boolean;
   /** Neuer Schlüssel. Ein leerer Wert wird vorher abgelehnt. */
   apiKey?: string;
   clearKey?: boolean;
@@ -140,6 +143,7 @@ export class ProviderService {
       })),
       sendImages: row.sendImages,
       allowTools: row.allowTools,
+      allowFiles: row.allowFiles,
       hasKey: hints.has(name),
       keyHint: hints.get(name) ?? null,
       warning: isCodingPlanUrl(row.baseUrl) ? 'coding_plan' : null,
@@ -190,6 +194,7 @@ export class ProviderService {
           models: JSON.stringify(models),
           sendImages: input.sendImages ?? true,
           allowTools: input.allowTools ?? true,
+          allowFiles: input.allowFiles ?? true,
           position: last?.value === null || last?.value === undefined ? 0 : last.value + 1,
         })
         .returning()
@@ -256,6 +261,7 @@ export class ProviderService {
     if (input.models !== undefined) changes.models = JSON.stringify(input.models);
     if (input.sendImages !== undefined) changes.sendImages = input.sendImages;
     if (input.allowTools !== undefined) changes.allowTools = input.allowTools;
+    if (input.allowFiles !== undefined) changes.allowFiles = input.allowFiles;
 
     // Zuerst den Schlüssel prüfen und schreiben: schlägt das fehl, bleibt alles andere unverändert.
     if (input.apiKey !== undefined) {
@@ -302,6 +308,7 @@ export class ProviderService {
     preset: string;
     models: ModelEntry[];
     allowTools: boolean;
+    allowFiles: boolean;
   } | null> {
     const row = this.db.select().from(providers).where(eq(providers.id, id)).get();
     if (!row) return null;
@@ -310,6 +317,7 @@ export class ProviderService {
       preset: row.preset,
       models: parseStoredModels(row.models),
       allowTools: row.allowTools,
+      allowFiles: row.allowFiles,
     };
   }
 
@@ -430,13 +438,23 @@ export class ProviderService {
   }
 
   /** Alles, was eine Anfrage braucht. Nur für Server-Code: enthält den Schlüssel. */
-  async resolve(
-    selection: Selection,
-  ): Promise<{ target: Target; model: ModelEntry; preset: string; allowTools: boolean } | null> {
+  async resolve(selection: Selection): Promise<{
+    target: Target;
+    model: ModelEntry;
+    preset: string;
+    allowTools: boolean;
+    allowFiles: boolean;
+  } | null> {
     const found = await this.target(selection.providerId);
     const model = found?.models.find((entry) => entry.id === selection.model);
     return found && model
-      ? { target: found.target, model, preset: found.preset, allowTools: found.allowTools }
+      ? {
+          target: found.target,
+          model,
+          preset: found.preset,
+          allowTools: found.allowTools,
+          allowFiles: found.allowFiles,
+        }
       : null;
   }
 }

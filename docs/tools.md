@@ -1,13 +1,13 @@
 # Werkzeuge der KI (Tool Calling)
 
-Stand: 26. Oktober 2026 (D-044, D-067, D-068). Chat-Modelle können kleine Werkzeuge aufrufen. Heute: `get_timetable` und `get_exams` (Stundenplan und Tests, nur lesend), `web_search` (Websuche, eigener Schalter, standardmäßig aus, siehe unten) sowie `create_document`, `create_presentation` und `create_spreadsheet` (Dateien, siehe unten, D-074 und D-077). Das Register ist allgemein gebaut, der Agent-Modus für API-Modelle (Phase 3) nutzt es wieder.
+Stand: 26. Oktober 2026 (D-044, D-067, D-068). Chat-Modelle können kleine Werkzeuge aufrufen. Heute: `get_timetable` und `get_exams` (Stundenplan und Tests, nur lesend), `web_search` (Websuche, eigener Schalter, standardmäßig aus, siehe unten) sowie `create_document`, `create_presentation`, `create_spreadsheet` und `create_figure` (Dateien, siehe unten, D-074, D-077 und D-078). Das Register ist allgemein gebaut, der Agent-Modus für API-Modelle (Phase 3) nutzt es wieder.
 
 ## Wann ein Modell Werkzeuge bekommt
 
 Alle drei Bedingungen müssen zusammenkommen:
 
 1. Der **globale Schalter** „KI darf Stundenplan und Tests einsehen“ (Einstellungen) ist an (Standard).
-2. Der **Anbieter** erlaubt es („Stundenplan und Tests einsehen lassen“ im Anbieter-Formular, Standard an).
+2. Der **Anbieter** erlaubt es („Stundenplan, Tests und Websuche nutzen lassen“ im Anbieter-Formular, Standard an).
 3. Das **Modell** hat das Flag „Werkzeuge“ in der Modellliste des Anbieters.
 
 Fehlt eine, geht nichts an den Anbieter. Die Daten gehen auch dann nur, wenn das Modell ein Werkzeug aufruft, nie mit jeder Nachricht. An der Antwort steht, was abgefragt wurde („Stundenplan eingesehen“), nie die Daten selbst.
@@ -25,12 +25,12 @@ Das Modell bekommt die Werkzeuge im Format der Schnittstelle (`tools`) und einen
 - Weder Argumente noch Ergebnisse stehen in Logs, Fehlermeldungen oder der Datenbank. Gespeichert wird nur Name, kurzes Ziel (`target`, zum Beispiel ein Wochentag) und Zustand.
 - Freitext aus Ergebnissen (Notizen, Themen) ist Fremdtext: Er steht als JSON-String in den Daten und löst nichts aus.
 
-## Dateien (`create_document`, `create_presentation`, `create_spreadsheet`, D-074, D-077)
+## Dateien (`create_document`, `create_presentation`, `create_spreadsheet`, `create_figure`, D-074, D-077, D-078)
 
 - **Wofür:** Das Modell legt ein Dokument (PDF oder Word), eine Präsentation (PowerPoint) oder eine Tabelle (Excel oder CSV, ohne Formeln) an, wenn die Person danach fragt. Die Argumente sind dieselbe Spezifikation wie bei den Blöcken `document` und `slides` im Chat.
 - **Ablauf:** Der Server prüft die Spezifikation, speichert sie (Tabelle `artifacts`) und meldet dem Modell nur Kennung und Titel, bei einem Fehler nur einen Code (`unsupported_text: U+0394`). Unter der Antwort erscheinen Vorschau und Download; die Datei entsteht erst dort im Gerät.
-- **Freigabe:** Schalter „KI darf Dateien erstellen“ (Einstellungen, Voreinstellung an), Freigabe des Anbieters und das Flag „Werkzeuge“ am Modell. Der Schalter ist unabhängig von „Stundenplan und Tests“.
-- **Abbildungen (D-075):** In Dokumenten gibt es `table`, `graph`, `molecule` und `notes`, auf Folien ein `figure`. Das Modell beschreibt sie (Funktionen, Summenformel oder SMILES, ABC-Notation), die App zeichnet sie; SMILES und Noten werden schon im Werkzeug geprüft, damit ein Fehler im selben Zug zurückkommt.
+- **Freigabe:** Schalter „KI darf Dateien erstellen“ (Einstellungen, Voreinstellung an), „Dateien erstellen lassen“ am Anbieter und das Flag „Werkzeuge“ am Modell. Unabhängig von „Stundenplan und Tests“ und von der Freigabe „Stundenplan, Tests und Websuche nutzen lassen“ am Anbieter.
+- **Abbildungen (D-075, D-078):** In Dokumenten gibt es `table`, `graph`, `molecule`, `notes` und `chart` (Balken, Linien, Kreis), auf Folien ein `figure`; `create_figure` liefert eine einzelne Abbildung als PNG oder SVG. Das Modell beschreibt sie (Funktionen, Summenformel oder SMILES, ABC-Notation), die App zeichnet sie; SMILES und Noten werden schon im Werkzeug geprüft, damit ein Fehler im selben Zug zurückkommt.
 - **Grenzen:** 4 Dateien je Antwort, 100 je Chat. Die Werkzeuge schreiben nur in Pagewises eigene Tabelle, nie in Daten der Person.
 
 ## Websuche (`web_search`, D-067, D-068)

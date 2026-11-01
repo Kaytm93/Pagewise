@@ -24,6 +24,7 @@ export type RenderErrorCode =
   | 'unsupported_text'
   | 'invalid_slides'
   | 'invalid_sheet'
+  | 'invalid_chart'
   | 'render_failed';
 
 export class RenderError extends Error {

@@ -808,16 +808,20 @@ export class ChatService {
 
         const registry = this.tools;
         // Jede Werkzeuggruppe hat ihren eigenen Schalter; der Anbieter und das Modell müssen Werkzeuge erlauben.
-        const toolsOn = registry !== null && resolved.allowTools && resolved.model.tools;
-        const filesOn = this.artifacts !== null && (this.toolSettings?.filesEnabled() ?? true);
+        // Stundenplan, Tests und Websuche hängen an der Freigabe „Werkzeuge“ des Anbieters, Dateien an „Dateien“.
+        const toolsOn = registry !== null && resolved.model.tools;
+        const filesOn =
+          this.artifacts !== null &&
+          resolved.allowFiles &&
+          (this.toolSettings?.filesEnabled() ?? true);
         const artifactStore = this.artifacts;
         // Der Kontext gehört zu dieser Antwort; nur die Werkzeuge, die gerade verfügbar sind, gehen an das Modell.
         const toolContext: ToolContext = {
           db: this.db,
           now: this.now,
           signal: generation.abort.signal,
-          web: this.web,
-          planner: this.toolSettings?.enabled() ?? true,
+          web: resolved.allowTools ? this.web : undefined,
+          planner: resolved.allowTools && (this.toolSettings?.enabled() ?? true),
           budget: { webSearches: 0, files: 0 },
           artifacts:
             filesOn && artifactStore
