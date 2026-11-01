@@ -1,5 +1,6 @@
 import type {
   ActivityEntry,
+  ChatArtifact,
   ChatAsset,
   ChatMessage,
   MessageStatus,
@@ -106,6 +107,26 @@ function asAssets(value: unknown): ChatAsset[] {
   });
 }
 
+const ARTIFACT_KINDS = ['document', 'slides'];
+
+function asArtifacts(value: unknown): ChatArtifact[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 20).flatMap((entry) => {
+    if (!isRecord(entry)) return [];
+    const { id, kind, title, version } = entry;
+    if (
+      typeof id !== 'string' ||
+      typeof kind !== 'string' ||
+      !ARTIFACT_KINDS.includes(kind) ||
+      typeof title !== 'string' ||
+      typeof version !== 'number'
+    ) {
+      return [];
+    }
+    return [{ id, kind: kind as ChatArtifact['kind'], title, version }];
+  });
+}
+
 function asMessage(value: unknown): ChatMessage | null {
   if (!isRecord(value)) return null;
   const { id, seq, role, content, status, providerId, model, errorCode, createdAt } = value;
@@ -132,6 +153,7 @@ function asMessage(value: unknown): ChatMessage | null {
     errorCode: typeof errorCode === 'string' ? errorCode : null,
     activity: asActivityList(value.activity),
     assets: asAssets(value.assets),
+    artifacts: asArtifacts(value.artifacts),
     reasoning:
       typeof value.reasoning === 'string' && value.reasoning !== '' ? value.reasoning : null,
     tokensPerSecond: typeof value.tokensPerSecond === 'number' ? value.tokensPerSecond : null,

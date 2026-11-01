@@ -671,6 +671,13 @@ export const de = {
       get_timetable: 'Stundenplan eingesehen',
       get_exams: 'Tests eingesehen',
       web_search: 'Websuche',
+      create_document: 'Dokument erstellt',
+      create_presentation: 'Präsentation erstellt',
+    },
+    artifacts: {
+      label: 'Dateien dieser Antwort',
+      loading: 'Datei wird geladen …',
+      failed: 'Die Datei konnte nicht geladen werden.',
     },
     modelDialog: {
       chatTitle: 'Modell für diesen Chat',
@@ -1178,6 +1185,9 @@ export const de = {
       hint: 'Die Daten gehen nur an den Anbieter, wenn das Modell sie über ein Werkzeug anfordert, nie mit jeder Nachricht. Das Modell muss Werkzeuge unterstützen (in der Modellliste des Anbieters markiert), und der Anbieter muss es erlauben. Im Chat siehst du, wann sie genutzt wurden. Die KI kann nichts ändern.',
       failed: 'Die Einstellung konnte nicht gespeichert werden.',
       loading: 'Wird geladen …',
+      filesLabel: 'KI darf Dateien erstellen',
+      filesHint:
+        'Die KI kann Dokumente (PDF) und Präsentationen (PowerPoint) anlegen, wenn du danach fragst. Die Dateien bleiben auf diesem Gerät, nichts davon geht an einen Dienst. Das Modell muss Werkzeuge unterstützen, und der Anbieter muss es erlauben.',
     },
     webSearch: {
       title: 'Websuche für die KI',

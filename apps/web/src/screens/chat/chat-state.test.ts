@@ -27,6 +27,7 @@ function msg(id: string, seq: number, extra: Partial<ChatMessage> = {}): ChatMes
     errorCode: null,
     activity: [],
     assets: [],
+    artifacts: [],
     reasoning: null,
     tokensPerSecond: null,
     costUsd: null,

@@ -38,6 +38,7 @@ function antwort(): ChatMessage {
     errorCode: null,
     activity: [],
     assets: [],
+    artifacts: [],
     reasoning: null,
     tokensPerSecond: null,
     costUsd: null,

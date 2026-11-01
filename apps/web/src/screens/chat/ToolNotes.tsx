@@ -6,7 +6,13 @@ import { format, messages as m } from '../../i18n';
  * Werkzeuge, die ein Modell im Chat aufrufen kann (Stundenplan, Tests, Websuche). Alles andere ist Arbeit eines
  * Agenten.
  */
-const MODEL_TOOLS = new Set(['get_timetable', 'get_exams', 'web_search']);
+const MODEL_TOOLS = new Set([
+  'get_timetable',
+  'get_exams',
+  'web_search',
+  'create_document',
+  'create_presentation',
+]);
 
 export const isModelTool = (entry: ActivityEntry): boolean => MODEL_TOOLS.has(entry.tool);
 

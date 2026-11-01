@@ -8,6 +8,7 @@ import { useDesign } from '../../ui/useDesign';
 import { BotHead } from '../atelier/BotHead';
 import { AgentActivity } from './AgentActivity';
 import { AssetList } from './AssetList';
+import { ArtifactList } from './artifacts/ArtifactCard';
 import { Markdown } from './Markdown';
 import { metricsLine } from './metrics';
 import { Reasoning } from './Reasoning';
@@ -168,6 +169,7 @@ export const MessageItem = memo(function MessageItem({
       {byAgent && (
         <AgentActivity steps={message.activity.filter((step) => !isModelTool(step))} live={live} />
       )}
+      <ArtifactList artifacts={message.artifacts} />
       {assetUrl && (
         <AssetList
           assets={

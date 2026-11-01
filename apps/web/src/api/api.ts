@@ -1,6 +1,7 @@
 import type { ApiClient } from './client';
 import type { SseMessage } from './sse';
 import type {
+  ArtifactDetail,
   AvailableModel,
   Chat,
   ChatDetail,
@@ -239,6 +240,16 @@ export function createApi(client: ApiClient) {
       return (await client.request<{ enabled: boolean }>('PUT', '/api/tool-settings', { enabled }))
         .enabled;
     },
+    /** Darf die KI Dateien anlegen (Dokument, Präsentation)? Eigener Schalter neben dem für Stundenplan und Tests. */
+    async filesEnabled(): Promise<boolean> {
+      return (await client.request<{ files: boolean }>('GET', '/api/tool-settings')).files;
+    },
+    async setFilesEnabled(files: boolean): Promise<boolean> {
+      return (await client.request<{ files: boolean }>('PUT', '/api/tool-settings', { files }))
+        .files;
+    },
+    /** Eine vom Modell angelegte Datei mit ihrer geprüften Spezifikation. */
+    artifact: (id: string) => client.request<ArtifactDetail>('GET', `/api/artifacts/${id}`),
 
     /** Websuche: Schalter und Schlüssel. Der Schlüssel kommt nie zurück, nur seine letzten Zeichen. */
     webSearch: () => client.request<WebSearchStatus>('GET', '/api/web-search'),

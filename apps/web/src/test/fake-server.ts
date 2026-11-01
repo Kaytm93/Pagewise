@@ -1,5 +1,6 @@
 import type {
   ActivityEntry,
+  ArtifactDetail,
   AvailableModel,
   Chat,
   ChatMessage,
@@ -199,6 +200,9 @@ export class FakeServer {
   exams: Exam[] = [];
   notes: Note[] = [];
   toolsEnabled = true;
+  filesEnabled = true;
+  /** Vom Modell angelegte Dateien nach Kennung (mit Spezifikation). */
+  artifacts = new Map<string, ArtifactDetail>();
   /** Websuche: Schalter, letzte Zeichen des Schlüssels und die Antwort der Prüfsuche. */
   webSearch = {
     enabled: false,
@@ -413,6 +417,12 @@ export class FakeServer {
     if (method === 'POST' && path === '/api/auth/passcode') {
       if (data.current !== TEST_PASSCODE) return json(403, { error: 'invalid_passcode' });
       return json(204);
+    }
+
+    const artifactPath = /^\/api\/artifacts\/([^/]+)$/.exec(path);
+    if (method === 'GET' && artifactPath) {
+      const artifact = this.artifacts.get(artifactPath[1] ?? '');
+      return artifact ? json(200, artifact) : json(404, { error: 'not_found' });
     }
 
     if (method === 'POST' && path === '/api/data/erase') {
@@ -666,6 +676,7 @@ export class FakeServer {
       errorCode: null,
       activity: [],
       assets: [],
+      artifacts: [],
       reasoning: null,
       tokensPerSecond: null,
       costUsd: null,
@@ -1063,8 +1074,11 @@ export class FakeServer {
     const time = /^([01]\d|2[0-3]):[0-5]\d$/;
     const date = /^\d{4}-\d{2}-\d{2}$/;
     if (path === '/api/tool-settings') {
-      if (method === 'PUT') this.toolsEnabled = data.enabled === true;
-      return json(200, { enabled: this.toolsEnabled });
+      if (method === 'PUT') {
+        if (typeof data.enabled === 'boolean') this.toolsEnabled = data.enabled;
+        if (typeof data.files === 'boolean') this.filesEnabled = data.files;
+      }
+      return json(200, { enabled: this.toolsEnabled, files: this.filesEnabled });
     }
     if (path === '/api/web-search') {
       if (method === 'PUT') {

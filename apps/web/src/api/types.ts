@@ -217,6 +217,19 @@ export interface ChatAsset {
   size: number;
 }
 
+/** Eine Datei, die das Modell über ein Werkzeug angelegt hat. Die Spezifikation holt `api.artifact(id)`. */
+export interface ChatArtifact {
+  id: string;
+  kind: 'document' | 'slides';
+  title: string;
+  version: number;
+}
+
+export interface ArtifactDetail extends ChatArtifact {
+  /** Geprüfte Spezifikation als JSON-Text, derselbe Inhalt wie der Block `document` oder `slides`. */
+  spec: string;
+}
+
 export interface ChatMessage {
   id: string;
   seq: number;
@@ -233,6 +246,8 @@ export interface ChatMessage {
   activity: ActivityEntry[];
   /** Dateien, die der Agent erzeugt hat. */
   assets: ChatAsset[];
+  /** Dateien, die das Modell über Werkzeuge angelegt hat (Dokument, Präsentation). */
+  artifacts: ChatArtifact[];
   /** Denkprozess des Modells, sonst `null` (nur wenn der Anbieter einen liefert). */
   reasoning: string | null;
   /** Tokens je Sekunde, sonst `null`. */
