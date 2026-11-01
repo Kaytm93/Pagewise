@@ -6,8 +6,22 @@ import type { ModelEntry } from './models';
  *
  * Stand 3. Oktober 2026, geprüft gegen die Dokumentation der Anbieter (Quellen: docs/decisions.md, D-024).
  */
+export type PresetId =
+  | 'openrouter'
+  | 'openai'
+  | 'anthropic'
+  | 'gemini'
+  | 'mistral'
+  | 'groq'
+  | 'deepseek'
+  | 'xai'
+  | 'zai'
+  | 'ollama'
+  | 'lmstudio'
+  | 'custom';
+
 export interface Preset {
-  id: 'openrouter' | 'zai' | 'ollama' | 'lmstudio' | 'custom';
+  id: PresetId;
   baseUrl: string;
   requiresKey: boolean;
   /** Modelle, die beim Anlegen vorgeschlagen werden. */
@@ -26,6 +40,16 @@ const model = (id: string, vision: boolean, tools: boolean, reasoning: boolean):
   streaming: true,
 });
 
+/** Voreinstellung für einen Anbieter mit OpenAI-kompatibler Schnittstelle ohne vorgeschlagene Modelle (Liste laden). */
+const compatible = (id: PresetId, baseUrl: string): Preset => ({
+  id,
+  baseUrl,
+  requiresKey: true,
+  models: [],
+  defaultModel: null,
+  fallbackModel: null,
+});
+
 export const PRESETS: readonly Preset[] = [
   {
     id: 'openrouter',
@@ -38,6 +62,15 @@ export const PRESETS: readonly Preset[] = [
     defaultModel: 'z-ai/glm-5.3-flash',
     fallbackModel: 'z-ai/glm-5.3-flash',
   },
+  // Weitere Anbieter (D-076). Adressen laut Dokumentation der Anbieter, Stand 1. November 2026; Modelle schlägt
+  // Pagewise nicht vor, weil sich ihre Namen oft ändern: „Vom Anbieter laden“ liest die aktuelle Liste.
+  compatible('openai', 'https://api.openai.com/v1'),
+  compatible('anthropic', 'https://api.anthropic.com/v1'),
+  compatible('gemini', 'https://generativelanguage.googleapis.com/v1beta/openai'),
+  compatible('mistral', 'https://api.mistral.ai/v1'),
+  compatible('groq', 'https://api.groq.com/openai/v1'),
+  compatible('deepseek', 'https://api.deepseek.com/v1'),
+  compatible('xai', 'https://api.x.ai/v1'),
   {
     // Allgemeine Pay-per-Token-API. Der Coding Plan hat einen eigenen Endpunkt und ist hier bewusst
     // kein Preset (D-011); sein Kontingent zählt auf dieser Adresse nicht (Fehler 1113, D-036).
@@ -75,6 +108,9 @@ export const PRESETS: readonly Preset[] = [
     fallbackModel: null,
   },
 ];
+
+/** Alle Kennungen der Voreinstellungen, für die Prüfung der Anfragen. */
+export const PRESET_IDS = PRESETS.map((preset) => preset.id) as [PresetId, ...PresetId[]];
 
 export function findPreset(id: string): Preset | undefined {
   return PRESETS.find((preset) => preset.id === id);

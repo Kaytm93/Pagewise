@@ -389,6 +389,43 @@ describe('Anbieter bearbeiten, testen und löschen', () => {
     });
   });
 
+  it('filtert die geladene Liste nach Fähigkeit und übernimmt alle Treffer auf einmal', async () => {
+    await openSettings();
+    const { server, provider } = seeded();
+    server.available = [
+      { id: 'a/text', name: null, vision: false, tools: true, reasoning: false, free: false },
+      { id: 'b/bild', name: null, vision: true, tools: true, reasoning: false, free: false },
+      { id: 'c/bild2', name: null, vision: true, tools: false, reasoning: true, free: false },
+      { id: 'd/gratis:free', name: null, vision: true, tools: true, reasoning: false, free: true },
+    ];
+    mount(server);
+    const user = userEvent.setup();
+    const dialog = await openEdit(user);
+    await user.click(within(dialog).getByRole('button', { name: 'Vom Anbieter laden' }));
+    expect(await within(dialog).findByText('4 von 4 Modellen')).toBeTruthy();
+    // „Bilder“ gibt es auch als Flag je Modell; das Filterfeld steht im Kasten der geladenen Liste.
+    const box = within(dialog).getByLabelText('Liste filtern').closest('div') as HTMLElement;
+    await user.click(within(box).getByRole('checkbox', { name: 'Bilder' }));
+    expect(await within(dialog).findByText('3 von 4 Modellen')).toBeTruthy();
+    await user.click(within(box).getByRole('checkbox', { name: 'Nur kostenlose' }));
+    expect(await within(dialog).findByText('1 von 4 Modellen')).toBeTruthy();
+    await user.click(within(box).getByRole('checkbox', { name: 'Nur kostenlose' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Alle 3 Treffer übernehmen' }));
+    expect(within(dialog).getAllByLabelText('Modell-Kennung')).toHaveLength(4);
+    await user.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const sent = server.calls('PATCH', `/api/providers/${provider.id}`)[0]?.body as {
+      models: { id: string; vision: boolean }[];
+    };
+    expect(sent.models.map((model) => model.id)).toEqual([
+      'zweit/modell',
+      'b/bild',
+      'c/bild2',
+      'd/gratis:free',
+    ]);
+    expect(sent.models.slice(1).every((model) => model.vision)).toBe(true);
+  });
+
   it('meldet, wenn die Modellliste nicht geladen werden kann', async () => {
     await openSettings();
     const { server, provider } = seeded();

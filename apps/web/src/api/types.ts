@@ -83,7 +83,19 @@ export interface ImportResult {
   subjects: Subject[];
 }
 
-export type PresetId = 'openrouter' | 'zai' | 'ollama' | 'lmstudio' | 'custom';
+export type PresetId =
+  | 'openrouter'
+  | 'openai'
+  | 'anthropic'
+  | 'gemini'
+  | 'mistral'
+  | 'groq'
+  | 'deepseek'
+  | 'xai'
+  | 'zai'
+  | 'ollama'
+  | 'lmstudio'
+  | 'custom';
 
 /** Ein Modell eines Anbieters mit den Fähigkeiten, die Pagewise kennen muss. */
 export interface ModelEntry {

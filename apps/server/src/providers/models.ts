@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
-/** Höchstzahl der Modelle, die ein Anbieter in Pagewise führt. Mehr braucht niemand zum Wählen. */
-export const MAX_MODELS_PER_PROVIDER = 100;
+/**
+ * Höchstzahl der Modelle, die ein Anbieter in Pagewise führt. OpenRouter allein nennt über 450; wer die ganze
+ * Liste übernehmen will, soll das können (D-076, vorher 100).
+ */
+export const MAX_MODELS_PER_PROVIDER = 500;
 
 // Modell-IDs sind Bezeichner der Anbieter (z. B. „vendor/name:variant“): keine Leer- und Steuerzeichen.
 // biome-ignore lint/suspicious/noControlCharactersInRegex: Steuerzeichen werden hier bewusst abgelehnt.

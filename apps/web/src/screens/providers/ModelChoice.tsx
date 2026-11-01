@@ -20,16 +20,33 @@ function fromKey(key: string): Selection | null {
   return key === NONE ? null : parseSelectionKey(key);
 }
 
-function Options({ providers }: { providers: Provider[] }) {
+/** Die Auswahl, gefiltert nach Suchtext (Anbieter oder Modell); die gerade gewählte Zeile bleibt immer sichtbar. */
+function Options({
+  providers,
+  query = '',
+  keep = '',
+}: {
+  providers: Provider[];
+  query?: string;
+  keep?: string;
+}) {
+  const needle = query.trim().toLowerCase();
   return (
     <>
       {providers.flatMap((provider) =>
-        provider.models.map((model) => (
-          <option key={`${provider.id}|${model.id}`} value={selectionKey(provider.id, model.id)}>
-            {provider.name} · {model.id}
-            {model.free ? ` · ${m.providers.models.free}` : ''}
-          </option>
-        )),
+        provider.models
+          .filter(
+            (model) =>
+              needle === '' ||
+              selectionKey(provider.id, model.id) === keep ||
+              `${provider.name} ${model.id}`.toLowerCase().includes(needle),
+          )
+          .map((model) => (
+            <option key={`${provider.id}|${model.id}`} value={selectionKey(provider.id, model.id)}>
+              {provider.name} · {model.id}
+              {model.free ? ` · ${m.providers.models.free}` : ''}
+            </option>
+          )),
       )}
     </>
   );
@@ -43,6 +60,7 @@ export function ModelChoice() {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   const c = m.providers.choice;
 
   // Der Server räumt die Wahl auf, wenn ein Anbieter oder Modell entfällt: den Stand dann übernehmen.
@@ -58,6 +76,8 @@ export function ModelChoice() {
   if (!hasModels) return <p className="text-ink-secondary">{c.noModels}</p>;
 
   const touched = () => setSaved(false);
+  // Bei vielen Modellen (zum Beispiel nach „Alle übernehmen“) hilft eine Suche über alle Auswahlfelder.
+  const total = providers.reduce((sum, provider) => sum + provider.models.length, 0);
 
   async function save() {
     setBusy(true);
@@ -81,6 +101,20 @@ export function ModelChoice() {
 
   return (
     <div className="space-y-6">
+      {total > 12 && (
+        <label className="block">
+          <span className="text-sm font-medium text-ink">{m.providers.models.search}</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            className="mt-1 min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink"
+          />
+        </label>
+      )}
       <SelectField
         label={c.default}
         hint={c.lead}
@@ -91,7 +125,7 @@ export function ModelChoice() {
         }}
       >
         <option value={NONE}>{c.none}</option>
-        <Options providers={providers} />
+        <Options providers={providers} query={query} keep={defaultKey} />
       </SelectField>
 
       <fieldset>
@@ -116,7 +150,7 @@ export function ModelChoice() {
                     touched();
                   }}
                 >
-                  <Options providers={providers} />
+                  <Options providers={providers} query={query} keep={key} />
                 </SelectField>
                 <button
                   type="button"
