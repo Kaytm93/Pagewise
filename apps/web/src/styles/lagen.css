@@ -188,6 +188,25 @@
     position: relative;
   }
 
+  /*
+   * Hülle der Blätter darunter (B-26, D-078): so groß wie der Stapel (inset: 0), unabhängig vom Inhalt. Als
+   * Größen-Container gibt sie den Blättern ihre Höhe und Breite (`cqh`, `cqw`). Ein Blatt ist so hoch wie die Seite
+   * und dreht sich um seine Mitte: Eine Ecke wandert dabei um (halbe Diagonale) · sin α, bei 4800 px und 0,34° um
+   * 14 px. Oben fächern die Blätter dann seitlich auf, unten stehen sie neben dem Blatt. `--ply-tilt-max` (am Blatt)
+   * begrenzt den Winkel auf atan(2 · Abweichung / Diagonale): keine Ecke weicht weiter als `--ply-corner` von ihrer
+   * Lage ohne Drehung ab. Kurze Seiten sind nicht betroffen (ihr Winkel ist kleiner als die Grenze), bei langen
+   * bleibt die Schiefe als Charakter. Ohne atan2(), hypot() und Container-Einheiten (vor Safari 16) gilt keine
+   * Grenze, der Stapel sieht aus wie bisher.
+   * Der Winkel steht in der Eigenschaft `rotate`, nicht in `transform`, und ist nicht in der `transition` der Blätter:
+   * Er folgt der Seitenhöhe. Beim ersten Anstrich ist die Höhe noch nicht gemessen, ein Übergang ließe die Blätter von
+   * der ungekürzten Schiefe auf die Grenze nachschwingen (gemessen: 0,34° auf 0,10° in etwa 0,3 s).
+   */
+  .lg-plies {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
   /* Die Blätter darunter: bei jeder Ebene tiefer ein Blatt mehr, leicht versetzt und schief */
   .lg-ply {
     position: absolute;
@@ -206,6 +225,11 @@
       transform var(--t-slow) var(--spring),
       opacity var(--t-med) ease;
     pointer-events: none;
+    /* Größte Abweichung einer Ecke von ihrer Lage ohne Drehung. 6 px: so weit wanderten die Ecken vor D-078 auf den
+       Seiten des Alltags (bis 5,8 px bei 2300 px Höhe), dort ändert sich nichts. Ohne Unterstützung (siehe oben)
+       90°, also keine Grenze. */
+    --ply-corner: 6px;
+    --ply-tilt-max: 90deg;
     /* Die gedrehte eigene Zeichnung (Rahmen, Fläche) bleibt innerhalb der Blattfläche — die Schiefe
        darf die Box nicht vergrößern und die Seite nicht breiter machen (M4-T035). */
     overflow: clip;
@@ -215,38 +239,58 @@
     background-color: var(--ply-2);
   }
 
+  /* Das dritte Blatt liegt 24 px versetzt; auf dem Telefon bleiben bis zum Fensterrand 28 − 24 = 4 px. Mehr darf
+     seine Ecke nicht wandern, sonst steht sie aus dem Fenster. */
   .lg-ply.lg-p3 {
+    --ply-corner: 4px;
     background-color: var(--ply-3);
+  }
+
+  /* Nach den Grundregeln der Blätter, sonst überstimmt `--ply-tilt-max: 90deg` die Grenze */
+  @supports (transform: rotate(atan2(1px, hypot(1cqw, 1cqh)))) {
+    .lg-plies {
+      container-type: size;
+    }
+
+    .lg-ply {
+      --ply-tilt-max: atan2(calc(var(--ply-corner) * 2), hypot(100cqw, 100cqh));
+    }
   }
 
   .lg-stack[data-depth="1"] .lg-p1 {
     opacity: 1;
-    transform: translate(6px, 6px) rotate(calc(var(--m) * 0.28deg));
+    transform: translate(6px, 6px);
+    rotate: calc(var(--m) * min(0.28deg, var(--ply-tilt-max)));
   }
 
   .lg-stack[data-depth="2"] .lg-p1 {
     opacity: 1;
-    transform: translate(7px, 7px) rotate(calc(var(--m) * 0.3deg));
+    transform: translate(7px, 7px);
+    rotate: calc(var(--m) * min(0.3deg, var(--ply-tilt-max)));
   }
 
   .lg-stack[data-depth="2"] .lg-p2 {
     opacity: 1;
-    transform: translate(14px, 13px) rotate(calc(var(--m) * -0.26deg));
+    transform: translate(14px, 13px);
+    rotate: calc(var(--m) * -1 * min(0.26deg, var(--ply-tilt-max)));
   }
 
   .lg-stack[data-depth="3"] .lg-p1 {
     opacity: 1;
-    transform: translate(8px, 8px) rotate(calc(var(--m) * 0.34deg));
+    transform: translate(8px, 8px);
+    rotate: calc(var(--m) * min(0.34deg, var(--ply-tilt-max)));
   }
 
   .lg-stack[data-depth="3"] .lg-p2 {
     opacity: 1;
-    transform: translate(16px, 14px) rotate(calc(var(--m) * -0.3deg));
+    transform: translate(16px, 14px);
+    rotate: calc(var(--m) * -1 * min(0.3deg, var(--ply-tilt-max)));
   }
 
   .lg-stack[data-depth="3"] .lg-p3 {
     opacity: 1;
-    transform: translate(24px, 19px) rotate(calc(var(--m) * 0.22deg));
+    transform: translate(24px, 19px);
+    rotate: calc(var(--m) * min(0.22deg, var(--ply-tilt-max)));
   }
 
   /* Das neue Blatt wird aufgelegt, wenn die Ansicht wechselt */

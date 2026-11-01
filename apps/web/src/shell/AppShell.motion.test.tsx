@@ -101,6 +101,23 @@ describe('Blattwechsel: Richtung am Blatt', () => {
     await ready();
     expect(arrive()?.getAttribute('style')).toBeNull();
   });
+
+  it('die drei Blätter darunter liegen in einer Hülle ohne Inline-Stil (B-26, D-078)', async () => {
+    mount(new FakeServer('unlocked'));
+    await ready();
+    const huelle = document.querySelector<HTMLElement>('.lg-stack > .lg-plies');
+    expect(huelle).not.toBeNull();
+    // Die Hülle ist der Größen-Container der Blätter (Höhe als cqh) und für Vorlesehilfen unsichtbar.
+    expect(huelle?.getAttribute('aria-hidden')).toBe('true');
+    expect(huelle?.getAttribute('style')).toBeNull();
+    expect([...(huelle?.children ?? [])].map((el) => el.className)).toEqual([
+      'lg-ply lg-p1',
+      'lg-ply lg-p2',
+      'lg-ply lg-p3',
+    ]);
+    // Das Blatt der Hülle liegt danach: die Blätter darunter werden zuerst gemalt.
+    expect(huelle?.nextElementSibling).toBe(arrive());
+  });
 });
 
 describe('motion.css: Bewegung je Richtung', () => {
