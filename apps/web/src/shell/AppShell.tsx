@@ -159,8 +159,8 @@ function Shell() {
   }, [key, depth, dir]);
 
   useEffect(() => (app.current ? startParallax(app.current) : undefined), []);
-  // `data-scrolled` am Kopf der schmalen Breite (Klasse lg-mobilkopf): Lagen und später Atelier legen ihre Fläche erst
-  // darunter, wenn die Seite gescrollt ist (D-076). Der Kopf wird über seine Klasse gefunden, damit sein Markup
+  // `data-scrolled` am Kopf der schmalen Breite (Klasse lg-mobilkopf): Lagen (Fläche) und Atelier (Glas) zeigen ihre
+  // Fläche erst, wenn die Seite gescrollt ist (D-076). Der Kopf wird über seine Klasse gefunden, damit sein Markup
   // (eine Zeile mit Klassen, vom Strukturtest gelesen) unverändert bleibt.
   useEffect(() => {
     const header = app.current?.querySelector<HTMLElement>('.lg-mobilkopf');

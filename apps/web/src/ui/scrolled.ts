@@ -3,7 +3,7 @@
  *
  * Sobald die Seite um mehr als ein paar Pixel gescrollt ist, steht am Kopf das Attribut `data-scrolled`; steht
  * die Seite wieder oben, wird es entfernt. Die Richtungen hängen ihre Fläche daran: „Lagen“ legt dann seine
- * deckende Fläche unter den Kopf (lagen.css), „Atelier“ folgt mit dem Glas. Das Attribut selbst gestaltet nichts.
+ * deckende Fläche unter den Kopf (lagen.css), „Atelier“ legt sein Glas darunter (atelier.css). Das Attribut selbst gestaltet nichts.
  *
  * Gelesen wird `window.scrollY`: In der App scrollt immer das Dokument (die Seitenhülle hat keinen eigenen
  * Scroll-Container; Chat und Stundenplan scrollen mit der Seite). Beim Gummiband-Überzug oberhalb von 0 (iOS) ist

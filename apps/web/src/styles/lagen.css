@@ -198,8 +198,8 @@
    * bleibt die Schiefe als Charakter. Ohne atan2(), hypot() und Container-Einheiten (vor Safari 16) gilt keine
    * Grenze, der Stapel sieht aus wie bisher.
    * Der Winkel steht in der Eigenschaft `rotate`, nicht in `transform`, und ist nicht in der `transition` der Blätter:
-   * Er folgt der Seitenhöhe. Beim ersten Anstrich ist die Höhe noch nicht gemessen, ein Übergang ließe die Blätter von
-   * der ungekürzten Schiefe auf die Grenze nachschwingen (gemessen: 0,34° auf 0,10° in etwa 0,3 s).
+   * Er folgt der Seitenhöhe. Die Seite wächst nach dem ersten Anstrich, wenn Inhalt nachlädt, und mit der Höhe ändert sich die
+   * Grenze: ein Übergang ließe die Blätter dabei nachschwingen (bei `chat-long` Blatt 1 von 0,34° auf 0,145°).
    */
   .lg-plies {
     position: absolute;
@@ -226,7 +226,7 @@
       opacity var(--t-med) ease;
     pointer-events: none;
     /* Größte Abweichung einer Ecke von ihrer Lage ohne Drehung. 6 px: so weit wanderten die Ecken vor D-078 auf den
-       Seiten des Alltags (bis 5,8 px bei 2300 px Höhe), dort ändert sich nichts. Ohne Unterstützung (siehe oben)
+       Seiten des Alltags (bis 5,8 px bei 2300 px Höhe), dort ändert sich praktisch nichts (unter 0,4 px). Ohne Unterstützung (siehe oben)
        90°, also keine Grenze. */
     --ply-corner: 6px;
     --ply-tilt-max: 90deg;
