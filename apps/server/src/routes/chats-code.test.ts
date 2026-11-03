@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PreviewError } from '../preview/render';
 import { PythonRuntime, type PythonRuntimeInfo } from '../python/runtime';
 import { SandboxGuard } from '../sandbox/probe';
@@ -13,6 +13,9 @@ import {
 } from '../sandbox/runner';
 import { findTestPython } from '../sandbox/test-python';
 import { createHarness, type Harness, type Session } from '../test-harness';
+
+// Die Grenzen-Tests warten auf Wächter und Prozesse; bei voller Auslastung (viele Testprozesse) reichen 5 s nicht.
+vi.setConfig({ testTimeout: 30_000 });
 
 // Fake-Schlüssel werden zur Laufzeit zusammengesetzt, damit der Secret-Scan den Quelltext nicht trifft.
 const KEY = ['beispiel', 'schluessel', 'abcdefghijklmnop'].join('-');

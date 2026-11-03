@@ -11,10 +11,13 @@ import {
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SandboxGuard, selfTest } from './probe';
 import { runSandboxed, type SandboxResult, sandboxSupported } from './runner';
 import { findTestPython } from './test-python';
+
+// Die Grenzen-Tests warten auf Wächter und Prozesse; bei voller Auslastung (viele Testprozesse) reichen 5 s nicht.
+vi.setConfig({ testTimeout: 30_000 });
 
 /**
  * Ausbruchsversuche gegen die echte Sandbox. Sie laufen nur dort, wo es sie gibt (macOS) und ein Python
