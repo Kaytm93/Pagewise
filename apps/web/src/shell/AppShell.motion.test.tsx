@@ -102,7 +102,7 @@ describe('Blattwechsel: Richtung am Blatt', () => {
     expect(arrive()?.getAttribute('style')).toBeNull();
   });
 
-  it('die drei Blätter darunter liegen in einer Hülle ohne Inline-Stil (B-26, D-078)', async () => {
+  it('die drei Blätter darunter liegen in einer Hülle ohne Inline-Stil (B-26, D-085)', async () => {
     mount(new FakeServer('unlocked'));
     await ready();
     const huelle = document.querySelector<HTMLElement>('.lg-stack > .lg-plies');

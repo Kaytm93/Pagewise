@@ -106,4 +106,4 @@ Der Rechner muss laufen, solange du von anderen Geräten zugreifst. Auf dem Mac 
 
 ## Docker (optional)
 
-Wenn du den Server in einem Container betreibst, setze `PAGEWISE_ALLOW_NON_LOOPBACK=1` im Container und veröffentliche den Port nur lokal (`127.0.0.1:3000:3000`). Das Datenverzeichnis kommt als Volume von außerhalb des Repos. Ein fertiges `docker compose`-Setup gibt es nicht und wird nicht gebaut (D-074). Den Start beim Anmelden übernimmt auf dem Mac die Mac-App („Bei Anmeldung starten“); ein eigenes `launchd`-Skript gibt es nicht.
+Wenn du den Server in einem Container betreibst, setze `PAGEWISE_ALLOW_NON_LOOPBACK=1` im Container und veröffentliche den Port nur lokal (`127.0.0.1:3000:3000`). Das Datenverzeichnis kommt als Volume von außerhalb des Repos. Ein fertiges `docker compose`-Setup gibt es nicht und wird nicht gebaut (D-081). Den Start beim Anmelden übernimmt auf dem Mac die Mac-App („Bei Anmeldung starten“); ein eigenes `launchd`-Skript gibt es nicht.

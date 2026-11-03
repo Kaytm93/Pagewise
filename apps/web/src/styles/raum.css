@@ -228,7 +228,7 @@
     box-shadow: none;
   }
 
-  /* Schublade auf dem iPhone (D-075, B-03): dieselbe deckende Fläche wie die Seitenleiste am Mac, mit den
+  /* Schublade auf dem iPhone (D-082, B-03): dieselbe deckende Fläche wie die Seitenleiste am Mac, mit den
      eingelassenen Zeilen darin. Der Schatten des Panels (Drawer.tsx) bleibt und trennt es vom Inhalt, darum
      kein box-shadow hier. */
   :root[data-design="raum"] .lg-scrim .lg-binder {
@@ -1293,7 +1293,7 @@
    Schattenlinie, darunter die helle Lichtlinie (je 1 px, Tokens --raum-dark und --raum-light). Die Linie sitzt am
    unteren Rand des Kopfes und ändert seine Höhe nicht; der Kopf bleibt deckend, damit der Inhalt beim Scrollen nicht
    durch Menüknopf und Wortmarke läuft. Der Menüknopf darin bleibt gehoben (mo-press). Die Regeln stehen außerhalb von
-   @layer wie die übrigen Raum-Regeln an Hüllenelementen (D-076). */
+   @layer wie die übrigen Raum-Regeln an Hüllenelementen (D-083). */
 :root[data-design="raum"] .lg-mobilkopf {
   background-color: var(--raum-canvas);
   border: 0;

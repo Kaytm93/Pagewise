@@ -68,4 +68,4 @@ Legende: **erfüllt** = umgesetzt und getestet, **später** = gehört zu einer s
 ## Offene Punkte
 
 - Z.ai Coding Plan: nach Entscheidung des Kontoinhabers zulässig, mit Auflagen (D-011). Vor Phase 1e werden die Bedingungen erneut geprüft.
-- Autostart (`launchd`) und `docker compose` sind nicht gebaut und werden nicht gebaut (D-074, siehe [self-hosting.md](self-hosting.md)). Den Start beim Anmelden bietet die Mac-App.
+- Autostart (`launchd`) und `docker compose` sind nicht gebaut und werden nicht gebaut (D-081, siehe [self-hosting.md](self-hosting.md)). Den Start beim Anmelden bietet die Mac-App.

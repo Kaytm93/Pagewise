@@ -89,7 +89,7 @@
     pointer-events: none;
   }
 
-  /* ===== Kopfzeile der schmalen Breite (AppShell, md:hidden, D-076) =====
+  /* ===== Kopfzeile der schmalen Breite (AppShell, md:hidden, D-083) =====
      Basisregel: die Fläche des Schreibtischs (vorher die Utility bg-desk). Sie dient den Richtungen, die darauf
      aufbauen: Raum überstimmt sie mit dem Raumton und einer eingravierten Doppellinie (raum.css), Atelier mit Glas
      (atelier.css, Regel auf header.sticky.md:hidden). Die Positionierung (sticky unter dem Verbindungsbanner,
@@ -102,7 +102,7 @@
      setzt ui/scrolled.ts `data-scrolled` an den Kopf; dann liegt die deckende Fläche im Ton des bisherigen Bandes
      (var(--desk)) hinter Menüknopf und Wortmarke, damit der Text nicht durch beide läuft. Die Fläche ist eine
      Ebene (::before) hinter dem Inhalt des Kopfes (der Kopf ist sticky mit z-index, also ein eigener
-     Stapelkontext) und blendet nur über opacity ein (140 ms bei „Voll“, sonst 0, D-058/D-074). */
+     Stapelkontext) und blendet nur über opacity ein (140 ms bei „Voll“, sonst 0, D-058/D-081). */
   :root[data-design="lagen"] .lg-mobilkopf {
     background-color: transparent;
     border: 0;
@@ -189,7 +189,7 @@
   }
 
   /*
-   * Hülle der Blätter darunter (B-26, D-078): so groß wie der Stapel (inset: 0), unabhängig vom Inhalt. Als
+   * Hülle der Blätter darunter (B-26, D-085): so groß wie der Stapel (inset: 0), unabhängig vom Inhalt. Als
    * Größen-Container gibt sie den Blättern ihre Höhe und Breite (`cqh`, `cqw`). Ein Blatt ist so hoch wie die Seite
    * und dreht sich um seine Mitte: Eine Ecke wandert dabei um (halbe Diagonale) · sin α, bei 4800 px und 0,34° um
    * 14 px. Oben fächern die Blätter dann seitlich auf, unten stehen sie neben dem Blatt. `--ply-tilt-max` (am Blatt)
@@ -225,7 +225,7 @@
       transform var(--t-slow) var(--spring),
       opacity var(--t-med) ease;
     pointer-events: none;
-    /* Größte Abweichung einer Ecke von ihrer Lage ohne Drehung. 6 px: so weit wanderten die Ecken vor D-078 auf den
+    /* Größte Abweichung einer Ecke von ihrer Lage ohne Drehung. 6 px: so weit wanderten die Ecken vor D-085 auf den
        Seiten des Alltags (bis 5,8 px bei 2300 px Höhe), dort ändert sich praktisch nichts (unter 0,4 px). Ohne Unterstützung (siehe oben)
        90°, also keine Grenze. */
     --ply-corner: 6px;

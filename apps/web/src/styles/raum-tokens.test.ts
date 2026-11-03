@@ -349,7 +349,7 @@ describe('Raum: Strichstärke des Fachsymbols und Kopfzeile auf dem Telefon', ()
     expect(body).toContain('box-shadow: none');
   });
 
-  // D-076 (Kay, GF-03): Raum trennt den Kopf mit einer eingravierten Doppellinie vom Inhalt statt mit einem Band.
+  // D-083 (Kay, GF-03): Raum trennt den Kopf mit einer eingravierten Doppellinie vom Inhalt statt mit einem Band.
   it('trennt den Kopf mit der Doppellinie aus Raum-Tokens: 1 px dunkel, 1 px hell, unten im Kopf', () => {
     const body = rule(raum, ":root[data-design='raum'] .lg-mobilkopf::after");
     expect(body).toContain("content: ''");
@@ -406,7 +406,7 @@ describe('Raum: Listen und Trennlinien', () => {
     );
     expect(divider).toContain('height: 2px');
     expect(divider).toContain('linear-gradient(var(--raum-dark) 1px, var(--raum-light) 1px)');
-    // Zeilentrenner, Dock mit Chat-Eingabe und (D-076) die Kopfzeile auf dem Telefon tragen dieselbe Linie;
+    // Zeilentrenner, Dock mit Chat-Eingabe und (D-083) die Kopfzeile auf dem Telefon tragen dieselbe Linie;
     // keine zwei Verläufe mehr übereinander. Drei Stellen, jede mit genau diesem einen Verlauf.
     expect(
       raum.match(/linear-gradient\(var\(--raum-dark\) 1px, var\(--raum-light\) 1px\)/g),
