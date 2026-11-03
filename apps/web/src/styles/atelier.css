@@ -220,6 +220,27 @@
     }
   }
 
+  /* Scrim von Dialog und Schublade (B-01, D-086): Das Glas des Panels sieht den Grund nur dann, wenn kein Vorfahr
+     eine Deckkraft-Animation trägt (Chromium: Hintergrundwurzel). Der Scrim selbst animiert deshalb nicht; die
+     Tönung (`--scrim` aus lagen.css) liegt als Ebene ::before hinter dem Panel und blendet dort beim Öffnen ein
+     (`fade` über --t-med, danach kein Füllen; bei „Aus“ ohne Animation). Das Panel ist kein Kind der Ebene, der
+     Blur wirkt von der ersten Einblendung an. Beim Schließen der Schublade animiert die Utility am Scrim weiter
+     (Schichten: Utilities schlagen `components`); dann braucht niemand mehr Blur. */
+  :root[data-design="atelier"] .lg-scrim {
+    background: none;
+    animation: none;
+  }
+
+  :root[data-design="atelier"] .lg-scrim::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: var(--scrim);
+    animation: fade var(--t-med) backwards;
+  }
+
   /* Radius 22 px für das Panel; die Testkarte hat denselben Radius und Innenabstand im 4er-Raster */
   :root[data-design="atelier"] .at-glass,
   :root[data-design="atelier"] .at-test {

@@ -195,6 +195,66 @@ describe('Kopf der schmalen Breite: Glas erst beim Scrollen (D-076)', () => {
   });
 });
 
+/*
+ * Scrim von Dialog und Schublade in „Atelier“ (Befund B-01, D-086): Das Glas des Panels (`backdrop-filter`) sieht den
+ * Grund nur, wenn kein Vorfahr eine Deckkraft-Animation trägt (Chromium: Hintergrundwurzel, gemessen in BT2). Darum
+ * animiert der Scrim hier nicht; seine Tönung liegt als Ebene ::before hinter dem Panel und blendet dort beim Öffnen ein.
+ * Die Ebene ist kein Vorfahr des Panels. Den Blur kann nur der Browser zeigen (Chromium, D-084); dieser Test sichert die
+ * Bauweise.
+ */
+describe('Scrim von Dialog und Schublade: Blur schon in der Einblendung (B-01, D-086)', () => {
+  const scrim = ":root[data-design='atelier'] .lg-scrim";
+  const ebene = `${scrim}::before`;
+  const regeln = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
+    selector: (match[1] as string).trim(),
+    body: match[2] as string,
+  }));
+  const mitScrim = regeln.filter((regel) => regel.selector.includes('.lg-scrim'));
+
+  it('nimmt dem Scrim selbst Animation und Fläche', () => {
+    const body = rule(scrim);
+    expect(body).toMatch(/animation:\s*none\b/);
+    expect(body).toMatch(/background:\s*none\b/);
+    expect(body).not.toMatch(/!important/);
+  });
+
+  it('legt die Tönung als Ebene hinter das Panel: Stapelkontext des Scrims, klickdurchlässig, Wert aus --scrim', () => {
+    const body = rule(ebene);
+    expect(body).toContain("content: ''");
+    expect(body).toMatch(/position:\s*absolute\b/);
+    expect(body).toMatch(/inset:\s*0\b/);
+    expect(body).toMatch(/z-index:\s*-1\b/);
+    expect(body).toMatch(/pointer-events:\s*none\b/);
+    expect(body).toMatch(/background:\s*var\(--scrim\)/);
+  });
+
+  it('blendet die Ebene beim Öffnen mit `fade` über --t-med ein und füllt danach nicht', () => {
+    const animation = /animation:\s*([^;]+);/.exec(rule(ebene))?.[1]?.trim() ?? '';
+    expect(animation).toBe('fade var(--t-med) backwards');
+  });
+
+  it('hängt backdrop-filter, filter, opacity und Animationen nur an die Ebene, nie an den Scrim', () => {
+    for (const regel of mitScrim) {
+      if (regel.selector.endsWith('::before')) continue;
+      expect(regel.body, `Scrim selbst: ${regel.selector}`).not.toMatch(
+        /backdrop-filter|(^|[;\s])opacity\s*:|(^|[;\s])filter\s*:/,
+      );
+      expect(regel.body, `Scrim selbst: ${regel.selector}`).not.toMatch(
+        /animation(-fill-mode)?:[^;]*\b(both|forwards)\b/,
+      );
+    }
+  });
+
+  it('steht in der Ebene components, damit die Utility beim Schließen der Schublade (lg-fade-out) weiter gilt', () => {
+    const roh = readFileSync(join(dir, 'atelier.css'), 'utf8').replaceAll('"', "'");
+    const layer = roh.indexOf('@layer components {');
+    expect(layer).toBeGreaterThan(-1);
+    expect(roh.indexOf(scrim)).toBeGreaterThan(layer);
+    // Die Regel steht vor dem Abschnitt „Ohne @layer“ (dort würde sie jede Utility überstimmen).
+    expect(roh.indexOf(scrim)).toBeLessThan(roh.indexOf('Ohne @layer'));
+  });
+});
+
 describe('Radien (22 px, 12 px, Pille)', () => {
   it('kennt in Atelier nur 0, 12 px, 22 px, Pille und Kreis (atelier-fach.test.ts)', () => {
     const fach = readFileSync(join(dir, 'atelier-fach.css'), 'utf8').replace(

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -247,5 +247,83 @@ describe('lagen.css: Kopf der schmalen Breite bekommt die Fläche erst beim Scro
     expect(shell).toContain("import { startScrolledState } from '../ui/scrolled'");
     expect(shell).toContain("querySelector<HTMLElement>('.lg-mobilkopf')");
     expect(shell).toContain('startScrolledState(header)');
+  });
+});
+
+/*
+ * Scrim von Dialog und Schublade (Befund B-01, D-086): Ein Scrim mit gefüllter Deckkraft-Animation (`fade … both`)
+ * wird in Chromium zur Hintergrundwurzel (Backdrop Root) des Panels. Der `backdrop-filter` des Atelier-Glases sieht
+ * dann nur den Scrim und nicht die Seite dahinter, der Seitentext schien scharf durch (gemessen in BT2: Kantenstärke
+ * im Panel 1,94 statt 0,39 wie bei „Aus“). Der Scrim blendet darum nur beim Öffnen ein und behält danach keinen
+ * Füllmodus (`backwards`). In Raum und Lagen sieht man keinen Unterschied. Atelier legt die Tönung zusätzlich auf eine
+ * Ebene ::before (geprüft in `atelier.test.ts`), damit der Blur schon in der Einblendung wirkt. Den Blur selbst
+ * kann nur der Browser zeigen (Chromium); dieser Test nagelt die Bauweise fest.
+ */
+describe('lagen.css: Scrim von Dialog und Schublade ohne gefüllte Deckkraft-Animation (B-01, D-086)', () => {
+  const tsx = (file: string) => readFileSync(join(dir, '..', file), 'utf8');
+
+  /** Alle flachen Regeln einer Stylesheet-Datei (auch in @layer), ohne Kommentare. */
+  const regeln = (css: string) =>
+    [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
+      selector: (match[1] as string).trim(),
+      body: match[2] as string,
+    }));
+
+  it('blendet die Tönung des Scrims beim Öffnen mit `fade` über --t-med ein und füllt danach nicht (backwards)', () => {
+    const body = regelBlock(lagen, '.lg-scrim') ?? '';
+    const animation = /animation:\s*([^;]+);/.exec(body)?.[1]?.trim() ?? '';
+    expect(animation).toBe('fade var(--t-med) backwards');
+    expect(animation).not.toMatch(/\b(both|forwards)\b/);
+    expect(animation).not.toMatch(/\b\d+(\.\d+)?m?s\b/);
+  });
+
+  it('hält die Tönung im Wert wie bisher (rgba(var(--shadow), 0.45)) und legt sie in --scrim ab', () => {
+    const body = regelBlock(lagen, '.lg-scrim') ?? '';
+    expect(body).toContain('--scrim: rgba(var(--shadow), 0.45)');
+    expect(body).toMatch(/background:\s*var\(--scrim\)/);
+  });
+
+  it('lässt `fade` ein reines Einblenden bleiben (nur from, Endwert ist die Deckkraft 1)', () => {
+    const motion = readFileSync(join(dir, 'motion.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(motion).toMatch(/@keyframes fade \{\s*from \{\s*opacity: 0;\s*\}\s*\}/);
+  });
+
+  it('hat in keinem Stylesheet eine Regel, die den Scrim selbst mit both oder forwards animiert', () => {
+    const dateien = readdirSync(dir).filter((name) => name.endsWith('.css'));
+    expect(dateien).toContain('lagen.css');
+    for (const name of dateien) {
+      for (const regel of regeln(readFileSync(join(dir, name), 'utf8'))) {
+        const trifftScrim = regel.selector.split(',').some((teil) => {
+          const letzter =
+            teil
+              .trim()
+              .split(/[\s>+~]+/)
+              .pop() ?? '';
+          return letzter.includes('.lg-scrim') && !letzter.includes('::');
+        });
+        if (!trifftScrim) continue;
+        expect(regel.body, `${name}: ${regel.selector}`).not.toMatch(
+          /animation(-fill-mode)?:[^;]*\b(both|forwards)\b/,
+        );
+      }
+    }
+  });
+
+  it('setzt am Scrim im Markup nur beim Schließen eine Animation (Schublade, both ist dort erlaubt), im Dialog nie', () => {
+    const modal = /className="(lg-scrim[^"]*)"/.exec(tsx('ui/modal.tsx'))?.[1] ?? '';
+    expect(modal).toContain('lg-scrim');
+    expect(modal).not.toContain('animate-');
+
+    const drawer = tsx('shell/Drawer.tsx');
+    const vorSchliessen = /className=\{`(lg-scrim[^`]*?)\$\{closing/.exec(drawer)?.[1] ?? '';
+    expect(vorSchliessen).toContain('lg-scrim');
+    expect(vorSchliessen).not.toContain('animate-');
+    expect(drawer).toMatch(/closing \? 'pointer-events-none animate-\[lg-fade-out_/);
+  });
+
+  it('nimmt dem Scrim bei „Aus“ die Animation mit der allgemeinen Regel (auch für ::before)', () => {
+    const motion = readFileSync(join(dir, 'motion.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const aus = regeln(motion).find((regel) => regel.selector.includes(':root.fx-off *::before'));
+    expect(aus?.body).toMatch(/animation:\s*none\s*!important/);
   });
 });
