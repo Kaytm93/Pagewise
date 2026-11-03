@@ -1,8 +1,11 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type LimitedSpec, runLimited, treeStats } from './run-limited';
+
+// Die Grenzen-Tests warten auf Wächter und Prozesse; bei voller Auslastung (viele Testprozesse) reichen 5 s nicht.
+vi.setConfig({ testTimeout: 30_000 });
 
 let dir: string;
 beforeEach(() => {
