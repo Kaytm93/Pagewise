@@ -83,7 +83,19 @@ export interface ImportResult {
   subjects: Subject[];
 }
 
-export type PresetId = 'openrouter' | 'zai' | 'ollama' | 'lmstudio' | 'custom';
+export type PresetId =
+  | 'openrouter'
+  | 'openai'
+  | 'anthropic'
+  | 'gemini'
+  | 'mistral'
+  | 'groq'
+  | 'deepseek'
+  | 'xai'
+  | 'zai'
+  | 'ollama'
+  | 'lmstudio'
+  | 'custom';
 
 /** Ein Modell eines Anbieters mit den Fähigkeiten, die Pagewise kennen muss. */
 export interface ModelEntry {
@@ -110,6 +122,10 @@ export interface Provider {
   sendImages: boolean;
   /** Darf das Modell Stundenplan und Tests über Werkzeuge einsehen? Aus: diese Daten gehen nie an den Anbieter. */
   allowTools: boolean;
+  /** Darf die KI über diesen Anbieter Dateien anlegen? */
+  allowFiles: boolean;
+  /** Darf die KI über diesen Anbieter Code ausführen lassen (D-079)? Standard: nein. */
+  allowCode: boolean;
   hasKey: boolean;
   /** Letzte vier Zeichen, nur bei langen Schlüsseln. Der Schlüssel selbst kommt nie an. */
   keyHint: string | null;
@@ -131,6 +147,8 @@ export interface ProviderInput {
   models?: ModelEntry[];
   sendImages?: boolean;
   allowTools?: boolean;
+  allowFiles?: boolean;
+  allowCode?: boolean;
 }
 
 export interface ProviderPatch {
@@ -139,6 +157,8 @@ export interface ProviderPatch {
   models?: ModelEntry[];
   sendImages?: boolean;
   allowTools?: boolean;
+  allowFiles?: boolean;
+  allowCode?: boolean;
   apiKey?: string;
   clearKey?: boolean;
 }
@@ -217,6 +237,65 @@ export interface ChatAsset {
   size: number;
 }
 
+/** Eine Datei, die das Modell über ein Werkzeug angelegt hat. Die Spezifikation holt `api.artifact(id)`. */
+export interface ChatArtifact {
+  id: string;
+  kind: 'document' | 'slides' | 'sheet' | 'figure';
+  title: string;
+  version: number;
+}
+
+export interface ArtifactDetail extends ChatArtifact {
+  /** Geprüfte Spezifikation als JSON-Text, derselbe Inhalt wie der Block `document` oder `slides`. */
+  spec: string;
+}
+
+export type CodeOutcome =
+  | 'ok'
+  | 'error'
+  | 'timeout'
+  | 'cancelled'
+  | 'output_limit'
+  | 'memory_limit'
+  | 'disk_limit'
+  | 'unavailable'
+  | 'failed';
+
+/** Ein Lauf von Code, den das Modell geschrieben hat, ohne das Skript. */
+export interface ChatCodeRun {
+  id: string;
+  purpose: string | null;
+  outcome: CodeOutcome;
+  durationMs: number;
+  /** Namen der Dateien, die dieser Lauf neu angelegt oder geändert hat. */
+  files: string[];
+}
+
+export interface CodeRunDetail extends ChatCodeRun {
+  /** Der Text des Skripts, nur zum Lesen. */
+  script: string;
+}
+
+export type CodePhase = 'download' | 'extract' | 'packages' | 'check';
+
+/** Zustand der Code-Ausführung: Schalter, privates Python und Einrichtung. */
+export interface CodeStatus {
+  /** Ob dieser Rechner Code ausführen kann (macOS mit Sandbox). */
+  supported: boolean;
+  enabled: boolean;
+  runtime: 'missing' | 'outdated' | 'ready';
+  setup: {
+    state: 'idle' | 'running' | 'ready' | 'error';
+    phase: CodePhase | null;
+    progress: number | null;
+    error: string | null;
+  };
+  /** Python eingerichtet und die Sandbox sperrt (Selbsttest bestanden). */
+  ready: boolean;
+  /** Sichtprüfung (D-080): welche Programme gefunden wurden. Optional für den Betrieb. */
+  preview: { office: boolean; raster: boolean; sandbox: boolean };
+}
+
 export interface ChatMessage {
   id: string;
   seq: number;
@@ -233,6 +312,10 @@ export interface ChatMessage {
   activity: ActivityEntry[];
   /** Dateien, die der Agent erzeugt hat. */
   assets: ChatAsset[];
+  /** Dateien, die das Modell über Werkzeuge angelegt hat (Dokument, Präsentation). */
+  artifacts: ChatArtifact[];
+  /** Code, den das Modell in dieser Antwort ausgeführt hat (D-079). Das Skript holt `api.codeRun(id)`. */
+  codeRuns: ChatCodeRun[];
   /** Denkprozess des Modells, sonst `null` (nur wenn der Anbieter einen liefert). */
   reasoning: string | null;
   /** Tokens je Sekunde, sonst `null`. */

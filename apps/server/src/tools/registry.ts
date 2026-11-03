@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import type { ArtifactKind } from '../artifacts/service';
 import type { Db } from '../db/client';
 import type { WebSearch } from '../search/types';
 
@@ -17,6 +18,54 @@ import type { WebSearch } from '../search/types';
 /** Zähler je Antwort: Was ein Werkzeug in dieser Antwort schon getan hat. */
 export interface ToolBudget {
   webSearches: number;
+  /** Dateien, die diese Antwort schon angelegt hat. */
+  files: number;
+  /** Skripte, die diese Antwort schon ausgeführt hat (D-079). */
+  codeRuns: number;
+  /** Vorschauen von Dateien, die diese Antwort schon angefordert hat (D-080). */
+  previews: number;
+}
+
+/** Ein Bild, das nach den Werkzeugergebnissen als Nachricht an das Modell geht (Sichtprüfung, D-080). */
+export interface PendingImage {
+  /** Beschriftung für das Modell, zum Beispiel „bericht.docx, Seite 1“. */
+  label: string;
+  /** PNG, base64. */
+  base64: string;
+}
+
+/** Rendert eine Datei des Arbeitsordners zu Seitenbildern (D-080). */
+export interface PreviewSink {
+  render(input: {
+    file: string;
+    pages: number;
+    signal: AbortSignal | undefined;
+  }): Promise<{ pagesTotal: number | null; pages: { number: number; base64: string }[] }>;
+}
+
+/** Führt ein Skript des Modells in der Sandbox aus (D-079). Gibt `null` zurück, wenn die Grenze je Chat erreicht ist. */
+export interface CodeSink {
+  run(input: {
+    script: string;
+    purpose: string | null;
+    signal: AbortSignal | undefined;
+  }): Promise<CodeRunOutput | null>;
+}
+
+/** Was ein Lauf zurückgibt: reine Daten für das Modell, nie Anweisungen. */
+export interface CodeRunOutput {
+  outcome: string;
+  exitCode: number | null;
+  durationMs: number;
+  stdout: string;
+  stderr: string;
+  truncated: boolean;
+  files: { name: string; size: number }[];
+}
+
+/** Legt eine Datei an die laufende Antwort (D-074). Gibt `null` zurück, wenn der Chat voll ist. */
+export interface ArtifactSink {
+  create(kind: ArtifactKind, title: string, spec: string): { id: string } | null;
 }
 
 export interface ToolContext {
@@ -25,10 +74,20 @@ export interface ToolContext {
   now: () => Date;
   /** Bricht Werkzeuge mit Netzzugriff ab, wenn die Person „Stopp“ drückt. */
   signal?: AbortSignal;
+  /** Ob Stundenplan und Tests abgefragt werden dürfen (globaler Schalter). Ohne Angabe: ja. */
+  planner?: boolean;
   /** Websuche. Ohne Angabe ist `web_search` nicht verfügbar. */
   web?: WebSearch;
   /** Zähler dieser Antwort über alle Runden hinweg. */
   budget: ToolBudget;
+  /** Legt Dateien an die Antwort. Ohne Angabe sind die Datei-Werkzeuge nicht verfügbar. */
+  artifacts?: ArtifactSink;
+  /** Führt Code aus (D-079). Ohne Angabe ist `run_python` nicht verfügbar. */
+  code?: CodeSink;
+  /** Rendert Dateien zu Bildern (D-080). Ohne Angabe ist `preview_file` nicht verfügbar. */
+  preview?: PreviewSink;
+  /** Sammelt Bilder, die nach den Werkzeugergebnissen an das Modell gehen. Ohne Angabe gibt es keine Vorschau. */
+  images?: PendingImage[];
 }
 
 export interface ToolDefinition<Args = unknown> {
@@ -39,6 +98,8 @@ export interface ToolDefinition<Args = unknown> {
   parameters: Record<string, unknown>;
   /** Strenge Prüfung der Argumente. Unbekannte Felder werden abgelehnt. */
   schema: z.ZodType<Args>;
+  /** Größte Argumentzeichenfolge dieses Werkzeugs. Ohne Angabe {@link MAX_ARGUMENT_CHARACTERS}. */
+  maxArgumentCharacters?: number;
   /** Kurzer Hinweis für die Oberfläche („Montag“), nie Inhalte. */
   target: (args: Args) => string | null;
   /** Ob das Werkzeug gerade angeboten wird (zum Beispiel nur mit gespeichertem Schlüssel). Ohne Angabe immer. */
@@ -142,7 +203,8 @@ export class ToolRegistry {
       content: errorContent('invalid_arguments'),
       target: null,
     };
-    if (rawArguments.length > MAX_ARGUMENT_CHARACTERS) return invalid;
+    if (rawArguments.length > (tool.maxArgumentCharacters ?? MAX_ARGUMENT_CHARACTERS))
+      return invalid;
     let input: unknown = {};
     if (rawArguments.trim() !== '') {
       try {

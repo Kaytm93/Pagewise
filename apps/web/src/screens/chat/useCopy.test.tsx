@@ -38,6 +38,8 @@ function antwort(): ChatMessage {
     errorCode: null,
     activity: [],
     assets: [],
+    artifacts: [],
+    codeRuns: [],
     reasoning: null,
     tokensPerSecond: null,
     costUsd: null,

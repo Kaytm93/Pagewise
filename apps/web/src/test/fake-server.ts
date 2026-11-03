@@ -1,9 +1,12 @@
 import type {
   ActivityEntry,
+  ArtifactDetail,
   AvailableModel,
   Chat,
   ChatMessage,
   CliStatus,
+  CodeRunDetail,
+  CodeStatus,
   EngineKindInfo,
   EngineProfile,
   Exam,
@@ -199,6 +202,21 @@ export class FakeServer {
   exams: Exam[] = [];
   notes: Note[] = [];
   toolsEnabled = true;
+  filesEnabled = true;
+  codeEnabled = false;
+  /** Zustand der Code-Ausführung (D-079): Python, Sandbox und Einrichtung. */
+  codeStatus: CodeStatus = {
+    supported: true,
+    enabled: false,
+    runtime: 'missing',
+    setup: { state: 'idle', phase: null, progress: null, error: null },
+    ready: false,
+    preview: { office: false, raster: false, sandbox: true },
+  };
+  /** Läufe von Code mit Skript nach Kennung. */
+  codeRuns = new Map<string, CodeRunDetail>();
+  /** Vom Modell angelegte Dateien nach Kennung (mit Spezifikation). */
+  artifacts = new Map<string, ArtifactDetail>();
   /** Websuche: Schalter, letzte Zeichen des Schlüssels und die Antwort der Prüfsuche. */
   webSearch = {
     enabled: false,
@@ -415,6 +433,12 @@ export class FakeServer {
       return json(204);
     }
 
+    const artifactPath = /^\/api\/artifacts\/([^/]+)$/.exec(path);
+    if (method === 'GET' && artifactPath) {
+      const artifact = this.artifacts.get(artifactPath[1] ?? '');
+      return artifact ? json(200, artifact) : json(404, { error: 'not_found' });
+    }
+
     if (method === 'POST' && path === '/api/data/erase') {
       if (data.passcode !== TEST_PASSCODE) return json(403, { error: 'invalid_passcode' });
       this.erased += 1;
@@ -475,6 +499,10 @@ export class FakeServer {
     return json(404, { error: 'not_found' });
   }
 
+  private currentCodeStatus(): CodeStatus {
+    return { ...this.codeStatus, enabled: this.codeEnabled };
+  }
+
   addProvider(name: string, extra: Partial<Provider> = {}): Provider {
     const provider: Provider = {
       id: nextId(),
@@ -485,6 +513,8 @@ export class FakeServer {
       models: [],
       sendImages: true,
       allowTools: true,
+      allowFiles: true,
+      allowCode: false,
       hasKey: false,
       keyHint: null,
       warning: null,
@@ -560,6 +590,8 @@ export class FakeServer {
         models: this.withFree(models),
         sendImages: data.sendImages !== false,
         allowTools: data.allowTools !== false,
+        allowFiles: data.allowFiles !== false,
+        allowCode: data.allowCode === true,
         warning: /\/api\/coding(\/|$)/.test(baseUrl) ? 'coding_plan' : null,
       });
       if (typeof data.apiKey === 'string') {
@@ -612,6 +644,8 @@ export class FakeServer {
       if (Array.isArray(data.models)) provider.models = this.withFree(data.models as ModelEntry[]);
       if (typeof data.sendImages === 'boolean') provider.sendImages = data.sendImages;
       if (typeof data.allowTools === 'boolean') provider.allowTools = data.allowTools;
+      if (typeof data.allowFiles === 'boolean') provider.allowFiles = data.allowFiles;
+      if (typeof data.allowCode === 'boolean') provider.allowCode = data.allowCode;
       if (typeof data.apiKey === 'string') {
         this.secrets.set(provider.id, data.apiKey);
         provider.hasKey = true;
@@ -666,6 +700,8 @@ export class FakeServer {
       errorCode: null,
       activity: [],
       assets: [],
+      artifacts: [],
+      codeRuns: [],
       reasoning: null,
       tokensPerSecond: null,
       costUsd: null,
@@ -1063,8 +1099,39 @@ export class FakeServer {
     const time = /^([01]\d|2[0-3]):[0-5]\d$/;
     const date = /^\d{4}-\d{2}-\d{2}$/;
     if (path === '/api/tool-settings') {
-      if (method === 'PUT') this.toolsEnabled = data.enabled === true;
-      return json(200, { enabled: this.toolsEnabled });
+      if (method === 'PUT') {
+        if (data.code === true && data.confirm !== true) {
+          return json(400, { error: 'confirmation_required' });
+        }
+        if (typeof data.enabled === 'boolean') this.toolsEnabled = data.enabled;
+        if (typeof data.files === 'boolean') this.filesEnabled = data.files;
+        if (typeof data.code === 'boolean') this.codeEnabled = data.code;
+      }
+      return json(200, {
+        enabled: this.toolsEnabled,
+        files: this.filesEnabled,
+        code: this.codeEnabled,
+      });
+    }
+    if (path === '/api/code/status') return json(200, this.currentCodeStatus());
+    if (path === '/api/code/setup' && method === 'POST') {
+      if (data.confirm !== true) return json(400, { error: 'invalid_input' });
+      this.codeStatus.setup = { state: 'running', phase: 'download', progress: 0.2, error: null };
+      return json(202, this.currentCodeStatus());
+    }
+    if (path === '/api/code/setup/cancel' && method === 'POST') {
+      this.codeStatus.setup = { state: 'error', phase: null, progress: null, error: 'cancelled' };
+      return json(200, this.currentCodeStatus());
+    }
+    if (path === '/api/code/runtime' && method === 'DELETE') {
+      this.codeStatus.runtime = 'missing';
+      this.codeStatus.ready = false;
+      return json(200, this.currentCodeStatus());
+    }
+    const codeRunPath = /^\/api\/code-runs\/([^/]+)$/.exec(path);
+    if (method === 'GET' && codeRunPath) {
+      const run = this.codeRuns.get(codeRunPath[1] ?? '');
+      return run ? json(200, run) : json(404, { error: 'not_found' });
     }
     if (path === '/api/web-search') {
       if (method === 'PUT') {

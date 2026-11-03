@@ -4,17 +4,24 @@ Stand: Phase 1a (c) und (d) umgesetzt. Anbieter und Modelle lassen sich in der O
 
 ## Provider-Registry
 
-Gebaut ist der Typ `openai-compatible`: Name, Basis-URL, optionaler API-Key und eine Modellliste. Je Modell gibt es vier Fähigkeiten (Bilder, Werkzeuge, Denken, Streaming), die du selbst setzt, weil die Schnittstelle sie nicht zuverlässig meldet. „Werkzeuge“ braucht ein Modell, damit es Stundenplan und Tests nachschlagen darf (siehe [tools.md](tools.md)); je Anbieter lässt sich das außerdem ausschalten. Die Liste kannst du von Hand pflegen oder mit „Vom Anbieter laden“ aus `/models` übernehmen (höchstens 100 Modelle je Anbieter, die Auswahl bleibt bei dir).
+Gebaut ist der Typ `openai-compatible`: Name, Basis-URL, optionaler API-Key und eine Modellliste. Je Modell gibt es vier Fähigkeiten (Bilder, Werkzeuge, Denken, Streaming), die du selbst setzt, weil die Schnittstelle sie nicht zuverlässig meldet. „Werkzeuge“ braucht ein Modell, damit es Stundenplan und Tests nachschlagen darf (siehe [tools.md](tools.md)); je Anbieter lässt sich das außerdem ausschalten. Die Liste kannst du von Hand pflegen oder mit „Vom Anbieter laden“ aus `/models` übernehmen (höchstens 500 Modelle je Anbieter, mit Suche und Filtern nach Bildern, Werkzeugen, Denken und kostenlos; die Auswahl bleibt bei dir).
 
 Weitere Typen (`anthropic-messages`, `gemini`) sind nicht gebaut und kommen erst bei Bedarf. Jeder Anbieter mit OpenAI-kompatibler Schnittstelle geht schon jetzt über „Eigener Anbieter“ (zum Beispiel OpenAI, Mistral, Groq, DeepSeek).
 
 ### Voreinstellungen
 
-Voreinstellungen sind nur Vorschläge für Adresse, Schlüsselpflicht und Modelle. Alles bleibt änderbar. Stand 3. Oktober 2026, Quellen und Werte in [decisions.md](decisions.md), D-024.
+Voreinstellungen sind nur Vorschläge für Adresse, Schlüsselpflicht und Modelle. Alles bleibt änderbar. Stand 3. Oktober 2026 (die sieben Anbieter ab OpenAI: 1. November 2026), Quellen und Werte in [decisions.md](decisions.md), D-024 und D-076.
 
 | Voreinstellung | Basis-URL | Schlüssel | Vorgeschlagene Modelle |
 | --- | --- | --- | --- |
 | OpenRouter | `https://openrouter.ai/api/v1` | nötig | `z-ai/glm-5.3-flash`, `openrouter/free` |
+| OpenAI | `https://api.openai.com/v1` | nötig | keine, Liste vom Anbieter laden |
+| Anthropic (Claude) | `https://api.anthropic.com/v1` | nötig | keine; Kompatibilitätsschicht ohne Denkprozess und Prompt-Caching |
+| Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai` | nötig | keine, Liste vom Anbieter laden |
+| Mistral | `https://api.mistral.ai/v1` | nötig | keine, Liste vom Anbieter laden |
+| Groq | `https://api.groq.com/openai/v1` | nötig | keine; lehnt einige OpenAI-Parameter ab |
+| DeepSeek | `https://api.deepseek.com/v1` | nötig | keine, Liste vom Anbieter laden |
+| xAI (Grok) | `https://api.x.ai/v1` | nötig | keine, Liste vom Anbieter laden |
 | Z.ai (API) | `https://api.z.ai/api/paas/v4` | nötig | keine, Kennungen trägst du ein |
 | Ollama (lokal) | `http://localhost:11434/v1` | nicht nötig | keine, Liste vom Anbieter laden |
 | LM Studio (lokal) | `http://localhost:1234/v1` | nicht nötig | keine, Liste vom Anbieter laden |

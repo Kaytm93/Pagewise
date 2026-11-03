@@ -1,12 +1,21 @@
 import { type DocumentSpec, SUBSCRIPTS, SUPERSCRIPTS } from '@pagewise/render/document';
+import { rasterizeBlock } from './raster';
 
 // A4 in Millimetern. Der Text läuft bis zur unteren Grenze, dann folgt eine neue Seite.
 const PAGE = { width: 210, height: 297, left: 22, top: 24, bottom: 22 } as const;
 const TEXT_WIDTH = PAGE.width - 2 * PAGE.left;
 const BULLET_INDENT = 6;
 /** Schriftgrößen in Punkt. */
-const SIZE = { title: 18, heading: 13, text: 11 } as const;
+const SIZE = { title: 18, heading: 13, text: 11, caption: 9, cell: 10 } as const;
+/** Pixel des SVG in Millimetern (96 dpi) und Vergrößerung auf der Seite; Abbildungen sind höchstens so breit wie der Text. */
+const PX_TO_MM = 0.2646;
+const FIGURE_SCALE = 1.2;
+const MAX_FIGURE_HEIGHT = 110;
+/** Innenabstand einer Tabellenzelle in Millimetern. */
+const CELL_PAD = 1.8;
 const LINE = 1.45;
+/** Steht anstelle einer Abbildung, die sich nicht zeichnen ließ. ASCII, damit die PDF-Schrift es setzt. */
+const FIGURE_FAILED = '(Abbildung konnte nicht gezeichnet werden)';
 const PT_TO_MM = 0.3528;
 /** Hoch- und Tiefstellung: 70 % der Schriftgröße; Hochgestelltes um 35 %, Tiefgestelltes um 20 % der Größe verschoben. */
 const SCRIPT_SCALE = 0.7;
@@ -92,7 +101,7 @@ function wrap(glyphs: Glyph[], widthOf: (glyph: Glyph) => number, width: number)
  * Baut aus dem geprüften Dokument eine PDF-Datei (A4, eingebaute Helvetica). Die Bibliothek wird erst hier
  * geladen, also beim Herunterladen, nicht schon beim Anzeigen. Zeichen, die `isPdfText` durchlässt, setzt die
  * Datei: Hoch- und Tiefstellung als kleinere, verschobene Zeichen, Mathezeichen aus der Symbol-Schrift. Die
- * Datei enthält keine Bilder und keine Verweise.
+ * Abbildungen sind PNG-Bilder (Graph, Molekül, Noten), Tabellen sind Linien und Text. Verweise enthält die Datei nicht.
  */
 export async function buildPdf(spec: DocumentSpec): Promise<Blob> {
   const { jsPDF } = await import('jspdf');
@@ -167,6 +176,100 @@ export async function buildPdf(spec: DocumentSpec): Promise<Blob> {
     });
   };
 
+  /** Bricht Text für eine Breite um (Zeilen aus Zeichen mit Schrift). */
+  const linesFor = (text: string, width: number, size: number, bold: boolean) =>
+    wrap([...text].map(glyphOf), (glyph) => widthOf(glyph, size, bold), width);
+
+  /** Schreibt einen kurzen Text zeilenweise mittig (Bildunterschrift). */
+  const writeCentered = (text: string, size: number) => {
+    const step = size * PT_TO_MM * LINE;
+    for (const line of linesFor(text, TEXT_WIDTH, size, false)) {
+      if (y + step > bottom) {
+        pdf.addPage();
+        y = PAGE.top;
+      }
+      const width = line.reduce((sum, glyph) => sum + widthOf(glyph, size, false), 0);
+      drawLine(line, PAGE.left + (TEXT_WIDTH - width) / 2, y + size * PT_TO_MM, size, false);
+      y += step;
+    }
+  };
+
+  /** Setzt eine Tabelle: gleich breite Spalten, Kopfzeile fett und grau hinterlegt, Zeilen brechen nicht über Seiten. */
+  const drawTable = (header: string[] | undefined, rows: string[][]) => {
+    const columns = (rows[0] ?? []).length;
+    const cellWidth = TEXT_WIDTH / columns;
+    const step = SIZE.cell * PT_TO_MM * LINE;
+    const all = header
+      ? [{ cells: header, bold: true }, ...rows.map((cells) => ({ cells, bold: false }))]
+      : rows.map((cells) => ({ cells, bold: false }));
+    pdf.setDrawColor(190, 190, 190);
+    pdf.setLineWidth(0.2);
+    for (const row of all) {
+      const wrapped = row.cells.map((cell) =>
+        linesFor(cell, cellWidth - 2 * CELL_PAD, SIZE.cell, row.bold),
+      );
+      const height = Math.max(...wrapped.map((lines) => lines.length)) * step + 2 * CELL_PAD;
+      if (y + height > bottom) {
+        pdf.addPage();
+        y = PAGE.top;
+      }
+      wrapped.forEach((lines, column) => {
+        const x = PAGE.left + column * cellWidth;
+        if (row.bold) {
+          pdf.setFillColor(238, 238, 238);
+          pdf.rect(x, y, cellWidth, height, 'FD');
+        } else {
+          pdf.rect(x, y, cellWidth, height, 'S');
+        }
+        lines.forEach((line, index) => {
+          const baseline = y + CELL_PAD + index * step + SIZE.cell * PT_TO_MM;
+          drawLine(line, x + CELL_PAD, baseline, SIZE.cell, row.bold);
+        });
+      });
+      y += height;
+    }
+  };
+
+  /**
+   * Setzt eine Abbildung (Graph, Molekül, Noten): gezeichnet wie im Chat, als PNG auf weißem Grund, mittig, mit
+   * Bildunterschrift. Lässt sich die Abbildung nicht zeichnen, steht stattdessen ein Hinweis; die Datei entsteht trotzdem.
+   */
+  const drawFigure = async (
+    kind: 'graph' | 'mol' | 'abc' | 'chart',
+    source: string,
+    caption: string | undefined,
+  ) => {
+    let raster: Awaited<ReturnType<typeof rasterizeBlock>> | null = null;
+    try {
+      raster = await rasterizeBlock(kind, source);
+    } catch {
+      raster = null;
+    }
+    if (!raster) {
+      write(FIGURE_FAILED, PAGE.left, TEXT_WIDTH, SIZE.text, false);
+      y += 2.5;
+      return;
+    }
+    let width = Math.min(TEXT_WIDTH, raster.width * PX_TO_MM * FIGURE_SCALE);
+    let height = width / raster.ratio;
+    if (height > MAX_FIGURE_HEIGHT) {
+      height = MAX_FIGURE_HEIGHT;
+      width = height * raster.ratio;
+    }
+    if (y + height > bottom) {
+      pdf.addPage();
+      y = PAGE.top;
+    }
+    pdf.addImage(raster.dataUrl, 'PNG', PAGE.left + (TEXT_WIDTH - width) / 2, y, width, height);
+    y += height + 2;
+    if (caption) {
+      pdf.setTextColor(90, 90, 90);
+      writeCentered(caption, SIZE.caption);
+      pdf.setTextColor(0, 0, 0);
+    }
+    y += 3;
+  };
+
   write(spec.title, PAGE.left, TEXT_WIDTH, SIZE.title, true);
   y += 4;
 
@@ -178,6 +281,11 @@ export async function buildPdf(spec: DocumentSpec): Promise<Blob> {
     } else if (part.type === 'paragraph') {
       write(part.text, PAGE.left, TEXT_WIDTH, SIZE.text, false);
       y += 2.5;
+    } else if (part.type === 'table') {
+      drawTable(part.header, part.rows);
+      y += 4;
+    } else if (part.type === 'figure') {
+      await drawFigure(part.kind, part.source, part.caption);
     } else {
       for (const item of part.items) {
         write(item, PAGE.left + BULLET_INDENT, TEXT_WIDTH - BULLET_INDENT, SIZE.text, false, true);

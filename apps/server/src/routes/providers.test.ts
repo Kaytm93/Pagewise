@@ -95,11 +95,24 @@ describe('Anbieter und Modellwahl', () => {
     ).presets;
     expect(presets.map((preset) => preset.id)).toEqual([
       'openrouter',
+      'openai',
+      'anthropic',
+      'gemini',
+      'mistral',
+      'groq',
+      'deepseek',
+      'xai',
       'zai',
       'ollama',
       'lmstudio',
       'custom',
     ]);
+    // Neue Anbieter: https, Schlüssel nötig, keine vorgeschlagenen Modelle (die Liste kommt vom Anbieter).
+    for (const id of ['openai', 'anthropic', 'gemini', 'mistral', 'groq', 'deepseek', 'xai']) {
+      const preset = presets.find((entry) => entry.id === id);
+      expect(preset?.baseUrl).toMatch(/^https:\/\//);
+      expect(preset?.models).toEqual([]);
+    }
     const openrouter = presets.find((preset) => preset.id === 'openrouter');
     expect(openrouter?.baseUrl).toBe('https://openrouter.ai/api/v1');
     expect(openrouter?.models.map((model) => model.id)).toEqual([
@@ -248,7 +261,7 @@ describe('Anbieter und Modellwahl', () => {
         {
           name: 'T',
           baseUrl: SECOND_URL,
-          models: Array.from({ length: 101 }, (_, i) => ({ id: `m${i}` })),
+          models: Array.from({ length: 501 }, (_, i) => ({ id: `m${i}` })),
         },
         'models',
       ],

@@ -191,7 +191,14 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
 
     expect(requests).toHaveLength(2);
     // Runde 1: Werkzeuge werden angeboten, das System-Prompt nennt den heutigen Tag.
-    expect(toolNames(requests[0])).toEqual(['get_timetable', 'get_exams']);
+    expect(toolNames(requests[0])).toEqual([
+      'get_timetable',
+      'get_exams',
+      'create_document',
+      'create_presentation',
+      'create_spreadsheet',
+      'create_figure',
+    ]);
     const system = requests[0]?.messages[0];
     expect(system?.role).toBe('system');
     expect(system?.content).toContain('Heute ist Sonntag, der 04.10.2026.');
@@ -288,10 +295,14 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
     };
 
     it('wenn der globale Schalter aus ist', async () => {
-      expect((await session.call('GET', '/api/tool-settings')).body).toEqual({ enabled: true });
-      expect((await session.call('PUT', '/api/tool-settings', { enabled: false })).body).toEqual({
-        enabled: false,
+      expect((await session.call('GET', '/api/tool-settings')).body).toEqual({
+        enabled: true,
+        files: true,
+        code: false,
       });
+      expect(
+        (await session.call('PUT', '/api/tool-settings', { enabled: false, files: false })).body,
+      ).toEqual({ enabled: false, files: false, code: false });
       await ask('Wann ist der Test?');
       expectNoTools();
     });
@@ -299,8 +310,9 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
     it('wenn der Anbieter es nicht erlaubt', async () => {
       const patched = await session.call('PATCH', `/api/providers/${providerId}`, {
         allowTools: false,
+        allowFiles: false,
       });
-      expect(patched.body).toMatchObject({ allowTools: false });
+      expect(patched.body).toMatchObject({ allowTools: false, allowFiles: false });
       await ask('Wann ist der Test?');
       expectNoTools();
     });
@@ -312,7 +324,7 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
     });
 
     it('wenn ein Modell Aufrufe schickt, obwohl keine angeboten wurden, laufen sie nicht', async () => {
-      await session.call('PUT', '/api/tool-settings', { enabled: false });
+      await session.call('PUT', '/api/tool-settings', { enabled: false, files: false });
       await choose('modell-a');
       scripts.push(() => toolCalls({ id: 'c', name: 'get_exams', args: '{}' }));
       const { events } = await ask('Frage');
@@ -429,7 +441,14 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
       );
       const { events } = await ask('Frage');
       expect(requests.map((r) => r.model)).toEqual(['modell-a', 'modell-b', 'modell-b']);
-      expect(toolNames(requests[1])).toEqual(['get_timetable', 'get_exams']);
+      expect(toolNames(requests[1])).toEqual([
+        'get_timetable',
+        'get_exams',
+        'create_document',
+        'create_presentation',
+        'create_spreadsheet',
+        'create_figure',
+      ]);
       expect(last(events).event).toBe('done');
     });
 
@@ -553,7 +572,15 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
 
       await enableSearch();
       await ask('Was gibt es Neues zur Photosynthese?');
-      expect(toolNames(requests[1])).toEqual(['get_timetable', 'get_exams', 'web_search']);
+      expect(toolNames(requests[1])).toEqual([
+        'get_timetable',
+        'get_exams',
+        'web_search',
+        'create_document',
+        'create_presentation',
+        'create_spreadsheet',
+        'create_figure',
+      ]);
       expect(requests[1]?.messages[0]?.content).toContain('web_search');
     });
 

@@ -48,6 +48,7 @@ const timetableArgs = z.strictObject({
 /** Stundenplan lesen: die ganze Woche oder ein Wochentag, in der aktuellen oder einer gewählten Wochenart. */
 export const getTimetable: ToolDefinition<z.infer<typeof timetableArgs>> = {
   name: 'get_timetable',
+  available: (context) => context.planner !== false,
   description:
     'Liest den Stundenplan der Person. Ohne Angaben kommt die ganze Woche der aktuellen Wochenart. Mit "weekday" (1 = Montag bis 7 = Sonntag) nur dieser Tag, mit "week" ("a" oder "b") die Stunden dieser Wochenart.',
   parameters: {
@@ -109,6 +110,7 @@ const examArgs = z.strictObject({
 /** Tests lesen: ab heute, in einem Zeitraum und/oder für ein Fach. */
 export const getExams: ToolDefinition<z.infer<typeof examArgs>> = {
   name: 'get_exams',
+  available: (context) => context.planner !== false,
   description:
     'Liest die Testeinträge der Person (Schulaufgabe, Test, Ex, Referat …) mit Datum. Ohne Angaben kommen die Einträge von heute an für ein halbes Jahr. Mit "from" und "to" (YYYY-MM-DD) ein Zeitraum, mit "subject" nur ein Fach (Name).',
   parameters: {

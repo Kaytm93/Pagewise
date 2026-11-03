@@ -1,10 +1,12 @@
 import { fail, hasControlChars, LIMITS, ok, type RenderError, type Result } from './errors';
+import { type Figure, isFigureEntry, readFigure } from './figure';
 
-/** Eine Folie: Titel, optional Stichpunkte und ein Absatz. */
+/** Eine Folie: Titel, optional Stichpunkte, ein Absatz und eine Abbildung (Graph, Molekül, Noten, D-075). */
 export interface Slide {
   title: string;
   bullets: string[];
   text: string | undefined;
+  figure: Figure | undefined;
 }
 
 export interface SlidesSpec {
@@ -20,6 +22,7 @@ const MAX = {
   bullets: 6,
   bullet: 120,
   text: 500,
+  caption: 120,
 } as const;
 
 type Json = Record<string, unknown>;
@@ -45,7 +48,7 @@ function readText(value: unknown, max: number): Result<string> {
 }
 
 function readSlide(entry: unknown): Result<Slide> {
-  if (!isObject(entry) || !hasOnly(entry, ['title', 'bullets', 'text'])) {
+  if (!isObject(entry) || !hasOnly(entry, ['title', 'bullets', 'text', 'figure'])) {
     return fail('invalid_slides', 'slides');
   }
   const title = readText(entry.title, MAX.slideTitle);
@@ -68,7 +71,16 @@ function readSlide(entry: unknown): Result<Slide> {
     if (!value.ok) return value;
     text = value.value;
   }
-  return ok({ title: title.value, bullets, text });
+  let figure: Figure | undefined;
+  if (entry.figure !== undefined) {
+    if (!isObject(entry.figure) || !isFigureEntry(entry.figure)) {
+      return fail('invalid_slides', 'figure');
+    }
+    const read = readFigure(entry.figure, (value) => readText(value, MAX.caption));
+    if (!read.ok) return read;
+    figure = read.value;
+  }
+  return ok({ title: title.value, bullets, text, figure });
 }
 
 /**

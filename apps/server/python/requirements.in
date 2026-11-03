@@ -1,0 +1,11 @@
+# Pakete der Code-Ausführung (D-079). Nur direkte Abhängigkeiten, ohne Versionen:
+# `pnpm python:lock` löst sie auf und schreibt Versionen und Prüfsummen nach apps/server/src/python/lock.ts.
+python-pptx
+python-docx
+openpyxl
+XlsxWriter
+reportlab
+matplotlib
+numpy
+Pillow
+lxml

@@ -29,7 +29,11 @@ describe('Werkzeug web_search', () => {
 
   beforeEach(() => {
     harness = createHarness();
-    context = { db: harness.services.database.db, now: () => NOW, budget: { webSearches: 0 } };
+    context = {
+      db: harness.services.database.db,
+      now: () => NOW,
+      budget: { webSearches: 0, files: 0, codeRuns: 0, previews: 0 },
+    };
   });
   afterEach(() => harness.close());
 

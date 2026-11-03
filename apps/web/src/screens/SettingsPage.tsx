@@ -16,6 +16,7 @@ import { readTheme, saveTheme, type ThemePreference } from '../ui/theme';
 import { useDesign } from '../ui/useDesign';
 import { AgentSection } from './agents/AgentSection';
 import { commonErrorMessage, rateLimitMessage } from './auth-errors';
+import { CodeChoice } from './CodeSettings';
 import { EraseDialog } from './EraseDialog';
 import { PromptRow } from './prompts/PromptRow';
 import { ProvidersSection } from './providers/ProvidersSection';
@@ -153,6 +154,7 @@ function AutoFixChoice() {
 function ToolsChoice() {
   const { api } = useSession();
   const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [files, setFiles] = useState<boolean | null>(null);
   const [failed, setFailed] = useState(false);
   const t = m.settings.tools;
 
@@ -162,6 +164,14 @@ function ToolsChoice() {
       .toolsEnabled()
       .then((value) => {
         if (!cancelled) setEnabled(value);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    api
+      .filesEnabled()
+      .then((value) => {
+        if (!cancelled) setFiles(value);
       })
       .catch(() => {
         if (!cancelled) setFailed(true);
@@ -183,7 +193,19 @@ function ToolsChoice() {
     }
   }
 
-  if (enabled === null && !failed) {
+  async function changeFiles(next: boolean) {
+    setFailed(false);
+    const before = files;
+    setFiles(next);
+    try {
+      setFiles(await api.setFilesEnabled(next));
+    } catch {
+      setFiles(before);
+      setFailed(true);
+    }
+  }
+
+  if ((enabled === null || files === null) && !failed) {
     return (
       <p role="status" className="text-ink-muted">
         {t.loading}
@@ -197,6 +219,12 @@ function ToolsChoice() {
         hint={t.hint}
         checked={enabled ?? true}
         onChange={(value) => void change(value)}
+      />
+      <CheckField
+        label={t.filesLabel}
+        hint={t.filesHint}
+        checked={files ?? true}
+        onChange={(value) => void changeFiles(value)}
       />
       {failed && <FieldError>{t.failed}</FieldError>}
     </div>
@@ -462,6 +490,9 @@ export function SettingsPage() {
         </Section>
         <Section title={m.settings.tools.title} lead={m.settings.tools.lead}>
           <ToolsChoice />
+        </Section>
+        <Section title={m.settings.code.title} lead={m.settings.code.lead}>
+          <CodeChoice />
         </Section>
         <Section title={m.settings.webSearch.title} lead={m.settings.webSearch.lead}>
           <WebSearchChoice />

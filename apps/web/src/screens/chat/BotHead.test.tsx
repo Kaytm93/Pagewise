@@ -23,6 +23,8 @@ function antwort(status: MessageStatus, content = 'Ein Satz als Antwort.'): Chat
     errorCode: status === 'error' ? 'unknown' : null,
     activity: [],
     assets: [],
+    artifacts: [],
+    codeRuns: [],
     reasoning: null,
     tokensPerSecond: null,
     costUsd: null,
