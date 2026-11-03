@@ -1,10 +1,16 @@
 import { fail, hasControlChars, LIMITS, ok, type RenderError, type Result } from './errors';
+import { type Figure, isFigureEntry, readFigure } from './figure';
 
-/** Ein Abschnitt des Dokuments: Überschrift, Absatz oder Aufzählung. */
+/**
+ * Ein Abschnitt des Dokuments: Überschrift, Absatz, Aufzählung, Tabelle oder Abbildung (Graph, Molekül, Noten,
+ * D-075). Eine Abbildung trägt den Quelltext des Blocks und wird mit denselben Zeichnern gezeichnet wie im Chat.
+ */
 export type DocumentPart =
   | { type: 'heading'; text: string }
   | { type: 'paragraph'; text: string }
-  | { type: 'list'; items: string[] };
+  | { type: 'list'; items: string[] }
+  | { type: 'table'; header: string[] | undefined; rows: string[][] }
+  | Figure;
 
 export interface DocumentSpec {
   title: string;
@@ -20,6 +26,10 @@ const MAX = {
   items: 30,
   // Ein Listenpunkt darf so lang sein wie ein Absatz: Das PDF bricht lange Punkte um.
   item: 1_200,
+  caption: 200,
+  columns: 6,
+  rows: 30,
+  cell: 120,
 } as const;
 
 /**
@@ -124,8 +134,51 @@ function readText(value: unknown, max: number, field: 'text' | 'items' = 'text')
   return ok(text);
 }
 
+function readTable(entry: Json): Result<DocumentPart> {
+  if (!hasOnly(entry, ['type', 'header', 'rows'])) return fail('invalid_document', 'table');
+  const readRow = (value: unknown, columns: number | null): Result<string[]> => {
+    if (!Array.isArray(value) || value.length < 1 || value.length > MAX.columns) {
+      return fail('invalid_document', 'table');
+    }
+    if (columns !== null && value.length !== columns) return fail('invalid_document', 'table');
+    const cells: string[] = [];
+    for (const cell of value) {
+      const text = readText(cell, MAX.cell);
+      if (!text.ok) return text;
+      cells.push(text.value);
+    }
+    return ok(cells);
+  };
+  const rows = entry.rows;
+  if (!Array.isArray(rows) || rows.length < 1 || rows.length > MAX.rows) {
+    return fail('invalid_document', 'rows');
+  }
+  const first = readRow(rows[0], null);
+  if (!first.ok) return first;
+  const columns = first.value.length;
+  const table: string[][] = [first.value];
+  for (const row of rows.slice(1)) {
+    const read = readRow(row, columns);
+    if (!read.ok) return read;
+    table.push(read.value);
+  }
+  let header: string[] | undefined;
+  if (entry.header !== undefined) {
+    const read = readRow(entry.header, columns);
+    if (!read.ok) return read;
+    header = read.value;
+  }
+  return ok({ type: 'table', header, rows: table });
+}
+
 function readPart(entry: unknown): Result<DocumentPart> {
   if (!isObject(entry) || typeof entry.type !== 'string') return fail('invalid_document', 'parts');
+  if (entry.type === 'table') return readTable(entry);
+  if (isFigureEntry(entry)) {
+    const figure = readFigure(entry, (value) => readText(value, MAX.caption));
+    if (!figure.ok) return figure;
+    return figure;
+  }
   if (entry.type === 'heading' || entry.type === 'paragraph') {
     if (!hasOnly(entry, ['type', 'text'])) return fail('invalid_document', 'parts');
     const max = entry.type === 'heading' ? MAX.heading : MAX.paragraph;

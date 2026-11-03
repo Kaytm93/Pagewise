@@ -1,10 +1,12 @@
 import { type DocumentSpec, parseDocumentSpec } from '@pagewise/render/document';
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { messages as m } from '../../../i18n';
 import { Button } from '../../../ui/Button';
 import { BlockError } from './BlockView';
 import { fileName, saveBlob } from './download';
 import { buildPdf } from './pdf';
+
+const BlockView = lazy(() => import('./BlockView'));
 
 /**
  * Dokument im Chat: eine Vorschau aus Text (ohne Netz) und der Knopf „Als PDF herunterladen“. Die PDF-Datei
@@ -29,12 +31,17 @@ function Document({ spec }: { spec: DocumentSpec }) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  const download = async () => {
+  const download = async (format: 'pdf' | 'docx') => {
     setBusy(true);
     setFailed(false);
     try {
-      const blob = await buildPdf(spec);
-      saveBlob(blob, fileName(spec.title, 'pdf'));
+      if (format === 'pdf') {
+        saveBlob(await buildPdf(spec), fileName(spec.title, 'pdf'));
+      } else {
+        // Word wird erst beim Klicken geladen, wie das PDF.
+        const { buildDocx } = await import('./docx');
+        saveBlob(await buildDocx(spec), fileName(spec.title, 'docx'));
+      }
     } catch {
       setFailed(true);
     } finally {
@@ -65,6 +72,54 @@ function Document({ spec }: { spec: DocumentSpec }) {
               </p>
             );
           }
+          if (part.type === 'table') {
+            return (
+              <div key={key} className="mt-3 overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  {part.header && (
+                    <thead>
+                      <tr>
+                        {part.header.map((cell, i) => (
+                          <th
+                            // biome-ignore lint/suspicious/noArrayIndexKey: die Tabelle steht fest, sie wird nie umsortiert
+                            key={`${i}:${cell}`}
+                            className="border border-control-edge bg-paper px-2 py-1 text-left font-medium"
+                          >
+                            {cell}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                  )}
+                  <tbody>
+                    {part.rows.map((row, r) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: die Tabelle steht fest, sie wird nie umsortiert
+                      <tr key={`${r}:${row.join('|')}`}>
+                        {row.map((cell, i) => (
+                          // biome-ignore lint/suspicious/noArrayIndexKey: die Tabelle steht fest, sie wird nie umsortiert
+                          <td key={`${i}:${cell}`} className="border border-control-edge px-2 py-1">
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          }
+          if (part.type === 'figure') {
+            return (
+              <div key={key} className="mt-3">
+                <Suspense fallback={<div className="h-24" />}>
+                  <BlockView kind={part.kind} source={part.source} final size="min-h-24" />
+                </Suspense>
+                {part.caption && (
+                  <p className="text-center text-sm text-ink-secondary">{part.caption}</p>
+                )}
+              </div>
+            );
+          }
           return (
             <ul key={key} className="mt-2 list-disc space-y-1 pl-6 marker:text-ink-muted">
               {part.items.map((item, i) => (
@@ -78,8 +133,11 @@ function Document({ spec }: { spec: DocumentSpec }) {
         })}
       </article>
       <figcaption className="mt-3 flex flex-wrap items-center gap-3">
-        <Button variant="secondary" busy={busy} onClick={() => void download()}>
+        <Button variant="secondary" busy={busy} onClick={() => void download('pdf')}>
           {busy ? m.blocks.documentView.making : m.blocks.documentView.download}
+        </Button>
+        <Button variant="ghost" disabled={busy} onClick={() => void download('docx')}>
+          {m.blocks.documentView.downloadDocx}
         </Button>
         {failed && (
           <span role="status" className="text-sm text-danger">

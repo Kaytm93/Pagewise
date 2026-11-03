@@ -1,7 +1,8 @@
 import { parseDocumentSpec } from '@pagewise/render/document';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fileName } from './download';
 import { buildPdf } from './pdf';
+import * as raster from './raster';
 
 const spec = (overrides: Record<string, unknown> = {}) => {
   const result = parseDocumentSpec(
@@ -64,5 +65,41 @@ describe('Dateiname', () => {
     expect(fileName('Wasser: Arbeitsblatt/1?', 'pdf')).toBe('Wasser Arbeitsblatt1.pdf');
     expect(fileName('   ', 'pdf')).toBe('Dokument.pdf');
     expect(fileName('x'.repeat(200), 'pptx').length).toBe(80 + '.pptx'.length);
+  });
+});
+
+// Ein Pixel, damit die Abbildung ohne Leinwand (jsdom) im PDF landet.
+const PIXEL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+describe('PDF mit Tabelle und Abbildungen', () => {
+  const rich = () =>
+    spec({
+      parts: [
+        { type: 'table', header: ['Stoff', 'Formel'], rows: [['Wasser', 'H₂O']] },
+        { type: 'graph', graph: { functions: ['x^2'], x: [-2, 2] }, caption: 'Parabel' },
+        { type: 'molecule', formula: 'H2O' },
+      ],
+    });
+
+  it('bettet Abbildungen als Bild ein und setzt die Tabelle als Text', async () => {
+    const spy = vi
+      .spyOn(raster, 'rasterizeBlock')
+      .mockResolvedValue({ dataUrl: PIXEL, ratio: 1.5, width: 480, height: 320 });
+    const blob = await buildPdf(rich());
+    const calls = spy.mock.calls.length;
+    spy.mockRestore();
+    const text = new TextDecoder('latin1').decode(new Uint8Array(await blob.arrayBuffer()));
+    expect(text.match(/\/Subtype\s*\/Image/g)?.length).toBe(2);
+    expect(calls).toBe(2);
+  });
+
+  it('erzeugt die Datei auch, wenn sich eine Abbildung nicht zeichnen lässt', async () => {
+    const spy = vi.spyOn(raster, 'rasterizeBlock').mockRejectedValue(new Error('keine Leinwand'));
+    const blob = await buildPdf(rich());
+    spy.mockRestore();
+    expect(blob.size).toBeGreaterThan(1000);
+    const text = new TextDecoder('latin1').decode(new Uint8Array(await blob.arrayBuffer()));
+    expect(text).not.toMatch(/\/Subtype\s*\/Image/);
   });
 });

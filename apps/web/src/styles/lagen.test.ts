@@ -61,14 +61,14 @@ describe('lagen.css: Deko-Schiefe ist eingeklemmt (M4-T035)', () => {
 });
 
 /*
- * Lagen-Blattstapel bei langen Seiten (Befund B-26, D-078, Kay GF-06 „Drehung begrenzt“): Ein Blatt (`.lg-ply`) ist
+ * Lagen-Blattstapel bei langen Seiten (Befund B-26, D-085, Kay GF-06 „Drehung begrenzt“): Ein Blatt (`.lg-ply`) ist
  * so hoch wie die Seite und dreht sich um seine Mitte; bei 4800 px und 0,34° wandert eine Ecke um 14 px, das dritte
  * Blatt stand 5 px aus dem Fenster, das erste 6 px links neben dem Blatt. Die Hülle `.lg-plies` ist ein Größen-
  * Container, `--ply-tilt-max` = atan(2 · Abweichung / Diagonale) begrenzt jeden Winkel, damit keine Ecke weiter als
  * `--ply-corner` von ihrer Lage ohne Drehung abweicht. Die Wirkung ist im Echtbrowser gemessen (Chromium und
  * WebKit, ~/pagewise-agent/shots/S-02/1.4/); dieser Test nagelt die Regeln fest.
  */
-describe('lagen.css: Drehung der Blätter darunter ist begrenzt (B-26, D-078)', () => {
+describe('lagen.css: Drehung der Blätter darunter ist begrenzt (B-26, D-085)', () => {
   const winkel: Array<[string, string, string]> = [
     ['1', 'p1', '0.28deg'],
     ['2', 'p1', '0.3deg'],
@@ -88,7 +88,7 @@ describe('lagen.css: Drehung der Blätter darunter ist begrenzt (B-26, D-078)', 
   });
 
   it('gibt jedem Blatt eine kleine feste Ecken-Grenze: 6 px für Blatt 1 und 2, 4 px für Blatt 3', () => {
-    // Wenige Pixel (Kay: „wenige Pixel“). 6 px: so weit wanderten die Ecken vor D-078 auf Seiten des Alltags
+    // Wenige Pixel (Kay: „wenige Pixel“). 6 px: so weit wanderten die Ecken vor D-085 auf Seiten des Alltags
     // (bis 5,8 px), dort bleibt das Bild. 4 px beim dritten Blatt: Es liegt 24 px versetzt, auf dem Telefon
     // bleiben bis zum Fensterrand 28 − 24 = 4 px.
     const blatt = regelBlock(lagen, '.lg-ply') ?? '';
@@ -176,11 +176,11 @@ describe('lagen.css: Drehung der Blätter darunter ist begrenzt (B-26, D-078)', 
 });
 
 /*
- * Kopf der schmalen Breite in „Lagen“ (D-076, Befund B-18): in Ruhe ohne Fläche, nach wenigen Pixeln Scrollen
+ * Kopf der schmalen Breite in „Lagen“ (D-083, Befund B-18): in Ruhe ohne Fläche, nach wenigen Pixeln Scrollen
  * deckend im Ton des bisherigen Bandes. Den Zustand setzt `ui/scrolled.ts` als Attribut `data-scrolled`.
  * Die Basisregel `.lg-mobilkopf` (var(--desk)) bleibt für Raum und Atelier, die darauf aufbauen.
  */
-describe('lagen.css: Kopf der schmalen Breite bekommt die Fläche erst beim Scrollen (D-076)', () => {
+describe('lagen.css: Kopf der schmalen Breite bekommt die Fläche erst beim Scrollen (D-083)', () => {
   const kopf = ':root[data-design="lagen"] .lg-mobilkopf';
   const flaeche = `${kopf}::before`;
   const gescrollt = `${kopf}[data-scrolled]::before`;
@@ -227,7 +227,7 @@ describe('lagen.css: Kopf der schmalen Breite bekommt die Fläche erst beim Scro
     expect(regelBlock(lagen, '.lg-mobilkopf')).toContain('background-color: var(--desk)');
   });
 
-  // Seit Schritt 1.3b (D-076) hängt auch Atelier sein Glas an `data-scrolled` (Regel auf `header.sticky.md:hidden::before`,
+  // Seit Schritt 1.3b (D-083) hängt auch Atelier sein Glas an `data-scrolled` (Regel auf `header.sticky.md:hidden::before`,
   // geprüft in `atelier.test.ts`). Die Erwartung „Atelier kennt das Attribut nicht“ war damit durch die Entscheidung
   // veraltet. Raum bleibt ohne Attribut; die Ebene `.lg-mobilkopf::before` setzt weiterhin nur Lagen.
   it('gilt das Attribut nur in Lagen und Atelier: Raum kennt es nicht', () => {

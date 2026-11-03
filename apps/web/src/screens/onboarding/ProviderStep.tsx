@@ -12,7 +12,17 @@ import { ProviderForm } from '../providers/ProviderForm';
 import { testMessage } from '../providers/provider-text';
 import { StepFrame } from './StepFrame';
 
-const CHOICES: PresetId[] = ['openrouter', 'zai', 'ollama', 'lmstudio', 'custom'];
+const CHOICES: PresetId[] = [
+  'openrouter',
+  'openai',
+  'anthropic',
+  'gemini',
+  'mistral',
+  'zai',
+  'ollama',
+  'lmstudio',
+  'custom',
+];
 
 /** Schritt „Anbieter“: auswählen, Schlüssel eintragen, anlegen, testen. Lässt sich überspringen. */
 export function ProviderStep({

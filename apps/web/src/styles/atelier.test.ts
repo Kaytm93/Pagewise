@@ -95,13 +95,13 @@ describe('Zeigerlicht', () => {
 });
 
 /*
- * Kopf der schmalen Breite in „Atelier“ (D-076, Befund B-18, Kay GF-03): Glas erst beim Scrollen. In Ruhe liegt der
+ * Kopf der schmalen Breite in „Atelier“ (D-083, Befund B-18, Kay GF-03): Glas erst beim Scrollen. In Ruhe liegt der
  * Kopf ohne Fläche, ohne Filter und ohne Rand auf dem Fachlicht; mit `data-scrolled` (gesetzt von `ui/scrolled.ts`)
  * wird die Ebene `::before` zum heutigen Glas. Der Blur lässt sich nur in Chromium prüfen (Playwright-WebKit zeichnet
- * `backdrop-filter` nicht, D-077); darum sichert dieser Test die Bauweise: Das Glas hängt an der Ebene, und `opacity`
+ * `backdrop-filter` nicht, D-084); darum sichert dieser Test die Bauweise: Das Glas hängt an der Ebene, und `opacity`
  * läuft nur dort, nie am Kopf oder an einem Vorfahren (ein Vorfahr mit opacity unter 1 nähme dem Glas den Blur).
  */
-describe('Kopf der schmalen Breite: Glas erst beim Scrollen (D-076)', () => {
+describe('Kopf der schmalen Breite: Glas erst beim Scrollen (D-083)', () => {
   const kopf = ":root[data-design='atelier'] header.sticky.md\\:hidden";
   const ebene = `${kopf}::before`;
   const gescrollt = `${kopf}[data-scrolled]::before`;

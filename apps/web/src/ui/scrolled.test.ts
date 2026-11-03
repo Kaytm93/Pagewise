@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SCROLLED_ATTRIBUTE, SCROLLED_THRESHOLD, startScrolledState } from './scrolled';
 
-/* Scroll-Zustand des Kopfes der schmalen Breite (D-076): data-scrolled ab etwas mehr als 4 px, sonst weg. */
+/* Scroll-Zustand des Kopfes der schmalen Breite (D-083): data-scrolled ab etwas mehr als 4 px, sonst weg. */
 
 let target: HTMLElement;
 let stop: (() => void) | undefined;

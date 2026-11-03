@@ -232,7 +232,7 @@ describe('raum.css: Stapel und Parallaxe bleiben unverändert', () => {
   });
 });
 
-describe('raum.css: Schublade hat den Raumton, Seitenleiste bleibt durchsichtig (D-075, B-03)', () => {
+describe('raum.css: Schublade hat den Raumton, Seitenleiste bleibt durchsichtig (D-082, B-03)', () => {
   it('macht den Heftrücken nur in der Seitenleiste durchsichtig und ohne Schatten', () => {
     const transparent = all.filter(
       (rule) =>

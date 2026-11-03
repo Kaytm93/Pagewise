@@ -61,6 +61,10 @@ export function createHarness(
     agent?: ServicesOptions['agent'];
     /** Ersetzt `fetch` für den Suchdienst. Tests, die eine Suche auslösen, setzen immer eine Fälschung. */
     searchFetch?: typeof fetch;
+    /** Ersetzt Python, Sandbox-Lauf und Selbsttest der Code-Ausführung (D-079). */
+    code?: ServicesOptions['code'];
+    /** Ersetzt die Sichtprüfung (D-080). Ohne Angabe sucht sie echte Programme, Tests setzen immer eine Fälschung. */
+    preview?: ServicesOptions['preview'];
   } = {},
 ): Harness {
   const base = mkdtempSync(join(tmpdir(), 'pagewise-test-'));
@@ -74,6 +78,10 @@ export function createHarness(
     defaultsDir: options.defaultsDir ?? join(base, 'keine-standards'),
     cliDetect: options.cliDetect ?? { searchPath: join(base, 'kein-claude'), extraDirs: [] },
     agent: options.agent,
+    code: options.code,
+    preview: options.preview ?? {
+      locate: { searchPath: join(base, 'kein-libreoffice'), system: false },
+    },
   });
   const app = createApp({ version: '1.2.3', services });
 

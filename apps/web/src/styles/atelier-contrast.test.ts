@@ -339,7 +339,7 @@ describe('Glas (D1): Text auf Glas über dem Lichtfeld', () => {
   );
 });
 
-// Kopf der schmalen Breite (D-076): Glas erst beim Scrollen. Menüsymbol und Wortmarke stehen in --ink. In Ruhe liegen
+// Kopf der schmalen Breite (D-083): Glas erst beim Scrollen. Menüsymbol und Wortmarke stehen in --ink. In Ruhe liegen
 // sie ohne Glas auf dem Lichtfeld, nach dem Scrollen auf Glas über Feld und Seite. Beide Zustände rechnen hier mit
 // der stärksten Stelle des Feldes; der Kopf sitzt am oberen Rand, wo das Feld schwächer ist. Im Browser gemessen:
 // schlechtester Pixel hinter der Schrift (S-02, 1.3b).

@@ -8,8 +8,8 @@ import { Button } from '../../ui/Button';
 import { FieldError } from '../../ui/FieldError';
 import { isFreeModel } from './provider-text';
 
-const MAX_MODELS = 100;
-const MAX_SHOWN = 50;
+const MAX_MODELS = 500;
+const MAX_SHOWN = 100;
 // Spiegelt die Regel des Servers: keine Leerzeichen oder Steuerzeichen, höchstens 200 Zeichen.
 // biome-ignore lint/suspicious/noControlCharactersInRegex: Steuerzeichen werden hier bewusst abgelehnt.
 const VALID_ID = /^[^\s\u0000-\u001f\u007f]{1,200}$/;
@@ -62,6 +62,7 @@ export function ModelListEditor({
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
+  const [need, setNeed] = useState<Set<'vision' | 'tools' | 'reasoning' | 'free'>>(new Set());
   const e = m.providers.errors;
 
   function change(index: number, patch: Partial<ModelEntry>) {
@@ -107,9 +108,17 @@ export function ModelListEditor({
     }
   }
 
-  const matches = (available ?? []).filter((model) =>
-    model.id.toLowerCase().includes(filter.trim().toLowerCase()),
+  // Filter nach Fähigkeit gibt es nur, wenn der Anbieter sie überhaupt meldet (OpenRouter tut es, viele andere nicht).
+  const reports = (available ?? []).some(
+    (model) => model.vision !== null || model.tools !== null || model.reasoning !== null,
   );
+  const matches = (available ?? []).filter(
+    (model) =>
+      model.id.toLowerCase().includes(filter.trim().toLowerCase()) &&
+      [...need].every((flag) => (flag === 'free' ? model.free : model[flag] === true)),
+  );
+  const addable = matches.filter((model) => !models.some((entry) => entry.id === model.id));
+  const room = Math.max(0, MAX_MODELS - models.length);
   const shown = matches.slice(0, MAX_SHOWN);
   const has = (id: string) => models.some((model) => model.id === id);
 
@@ -219,6 +228,55 @@ export function ModelListEditor({
             spellCheck={false}
             className="min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink"
           />
+          {reports && (
+            <div className="mt-2 flex flex-wrap gap-x-4">
+              {(
+                [
+                  ['vision', m.providers.models.vision],
+                  ['tools', m.providers.models.tools],
+                  ['reasoning', m.providers.models.reasoning],
+                  ['free', m.providers.models.onlyFree],
+                ] as const
+              ).map(([key, label]) => (
+                <Flag
+                  key={key}
+                  label={label}
+                  checked={need.has(key)}
+                  onChange={(value) =>
+                    setNeed((current) => {
+                      const next = new Set(current);
+                      if (value) next.add(key);
+                      else next.delete(key);
+                      return next;
+                    })
+                  }
+                />
+              ))}
+            </div>
+          )}
+          <p className="mt-2 text-meta text-ink-muted">
+            {format(m.providers.models.shownOf, { shown: matches.length, total: available.length })}
+          </p>
+          {addable.length > 1 && room > 0 && (
+            <Button
+              variant="ghost"
+              className="mt-1 -ml-3"
+              onClick={() =>
+                onChange([
+                  ...models,
+                  ...addable.slice(0, room).map((model) => ({
+                    id: model.id,
+                    vision: model.vision ?? false,
+                    tools: model.tools ?? false,
+                    reasoning: model.reasoning ?? false,
+                    streaming: true,
+                  })),
+                ])
+              }
+            >
+              {format(m.providers.models.takeAll, { count: Math.min(addable.length, room) })}
+            </Button>
+          )}
           {shown.length === 0 ? (
             <p className="mt-3 text-sm text-ink-muted">{m.providers.models.noMatches}</p>
           ) : (
@@ -227,6 +285,21 @@ export function ModelListEditor({
                 <li key={model.id} className="flex items-center justify-between gap-3 py-1">
                   <span className="min-w-0 break-all text-sm">
                     {model.id}
+                    {[
+                      model.vision ? m.providers.models.vision : null,
+                      model.tools ? m.providers.models.tools : null,
+                      model.reasoning ? m.providers.models.reasoning : null,
+                    ].some(Boolean) && (
+                      <span className="ml-2 text-meta text-ink-muted">
+                        {[
+                          model.vision ? m.providers.models.vision : null,
+                          model.tools ? m.providers.models.tools : null,
+                          model.reasoning ? m.providers.models.reasoning : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    )}
                     {model.free && (
                       <span className="ml-2 text-meta text-ink-muted">
                         {m.providers.models.free}

@@ -5,19 +5,21 @@ import { idField, nameField } from '../http/fields';
 import { limitBody, readJson } from '../http/json';
 import type { AppEnv } from '../http/types';
 import { ModelListSchema, SelectionSchema } from '../providers/models';
-import { PRESETS } from '../providers/presets';
+import { PRESET_IDS, PRESETS } from '../providers/presets';
 import { MAX_FALLBACKS, type ProviderService, type ServiceFailure } from '../providers/service';
 
 const ApiKey = z.string().min(1).max(4096);
 
 const CreateBody = z.strictObject({
   name: nameField,
-  preset: z.enum(['openrouter', 'zai', 'ollama', 'lmstudio', 'custom']).default('custom'),
+  preset: z.enum(PRESET_IDS).default('custom'),
   baseUrl: z.string().max(200).optional(),
   apiKey: ApiKey.optional(),
   models: ModelListSchema.optional(),
   sendImages: z.boolean().optional(),
   allowTools: z.boolean().optional(),
+  allowFiles: z.boolean().optional(),
+  allowCode: z.boolean().optional(),
 });
 
 const UpdateBody = z
@@ -27,6 +29,8 @@ const UpdateBody = z
     models: ModelListSchema.optional(),
     sendImages: z.boolean().optional(),
     allowTools: z.boolean().optional(),
+    allowFiles: z.boolean().optional(),
+    allowCode: z.boolean().optional(),
     apiKey: ApiKey.optional(),
     clearKey: z.boolean().optional(),
   })

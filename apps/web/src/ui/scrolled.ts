@@ -1,5 +1,5 @@
 /**
- * Scroll-Zustand des Kopfes der schmalen Breite (AppShell, Klasse `lg-mobilkopf`, D-076).
+ * Scroll-Zustand des Kopfes der schmalen Breite (AppShell, Klasse `lg-mobilkopf`, D-083).
  *
  * Sobald die Seite um mehr als ein paar Pixel gescrollt ist, steht am Kopf das Attribut `data-scrolled`; steht
  * die Seite wieder oben, wird es entfernt. Die Richtungen hängen ihre Fläche daran: „Lagen“ legt dann seine

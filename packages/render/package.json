@@ -9,6 +9,7 @@
     "./math": "./src/math.ts",
     "./math-dom": "./src/math-dom.ts",
     "./document": "./src/document.ts",
+    "./figure": "./src/figure.ts",
     "./graph": "./src/graph/index.ts",
     "./mol": "./src/mol/index.ts",
     "./abc": "./src/abc.ts",
@@ -17,6 +18,8 @@
     "./smiles-dom": "./src/smiles-dom.ts",
     "./sanitize": "./src/sanitize.ts",
     "./slides": "./src/slides.ts",
+    "./sheet": "./src/sheet.ts",
+    "./chart": "./src/chart.ts",
     "./quiz": "./src/quiz.ts",
     "./validate": "./src/validate.ts"
   },
@@ -27,7 +30,7 @@
   "dependencies": {
     "abcjs": "6.7.2",
     "dompurify": "3.4.17",
-    "katex": "0.19.0",
+    "katex": "0.19.1",
     "smiles-drawer": "2.4.1"
   },
   "devDependencies": {

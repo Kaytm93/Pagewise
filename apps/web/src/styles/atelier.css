@@ -190,7 +190,7 @@
      Die Glasfläche steht in dieser einen Regel, damit backdrop-filter nur an einer Stelle vorkommt. Die Hüllen
      tragen dafür keine neue Klasse im Markup: Seitenleiste (.lg-binder), Composer (.lg-composer), Dialogblatt
      (.lg-dialog), die Kopfzeile der schmalen Breite (header.sticky im md:hidden, dort als Ebene ::before, die erst
-     mit data-scrolled sichtbar wird, D-076) und die Testkarte (.at-test).
+     mit data-scrolled sichtbar wird, D-083) und die Testkarte (.at-test).
      Höchstens drei Glasflächen gleichzeitig. Auf Text und Chat-Fließtext liegt nie Glas. Der Rand steckt im
      Haarstrich des Schattens, nicht in einer Linie. */
   :root[data-design="atelier"] .at-glass,
@@ -1093,7 +1093,7 @@
  * Utilities-Layer und schlagen @layer components). Alle hängen an data-design="atelier".
  */
 
-/* Kopfzeile der schmalen Breite (D-076, Befund B-18): Glas erst beim Scrollen. In Ruhe liegt der Kopf ohne Fläche,
+/* Kopfzeile der schmalen Breite (D-083, Befund B-18): Glas erst beim Scrollen. In Ruhe liegt der Kopf ohne Fläche,
    ohne Filter und ohne Rand auf dem Fachlicht (die Basisfläche var(--desk) aus lagen.css entfällt hier). Das Glas
    selbst ist die Ebene ::before hinter dem Inhalt des Kopfes (Füllung, Haarstrich, Schatten und backdrop-filter
    stehen in der Glasregel oben). Der Kopf ist sticky mit z-index, also ein eigener Stapelkontext; die Ebene liegt

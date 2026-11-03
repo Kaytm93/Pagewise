@@ -83,6 +83,8 @@ export function ProviderForm({
   const [removeKey, setRemoveKey] = useState(false);
   const [sendImages, setSendImages] = useState(provider?.sendImages ?? true);
   const [allowTools, setAllowTools] = useState(provider?.allowTools ?? true);
+  const [allowFiles, setAllowFiles] = useState(provider?.allowFiles ?? true);
+  const [allowCode, setAllowCode] = useState(provider?.allowCode ?? false);
   const [models, setModels] = useState<ModelEntry[]>(
     provider ? provider.models.map(toEntry) : (preset?.models ?? []),
   );
@@ -122,6 +124,8 @@ export function ProviderForm({
         }
         if (sendImages !== provider.sendImages) patch.sendImages = sendImages;
         if (allowTools !== provider.allowTools) patch.allowTools = allowTools;
+        if (allowFiles !== provider.allowFiles) patch.allowFiles = allowFiles;
+        if (allowCode !== provider.allowCode) patch.allowCode = allowCode;
         if (apiKey.trim() !== '') patch.apiKey = apiKey.trim();
         else if (removeKey) patch.clearKey = true;
         if (Object.keys(patch).length === 0) {
@@ -139,6 +143,8 @@ export function ProviderForm({
             models,
             ...(sendImages ? {} : { sendImages: false }),
             ...(allowTools ? {} : { allowTools: false }),
+            ...(allowFiles ? {} : { allowFiles: false }),
+            ...(allowCode ? { allowCode: true } : {}),
           }),
         );
       }
@@ -277,6 +283,18 @@ export function ProviderForm({
             hint={m.providers.form.allowToolsHint}
             checked={allowTools}
             onChange={setAllowTools}
+          />
+          <CheckField
+            label={m.providers.form.allowFiles}
+            hint={m.providers.form.allowFilesHint}
+            checked={allowFiles}
+            onChange={setAllowFiles}
+          />
+          <CheckField
+            label={m.providers.form.allowCode}
+            hint={m.providers.form.allowCodeHint}
+            checked={allowCode}
+            onChange={setAllowCode}
           />
         </div>
       </section>
