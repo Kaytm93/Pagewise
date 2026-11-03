@@ -255,6 +255,110 @@ describe('Scrim von Dialog und Schublade: Blur schon in der Einblendung (B-01, D
   });
 });
 
+/*
+ * Dialog, Schublade und Fuß des Dialogs in „Atelier“ (Befunde B-07 und B-22, D-087): Dialogblatt und Schublade haben
+ * eine eigene Glasfüllung (`--glass-dialog-fill`), weil sie auf dem Scrim liegen und der gedämpfte Text mit der
+ * Füllung der übrigen Flächen unter 4,5 : 1 stand (Kontrastrechnung in `atelier-contrast.test.ts`, Pixelmessung im
+ * Browser). Seitenleiste, Kopf, Composer und Testkarte behalten `--glass-fill`. Der Fuß ist deckend im Ton des Dialogs
+ * und reicht bis an dessen Rand. Wo `backdrop-filter` fehlt, sind Blatt, Schublade und Fuß deckend (94 % `--canvas`).
+ */
+describe('Dialog, Schublade und Fuß: eigene Fläche (B-07, B-22, D-087)', () => {
+  const regeln = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
+    selector: (match[1] as string).trim(),
+    body: match[2] as string,
+  }));
+  /** Auswahl der Regel nach den Kommentaren, ohne die Bedingung des @supports-Blocks davor. */
+  const teile = (selector: string) => selector.split(',').map((teil) => teil.trim());
+  const root = ":root[data-design='atelier']";
+  const dialog = `${root} .lg-dialog`;
+  const schublade = `${root} .lg-scrim .lg-binder`;
+  const fuss = `${root} .lg-dialog-foot`;
+  const deckend = /color-mix\(in srgb, var\(--canvas\) 94%, transparent\)/;
+
+  it('legt Dialogblatt und Schublade auf --glass-dialog-fill, hinter die gemeinsame Glasregel', () => {
+    const glasRegel = regeln.findIndex(
+      (regel) => teile(regel.selector).includes(dialog) && /backdrop-filter/.test(regel.body),
+    );
+    const eigene = regeln.findIndex(
+      (regel) =>
+        teile(regel.selector).includes(dialog) &&
+        teile(regel.selector).includes(schublade) &&
+        /background-color:\s*var\(--glass-dialog-fill\)/.test(regel.body),
+    );
+    expect(glasRegel).toBeGreaterThan(-1);
+    expect(eigene, 'Regel mit --glass-dialog-fill').toBeGreaterThan(glasRegel);
+    // nur diese eine Regel nutzt die Füllung, und sonst nichts außer der Fläche
+    const nutzer = regeln.filter((regel) => regel.body.includes('--glass-dialog-fill'));
+    expect(nutzer).toHaveLength(1);
+    expect(nutzer[0]?.body.trim()).toBe('background-color: var(--glass-dialog-fill);');
+  });
+
+  it('lässt Seitenleiste, Kopf, Composer und Testkarte auf --glass-fill und trifft sie nicht mit der Dialogfüllung', () => {
+    const fuellung = regeln.find(
+      (regel) => teile(regel.selector).includes(dialog) && /--glass-fill/.test(regel.body),
+    );
+    expect(fuellung, 'gemeinsame Glasregel').toBeDefined();
+    for (const selector of ['.at-glass', '.lg-binder', '.lg-composer', '.at-test']) {
+      expect(teile(fuellung?.selector ?? '')).toContain(`${root} ${selector}`);
+    }
+    // die Seitenleiste am Mac (.lg-aside .lg-binder) liegt nicht unter .lg-scrim
+    const eigene = regeln.find((regel) => regel.body.includes('--glass-dialog-fill'));
+    for (const teil of teile(eigene?.selector ?? '')) {
+      expect([dialog, schublade]).toContain(teil);
+    }
+  });
+
+  it('ersetzt die Fläche von Dialogblatt, Schublade und Fuß ohne backdrop-filter durch 94 % --canvas', () => {
+    const rueckfall = css.match(
+      /@supports not \(\(backdrop-filter: blur\(1px\)\) or \(-webkit-backdrop-filter: blur\(1px\)\)\) \{[^}]*\}\s*\}/g,
+    );
+    expect(rueckfall, '@supports-Blöcke').not.toBeNull();
+    const text = (rueckfall ?? []).join('\n');
+    expect(text).toContain(dialog);
+    expect(text).toContain(schublade);
+    expect(text).toContain(fuss);
+    expect(text).toMatch(deckend);
+    // der Block der Flächen steht hinter der Regel mit der Dialogfüllung, sonst gälte sie wieder
+    const eigene = css.indexOf('background-color: var(--glass-dialog-fill)');
+    const rueckfallStart = css.indexOf('@supports not', eigene);
+    expect(eigene).toBeGreaterThan(-1);
+    expect(rueckfallStart).toBeGreaterThan(eigene);
+    expect(css.slice(rueckfallStart, css.indexOf('}\n  }', rueckfallStart))).toContain(schublade);
+  });
+
+  it('gibt dem Fuß eine deckende Fläche im Ton des Dialogs, bis an den Rand des Dialogs und ohne feste Farben', () => {
+    const regel = regeln.find(
+      (eintrag) => eintrag.selector === fuss && /clip-path/.test(eintrag.body),
+    );
+    expect(regel, 'Regel des Fußes').toBeDefined();
+    const body = regel?.body ?? '';
+    expect(body).toMatch(/--ft:\s*var\(--glass-dialog-foot\)/);
+    expect(body).toMatch(/background-color:\s*var\(--ft\)/);
+    expect(body).toMatch(/box-shadow:\s*0 0 0 100vmax var\(--ft\)/);
+    expect(body).toMatch(/clip-path:\s*inset\(0 -100vmax\)/);
+    expect(body).toMatch(/border-top-color:\s*var\(--line-warm\)/);
+    expect(body).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
+    // keine Rundung am Fuß selbst: Radius und overflow des Dialogs runden die Ecken
+    expect(body).not.toMatch(/border-radius/);
+  });
+
+  it('bietet dem Fuß ohne backdrop-filter dieselbe deckende Fläche wie dem Dialog', () => {
+    const regel = regeln.find(
+      (eintrag) =>
+        eintrag.selector === fuss && !/clip-path/.test(eintrag.body) && /--ft:/.test(eintrag.body),
+    );
+    expect(regel?.body).toMatch(/--ft:\s*color-mix\(in srgb, var\(--canvas\) 94%, transparent\)/);
+  });
+
+  it('lässt keine andere Regel den Fuß färben (nur Tokens, kein weißes Rechteck mehr)', () => {
+    for (const eintrag of regeln.filter((regel) => regel.selector.includes('.lg-dialog-foot'))) {
+      expect(eintrag.body).not.toMatch(
+        /background-color:\s*color-mix\(in srgb, var\(--canvas\) 94%/,
+      );
+    }
+  });
+});
+
 describe('Radien (22 px, 12 px, Pille)', () => {
   it('kennt in Atelier nur 0, 12 px, 22 px, Pille und Kreis (atelier-fach.test.ts)', () => {
     const fach = readFileSync(join(dir, 'atelier-fach.css'), 'utf8').replace(
