@@ -19,7 +19,8 @@ import { createServices, type Services } from '../services';
  *
  * Läuft nur mit `PAGEWISE_E2E_CODE=<Pfad zum Ordner des Pakets playwright>` (zum Beispiel
  * `~/pagewise-agent/pw/node_modules/playwright`), gebautem `apps/web/dist` und einem Python (`PAGEWISE_TEST_PYTHON`).
- * Der Testserver nutzt `PAGEWISE_E2E_PORT` (Standard 3190), ein leeres Datenverzeichnis im Temp-Ordner und erfundene
+ * Ein Bildschirmfoto des Chats landet im Ordner `PAGEWISE_E2E_SHOTS` (sonst im Temp-Ordner des Laufs). Der Testserver nutzt
+ * `PAGEWISE_E2E_PORT` (Standard 3190), ein leeres Datenverzeichnis im Temp-Ordner und erfundene
  * Daten. Nie auf den Port einer echten App richten.
  */
 /** Der kleine Teil von Playwright, den der Test braucht. Das Paket gehört nicht zum Repo, nur sein Pfad kommt per Umgebung. */
@@ -236,19 +237,9 @@ print("fertig")
         expect(download.headers()['content-disposition']).toContain('attachment');
         expect(download.headers()['x-content-type-options']).toBe('nosniff');
         expect(await download.text()).toContain('x;y');
-        mkdirSync(join(process.env.HOME ?? tmpdir(), 'pagewise-agent', 'shots', 'code-e2e'), {
-          recursive: true,
-        });
-        await page.screenshot({
-          path: join(
-            process.env.HOME ?? tmpdir(),
-            'pagewise-agent',
-            'shots',
-            'code-e2e',
-            'chat.png',
-          ),
-          fullPage: false,
-        });
+        const shots = process.env.PAGEWISE_E2E_SHOTS ?? join(base, 'shots');
+        mkdirSync(shots, { recursive: true });
+        await page.screenshot({ path: join(shots, 'chat.png'), fullPage: false });
 
         // 5. Das Modell hat das Seitenbild der Sichtprüfung bekommen: ein echtes PNG
         const withImage = received.at(-1)?.messages.at(-1);
