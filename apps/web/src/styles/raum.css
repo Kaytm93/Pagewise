@@ -220,12 +220,22 @@
     --raum-surf: var(--raum-canvas);
   }
 
-  :root[data-design="raum"] .lg-binder {
+  :root[data-design="raum"] .lg-aside .lg-binder {
     border: 0;
     border-radius: 0;
     background-color: transparent;
     background-image: none;
     box-shadow: none;
+  }
+
+  /* Schublade auf dem iPhone (D-075, B-03): dieselbe deckende Fläche wie die Seitenleiste am Mac, mit den
+     eingelassenen Zeilen darin. Der Schatten des Panels (Drawer.tsx) bleibt und trennt es vom Inhalt, darum
+     kein box-shadow hier. */
+  :root[data-design="raum"] .lg-scrim .lg-binder {
+    --raum-surf: var(--raum-canvas);
+    border: 0;
+    background-color: var(--raum-canvas);
+    background-image: none;
   }
 
   :root[data-design="raum"] .lg-liste {
@@ -1278,13 +1288,27 @@
   }
 }
 
-/* Die Kopfzeile auf dem Telefon (AppShell, md:hidden) trägt den Raumton statt des kühlen bg-desk: kein Rand,
-   kein Schatten. Der Menüknopf darin bleibt gehoben (mo-press). Die Regel steht außerhalb von @layer, damit sie
-   die Utilities überstimmt. */
-:root[data-design="raum"] .lg-app header.md\:hidden {
+/* Die Kopfzeile auf dem Telefon (AppShell, md:hidden, Klasse lg-mobilkopf) trägt den Raumton wie die Seite, ohne
+   Band, Rand und Schatten. Zum Inhalt hin trennt sie eine eingravierte Doppellinie wie am Dock: oben die dunkle
+   Schattenlinie, darunter die helle Lichtlinie (je 1 px, Tokens --raum-dark und --raum-light). Die Linie sitzt am
+   unteren Rand des Kopfes und ändert seine Höhe nicht; der Kopf bleibt deckend, damit der Inhalt beim Scrollen nicht
+   durch Menüknopf und Wortmarke läuft. Der Menüknopf darin bleibt gehoben (mo-press). Die Regeln stehen außerhalb von
+   @layer wie die übrigen Raum-Regeln an Hüllenelementen (D-076). */
+:root[data-design="raum"] .lg-mobilkopf {
   background-color: var(--raum-canvas);
   border: 0;
   box-shadow: none;
+}
+
+:root[data-design="raum"] .lg-mobilkopf::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(var(--raum-dark) 1px, var(--raum-light) 1px);
+  pointer-events: none;
 }
 
 /* ----- Chat in „Raum“: Gestaltung über Klassen und Elemente, die schon da sind. Der Lesebereich bleibt ruhig:

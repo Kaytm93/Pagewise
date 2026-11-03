@@ -342,11 +342,45 @@ describe('Raum: Strichstärke des Fachsymbols und Kopfzeile auf dem Telefon', ()
     expect(rule(raum, ":root[data-design='raum'] .lg-motif")).toContain('stroke-width: 0.8');
   });
 
-  it('gibt der Telefon-Kopfzeile den Raumton, ohne Rand und ohne Schatten (überstimmt bg-desk)', () => {
-    const body = rule(raum, ":root[data-design='raum'] .lg-app header.md\\:hidden");
+  it('gibt der Telefon-Kopfzeile (Klasse lg-mobilkopf) den Raumton, ohne Rand und ohne Schatten', () => {
+    const body = rule(raum, ":root[data-design='raum'] .lg-mobilkopf");
     expect(body).toContain('background-color: var(--raum-canvas)');
     expect(body).toContain('border: 0');
     expect(body).toContain('box-shadow: none');
+  });
+
+  // D-076 (Kay, GF-03): Raum trennt den Kopf mit einer eingravierten Doppellinie vom Inhalt statt mit einem Band.
+  it('trennt den Kopf mit der Doppellinie aus Raum-Tokens: 1 px dunkel, 1 px hell, unten im Kopf', () => {
+    const body = rule(raum, ":root[data-design='raum'] .lg-mobilkopf::after");
+    expect(body).toContain("content: ''");
+    expect(body).toContain('position: absolute');
+    expect(body).toContain('bottom: 0');
+    expect(body).toContain('height: 2px');
+    expect(body).toContain(
+      'background: linear-gradient(var(--raum-dark) 1px, var(--raum-light) 1px)',
+    );
+    expect(body).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(/i);
+  });
+
+  it('nennt den Kopf nur noch über die Klasse, nicht mehr über das Element (header.md:hidden)', () => {
+    expect(raum).not.toMatch(/header\.md\\:hidden/);
+    expect(raum).not.toContain('bg-desk');
+  });
+
+  it('trägt im Markup die Klasse lg-mobilkopf statt bg-desk und behält sticky und md:hidden (Atelier-Glas)', () => {
+    const shell = readFileSync(join(dir, '../shell/AppShell.tsx'), 'utf8');
+    const header = /<header className="([^"]*)"/.exec(shell)?.[1] ?? '';
+    expect(header.split(' ')).toEqual(
+      expect.arrayContaining(['lg-mobilkopf', 'sticky', 'md:hidden']),
+    );
+    expect(header.split(' ')).not.toContain('bg-desk');
+    // Atelier legt das Glas auf header.sticky.md:hidden; die Regel muss die Kopfzeile weiter treffen.
+    expect(read('atelier.css')).toContain('header.sticky.md\\:hidden');
+  });
+
+  it('gibt dem Kopf in der Basis (Lagen) die bisherige Fläche des Schreibtischs', () => {
+    const lagen = read('lagen.css');
+    expect(rule(lagen, '.lg-mobilkopf')).toContain('background-color: var(--desk)');
   });
 });
 
@@ -372,10 +406,11 @@ describe('Raum: Listen und Trennlinien', () => {
     );
     expect(divider).toContain('height: 2px');
     expect(divider).toContain('linear-gradient(var(--raum-dark) 1px, var(--raum-light) 1px)');
-    // Dock und Chat-Eingabe tragen dieselbe Linie; keine zwei Verläufe mehr übereinander.
+    // Zeilentrenner, Dock mit Chat-Eingabe und (D-076) die Kopfzeile auf dem Telefon tragen dieselbe Linie;
+    // keine zwei Verläufe mehr übereinander. Drei Stellen, jede mit genau diesem einen Verlauf.
     expect(
       raum.match(/linear-gradient\(var\(--raum-dark\) 1px, var\(--raum-light\) 1px\)/g),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
     expect(raum).not.toMatch(/top \/ 100% 1px/);
   });
 

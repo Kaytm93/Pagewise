@@ -13,6 +13,7 @@ import { SubjectPage } from '../screens/SubjectPage';
 import { startParallax } from '../ui/parallax';
 import { usePointerGlow } from '../ui/pointer-glow';
 import { Sheet } from '../ui/Sheet';
+import { startScrolledState } from '../ui/scrolled';
 import { subjectColorAttr } from '../ui/subject-color';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { Drawer } from './Drawer';
@@ -158,6 +159,13 @@ function Shell() {
   }, [key, depth, dir]);
 
   useEffect(() => (app.current ? startParallax(app.current) : undefined), []);
+  // `data-scrolled` am Kopf der schmalen Breite (Klasse lg-mobilkopf): Lagen (Fläche) und Atelier (Glas) zeigen ihre
+  // Fläche erst, wenn die Seite gescrollt ist (D-076). Der Kopf wird über seine Klasse gefunden, damit sein Markup
+  // (eine Zeile mit Klassen, vom Strukturtest gelesen) unverändert bleibt.
+  useEffect(() => {
+    const header = app.current?.querySelector<HTMLElement>('.lg-mobilkopf');
+    return header ? startScrolledState(header) : undefined;
+  }, []);
   usePointerGlow();
 
   useEffect(() => {
@@ -204,7 +212,7 @@ function Shell() {
       </aside>
 
       <div className="flex min-h-dvh min-w-0 flex-col">
-        <header className="sticky top-[var(--cb-h,0px)] z-30 bg-desk pt-[env(safe-area-inset-top)] md:hidden">
+        <header className="lg-mobilkopf sticky top-[var(--cb-h,0px)] z-30 pt-[env(safe-area-inset-top)] md:hidden">
           <div className="flex h-14 items-center gap-1 pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]">
             <button
               type="button"
@@ -227,9 +235,11 @@ function Shell() {
           className="flex-1 scroll-mt-20 pt-1 pr-[max(1.75rem,env(safe-area-inset-right))] pb-[max(1.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] outline-none md:py-3.5 md:pr-[max(3rem,env(safe-area-inset-right))] md:pl-0"
         >
           <div className="lg-stack mx-auto max-w-[1180px]" data-depth={depth}>
-            <div aria-hidden="true" className="lg-ply lg-p1" />
-            <div aria-hidden="true" className="lg-ply lg-p2" />
-            <div aria-hidden="true" className="lg-ply lg-p3" />
+            <div aria-hidden="true" className="lg-plies">
+              <div className="lg-ply lg-p1" />
+              <div className="lg-ply lg-p2" />
+              <div className="lg-ply lg-p3" />
+            </div>
             <div key={pageKey(route)} className="lg-arrive" data-dir={dir}>
               <ErrorBoundary resetKey={pageKey(route)}>
                 <Page route={route} />

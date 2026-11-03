@@ -94,6 +94,107 @@ describe('Zeigerlicht', () => {
   });
 });
 
+/*
+ * Kopf der schmalen Breite in „Atelier“ (D-076, Befund B-18, Kay GF-03): Glas erst beim Scrollen. In Ruhe liegt der
+ * Kopf ohne Fläche, ohne Filter und ohne Rand auf dem Fachlicht; mit `data-scrolled` (gesetzt von `ui/scrolled.ts`)
+ * wird die Ebene `::before` zum heutigen Glas. Der Blur lässt sich nur in Chromium prüfen (Playwright-WebKit zeichnet
+ * `backdrop-filter` nicht, D-077); darum sichert dieser Test die Bauweise: Das Glas hängt an der Ebene, und `opacity`
+ * läuft nur dort, nie am Kopf oder an einem Vorfahren (ein Vorfahr mit opacity unter 1 nähme dem Glas den Blur).
+ */
+describe('Kopf der schmalen Breite: Glas erst beim Scrollen (D-076)', () => {
+  const kopf = ":root[data-design='atelier'] header.sticky.md\\:hidden";
+  const ebene = `${kopf}::before`;
+  const gescrollt = `${kopf}[data-scrolled]::before`;
+
+  /** Alle flachen Regeln (Auswahl und Rumpf), auch innerhalb von @layer und @supports. */
+  const regeln = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
+    selector: (match[1] as string).trim(),
+    body: match[2] as string,
+  }));
+  const mitKopf = regeln.filter((regel) => regel.selector.includes('header.sticky.md\\:hidden'));
+  /** Die Regel, die die Ebene anlegt (nicht die Glasregel, deren Auswahl die Ebene am Ende nennt). */
+  const ebeneAnlegen = regeln.find(
+    (regel) => regel.selector === ebene && regel.body.includes('content:'),
+  )?.body;
+
+  it('lässt den Kopf in Ruhe ohne Fläche, ohne Rand und ohne Schatten', () => {
+    const body = rule(kopf);
+    expect(body).toMatch(/background-color:\s*transparent\b/);
+    expect(body).toMatch(/border:\s*0\b/);
+    expect(body).toMatch(/box-shadow:\s*none\b/);
+  });
+
+  it('hängt weder backdrop-filter noch opacity noch einen Übergang an den Kopf selbst', () => {
+    for (const regel of mitKopf) {
+      const istEbene = /::before\s*$/.test(regel.selector.replace(/\[data-scrolled\]/, ''));
+      if (istEbene) continue;
+      expect(regel.body, `Kopf selbst: ${regel.selector}`).not.toMatch(
+        /backdrop-filter|(^|[;\s])opacity\s*:|transition|filter\s*:/,
+      );
+    }
+  });
+
+  it('legt das Glas als Ebene ::before hinter den Inhalt des Kopfes, in Ruhe unsichtbar', () => {
+    const body = ebeneAnlegen ?? '';
+    expect(body).toContain("content: ''");
+    expect(body).toMatch(/position:\s*absolute\b/);
+    expect(body).toMatch(/inset:\s*0\b/);
+    expect(body).toMatch(/z-index:\s*-1\b/);
+    expect(body).toMatch(/opacity:\s*0\b/);
+    expect(body).toMatch(/pointer-events:\s*none\b/);
+  });
+
+  it('macht die Ebene mit data-scrolled sichtbar', () => {
+    expect(rule(gescrollt)).toMatch(/opacity:\s*1\b/);
+  });
+
+  it('gibt der Ebene das heutige Glas: Füllung, Haarstrich, Schatten und Blur aus den Glas-Tokens', () => {
+    const glas = regeln.find(
+      (regel) =>
+        regel.selector.includes('header.sticky.md\\:hidden::before') &&
+        /backdrop-filter/.test(regel.body),
+    );
+    expect(glas, 'Glasregel mit der Ebene des Kopfes').toBeDefined();
+    const body = glas?.body ?? '';
+    expect(body).toMatch(/background-color:\s*var\(--glass-fill\)/);
+    expect(body).toMatch(/inset 0 0 0 1px var\(--glass-edge-side\)/);
+    expect(body).toMatch(/inset 0 1px 0 var\(--glass-edge\)/);
+    expect(body).toMatch(/var\(--glass-shadow-near\)/);
+    expect(body).toMatch(/var\(--glass-shadow-far\)/);
+    expect(body).toMatch(
+      /-webkit-backdrop-filter:\s*blur\(var\(--glass-blur\)\)\s*saturate\(160%\)/,
+    );
+    // Die Glasregel nennt den Kopf nur als Ebene, nie als Element (sonst läge das Glas in Ruhe am Kopf).
+    expect(glas?.selector).not.toMatch(/header\.sticky\.md\\:hidden\s*(,|$)/);
+  });
+
+  it('animiert nur die Ebene, nur über opacity und mit --t-color (0 ms bei „Reduziert“ und „Aus“)', () => {
+    const body = ebeneAnlegen ?? '';
+    const transitions = [...body.matchAll(/transition:\s*([^;]+);/g)].map((match) =>
+      match[1]?.trim(),
+    );
+    expect(transitions).toEqual(['opacity var(--t-color)']);
+    expect(body).not.toMatch(/\b\d+(\.\d+)?m?s\b/);
+  });
+
+  it('bietet ohne backdrop-filter die deckende Fläche (--canvas, 94 %) an der Ebene', () => {
+    const regel = regeln.find(
+      (eintrag) =>
+        eintrag.selector === ebene && /color-mix\(in srgb, var\(--canvas\) 94%/.test(eintrag.body),
+    );
+    expect(regel, 'Rückfall ohne backdrop-filter').toBeDefined();
+    expect(css).toMatch(
+      /@supports not \(\(backdrop-filter: blur\(1px\)\) or \(-webkit-backdrop-filter: blur\(1px\)\)\) \{\s*:root\[data-design='atelier'\] header\.sticky\.md\\:hidden::before/,
+    );
+  });
+
+  it('nutzt keine festen Farben für Kopf und Ebene', () => {
+    for (const body of [rule(kopf), ebeneAnlegen ?? '', rule(gescrollt)]) {
+      expect(body).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
+    }
+  });
+});
+
 describe('Radien (22 px, 12 px, Pille)', () => {
   it('kennt in Atelier nur 0, 12 px, 22 px, Pille und Kreis (atelier-fach.test.ts)', () => {
     const fach = readFileSync(join(dir, 'atelier-fach.css'), 'utf8').replace(
