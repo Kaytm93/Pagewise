@@ -1,6 +1,7 @@
 import { type ActivityEntry, upsertActivity } from '../agents/activity';
 import type { AssetView } from '../agents/assets';
 import type { ArtifactView } from '../artifacts/service';
+import type { CodeRunView } from '../code/executor';
 import type { ProviderErrorCode } from '../providers/errors';
 
 /** Fehler, die nur beim Antworten über einen Agenten (Agent-CLI) vorkommen. */
@@ -41,6 +42,8 @@ export interface MessageView {
   assets: AssetView[];
   /** Dateien, die das Modell über Werkzeuge angelegt hat (Dokument, Präsentation …), ohne Spezifikation. */
   artifacts: ArtifactView[];
+  /** Code, den das Modell in dieser Antwort ausgeführt hat (D-079), ohne Skript. */
+  codeRuns: CodeRunView[];
   /** Denkprozess des Modells, nur wenn der Anbieter ihn liefert; sonst `null`. */
   reasoning: string | null;
   /** Tokens je Sekunde, nur wenn der Anbieter die Zahl der Tokens meldet; sonst `null`. */

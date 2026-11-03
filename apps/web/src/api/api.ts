@@ -6,6 +6,8 @@ import type {
   Chat,
   ChatDetail,
   CliStatus,
+  CodeRunDetail,
+  CodeStatus,
   EngineInput,
   EnginePatch,
   EngineProfile,
@@ -248,6 +250,25 @@ export function createApi(client: ApiClient) {
       return (await client.request<{ files: boolean }>('PUT', '/api/tool-settings', { files }))
         .files;
     },
+    /** Darf die KI Code ausführen (D-079)? Einschalten braucht die ausdrückliche Bestätigung der Erklärung. */
+    async codeEnabled(): Promise<boolean> {
+      return (await client.request<{ code: boolean }>('GET', '/api/tool-settings')).code;
+    },
+    async setCodeEnabled(code: boolean): Promise<boolean> {
+      return (
+        await client.request<{ code: boolean }>('PUT', '/api/tool-settings', {
+          code,
+          ...(code ? { confirm: true } : {}),
+        })
+      ).code;
+    },
+    codeStatus: () => client.request<CodeStatus>('GET', '/api/code/status'),
+    /** Richtet das private Python ein. Nur auf Klick, nachdem die Erklärung bestätigt wurde. */
+    startCodeSetup: () => client.request<CodeStatus>('POST', '/api/code/setup', { confirm: true }),
+    cancelCodeSetup: () => client.request<CodeStatus>('POST', '/api/code/setup/cancel'),
+    removeCodeRuntime: () => client.request<CodeStatus>('DELETE', '/api/code/runtime'),
+    /** Ein Lauf mit seinem Skript (nur Text). */
+    codeRun: (id: string) => client.request<CodeRunDetail>('GET', `/api/code-runs/${id}`),
     /** Eine vom Modell angelegte Datei mit ihrer geprüften Spezifikation. */
     artifact: (id: string) => client.request<ArtifactDetail>('GET', `/api/artifacts/${id}`),
 

@@ -9,6 +9,7 @@ import { BotHead } from '../atelier/BotHead';
 import { AgentActivity } from './AgentActivity';
 import { AssetList } from './AssetList';
 import { ArtifactList } from './artifacts/ArtifactCard';
+import { CodeRunList } from './code/CodeRuns';
 import { Markdown } from './Markdown';
 import { metricsLine } from './metrics';
 import { Reasoning } from './Reasoning';
@@ -170,6 +171,7 @@ export const MessageItem = memo(function MessageItem({
         <AgentActivity steps={message.activity.filter((step) => !isModelTool(step))} live={live} />
       )}
       <ArtifactList artifacts={message.artifacts} />
+      <CodeRunList runs={message.codeRuns} />
       {assetUrl && (
         <AssetList
           assets={

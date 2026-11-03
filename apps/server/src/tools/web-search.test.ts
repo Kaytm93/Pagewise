@@ -32,7 +32,7 @@ describe('Werkzeug web_search', () => {
     context = {
       db: harness.services.database.db,
       now: () => NOW,
-      budget: { webSearches: 0, files: 0 },
+      budget: { webSearches: 0, files: 0, codeRuns: 0, previews: 0 },
     };
   });
   afterEach(() => harness.close());

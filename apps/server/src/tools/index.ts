@@ -1,9 +1,20 @@
 import { createDocument, createFigure, createPresentation, createSpreadsheet } from './artifacts';
+import { runPython } from './code';
 import { getExams, getTimetable } from './planner';
+import { previewFile } from './preview';
 import { ToolRegistry } from './registry';
 import { webSearch } from './web-search';
 
-export type { ToolBudget, ToolContext, ToolOutcome, ToolSpec } from './registry';
+export { MAX_CODE_RUNS_PER_REPLY } from './code';
+export { MAX_PREVIEWS_PER_REPLY } from './preview';
+export type {
+  CodeRunOutput,
+  CodeSink,
+  ToolBudget,
+  ToolContext,
+  ToolOutcome,
+  ToolSpec,
+} from './registry';
 export { ToolError, ToolRegistry } from './registry';
 export { MAX_WEB_SEARCHES } from './web-search';
 
@@ -20,7 +31,9 @@ export function createToolRegistry(): ToolRegistry {
     .register(createDocument)
     .register(createPresentation)
     .register(createSpreadsheet)
-    .register(createFigure);
+    .register(createFigure)
+    .register(runPython)
+    .register(previewFile);
 }
 
 export { WEEKDAY_NAMES } from './planner';

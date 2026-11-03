@@ -140,11 +140,14 @@ export class AssetService {
     workspaceDir: string,
     before: Snapshot,
     target: { chatId: string; messageId: string },
+    /** Nur Dateien, für die das `true` liefert (relativer Pfad mit `/`). Ohne Angabe alle. */
+    include?: (relativePath: string) => boolean,
   ): Promise<AssetView[]> {
     const root = realpathSync(workspaceDir);
     const taken: AssetView[] = [];
     for (const relativePath of changedFiles(before, snapshotDir(workspaceDir))) {
       if (taken.length >= MAX_ASSETS_PER_RUN) break;
+      if (include && !include(relativePath)) continue;
       const type = typeOf(relativePath);
       if (!type) continue;
       const full = join(workspaceDir, relativePath);

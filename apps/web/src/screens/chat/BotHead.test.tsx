@@ -24,6 +24,7 @@ function antwort(status: MessageStatus, content = 'Ein Satz als Antwort.'): Chat
     activity: [],
     assets: [],
     artifacts: [],
+    codeRuns: [],
     reasoning: null,
     tokensPerSecond: null,
     costUsd: null,

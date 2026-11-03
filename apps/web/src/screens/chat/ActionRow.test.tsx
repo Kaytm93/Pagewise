@@ -27,6 +27,7 @@ const antwort: ChatMessage = {
   activity: [],
   assets: [],
   artifacts: [],
+  codeRuns: [],
   reasoning: null,
   tokensPerSecond: null,
   costUsd: null,

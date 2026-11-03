@@ -2,6 +2,7 @@ import type {
   ActivityEntry,
   ChatArtifact,
   ChatAsset,
+  ChatCodeRun,
   ChatMessage,
   MessageStatus,
   Selection,
@@ -127,6 +128,46 @@ function asArtifacts(value: unknown): ChatArtifact[] {
   });
 }
 
+const CODE_OUTCOMES = [
+  'ok',
+  'error',
+  'timeout',
+  'cancelled',
+  'output_limit',
+  'memory_limit',
+  'disk_limit',
+  'unavailable',
+  'failed',
+];
+
+/** Läufe von Code (D-079): nur bekannte Felder, nie das Skript. */
+function asCodeRuns(value: unknown): ChatCodeRun[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 20).flatMap((entry) => {
+    if (!isRecord(entry)) return [];
+    const { id, purpose, outcome, durationMs, files } = entry;
+    if (
+      typeof id !== 'string' ||
+      typeof outcome !== 'string' ||
+      !CODE_OUTCOMES.includes(outcome) ||
+      typeof durationMs !== 'number'
+    ) {
+      return [];
+    }
+    return [
+      {
+        id,
+        purpose: typeof purpose === 'string' ? purpose : null,
+        outcome: outcome as ChatCodeRun['outcome'],
+        durationMs,
+        files: Array.isArray(files)
+          ? files.filter((name): name is string => typeof name === 'string').slice(0, 20)
+          : [],
+      },
+    ];
+  });
+}
+
 function asMessage(value: unknown): ChatMessage | null {
   if (!isRecord(value)) return null;
   const { id, seq, role, content, status, providerId, model, errorCode, createdAt } = value;
@@ -154,6 +195,7 @@ function asMessage(value: unknown): ChatMessage | null {
     activity: asActivityList(value.activity),
     assets: asAssets(value.assets),
     artifacts: asArtifacts(value.artifacts),
+    codeRuns: asCodeRuns(value.codeRuns),
     reasoning:
       typeof value.reasoning === 'string' && value.reasoning !== '' ? value.reasoning : null,
     tokensPerSecond: typeof value.tokensPerSecond === 'number' ? value.tokensPerSecond : null,

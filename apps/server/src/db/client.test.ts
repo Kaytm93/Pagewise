@@ -54,6 +54,7 @@ describe('Datenbank', () => {
       'assets',
       'auth_credentials',
       'chats',
+      'code_runs',
       'engine_profiles',
       'exams',
       'messages',

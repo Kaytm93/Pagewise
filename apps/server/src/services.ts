@@ -13,13 +13,21 @@ import { AuthService } from './auth/auth-service';
 import type { ScryptParams } from './auth/passcode';
 import { SessionService } from './auth/sessions';
 import { ChatService, type ChatServiceOptions } from './chats/service';
+import { CodeExecutor } from './code/executor';
 import { type DatabaseHandle, migrateDatabase, openDatabase } from './db/client';
 import { loadSubjectCatalog, type SubjectCatalog } from './domain/subject-templates';
 import { ensureDefaultSubject } from './domain/subjects';
 import { type ResourcePaths, resolveResources } from './paths';
+import { PreviewService } from './preview/render';
 import { DefaultPrompts } from './prompts/defaults';
 import { ProviderClient } from './providers/client';
 import { ProviderService } from './providers/service';
+import { REQUIREMENTS_LOCK } from './python/lock';
+import { platformKey } from './python/pins';
+import { PythonRuntime } from './python/runtime';
+import { PythonSetup } from './python/setup';
+import { SandboxGuard } from './sandbox/probe';
+import type { runSandboxed } from './sandbox/runner';
 import { WebSearchService } from './search/service';
 import { type DataPaths, ensureDataLayout } from './storage/data-paths';
 import { DataEraser } from './storage/eraser';
@@ -61,6 +69,13 @@ export interface Services {
   toolSettings: ToolSettings;
   /** Websuche für das Werkzeug `web_search`: Schalter und Schlüssel (standardmäßig aus). */
   webSearch: WebSearchService;
+  /** Das private Python der Code-Ausführung: Erkennung, Einrichtung (nur auf Klick), Läufe (D-079). */
+  pythonRuntime: PythonRuntime;
+  pythonSetup: PythonSetup;
+  sandboxGuard: SandboxGuard;
+  code: CodeExecutor;
+  /** Sichtprüfung von Dateien mit LibreOffice und poppler in der Sandbox (D-080). */
+  preview: PreviewService;
   chats: ChatService;
   eraser: DataEraser;
   close(): void;
@@ -87,6 +102,15 @@ export interface ServicesOptions {
   cliDetect?: DetectOptions;
   /** Nur für Tests: Umgebung, Benutzerverzeichnis und Zusatzvariablen des Agent-Prozesses. */
   agent?: Omit<EngineOptions, 'dataRoot'>;
+  /** Nur für Tests: ersetzt Plattform, Lock, Sandbox-Lauf und Selbsttest der Code-Ausführung. */
+  code?: {
+    runtime?: PythonRuntime;
+    guard?: SandboxGuard;
+    run?: typeof runSandboxed;
+    setup?: Partial<ConstructorParameters<typeof PythonSetup>[0]>;
+  };
+  /** Nur für Tests: ersetzt die Sichtprüfung (Suche der Programme, Sandbox-Lauf). */
+  preview?: Partial<ConstructorParameters<typeof PreviewService>[0]>;
 }
 
 /**
@@ -146,6 +170,32 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
   const tools = createToolRegistry();
   const toolSettings = new ToolSettings(database.db);
   const webSearch = new WebSearchService(database.db, secrets, { fetch: options.searchFetch });
+  const pythonRuntime = options.code?.runtime ?? new PythonRuntime(paths.root);
+  const sandboxGuard = options.code?.guard ?? new SandboxGuard();
+  const key = platformKey();
+  const pythonSetup = new PythonSetup({
+    runtime: pythonRuntime,
+    guard: sandboxGuard,
+    platform: key,
+    lock: key ? (REQUIREMENTS_LOCK[key] ?? null) : null,
+    timeZone: process.env.TZ,
+    ...options.code?.setup,
+  });
+  const code = new CodeExecutor({
+    db: database.db,
+    runtime: pythonRuntime,
+    guard: sandboxGuard,
+    workspaces,
+    assets,
+    timeZone: process.env.TZ,
+    ...(options.code?.run ? { run: options.code.run } : {}),
+  });
+  const preview = new PreviewService({
+    workspaces,
+    // LibreOffice darf das Datenverzeichnis nie lesen, auch wenn es außerhalb des Benutzerverzeichnisses liegt.
+    denyRead: [paths.root],
+    ...options.preview,
+  });
   const chats = new ChatService(database.db, providers, {
     ...options.chats,
     defaults,
@@ -153,6 +203,8 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     agents: runner,
     assets,
     artifacts,
+    code,
+    preview,
     tools,
     toolSettings,
     web: webSearch,
@@ -181,6 +233,11 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     tools,
     toolSettings,
     webSearch,
+    pythonRuntime,
+    pythonSetup,
+    sandboxGuard,
+    code,
+    preview,
     chats,
     eraser: new DataEraser({ database, paths, secrets, chats }),
     close: () => database.close(),

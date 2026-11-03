@@ -71,6 +71,8 @@ export const providers = sqliteTable(
     allowTools: integer('allow_tools', { mode: 'boolean' }).notNull().default(true),
     /** Darf die KI über diesen Anbieter Dateien anlegen (Dokument, Präsentation …)? D-074. */
     allowFiles: integer('allow_files', { mode: 'boolean' }).notNull().default(true),
+    /** Darf die KI über diesen Anbieter Code ausführen lassen (Python in der Sandbox)? Standard: aus (D-079). */
+    allowCode: integer('allow_code', { mode: 'boolean' }).notNull().default(false),
     position: integer('position').notNull().default(0),
     ...timestamps,
   },
@@ -310,6 +312,38 @@ export const artifacts = sqliteTable(
 );
 
 /**
+ * Läufe von Code, den ein Modell geschrieben hat (D-079). Das Skript steht hier nur, damit die Person es lesen kann
+ * („Code anzeigen“); es wird nie von hier ausgeführt und steht nie in Logs oder Fehlermeldungen. Die Ausgabe des
+ * Skripts wird nicht gespeichert.
+ */
+export const codeRuns = sqliteTable(
+  'code_runs',
+  {
+    id: id(),
+    chatId: text('chat_id')
+      .notNull()
+      .references(() => chats.id, { onDelete: 'cascade' }),
+    messageId: text('message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    /** Kurzbeschreibung des Modells (bis 80 Zeichen), nur zur Anzeige. */
+    purpose: text('purpose'),
+    script: text('script').notNull(),
+    /** ok, error, timeout, memory_limit, output_limit, disk_limit, cancelled oder unavailable. */
+    outcome: text('outcome').notNull(),
+    exitCode: integer('exit_code'),
+    durationMs: integer('duration_ms').notNull().default(0),
+    /** Namen der Dateien, die dieser Lauf neu angelegt oder geändert hat (JSON-Liste). */
+    files: text('files').notNull().default('[]'),
+    ...timestamps,
+  },
+  (table) => [
+    index('code_runs_message').on(table.messageId),
+    index('code_runs_chat').on(table.chatId),
+  ],
+);
+
+/**
  * Stundenplan: eine Zeile je Stunde und Woche (Welle 3). Zeiten sind frei (`HH:MM`), kein festes Raster. Das Fach
  * ist optional und bleibt leer, wenn es gelöscht wird (die Stunde im Plan besteht weiter). `week` kennt die
  * Wochenart „jede“, „A“ oder „B“.
@@ -430,6 +464,7 @@ export type ChatRow = typeof chats.$inferSelect;
 export type EngineProfileRow = typeof engineProfiles.$inferSelect;
 export type AssetRow = typeof assets.$inferSelect;
 export type ArtifactRow = typeof artifacts.$inferSelect;
+export type CodeRunRow = typeof codeRuns.$inferSelect;
 export type TimetableRow = typeof timetableEntries.$inferSelect;
 export type ExamRow = typeof exams.$inferSelect;
 export type NoteRow = typeof notes.$inferSelect;

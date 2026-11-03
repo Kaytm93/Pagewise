@@ -34,6 +34,8 @@ export interface ProviderView {
   /** Darf das Modell Stundenplan und Tests über Werkzeuge einsehen? Aus bedeutet: diese Daten gehen nie an den Anbieter. */
   allowTools: boolean;
   allowFiles: boolean;
+  /** Darf die KI über diesen Anbieter Code ausführen lassen (D-079)? Standard: nein. */
+  allowCode: boolean;
   hasKey: boolean;
   /** Letzte vier Zeichen, nur bei langen Schlüsseln. Der Schlüssel selbst verlässt den Server nie. */
   keyHint: string | null;
@@ -78,6 +80,7 @@ export interface CreateProviderInput {
   sendImages?: boolean;
   allowTools?: boolean;
   allowFiles?: boolean;
+  allowCode?: boolean;
 }
 
 export interface UpdateProviderInput {
@@ -87,6 +90,7 @@ export interface UpdateProviderInput {
   sendImages?: boolean;
   allowTools?: boolean;
   allowFiles?: boolean;
+  allowCode?: boolean;
   /** Neuer Schlüssel. Ein leerer Wert wird vorher abgelehnt. */
   apiKey?: string;
   clearKey?: boolean;
@@ -144,6 +148,7 @@ export class ProviderService {
       sendImages: row.sendImages,
       allowTools: row.allowTools,
       allowFiles: row.allowFiles,
+      allowCode: row.allowCode,
       hasKey: hints.has(name),
       keyHint: hints.get(name) ?? null,
       warning: isCodingPlanUrl(row.baseUrl) ? 'coding_plan' : null,
@@ -195,6 +200,7 @@ export class ProviderService {
           sendImages: input.sendImages ?? true,
           allowTools: input.allowTools ?? true,
           allowFiles: input.allowFiles ?? true,
+          allowCode: input.allowCode ?? false,
           position: last?.value === null || last?.value === undefined ? 0 : last.value + 1,
         })
         .returning()
@@ -262,6 +268,7 @@ export class ProviderService {
     if (input.sendImages !== undefined) changes.sendImages = input.sendImages;
     if (input.allowTools !== undefined) changes.allowTools = input.allowTools;
     if (input.allowFiles !== undefined) changes.allowFiles = input.allowFiles;
+    if (input.allowCode !== undefined) changes.allowCode = input.allowCode;
 
     // Zuerst den Schlüssel prüfen und schreiben: schlägt das fehl, bleibt alles andere unverändert.
     if (input.apiKey !== undefined) {
@@ -309,6 +316,7 @@ export class ProviderService {
     models: ModelEntry[];
     allowTools: boolean;
     allowFiles: boolean;
+    allowCode: boolean;
   } | null> {
     const row = this.db.select().from(providers).where(eq(providers.id, id)).get();
     if (!row) return null;
@@ -318,6 +326,7 @@ export class ProviderService {
       models: parseStoredModels(row.models),
       allowTools: row.allowTools,
       allowFiles: row.allowFiles,
+      allowCode: row.allowCode,
     };
   }
 
@@ -444,6 +453,7 @@ export class ProviderService {
     preset: string;
     allowTools: boolean;
     allowFiles: boolean;
+    allowCode: boolean;
   } | null> {
     const found = await this.target(selection.providerId);
     const model = found?.models.find((entry) => entry.id === selection.model);
@@ -454,6 +464,7 @@ export class ProviderService {
           preset: found.preset,
           allowTools: found.allowTools,
           allowFiles: found.allowFiles,
+          allowCode: found.allowCode,
         }
       : null;
   }

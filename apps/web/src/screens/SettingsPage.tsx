@@ -16,6 +16,7 @@ import { readTheme, saveTheme, type ThemePreference } from '../ui/theme';
 import { useDesign } from '../ui/useDesign';
 import { AgentSection } from './agents/AgentSection';
 import { commonErrorMessage, rateLimitMessage } from './auth-errors';
+import { CodeChoice } from './CodeSettings';
 import { EraseDialog } from './EraseDialog';
 import { PromptRow } from './prompts/PromptRow';
 import { ProvidersSection } from './providers/ProvidersSection';
@@ -489,6 +490,9 @@ export function SettingsPage() {
         </Section>
         <Section title={m.settings.tools.title} lead={m.settings.tools.lead}>
           <ToolsChoice />
+        </Section>
+        <Section title={m.settings.code.title} lead={m.settings.code.lead}>
+          <CodeChoice />
         </Section>
         <Section title={m.settings.webSearch.title} lead={m.settings.webSearch.lead}>
           <WebSearchChoice />

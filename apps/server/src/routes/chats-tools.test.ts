@@ -298,10 +298,11 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
       expect((await session.call('GET', '/api/tool-settings')).body).toEqual({
         enabled: true,
         files: true,
+        code: false,
       });
       expect(
         (await session.call('PUT', '/api/tool-settings', { enabled: false, files: false })).body,
-      ).toEqual({ enabled: false, files: false });
+      ).toEqual({ enabled: false, files: false, code: false });
       await ask('Wann ist der Test?');
       expectNoTools();
     });

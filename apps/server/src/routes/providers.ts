@@ -19,6 +19,7 @@ const CreateBody = z.strictObject({
   sendImages: z.boolean().optional(),
   allowTools: z.boolean().optional(),
   allowFiles: z.boolean().optional(),
+  allowCode: z.boolean().optional(),
 });
 
 const UpdateBody = z
@@ -29,6 +30,7 @@ const UpdateBody = z
     sendImages: z.boolean().optional(),
     allowTools: z.boolean().optional(),
     allowFiles: z.boolean().optional(),
+    allowCode: z.boolean().optional(),
     apiKey: ApiKey.optional(),
     clearKey: z.boolean().optional(),
   })

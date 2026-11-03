@@ -4,6 +4,7 @@ import { settings } from '../db/schema';
 
 const KEY = 'tools.enabled';
 const FILES_KEY = 'tools.files';
+const CODE_KEY = 'tools.code';
 
 /**
  * Der globale Schalter „KI darf Stundenplan und Tests einsehen“ (Voreinstellung: an). Zusätzlich muss der
@@ -12,13 +13,14 @@ const FILES_KEY = 'tools.files';
 export class ToolSettings {
   constructor(private readonly db: Db) {}
 
-  private read(key: string): boolean {
+  private read(key: string, fallback = true): boolean {
     const row = this.db.select().from(settings).where(eq(settings.key, key)).get();
-    if (!row) return true;
+    if (!row) return fallback;
     try {
-      return JSON.parse(row.value) !== false;
+      const value: unknown = JSON.parse(row.value);
+      return fallback ? value !== false : value === true;
     } catch {
-      return true;
+      return fallback;
     }
   }
 
@@ -46,5 +48,14 @@ export class ToolSettings {
 
   setFilesEnabled(enabled: boolean): void {
     this.write(FILES_KEY, enabled);
+  }
+
+  /** „KI darf Code ausführen“ (Python in der Sandbox, D-079). Voreinstellung: aus. */
+  codeEnabled(): boolean {
+    return this.read(CODE_KEY, false);
+  }
+
+  setCodeEnabled(enabled: boolean): void {
+    this.write(CODE_KEY, enabled);
   }
 }

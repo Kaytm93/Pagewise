@@ -173,7 +173,7 @@ describe('Chats mit Datei-Werkzeugen (Dokument, Präsentation)', () => {
 
   it('bietet die Datei-Werkzeuge nicht an, wenn der Schalter aus ist', async () => {
     const off = await session.call('PUT', '/api/tool-settings', { files: false });
-    expect(off.body).toEqual({ enabled: true, files: false });
+    expect(off.body).toEqual({ enabled: true, files: false, code: false });
     await ask('Hallo');
     expect(toolNames(requests[0])).toEqual(['get_timetable', 'get_exams']);
     expect(requests[0]?.messages[0]?.content).not.toContain('create_document');
