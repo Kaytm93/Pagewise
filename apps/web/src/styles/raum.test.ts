@@ -276,3 +276,93 @@ describe('raum.css: Schublade hat den Raumton, Seitenleiste bleibt durchsichtig 
     expect(drawer?.body).toContain('--raum-surf: var(--raum-canvas);');
   });
 });
+
+describe('raum.css: Dialog ist eine gehobene Fläche wie Blatt und Karte (D-088, B-21, GF-01)', () => {
+  const dialogSelector = ":root[data-design='raum'] .lg-dialog";
+  const footSelector = ":root[data-design='raum'] .lg-dialog-foot";
+  const panel = all.find((rule) => rule.selector === dialogSelector && rule.medias.length === 0);
+  const panelWide = all.find(
+    (rule) => rule.selector === dialogSelector && rule.medias.includes('@media (min-width: 640px)'),
+  );
+  const foot = all.find((rule) => rule.selector === footSelector);
+  const footLine = all.find((rule) => rule.selector === `${footSelector}::before`);
+
+  // Gelten muss die Regel gegen `rounded-t-card sm:rounded-card` am Panel und `border-t border-line-warm bg-sheet` an
+  // der Fußzeile (Tailwind-Utilities, Schicht `utilities`): Das schaffen nur Regeln außerhalb von @layer.
+  const layerStart = css.indexOf('@layer components {');
+  let layerEnd = layerStart;
+  for (let depth = 0, at = css.indexOf('{', layerStart); at < css.length; at++) {
+    if (css[at] === '{') depth++;
+    if (css[at] === '}' && --depth === 0) {
+      layerEnd = at;
+      break;
+    }
+  }
+
+  it('hat eine Regel für .lg-dialog (vorher keine, der Dialog trug die Lagen-Papierfläche)', () => {
+    expect(panel, 'keine Raum-Regel für .lg-dialog').toBeDefined();
+  });
+
+  it('gibt dem Dialog die Fläche --raum-raised, keinen Rand, keine Körnung und die große Schattenstufe', () => {
+    expect(panel?.body).toContain('background-color: var(--raum-raised)');
+    expect(panel?.body).toMatch(/border:\s*0;/);
+    expect(panel?.body).toContain('background-image: none');
+    expect(panel?.body).toContain('box-shadow: var(--raum-up-l)');
+    expect(panel?.body).not.toMatch(/--grain/);
+  });
+
+  it('setzt --raum-surf auf die Fläche des Dialogs, damit Eingelassenes darin richtig liegt', () => {
+    expect(panel?.body).toContain('--raum-surf: var(--raum-raised);');
+  });
+
+  it('rundet mit dem Raum-Radius: unten Blatt nur oben, ab 640 px rundum', () => {
+    expect(panel?.body).toContain('border-radius: var(--raum-r-big) var(--raum-r-big) 0 0');
+    expect(panelWide?.body).toContain('border-radius: var(--raum-r-big);');
+  });
+
+  it('benutzt nur Tokens: keine festen Farben, keine festen Radien, Schatten und Fläche ohne Zahlen', () => {
+    for (const rule of [panel, panelWide, foot, footLine]) {
+      expect(rule?.body, rule?.selector).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
+    }
+    expect(`${panel?.body}${panelWide?.body}`).not.toMatch(/border-radius:[^;]*\d+px/);
+  });
+
+  it('steht außerhalb von @layer, sonst gewinnen die Utilities am Panel und an der Fußzeile', () => {
+    // Plausibilität der Schichtgrenze: das Blatt steht noch in der Schicht, der Dialog dahinter.
+    expect(layerStart).toBeGreaterThanOrEqual(0);
+    expect(css.indexOf(":root[data-design='raum'] .lg-sheet {")).toBeLessThan(layerEnd);
+    for (const selector of [dialogSelector, footSelector, `${footSelector}::before`]) {
+      const at = css.indexOf(`${selector} {`);
+      expect(at, `${selector} fehlt`).toBeGreaterThan(layerEnd);
+    }
+  });
+
+  it('nimmt der Fußzeile die Randlinie und gibt ihr die Fläche des Dialogs (deckend)', () => {
+    expect(foot?.body).toMatch(/border-top:\s*0;/);
+    expect(foot?.body).toContain('background-color: var(--raum-raised)');
+  });
+
+  it('zeichnet statt der Randlinie eine eingravierte Doppellinie oben (dunkel, dann hell, je 1 px)', () => {
+    expect(footLine?.body).toContain(
+      'background: linear-gradient(var(--raum-dark) 1px, var(--raum-light) 1px)',
+    );
+    expect(footLine?.body).toMatch(/height:\s*2px/);
+    expect(footLine?.body).toMatch(/top:\s*0/);
+    expect(footLine?.body).not.toMatch(/border/);
+  });
+
+  it('kehrt bei „Mehr Kontrast“ die 1 px Umrandung auch am Dialog zurück', () => {
+    const outline = all.find(
+      (rule) =>
+        rule.medias.some((media) => media.includes('prefers-contrast: more')) &&
+        rule.body.includes('outline: 1px solid var(--raum-edge)'),
+    );
+    expect(outline?.selector).toContain('.lg-dialog,');
+  });
+
+  it('ui/modal.tsx trägt die Haken lg-dialog (Panel) und lg-dialog-foot (Fußzeile)', () => {
+    const modal = readFileSync(join(dir, '..', 'ui', 'modal.tsx'), 'utf8');
+    expect(modal).toMatch(/className=\{?`lg-dialog /);
+    expect(modal).toMatch(/lg-dialog-foot /);
+  });
+});

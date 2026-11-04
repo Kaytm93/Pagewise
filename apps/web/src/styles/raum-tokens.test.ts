@@ -406,11 +406,12 @@ describe('Raum: Listen und Trennlinien', () => {
     );
     expect(divider).toContain('height: 2px');
     expect(divider).toContain('linear-gradient(var(--raum-dark) 1px, var(--raum-light) 1px)');
-    // Zeilentrenner, Dock mit Chat-Eingabe und (D-083) die Kopfzeile auf dem Telefon tragen dieselbe Linie;
-    // keine zwei Verläufe mehr übereinander. Drei Stellen, jede mit genau diesem einen Verlauf.
+    // Zeilentrenner, Dock mit Chat-Eingabe, (D-083) die Kopfzeile auf dem Telefon und (D-088) die Fußzeile des
+    // Dialogs tragen dieselbe Linie; keine zwei Verläufe mehr übereinander. Vier Stellen, jede mit genau diesem
+    // einen Verlauf.
     expect(
       raum.match(/linear-gradient\(var\(--raum-dark\) 1px, var\(--raum-light\) 1px\)/g),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
     expect(raum).not.toMatch(/top \/ 100% 1px/);
   });
 

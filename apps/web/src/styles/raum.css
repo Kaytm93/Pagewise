@@ -1147,6 +1147,46 @@
   background: linear-gradient(var(--raum-dark) 1px, var(--raum-light) 1px);
 }
 
+/* Dialog (ui/modal.tsx, B-21, D-088): eine gehobene Fläche wie Blatt und Karte (GF-01): Raumfläche, kein Rand, keine
+   Körnung, die große Stufe der Schatten. Radius 20 px wie die Karte; auf dem Handy ein Blatt am unteren Rand (nur oben
+   gerundet), ab 640 px rundum. --raum-surf folgt der Fläche, damit Eingelassenes darin (Felder, LED-Ringe) richtig liegt.
+   Ein Dialog über einem Dialog („…löschen“ über dem Formular) trennt sich über seinen Schatten und den eigenen Scrim.
+   Die Regeln stehen außerhalb von @layer: `rounded-t-card sm:rounded-card` am Panel und `border-t border-line-warm
+   bg-sheet` an der Fußzeile (Utilities) gewinnen sonst. */
+:root[data-design="raum"] .lg-dialog {
+  --raum-surf: var(--raum-raised);
+  border: 0;
+  border-radius: var(--raum-r-big) var(--raum-r-big) 0 0;
+  background-color: var(--raum-raised);
+  background-image: none;
+  box-shadow: var(--raum-up-l);
+}
+
+@media (min-width: 640px) {
+  :root[data-design="raum"] .lg-dialog {
+    border-radius: var(--raum-r-big);
+  }
+}
+
+/* Fußzeile des Dialogs: deckend in der Fläche des Dialogs (der Inhalt läuft beim Scrollen darunter durch), statt der
+   Randlinie eine eingravierte Doppellinie oben (dunkel, dann hell) wie am Dock. Die Linie sitzt am oberen Rand der
+   Fußzeile und ändert ihre Höhe nicht. */
+:root[data-design="raum"] .lg-dialog-foot {
+  border-top: 0;
+  background-color: var(--raum-raised);
+}
+
+:root[data-design="raum"] .lg-dialog-foot::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(var(--raum-dark) 1px, var(--raum-light) 1px);
+  pointer-events: none;
+}
+
 /* Werkzeugzeile des Agenten (summary): flach, hebt sich beim Darüberfahren, drückt sich ein. */
 :root[data-design="raum"] .lg-agent-head {
   width: 100%;
@@ -1354,6 +1394,7 @@
       .lg-slip,
       .lg-brand,
       .lg-sheet-auth,
+      .lg-dialog,
       .rm-start-dock form > div,
       .lg-composer textarea,
       ul:has(> li > .lg-row)
