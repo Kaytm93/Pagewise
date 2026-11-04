@@ -1126,6 +1126,50 @@
   box-shadow: var(--raum-in-s);
 }
 
+/* Textfelder außerhalb der Eingabezeile (B-20, D-089): Anmeldung, Einrichtung, Onboarding, Dialoge, Einstellungen, Editor
+   (Stichwörter, Text), Hefte-Suche. Das Feld hängt über den Haken `lg-field` an (ui/Field.tsx: Text, Passcode, Auswahl,
+   Textbereich; NoteList, NotePage) und hat dieselbe Gestalt wie die Chat-Eingabe: Mulde in der Fläche, auf der es liegt
+   (--raum-raised, wie Blatt und Dialog), Radius 20 px, die Bodenlinie als einziger Rand. Innenabstand und Schrift bleiben die
+   des Feldes (px-3, pl-9, p-4). Die Bodenlinie steht als erste Schicht, also zuoberst: hinter der hellen Innenschicht der
+   Mulde (--raum-in-m, Weiß 86 % hell) verblasste sie auf 1,4 : 1 (gemessen); so zeigt sie --raum-edge unverfälscht
+   (mindestens 3 : 1). Die Regeln stehen außerhalb von @layer: `border`, `bg-sheet`, `rounded-*`,
+   `transition-shadow` und `focus:*` am Feld (Utilities) gewinnen sonst. Farbe und Schatten wechseln nur mit --t-color. */
+:root[data-design="raum"] .lg-field {
+  border: 0;
+  border-radius: var(--raum-r-big);
+  background-color: var(--raum-raised);
+  box-shadow:
+    inset 0 -2px 0 0 var(--raum-edge),
+    var(--raum-in-m);
+  transition: box-shadow var(--t-color) ease;
+}
+
+/* Platzhalter in --ink-muted (mindestens 4,5 : 1 auf der Fläche); der Standard der Seite ist ein halb durchsichtiges Grau. */
+:root[data-design="raum"] .lg-field::placeholder {
+  color: var(--ink-muted);
+  opacity: 1;
+}
+
+/* Fokus: die Bodenlinie in der Akzentfarbe und der Ring (2 px, 3 px Abstand) wie an der Chat-Eingabe. */
+:root[data-design="raum"] .lg-field:focus {
+  box-shadow:
+    inset 0 -2px 0 0 var(--accent),
+    var(--raum-in-m);
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Fehler (aria-invalid, auch fokussiert): die Bodenlinie in --danger. Der Rand `border-danger` der Seite gibt es hier nicht. */
+:root[data-design="raum"] .lg-field[aria-invalid="true"] {
+  box-shadow:
+    inset 0 -2px 0 0 var(--danger),
+    var(--raum-in-m);
+}
+
+:root[data-design="raum"] .lg-field[aria-invalid="true"]:focus {
+  outline-color: var(--danger);
+}
+
 /* Die Dockleiste unten am Blatt (Startseite und Chat): deckende Fläche ohne Randlinie. Abgrenzung nur durch eine
    eingravierte Doppellinie oben (dunkel, dann hell). */
 :root[data-design="raum"] .rm-start-dock,
@@ -1395,6 +1439,7 @@
       .lg-brand,
       .lg-sheet-auth,
       .lg-dialog,
+      .lg-field,
       .rm-start-dock form > div,
       .lg-composer textarea,
       ul:has(> li > .lg-row)

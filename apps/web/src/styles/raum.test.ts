@@ -78,6 +78,18 @@ function layers(value: string, rim: string): number {
 }
 
 const all = rules(css);
+
+/** Ende von `@layer components { … }`: was dahinter steht, gewinnt gegen Tailwind-Utilities (Schicht `utilities`). */
+const layerStart = css.indexOf('@layer components {');
+let layerEnd = layerStart;
+for (let depth = 0, at = css.indexOf('{', layerStart); at < css.length; at++) {
+  if (css[at] === '{') depth++;
+  if (css[at] === '}' && --depth === 0) {
+    layerEnd = at;
+    break;
+  }
+}
+
 const rootTokens = declarationsOf(
   all.find((rule) => rule.selector === ":root[data-design='raum']")?.body ?? '',
 );
@@ -289,16 +301,6 @@ describe('raum.css: Dialog ist eine gehobene Fläche wie Blatt und Karte (D-088,
 
   // Gelten muss die Regel gegen `rounded-t-card sm:rounded-card` am Panel und `border-t border-line-warm bg-sheet` an
   // der Fußzeile (Tailwind-Utilities, Schicht `utilities`): Das schaffen nur Regeln außerhalb von @layer.
-  const layerStart = css.indexOf('@layer components {');
-  let layerEnd = layerStart;
-  for (let depth = 0, at = css.indexOf('{', layerStart); at < css.length; at++) {
-    if (css[at] === '{') depth++;
-    if (css[at] === '}' && --depth === 0) {
-      layerEnd = at;
-      break;
-    }
-  }
-
   it('hat eine Regel für .lg-dialog (vorher keine, der Dialog trug die Lagen-Papierfläche)', () => {
     expect(panel, 'keine Raum-Regel für .lg-dialog').toBeDefined();
   });
@@ -364,5 +366,125 @@ describe('raum.css: Dialog ist eine gehobene Fläche wie Blatt und Karte (D-088,
     const modal = readFileSync(join(dir, '..', 'ui', 'modal.tsx'), 'utf8');
     expect(modal).toMatch(/className=\{?`lg-dialog /);
     expect(modal).toMatch(/lg-dialog-foot /);
+  });
+});
+
+describe('raum.css: Textfelder sind eingelassen mit Bodenlinie (D-089, B-20)', () => {
+  const fieldSelector = ":root[data-design='raum'] .lg-field";
+  const field = all.find((rule) => rule.selector === fieldSelector);
+  const focus = all.find((rule) => rule.selector === `${fieldSelector}:focus`);
+  const invalid = all.find((rule) => rule.selector === `${fieldSelector}[aria-invalid='true']`);
+  const invalidFocus = all.find(
+    (rule) => rule.selector === `${fieldSelector}[aria-invalid='true']:focus`,
+  );
+  const placeholder = all.find((rule) => rule.selector === `${fieldSelector}::placeholder`);
+  const composer = all.find(
+    (rule) => rule.selector === ":root[data-design='raum'] .lg-composer textarea",
+  );
+  const flat = (text: string | undefined) => (text ?? '').replace(/\s+/g, ' ');
+
+  it('hat eine Regel für .lg-field mit Mulde, Bodenlinie und ohne vollen Rand', () => {
+    expect(field, 'keine Raum-Regel für .lg-field').toBeDefined();
+    expect(field?.body).toMatch(/border:\s*0;/);
+    expect(field?.body).toContain('border-radius: var(--raum-r-big)');
+    expect(field?.body).toContain('background-color: var(--raum-raised)');
+    expect(flat(field?.body)).toContain(
+      'box-shadow: inset 0 -2px 0 0 var(--raum-edge), var(--raum-in-m);',
+    );
+    expect(field?.body).not.toMatch(/border(-color|-(top|right|bottom|left))?:\s*[1-9]/);
+  });
+
+  it('hat dieselbe Mulde, Fläche, Bodenlinie und Ecke wie die Chat-Eingabe', () => {
+    expect(composer?.body).toContain('var(--raum-in-m)');
+    expect(composer?.body).toContain('inset 0 -2px 0 0 var(--raum-edge)');
+    expect(composer?.body).toContain('background-color: var(--raum-raised)');
+    expect(composer?.body).toContain('border-radius: var(--raum-r-big)');
+    expect(field?.body).toContain('var(--raum-in-m)');
+    expect(field?.body).toContain('background-color: var(--raum-raised)');
+    expect(field?.body).toContain('border-radius: var(--raum-r-big)');
+  });
+
+  it('malt die Bodenlinie zuoberst (erste Schicht), sonst verblasst sie hinter der hellen Innenschicht der Mulde', () => {
+    for (const rule of [field, focus, invalid]) {
+      expect(flat(rule?.body), rule?.selector).toMatch(
+        /box-shadow: inset 0 -2px 0 0 var\(--(raum-edge|accent|danger)\), var\(--raum-in-m\);/,
+      );
+    }
+  });
+
+  it('wechselt Schatten nur kurz mit --t-color (D-058), nicht mit den längeren Zeiten', () => {
+    expect(field?.body).toContain('transition: box-shadow var(--t-color) ease');
+    expect(field?.body).not.toMatch(/--t-(fast|med|slow)/);
+  });
+
+  it('zeigt den Fokus: Bodenlinie in --accent und ein Ring von 2 px mit 3 px Abstand', () => {
+    expect(focus, 'keine Regel für .lg-field:focus').toBeDefined();
+    expect(flat(focus?.body)).toContain('inset 0 -2px 0 0 var(--accent), var(--raum-in-m)');
+    expect(focus?.body).toContain('outline: 2px solid var(--accent)');
+    expect(focus?.body).toContain('outline-offset: 3px');
+  });
+
+  it('zeigt einen Fehler an der Bodenlinie in --danger, auch fokussiert (der Rand der Seite entfällt)', () => {
+    expect(invalid, 'keine Regel für aria-invalid').toBeDefined();
+    expect(flat(invalid?.body)).toContain('inset 0 -2px 0 0 var(--danger), var(--raum-in-m)');
+    expect(invalidFocus?.body).toContain('outline-color: var(--danger)');
+    // Reihenfolge: erst Fokus, dann Fehler, sonst überstimmt der Fokus die Fehlerlinie bei gleicher Gewichtung
+    expect(css.indexOf(`${fieldSelector}[aria-invalid='true'] {`)).toBeGreaterThan(
+      css.indexOf(`${fieldSelector}:focus {`),
+    );
+  });
+
+  it('setzt den Platzhalter in --ink-muted ohne Abdunkeln (mindestens 4,5 : 1)', () => {
+    expect(placeholder?.body).toContain('color: var(--ink-muted)');
+    expect(placeholder?.body).toContain('opacity: 1');
+  });
+
+  it('steht außerhalb von @layer, sonst gewinnen border, bg-sheet, rounded-* und focus:* am Feld', () => {
+    for (const selector of [fieldSelector, `${fieldSelector}:focus`]) {
+      expect(css.indexOf(`${selector} {`), `${selector} fehlt`).toBeGreaterThan(layerEnd);
+    }
+  });
+
+  it('benutzt nur Tokens: keine festen Farben und Radien in den Feldregeln', () => {
+    for (const rule of [field, focus, invalid, invalidFocus, placeholder]) {
+      expect(rule?.body, rule?.selector).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
+    }
+    expect(field?.body).not.toMatch(/border-radius:[^;]*\d+px/);
+  });
+
+  it('kehrt bei „Mehr Kontrast“ die 1 px Umrandung auch am Feld zurück', () => {
+    const outline = all.find(
+      (rule) =>
+        rule.medias.some((media) => media.includes('prefers-contrast: more')) &&
+        rule.body.includes('outline: 1px solid var(--raum-edge)'),
+    );
+    expect(outline?.selector).toContain('.lg-field,');
+  });
+
+  it('lässt Lagen und Atelier unberührt: der Haken lg-field steht in keinem anderen Stylesheet', () => {
+    for (const name of [
+      'lagen.css',
+      'atelier.css',
+      'atelier-fach.css',
+      'tokens.css',
+      'motion.css',
+    ]) {
+      expect(readFileSync(join(dir, name), 'utf8'), name).not.toContain('lg-field');
+    }
+  });
+
+  it('hängt die gemeinsame Feldklasse in ui/Field.tsx an den Haken lg-field (Text, Auswahl, Textbereich)', () => {
+    const fieldTsx = readFileSync(join(dir, '..', 'ui', 'Field.tsx'), 'utf8');
+    expect(fieldTsx).toMatch(/const inputClass =\s*'lg-field /);
+    expect(fieldTsx).toMatch(/className=\{`lg-field mt-1\.5 \$\{compact/);
+    expect(fieldTsx.match(/lg-field/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('hängt die Hefte-Suche, die Stichwörter und das Textfeld des Editors an denselben Haken', () => {
+    const list = readFileSync(join(dir, '..', 'screens', 'notes', 'NoteList.tsx'), 'utf8');
+    const page = readFileSync(join(dir, '..', 'screens', 'notes', 'NotePage.tsx'), 'utf8');
+    expect(list.match(/className="lg-field /g)).toHaveLength(1);
+    expect(page).toMatch(/id="note-tags"[\s\S]*?className="lg-field /);
+    expect(page).toMatch(/id="note-text"[\s\S]*?className="lg-field /);
   });
 });

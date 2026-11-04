@@ -437,7 +437,7 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
               aria-describedby={
                 stichwoerterZuViel ? 'note-tags-hint note-tags-limit' : 'note-tags-hint'
               }
-              className="mt-1.5 min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink transition-shadow duration-[var(--t-med)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none aria-invalid:border-danger aria-invalid:focus:border-danger aria-invalid:focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--danger)_22%,transparent)]"
+              className="lg-field mt-1.5 min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink transition-shadow duration-[var(--t-med)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none aria-invalid:border-danger aria-invalid:focus:border-danger aria-invalid:focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--danger)_22%,transparent)]"
             />
             <p id="note-tags-hint" className="mt-1 text-sm text-ink-muted">
               {e.tagsHint}
@@ -482,7 +482,7 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
             maxLength={MAX_CHARACTERS}
             spellCheck
             aria-describedby="note-text-hint"
-            className="min-h-[24rem] w-full resize-y rounded-box border border-control-edge bg-sheet p-4 font-mono text-base leading-relaxed text-ink transition-shadow duration-[var(--t-med)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none lg:min-h-[32rem]"
+            className="lg-field min-h-[24rem] w-full resize-y rounded-box border border-control-edge bg-sheet p-4 font-mono text-base leading-relaxed text-ink transition-shadow duration-[var(--t-med)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none lg:min-h-[32rem]"
           />
           <p id="note-text-hint" className="mt-1 text-sm text-ink-muted">
             {e.textHint}
