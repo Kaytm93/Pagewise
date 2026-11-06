@@ -209,15 +209,45 @@
     backdrop-filter: blur(var(--glass-blur)) saturate(160%);
   }
 
-  /* Ohne backdrop-filter (ältere Geräte): deckende Fläche aus dem Grund, 94 % */
+  /* Dialogblatt und Schublade haben eine eigene Füllung (B-07, D-087). Sie liegen auf dem Scrim (45 % Schatten);
+     mit der Füllung der übrigen Glasflächen (--glass-fill, hell 46 % Weiß) stand der gedämpfte Text bei 3,2 bis
+     3,8 : 1. Die Seitenleiste am Mac (.lg-aside .lg-binder) und alle anderen Flächen behalten --glass-fill. */
+  :root[data-design="atelier"] .lg-dialog,
+  :root[data-design="atelier"] .lg-scrim .lg-binder {
+    background-color: var(--glass-dialog-fill);
+  }
+
+  /* Ohne backdrop-filter (ältere Geräte): deckende Fläche aus dem Grund, 94 % (auch Dialog und Schublade) */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     :root[data-design="atelier"] .at-glass,
     :root[data-design="atelier"] .lg-binder,
     :root[data-design="atelier"] .lg-composer,
     :root[data-design="atelier"] .lg-dialog,
+    :root[data-design="atelier"] .lg-scrim .lg-binder,
     :root[data-design="atelier"] .at-test {
       background-color: color-mix(in srgb, var(--canvas) 94%, transparent);
     }
+  }
+
+  /* Scrim von Dialog und Schublade (B-01, D-086): Das Glas des Panels sieht den Grund nur dann, wenn kein Vorfahr
+     eine Deckkraft-Animation trägt (Chromium: Hintergrundwurzel). Der Scrim selbst animiert deshalb nicht; die
+     Tönung (`--scrim` aus lagen.css) liegt als Ebene ::before hinter dem Panel und blendet dort beim Öffnen ein
+     (`fade` über --t-med, danach kein Füllen; bei „Aus“ ohne Animation). Das Panel ist kein Kind der Ebene, der
+     Blur wirkt von der ersten Einblendung an. Beim Schließen der Schublade animiert die Utility am Scrim weiter
+     (Schichten: Utilities schlagen `components`); dann braucht niemand mehr Blur. */
+  :root[data-design="atelier"] .lg-scrim {
+    background: none;
+    animation: none;
+  }
+
+  :root[data-design="atelier"] .lg-scrim::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: var(--scrim);
+    animation: fade var(--t-med) backwards;
   }
 
   /* Radius 22 px für das Panel; die Testkarte hat denselben Radius und Innenabstand im 4er-Raster */
@@ -236,6 +266,7 @@
   }
 
   /* Eine Kante, kein Panel: der Trennstrich rechts ist der Haarstrich des Glases */
+  /* biome-ignore lint/style/noDescendingSpecificity: Die Reihenfolge ist ohne Wirkung (die Dialogfüllung setzt nur background-color, diese Regel nicht); die Füllung muss vor dem @supports-Rückfall stehen. */
   :root[data-design="atelier"] .lg-binder {
     border: 0;
     border-radius: 0;
@@ -284,6 +315,19 @@
     background-color: transparent;
     background-image: none;
     box-shadow: none;
+  }
+
+  /* Wortmarke über der Karte (B-24, D-090): Die Karte von Anmeldung, Einrichtung, Verbindung und Onboarding hat in Atelier
+     weder Rand noch Fläche, ihr Polster (p-6, ab 640 px p-8) bleibt aber. Die Wortmarke rückt um dasselbe Polster ein,
+     damit sie bündig mit Überschrift und Feldern steht; die Seitenränder des Inhalts bleiben gleich. */
+  :root[data-design="atelier"] .lg-wordmark {
+    padding-inline: 1.5rem;
+  }
+
+  @media (min-width: 640px) {
+    :root[data-design="atelier"] .lg-wordmark {
+      padding-inline: 2rem;
+    }
   }
 
   /* Karte: runde Fläche mit Rand und weichem Schatten, Fachfarbe als Licht */
@@ -1119,9 +1163,23 @@
   }
 }
 
+/* Fuß des Dialogs (B-22, D-087): Er folgt der Fläche des Dialogs statt als weißes Rechteck in der Innenbreite zu
+   stehen. Die Fläche ist deckend (der Inhalt läuft beim Scrollen darunter durch) im Ton des Dialogs
+   (--glass-dialog-foot) und reicht per Spread-Schatten, den clip-path nach oben und unten abschneidet, bis an den
+   Rand des Dialogs; dessen overflow und Radius runden die unteren Ecken. Ohne backdrop-filter gilt dieselbe
+   deckende Fläche wie am Dialog (94 % --canvas). */
 :root[data-design="atelier"] .lg-dialog-foot {
-  background-color: color-mix(in srgb, var(--canvas) 94%, transparent);
+  --ft: var(--glass-dialog-foot);
+  background-color: var(--ft);
+  box-shadow: 0 0 0 100vmax var(--ft);
+  clip-path: inset(0 -100vmax);
   border-top-color: var(--line-warm);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-design="atelier"] .lg-dialog-foot {
+    --ft: color-mix(in srgb, var(--canvas) 94%, transparent);
+  }
 }
 
 /* Fokusring: 2 px in der Fachfarbe, im Text-Ton (mindestens 3 : 1 gegen das Glas). Der Composer zeigt seinen Ring selbst. */

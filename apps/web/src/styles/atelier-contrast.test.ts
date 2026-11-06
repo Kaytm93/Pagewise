@@ -34,6 +34,8 @@ function block(source: string, opener: string): Tokens {
 const palette = block(tokensCss, '@theme {');
 const light = block(tokensCss, ':root {');
 const dark = { ...light, ...block(tokensCss, ":root[data-theme='dark'] {") };
+// Automatisch dunkel (Systemeinstellung): derselbe Satz Tokens in einer Medienabfrage
+const darkAuto = { ...light, ...block(tokensCss, ":root:not([data-theme='light']) {") };
 
 function toHex(value: string, tokens: Tokens = {}): string {
   const reference = /^var\((--[\w-]+)\)$/.exec(value);
@@ -258,8 +260,13 @@ describe('Dialoge in Atelier (S-01)', () => {
     expect(rule?.body).toMatch(/background-color:\s*var\(--sheet\)/);
   });
 
-  it('atelier.css legt das Dialogblatt auf Glas (--glass-fill); ohne Glas bleiben 94 % --canvas', () => {
-    expect(atelierCss).toMatch(/\.lg-dialog[^{]*\{[^}]*background-color:\s*var\(--glass-fill\)/);
+  // D-087: Das Dialogblatt hat eine eigene Glasfüllung (--glass-dialog-fill); die Erwartung „Dialog auf --glass-fill“
+  // (S-01, vor B-07) ist durch diese Entscheidung veraltet. Die Regel mit der Füllung steht hinter der gemeinsamen
+  // Glasregel und überstimmt dort die Füllung; ohne Glas bleiben 94 % --canvas.
+  it('atelier.css legt das Dialogblatt auf Glas mit eigener Füllung (--glass-dialog-fill); ohne Glas bleiben 94 % --canvas', () => {
+    expect(atelierCss).toMatch(
+      /\.lg-dialog,\s*:root\[data-design='atelier'\] \.lg-scrim \.lg-binder\s*\{[^}]*background-color:\s*var\(--glass-dialog-fill\)/,
+    );
     expect(atelierCss).toMatch(/color-mix\(in srgb, var\(--canvas\) 94%, transparent\)/);
   });
 
@@ -284,6 +291,10 @@ describe('Dialoge in Atelier (S-01)', () => {
     },
   );
 });
+
+/** Zahlen aus einem Tupel-Token wie `--shadow: 70, 50, 20`. */
+const tuple = (value: string): [number, number, number] =>
+  value.split(',').map((part) => Number.parseFloat(part)) as [number, number, number];
 
 /** Glas-Token `rgb(…)` oder `rgba(…)`: Kanäle 0 bis 255, Deckung als Zahl oder Prozent. */
 function glassToken(value: string): { rgb: number[]; alpha: number } {
@@ -413,4 +424,117 @@ describe('Text auf dem Feld (ohne Glas)', () => {
     );
     expect(toHex(darkA['--link'] as string, darkA)).toBe(toHex(dark['--link'] as string, dark));
   });
+});
+
+/*
+ * Dialog und Schublade in Atelier (B-07, D-087): Die Fläche besteht aus drei Schichten: der Seite dahinter (vom Blur
+ * zu einer Tönung verwischt), dem Scrim (`--scrim`, 45 % Schatten, lagen.css) und der Glasfüllung des Dialogs
+ * (`--glass-dialog-fill`). Der alte Test rechnete ohne Scrim und war zu optimistisch (4,02 : 1 gegen 2,9 bis 3,8 : 1
+ * im Pixel). Hier steht der gedämpfte Text auf der Fläche im ungünstigsten Fall hinter dem Dialog: Fachlicht an der
+ * stärksten Stelle auf dem Grund (alle acht Fachfarben) und dazu ein verwischter Anteil des Seitentextes. Der Anteil
+ * (`SEITENTEXT`, 30 %) ist größer als das Gemessene: Im Browser (Chromium, 33 Dialoge, Mac und iPhone, hell und dunkel)
+ * lag der dunkelste Grund unter einer Textzeile im Hellen bei etwa 20 bis 25 %, im Dunklen bei etwa 15 %.
+ */
+describe('Dialog und Schublade in Atelier: Text auf Scrim und Glas (B-07, D-087)', () => {
+  const SEITENTEXT = 0.3;
+  const scrimAlpha = Number.parseFloat(
+    /--scrim:\s*rgba\(var\(--shadow\),\s*([\d.]+)\)/.exec(lagenCss)?.[1] as string,
+  );
+  const fills = [
+    ['hell', lightA, subjectsLight, kLight],
+    ['dunkel', darkA, subjectsDark, kDark],
+  ] as const;
+
+  /** Fläche des Dialogs über dem Grund: Seite (Fachlicht + Seitentext), Scrim, Glas. */
+  function dialogFlaeche(tokens: Tokens, subject: string, k: number, seite: number): string {
+    const canvas = toHex(tokens['--canvas'] as string, tokens);
+    const ink = toHex(tokens['--ink'] as string, tokens);
+    const grund = over(over(canvas, subject, CENTER * k), ink, seite);
+    const [r, g, b] = tuple(tokens['--shadow'] as string);
+    const scrim = over(
+      grund,
+      `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`,
+      scrimAlpha,
+    );
+    return onGlass(glassToken(tokens['--glass-dialog-fill'] as string), scrim);
+  }
+
+  it('der Scrim hat den Wert 0,45 aus lagen.css', () => {
+    expect(scrimAlpha).toBeCloseTo(0.45, 2);
+  });
+
+  it.each(fills)(
+    '--ink-muted erreicht im %s Modus auf der Dialogfläche im ungünstigsten Fall mindestens 4,5 : 1',
+    (_name, tokens, subjects, k) => {
+      const muted = toHex(tokens['--ink-muted'] as string, tokens);
+      for (const subject of subjects) {
+        expect(
+          contrast(muted, dialogFlaeche(tokens, subject, k, SEITENTEXT)),
+          'ink-muted auf Dialog',
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    },
+  );
+
+  it.each(fills)(
+    'auch --ink, --ink-secondary, --link und --danger erreichen im %s Modus auf der Dialogfläche 4,5 : 1',
+    (_name, tokens, subjects, k) => {
+      for (const name of ['--ink', '--ink-secondary', '--link', '--danger']) {
+        const color = toHex(tokens[name] as string, tokens);
+        for (const subject of subjects) {
+          expect(
+            contrast(color, dialogFlaeche(tokens, subject, k, SEITENTEXT)),
+            `${name} auf Dialog`,
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    },
+  );
+
+  it('ohne den neuen Wert (--glass-fill, hell 46 %) wäre der gedämpfte Text im Hellen unter 4,5 : 1 (der Fall von B-07)', () => {
+    const alt = { ...lightA, '--glass-dialog-fill': lightA['--glass-fill'] as string };
+    const muted = toHex(lightA['--ink-muted'] as string, lightA);
+    const schlechteste = Math.min(
+      ...subjectsLight.map((subject) => contrast(muted, dialogFlaeche(alt, subject, kLight, 0))),
+    );
+    expect(schlechteste).toBeLessThan(4.5);
+  });
+
+  it('die Füllung des Dialogs ist stärker als --glass-fill, und --glass-fill selbst bleibt (Seitenleiste, Kopf, Composer, Testkarte)', () => {
+    expect(glassToken(lightA['--glass-dialog-fill'] as string).alpha).toBeGreaterThan(
+      glassToken(lightA['--glass-fill'] as string).alpha,
+    );
+    expect(glassToken(lightA['--glass-fill'] as string).alpha).toBeCloseTo(0.46, 2);
+    expect(glassToken(darkA['--glass-fill'] as string).alpha).toBeCloseTo(0.52, 2);
+  });
+
+  it('beide Werte stehen in hell, dunkel und im automatischen Dunkelmodus', () => {
+    for (const name of ['--glass-dialog-fill', '--glass-dialog-foot']) {
+      expect(light[name], `${name} hell`).toBeDefined();
+      expect(dark[name], `${name} dunkel`).toBeDefined();
+      expect(darkAuto[name], `${name} automatisch dunkel`).toBe(dark[name]);
+    }
+  });
+
+  // Der Fuß steht deckend im Ton des Dialogs (B-22): Text darauf erreicht 4,5 : 1, und er weicht von der Dialogfläche
+  // auf dem Fachlicht ohne Seitentext nur wenig ab (Leuchtdichteverhältnis höchstens 1,12 : 1, vorher ein weißes
+  // Rechteck mit 1,37 : 1 gegen die Fläche).
+  it.each(fills)(
+    'der Fuß im %s Modus: Text darauf mindestens 4,5 : 1, Ton nahe an der Dialogfläche',
+    (_name, tokens, subjects, k) => {
+      const foot = toHex(tokens['--glass-dialog-foot'] as string, tokens);
+      for (const name of ['--ink', '--ink-secondary', '--ink-muted', '--link', '--danger']) {
+        expect(
+          contrast(toHex(tokens[name] as string, tokens), foot),
+          `${name} auf Fuß`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+      for (const subject of subjects) {
+        expect(
+          contrast(foot, dialogFlaeche(tokens, subject, k, 0)),
+          'Fuß gegen Dialogfläche',
+        ).toBeLessThanOrEqual(1.12);
+      }
+    },
+  );
 });

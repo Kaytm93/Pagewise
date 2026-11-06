@@ -128,6 +128,12 @@
   --glass-blur: 20px;
   --glass-shadow-near: 0 1px 2px rgba(var(--shadow), 0.08);
   --glass-shadow-far: 0 16px 40px -16px rgba(var(--shadow), var(--shadow-a));
+  /* Atelier, Dialog und Schublade (D-087, B-07): eigene Füllung, nur dort verwendet (`--glass-fill` färbt auch
+     Seitenleiste, Kopf, Composer und Testkarte und bleibt wie es ist). Der Dialog liegt auf dem Scrim (45 %
+     Schatten), 46 % Weiß ließen den gedämpften Text bei 3,2 bis 3,8 : 1; mit 76 % sind es mindestens 4,8 : 1 auf
+     dem dunkelsten gemessenen Grund. Der Fuß steht deckend im Ton der Fläche darunter (B-22). */
+  --glass-dialog-fill: rgba(255, 255, 255, 0.76);
+  --glass-dialog-foot: #e8e5dd;
   /* Raum (neumorph, D-073): Raumton, Blatt, Randlinie, Licht, Schatten, Glanz, Fensterlicht */
   --raum-canvas: #e7e3dc;
   --raum-raised: #ece9e2;
@@ -194,6 +200,9 @@
   --glass-blur: 20px;
   --glass-shadow-near: 0 1px 2px rgba(var(--shadow), 0.08);
   --glass-shadow-far: 0 16px 40px -16px rgba(var(--shadow), var(--shadow-a));
+  /* Dialog und Schublade (D-087): im Dunkeln genügt die Füllung der übrigen Flächen (gedämpfter Text mindestens 5,2 : 1) */
+  --glass-dialog-fill: rgba(36, 36, 34, 0.52);
+  --glass-dialog-foot: #1e1f1d;
   /* Raum (neumorph, D-073) */
   --raum-canvas: #232220;
   --raum-raised: #292826;
@@ -261,6 +270,8 @@
     --glass-blur: 20px;
     --glass-shadow-near: 0 1px 2px rgba(var(--shadow), 0.08);
     --glass-shadow-far: 0 16px 40px -16px rgba(var(--shadow), var(--shadow-a));
+    --glass-dialog-fill: rgba(36, 36, 34, 0.52);
+    --glass-dialog-foot: #1e1f1d;
     /* Raum (neumorph, D-073) */
     --raum-canvas: #232220;
     --raum-raised: #292826;

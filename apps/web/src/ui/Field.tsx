@@ -20,8 +20,9 @@ interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id
   trailing?: ReactNode;
 }
 
+/** `lg-field` ist der Haken für die Richtungen (raum.css: eingelassenes Feld mit Bodenlinie, B-20); Lagen und Atelier lassen ihn leer. */
 const inputClass =
-  'min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink transition-shadow duration-[var(--t-med)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none disabled:opacity-60';
+  'lg-field min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink transition-shadow duration-[var(--t-med)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none disabled:opacity-60';
 
 export function TextField({
   label,
@@ -190,7 +191,7 @@ export function TextAreaField({
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy || undefined}
-        className={`mt-1.5 ${compact ? 'min-h-24' : 'min-h-60'} w-full resize-y rounded-control border border-control-edge bg-sheet px-3 py-2.5 text-base leading-relaxed text-ink disabled:opacity-60`}
+        className={`lg-field mt-1.5 ${compact ? 'min-h-24' : 'min-h-60'} w-full resize-y rounded-control border border-control-edge bg-sheet px-3 py-2.5 text-base leading-relaxed text-ink disabled:opacity-60`}
         {...textarea}
       />
       {hint && (

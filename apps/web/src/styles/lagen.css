@@ -539,9 +539,18 @@
   }
 
   /* ===== Leichte Hilfsklassen ===== */
+  /*
+   * Hintergrund von Dialog und Schublade (ui/modal.tsx, shell/Drawer.tsx). Die Tönung steht in `--scrim`, damit
+   * Atelier sie an anderer Stelle wiederverwenden kann. Sie blendet nur beim Öffnen ein (`backwards`, kein Füllen
+   * danach): ein Scrim mit gefüllter Deckkraft-Animation (`fade … both`) wäre in Chromium die Hintergrundwurzel des
+   * Panels und nähme jedem backdrop-filter darin den Blur (B-01, D-086). In Raum und Lagen sieht man keinen
+   * Unterschied (der Endwert der Deckkraft ist ohnehin 1); Atelier legt die Tönung zusätzlich auf eine Ebene
+   * hinter das Panel (atelier.css), damit der Blur schon in der Einblendung wirkt.
+   */
   .lg-scrim {
-    background: rgba(var(--shadow), 0.45);
-    animation: fade var(--t-med) both;
+    --scrim: rgba(var(--shadow), 0.45);
+    background: var(--scrim);
+    animation: fade var(--t-med) backwards;
   }
 }
 

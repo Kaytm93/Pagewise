@@ -1126,6 +1126,50 @@
   box-shadow: var(--raum-in-s);
 }
 
+/* Textfelder außerhalb der Eingabezeile (B-20, D-089): Anmeldung, Einrichtung, Onboarding, Dialoge, Einstellungen, Editor
+   (Stichwörter, Text), Hefte-Suche. Das Feld hängt über den Haken `lg-field` an (ui/Field.tsx: Text, Passcode, Auswahl,
+   Textbereich; NoteList, NotePage) und hat dieselbe Gestalt wie die Chat-Eingabe: Mulde in der Fläche, auf der es liegt
+   (--raum-raised, wie Blatt und Dialog), Radius 20 px, die Bodenlinie als einziger Rand. Innenabstand und Schrift bleiben die
+   des Feldes (px-3, pl-9, p-4). Die Bodenlinie steht als erste Schicht, also zuoberst: hinter der hellen Innenschicht der
+   Mulde (--raum-in-m, Weiß 86 % hell) verblasste sie auf 1,4 : 1 (gemessen); so zeigt sie --raum-edge unverfälscht
+   (mindestens 3 : 1). Die Regeln stehen außerhalb von @layer: `border`, `bg-sheet`, `rounded-*`,
+   `transition-shadow` und `focus:*` am Feld (Utilities) gewinnen sonst. Farbe und Schatten wechseln nur mit --t-color. */
+:root[data-design="raum"] .lg-field {
+  border: 0;
+  border-radius: var(--raum-r-big);
+  background-color: var(--raum-raised);
+  box-shadow:
+    inset 0 -2px 0 0 var(--raum-edge),
+    var(--raum-in-m);
+  transition: box-shadow var(--t-color) ease;
+}
+
+/* Platzhalter in --ink-muted (mindestens 4,5 : 1 auf der Fläche); der Standard der Seite ist ein halb durchsichtiges Grau. */
+:root[data-design="raum"] .lg-field::placeholder {
+  color: var(--ink-muted);
+  opacity: 1;
+}
+
+/* Fokus: die Bodenlinie in der Akzentfarbe und der Ring (2 px, 3 px Abstand) wie an der Chat-Eingabe. */
+:root[data-design="raum"] .lg-field:focus {
+  box-shadow:
+    inset 0 -2px 0 0 var(--accent),
+    var(--raum-in-m);
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Fehler (aria-invalid, auch fokussiert): die Bodenlinie in --danger. Der Rand `border-danger` der Seite gibt es hier nicht. */
+:root[data-design="raum"] .lg-field[aria-invalid="true"] {
+  box-shadow:
+    inset 0 -2px 0 0 var(--danger),
+    var(--raum-in-m);
+}
+
+:root[data-design="raum"] .lg-field[aria-invalid="true"]:focus {
+  outline-color: var(--danger);
+}
+
 /* Die Dockleiste unten am Blatt (Startseite und Chat): deckende Fläche ohne Randlinie. Abgrenzung nur durch eine
    eingravierte Doppellinie oben (dunkel, dann hell). */
 :root[data-design="raum"] .rm-start-dock,
@@ -1145,6 +1189,46 @@
   left: 18px;
   height: 2px;
   background: linear-gradient(var(--raum-dark) 1px, var(--raum-light) 1px);
+}
+
+/* Dialog (ui/modal.tsx, B-21, D-088): eine gehobene Fläche wie Blatt und Karte (GF-01): Raumfläche, kein Rand, keine
+   Körnung, die große Stufe der Schatten. Radius 20 px wie die Karte; auf dem Handy ein Blatt am unteren Rand (nur oben
+   gerundet), ab 640 px rundum. --raum-surf folgt der Fläche, damit Eingelassenes darin (Felder, LED-Ringe) richtig liegt.
+   Ein Dialog über einem Dialog („…löschen“ über dem Formular) trennt sich über seinen Schatten und den eigenen Scrim.
+   Die Regeln stehen außerhalb von @layer: `rounded-t-card sm:rounded-card` am Panel und `border-t border-line-warm
+   bg-sheet` an der Fußzeile (Utilities) gewinnen sonst. */
+:root[data-design="raum"] .lg-dialog {
+  --raum-surf: var(--raum-raised);
+  border: 0;
+  border-radius: var(--raum-r-big) var(--raum-r-big) 0 0;
+  background-color: var(--raum-raised);
+  background-image: none;
+  box-shadow: var(--raum-up-l);
+}
+
+@media (min-width: 640px) {
+  :root[data-design="raum"] .lg-dialog {
+    border-radius: var(--raum-r-big);
+  }
+}
+
+/* Fußzeile des Dialogs: deckend in der Fläche des Dialogs (der Inhalt läuft beim Scrollen darunter durch), statt der
+   Randlinie eine eingravierte Doppellinie oben (dunkel, dann hell) wie am Dock. Die Linie sitzt am oberen Rand der
+   Fußzeile und ändert ihre Höhe nicht. */
+:root[data-design="raum"] .lg-dialog-foot {
+  border-top: 0;
+  background-color: var(--raum-raised);
+}
+
+:root[data-design="raum"] .lg-dialog-foot::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(var(--raum-dark) 1px, var(--raum-light) 1px);
+  pointer-events: none;
 }
 
 /* Werkzeugzeile des Agenten (summary): flach, hebt sich beim Darüberfahren, drückt sich ein. */
@@ -1354,6 +1438,8 @@
       .lg-slip,
       .lg-brand,
       .lg-sheet-auth,
+      .lg-dialog,
+      .lg-field,
       .rm-start-dock form > div,
       .lg-composer textarea,
       ul:has(> li > .lg-row)

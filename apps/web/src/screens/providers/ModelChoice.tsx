@@ -111,7 +111,7 @@ export function ModelChoice() {
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
-            className="mt-1 min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink"
+            className="lg-field mt-1 min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink"
           />
         </label>
       )}

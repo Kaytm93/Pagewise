@@ -19,18 +19,51 @@ const stack: Layer[] = [];
 /** Vom Dialog gesperrte Geschwister von <body>, damit nur eigene `inert`-Marken wieder entfernt werden. */
 const inerted = new Set<Element>();
 
-/** Zuletzt angeklicktes bedienbares Element: Safari und iOS fokussieren Knöpfe beim Klick nicht. */
-let lastTrigger: HTMLElement | null = null;
-const TRIGGER = 'button, a[href], [role="button"], summary, input, select, textarea, [tabindex]';
+/**
+ * Steuerelemente, an die der Fokus nach dem Schließen zurückgehen kann. `[tabindex="-1"]` zählt nicht: das sind
+ * Fokusziele wie `main` oder das Dialogpanel, keine Auslöser.
+ */
+const CONTROL =
+  'button, a[href], [role="button"], [role="menuitem"], summary, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+const NOT_CONTROL = 'html, body, main, [role="dialog"]';
+
+/**
+ * Zuletzt per Zeiger (Maus, Stift, Berührung) bedientes Steuerelement, ein einziger Eintrag. Safari und iOS
+ * fokussieren einen Knopf beim Klick nicht: `document.activeElement` ist dann `body` oder der nächste fokussierbare
+ * Vorfahr (`main`, in einem Dialog das Dialogpanel) und taugt nicht als Rückgabeziel (D-091). Die Listener hängen
+ * einmal am Dokument, in der Capture-Phase, damit kein `stopPropagation` darunter sie abschneidet.
+ */
+let pointerTarget: HTMLElement | null = null;
+
+function rememberPointerTarget(event: Event) {
+  pointerTarget =
+    event.target instanceof Element ? event.target.closest<HTMLElement>(CONTROL) : null;
+}
+
 if (typeof document !== 'undefined') {
-  document.addEventListener(
-    'click',
-    (event) => {
-      lastTrigger =
-        event.target instanceof Element ? event.target.closest<HTMLElement>(TRIGGER) : null;
-    },
-    true,
+  document.addEventListener('pointerdown', rememberPointerTarget, true);
+  document.addEventListener('click', rememberPointerTarget, true);
+}
+
+function isControl(element: Element | null): element is HTMLElement {
+  return (
+    element instanceof HTMLElement && element.matches(CONTROL) && !element.matches(NOT_CONTROL)
   );
+}
+
+/**
+ * Das Element, an das der Fokus nach dem Schließen zurückgeht. Ist ein Steuerelement fokussiert (Tastatur, Chromium),
+ * ist es der Auslöser. Sonst (Safari nach Mausklick oder Tippen) gilt das zuletzt per Zeiger bediente Steuerelement,
+ * sofern es noch im DOM steht, nicht im gesperrten Hintergrund liegt und nicht im neuen Dialog selbst. Sonst bleibt
+ * es wie früher das fokussierte Element, außer `body`.
+ */
+function findOpener(host: HTMLElement): HTMLElement | null {
+  const active = document.activeElement;
+  if (isControl(active)) return active;
+  const clicked = pointerTarget;
+  if (clicked?.isConnected && !host.contains(clicked) && !clicked.closest('[inert]'))
+    return clicked;
+  return active instanceof HTMLElement && active !== document.body ? active : null;
 }
 
 const FOCUSABLE =
@@ -107,9 +140,8 @@ export function useModalLayer(onClose: () => void): HTMLElement | null {
     document.body.appendChild(host);
     setContainer(host);
 
-    // Safari fokussiert einen angeklickten Knopf nicht: dann gilt das zuletzt angeklickte Element.
-    const active = document.activeElement;
-    const opener = active instanceof HTMLElement && active !== document.body ? active : lastTrigger;
+    // Vor dem Sperren des Hintergrunds festhalten: danach wäre der Auslöser der unteren Ebene `inert`.
+    const opener = findOpener(host);
 
     const layer: Layer = { container: host, close: () => closeRef.current() };
     stack.push(layer);
@@ -132,7 +164,7 @@ export function useModalLayer(onClose: () => void): HTMLElement | null {
       // Der Auslöser kann inzwischen aus dem DOM sein (die Ansicht hat neu gezeichnet): dann nimmt die
       // nächste Ebene oder der Hauptbereich den Fokus, statt dass er auf <body> verloren geht.
       if (opener?.isConnected) {
-        opener.focus();
+        opener.focus({ preventScroll: true });
       } else {
         const below =
           stack[stack.length - 1]?.container.querySelector<HTMLElement>('[role="dialog"]');
