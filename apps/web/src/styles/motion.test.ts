@@ -27,3 +27,16 @@ describe('Pulsierender Wartepunkt (.animate-pulse)', () => {
     expect(ruleBody(':root.fx-off .animate-pulse')).toContain('animation: none');
   });
 });
+
+// B-14 (D-096): Der Spinner (Tailwind animate-spin) an Verbindungsseite, Banner und Knöpfen im Wartezustand
+// ist ein Dauerläufer wie der Wartepunkt. Er steht bei „Reduziert“ still; das Symbol bleibt sichtbar, der
+// Text daneben trägt die Information.
+describe('Spinner (.animate-spin)', () => {
+  it('steht bei „Reduziert“ (:root.fx-reduced) still', () => {
+    expect(ruleBody(':root.fx-reduced .animate-spin')).toContain('animation: none');
+  });
+
+  it('steht bei „Aus“ (:root.fx-off) still', () => {
+    expect(ruleBody(':root.fx-off .animate-spin')).toContain('animation: none');
+  });
+});

@@ -474,8 +474,11 @@
   animation: none;
 }
 
-/* Pulsierender Wartepunkt (Tailwind animate-pulse): Dauerläufer, steht schon bei „Reduziert“ still */
+/* Pulsierender Wartepunkt (Tailwind animate-pulse) und drehender Spinner (Tailwind animate-spin, Verbindung,
+   Banner, Knöpfe im Wartezustand): Dauerläufer, stehen schon bei „Reduziert“ still (B-14, D-096). Das Symbol bleibt. */
 :root.fx-reduced .animate-pulse,
-:root.fx-off .animate-pulse {
+:root.fx-off .animate-pulse,
+:root.fx-reduced .animate-spin,
+:root.fx-off .animate-spin {
   animation: none;
 }
