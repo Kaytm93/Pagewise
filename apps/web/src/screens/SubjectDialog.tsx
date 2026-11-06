@@ -163,7 +163,10 @@ export function SubjectDialog({ subject, onClose }: { subject?: Subject; onClose
             </div>
           </div>
         ) : null}
-        {(!subject || mode === 'custom') && (
+        {/* Das Formular steht nur im Register „Eigenes Fach“ und beim Bearbeiten. Sonst käme seine klebende
+            Fußzeile mit „Speichern“ unter dem Katalog heraus (B-02). Die Eingaben leben in diesem Bauteil,
+            nicht im Formular: sie überstehen den Wechsel der Register. */}
+        {(subject || mode === 'custom') && (
           <form onSubmit={onSubmit} className="space-y-4" noValidate>
             <TextField
               label={m.subjectDialog.name}
