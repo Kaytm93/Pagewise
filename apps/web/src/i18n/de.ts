@@ -473,6 +473,13 @@ export const de = {
       aufgabe: 'Aufgabe',
       definition: 'Definition',
     },
+    /** Platzhaltersätze der vier Hinweisvorlagen; „Einfügen“ schreibt sie in den Hefteintrag (templates.ts). */
+    templateText: {
+      merksatz: 'Hier steht der Merksatz.',
+      beispiel: 'Hier steht ein Beispiel.',
+      aufgabe: 'Hier steht die Aufgabe.',
+      definition: 'Hier steht die Definition.',
+    },
   },
   subject: {
     chats: 'Chats',
@@ -545,6 +552,24 @@ export const de = {
     teacherHint: 'Name oder Kürzel.',
     hours: 'Stunden pro Woche',
     icon: 'Symbol',
+    /** Namen der Fachsymbole für Bildschirmleser; Schlüssel = Kennung in `ui/SubjectIcon.tsx`. */
+    iconNames: {
+      book: 'Buch',
+      pen: 'Stift',
+      languages: 'Sprachen',
+      calculator: 'Rechner',
+      atom: 'Atom',
+      flask: 'Kolben',
+      microscope: 'Mikroskop',
+      leaf: 'Blatt',
+      globe: 'Globus',
+      landmark: 'Gebäude',
+      scale: 'Waage',
+      music: 'Musik',
+      palette: 'Palette',
+      sport: 'Hantel',
+      code: 'Code',
+    },
     color: 'Farbe',
     colorHint: 'Ohne Auswahl wählt Pagewise eine Farbe, die noch nicht so oft vorkommt.',
     colorNames: [

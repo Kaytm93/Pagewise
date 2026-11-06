@@ -68,7 +68,8 @@ export function SubjectPage({
   useEffect(() => {
     if (!rueckkehrZiel.current) return;
     zielRef.current?.scrollIntoView({ block: 'nearest' });
-    const panelOffen = document.querySelector('[aria-label="Hefteinträge"]') !== null;
+    // Ob das Panel offen ist, zeigt die Anker-Id in NoteList, nicht der übersetzte Name (B-15, D-095).
+    const panelOffen = document.getElementById('hefte-eintraege-panel') !== null;
     if (window.sessionStorage.getItem(listenRuf) === '1' && !panelOffen) {
       window.sessionStorage.removeItem(listenRuf);
     }

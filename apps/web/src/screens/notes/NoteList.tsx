@@ -97,7 +97,7 @@ export function NoteList({ subjectId, groupId }: { subjectId: string; groupId: s
   const searching = query.trim() !== '';
 
   return (
-    <section className="mt-6" aria-label={m.notes.notes}>
+    <section id="hefte-eintraege-panel" className="mt-6" aria-label={m.notes.notes}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <label className="relative min-w-0 flex-1 basis-56">
           <span className="sr-only">{m.notes.searchLabel}</span>
