@@ -327,3 +327,59 @@ describe('lagen.css: Scrim von Dialog und Schublade ohne gefüllte Deckkraft-Ani
     expect(aus?.body).toMatch(/animation:\s*none\s*!important/);
   });
 });
+
+describe('lagen.css: Kurzform der Umschalter-Beschriftung auf Telefonen (bis 480 px) (B-05, D-093)', () => {
+  /** Rumpf der @media-Regel mit genau dieser Bedingung, die den Selektor enthält (ohne Kommentare, ohne Verschachtelung). */
+  const mediaBlock = (css: string, bedingung: string, selektor: string): string | null => {
+    const start = css.indexOf(`@media ${bedingung} {`);
+    let von = start;
+    while (von !== -1) {
+      let tiefe = 0;
+      let j = css.indexOf('{', von);
+      const anfang = j + 1;
+      for (; j < css.length; j++) {
+        if (css[j] === '{') tiefe++;
+        else if (css[j] === '}' && --tiefe === 0) break;
+      }
+      const body = css.slice(anfang, j);
+      if (body.includes(selektor)) return body;
+      von = css.indexOf(`@media ${bedingung} {`, j);
+    }
+    return null;
+  };
+
+  it('zeigt standardmäßig nur die lange Form: .lg-seg-short ist ausgeblendet', () => {
+    expect(regelBlock(lagen, '.lg-seg-short')).toMatch(/display:\s*none/);
+    // Für die lange Form gibt es außerhalb der Media-Query keine Regel: sie bleibt, wie der Text von selbst steht.
+    const ausserhalb = lagen.replace(/@media \(max-width: 480px\) \{[\s\S]*?\n {2}\}\n/, '');
+    expect(ausserhalb).not.toMatch(/\.lg-seg-long\s*\{/);
+  });
+
+  it('wechselt bis 480 px Breite zur Kurzform (Media-Query, nicht per Skript)', () => {
+    const media = mediaBlock(lagen, '(max-width: 480px)', '.lg-seg-long');
+    expect(media, 'Media-Query (max-width: 480px) mit .lg-seg-long fehlt').not.toBeNull();
+    expect(regelBlock(media ?? '', '.lg-seg-long')).toMatch(/display:\s*none/);
+    expect(regelBlock(media ?? '', '.lg-seg-short')).toMatch(/display:\s*inline/);
+  });
+
+  it('steht in der gemeinsamen Grundlage (gilt für Raum, Lagen, Atelier), nicht unter einer Richtung', () => {
+    const regeln = [...lagen.matchAll(/([^{}]+)\{/g)].map((m) => (m[1] as string).trim());
+    const betroffen = regeln.filter(
+      (selektor) => selektor.includes('lg-seg-short') || selektor.includes('lg-seg-long'),
+    );
+    expect(betroffen.length).toBeGreaterThan(0);
+    for (const selektor of betroffen) expect(selektor).not.toContain('data-design');
+    // Die anderen Richtungen überschreiben sie nicht.
+    for (const file of ['raum.css', 'atelier.css', 'atelier-fach.css']) {
+      const css = readFileSync(join(dir, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+      expect(css, file).not.toMatch(/lg-seg-(short|long)/);
+    }
+  });
+
+  it('setzt die Kurzform nur über CSS: Segmented.tsx misst nichts im Skript', () => {
+    const quelle = readFileSync(join(dir, '..', 'ui', 'Segmented.tsx'), 'utf8');
+    expect(quelle).not.toMatch(
+      /matchMedia|innerWidth|getBoundingClientRect|ResizeObserver|offsetWidth|scrollWidth/,
+    );
+  });
+});

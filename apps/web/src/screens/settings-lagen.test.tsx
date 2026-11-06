@@ -68,3 +68,31 @@ describe('Einstellungen in „Lagen“', () => {
     }
   });
 });
+
+describe('Einstellungen: Umschalter „Bewegung“ mit Kurzform (N2, B-05)', () => {
+  it('beschriftet „Automatisch“ auf Telefonen mit „Auto“, der Name bleibt voll, in allen Richtungen', async () => {
+    for (const design of ['raum', 'lagen', 'atelier'] as const) {
+      const { unmount } = openSettings(design);
+      await screen.findByRole('heading', { level: 1, name: 'Einstellungen' });
+
+      const group = screen.getByRole('group', { name: 'Bewegung' });
+      const radios = Array.from(group.querySelectorAll('input[type="radio"]'));
+      const names = radios.map(
+        (radio) => radio.getAttribute('aria-label') ?? radio.closest('label')?.textContent,
+      );
+      expect(names, design).toEqual(['Automatisch', 'Voll', 'Reduziert', 'Aus']);
+      const automatisch = screen.getByRole('radio', { name: 'Automatisch' });
+      expect(
+        automatisch.closest('label')?.querySelector('.lg-seg-short')?.textContent,
+        design,
+      ).toBe('Auto');
+      expect(automatisch.closest('label')?.querySelector('.lg-seg-long')?.textContent, design).toBe(
+        'Automatisch',
+      );
+      // Die anderen drei sind kurz genug und tragen keine zweite Form.
+      expect(group.querySelectorAll('.lg-seg-short'), design).toHaveLength(1);
+
+      unmount();
+    }
+  });
+});

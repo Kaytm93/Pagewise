@@ -1392,6 +1392,8 @@ export const de = {
         title: 'Bewegung',
         lead: 'Wie viel sich in der Oberfläche bewegt. „Automatisch“ folgt der Einstellung deines Geräts.',
         system: 'Automatisch',
+        // Kurzform des Umschalters auf Telefonen (Segmented, B-05); der Name für Screenreader bleibt „Automatisch“.
+        systemShort: 'Auto',
         full: 'Voll',
         reduced: 'Reduziert',
         off: 'Aus',

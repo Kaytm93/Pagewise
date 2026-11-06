@@ -359,11 +359,14 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
             {e.fromChat}
           </Link>
         )}
-        <div className="ml-auto flex items-center">
+        {/* Passt die Gruppe nicht in die Zeile (iPhone hoch: gut 300 px für gut 370), bricht sie um, statt dass die
+            Knöpfe schrumpfen: Anheften und Löschen waren dort 31 px breit, „Schreiben“ lief in „Vorschau“ (B-08).
+            Der Umschalter und die drei Knöpfe bleiben je für sich ganz und rücken als Block in die nächste Zeile. */}
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-y-1">
           {/* Ansichts-Umschalter nur unter 1024 px (M4-T007, notes#13): er gehört zum Kopf und darf
               keine eigene Zeile vor dem Textfeld belegen — auf iPhone quer füllte er mit der
               Einfügen-Leiste den ersten Bildschirm, das Textfeld begann erst bei y≈594 von 390 px. */}
-          <div className="mr-1 lg:hidden">
+          <div className="mr-1 max-w-full shrink-0 lg:hidden">
             <Segmented
               legend={e.editorView}
               options={[
@@ -374,29 +377,31 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
               onChange={setView}
             />
           </div>
-          <Button variant="ghost" onClick={() => void save()} disabled={saving === 'saving'}>
-            {e.save}
-          </Button>
-          <button
-            type="button"
-            onClick={() => setPinned((value) => !value)}
-            aria-label={pinned ? e.unpin : e.pin}
-            className="mo-press inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
-          >
-            {pinned ? (
-              <PinOff aria-hidden="true" className="size-4" />
-            ) : (
-              <Pin aria-hidden="true" className="size-4" />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeleting(true)}
-            aria-label={e.delete}
-            className="mo-press inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
-          >
-            <Trash2 aria-hidden="true" className="size-4" />
-          </button>
+          <div className="flex shrink-0 items-center">
+            <Button variant="ghost" onClick={() => void save()} disabled={saving === 'saving'}>
+              {e.save}
+            </Button>
+            <button
+              type="button"
+              onClick={() => setPinned((value) => !value)}
+              aria-label={pinned ? e.unpin : e.pin}
+              className="mo-press inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+            >
+              {pinned ? (
+                <PinOff aria-hidden="true" className="size-4" />
+              ) : (
+                <Pin aria-hidden="true" className="size-4" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleting(true)}
+              aria-label={e.delete}
+              className="mo-press inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+            >
+              <Trash2 aria-hidden="true" className="size-4" />
+            </button>
+          </div>
         </div>
       </div>
       {actionError && <FieldError>{actionError}</FieldError>}

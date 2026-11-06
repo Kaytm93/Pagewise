@@ -84,6 +84,8 @@ Rahmen und Startfläche folgen der **gewählten** Darstellung, nicht nur dem Ger
 - Auswertung nur im Speicher der Ansicht: kein Netz, nichts wird gespeichert, „Noch einmal“ setzt alles zurück.
 - Dokument-Vorschau (D-060): ein Blatt auf `bg-canvas` mit Rand `control-edge`, höchstens 21 cm breit, darunter der Knopf „Als PDF herunterladen“. Die Vorschau zeigt Text, das PDF entsteht erst beim Klicken.
 - Folien-Vorschau (D-061): je Folie eine Karte im Format 16:9 (`aspect-video`) auf `bg-canvas`, Rand `control-edge`; die Karte wächst mit dem Inhalt statt abzuschneiden. Darunter der Knopf „Als PowerPoint herunterladen“.
+- Umschalter (`ui/Segmented.tsx`, D-093): gleich breite Stücke. Passt eine Beschriftung auf dem Telefon nicht in ihr Stück, trägt die Option eine Kurzform (`short`, z. B. „Auto“ für „Automatisch“, Text in `i18n/de.ts`); bis 480 px zeigt allein CSS (`lg-seg-short`, `lg-seg-long` in `lagen.css`) die Kurzform, der Name für Screenreader bleibt der volle Text (`aria-label`). Ein Text läuft nie aus seinem Stück.
+- Kopfzeile des Editors (D-093): Umschalter und Knöpfe schrumpfen nie (`shrink-0`, Knöpfe 44 × 44 px); reicht die Zeile nicht, bricht die Gruppe um (Umschalter oben, „Speichern“, Anheften, Löschen darunter, rechtsbündig).
 
 ## Unterstützte Browser
 
