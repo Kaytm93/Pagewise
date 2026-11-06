@@ -383,3 +383,51 @@ describe('lagen.css: Kurzform der Umschalter-Beschriftung auf Telefonen (bis 480
     );
   });
 });
+
+describe('Seitenleiste: Breite je Richtung (B-04, D-094)', () => {
+  const lesen = (file: string) =>
+    readFileSync(join(dir, file), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replaceAll('"', "'");
+
+  /** `--sidebar-w` in einer :root-Regel, die direkt (ohne @media) oder in der Bedingung `media` steht. */
+  function leiste(css: string, richtung: string, media: string | null): number | null {
+    const wurzel = `:root[data-design='${richtung}']`;
+    const muster =
+      media === null
+        ? new RegExp(`^\\s*${wurzel.replaceAll(/[[\]]/g, '\\$&')} \\{([^}]*)\\}`, 'm')
+        : new RegExp(
+            `@media ${media.replaceAll(/[().]/g, '\\$&')} \\{\\s*${wurzel.replaceAll(/[[\]]/g, '\\$&')} \\{([^}]*)\\}`,
+          );
+    const wert = muster.exec(css)?.[1]?.match(/--sidebar-w:\s*([\d.]+)px/)?.[1];
+    return wert ? Number.parseFloat(wert) : null;
+  }
+
+  const lagenCss = lesen('lagen.css');
+  const IPAD_LAGEN = '(min-width: 768px) and (max-width: 1023.98px)';
+
+  it('Lagen: 276 px wie bisher ab 1024 px, im schmalen Bereich 278 statt 248 px', () => {
+    expect(leiste(lagenCss, 'lagen', null)).toBe(276);
+    expect(leiste(lagenCss, 'lagen', IPAD_LAGEN)).toBe(278);
+  });
+
+  it('Lagen: die Namensspalte hat im schmalen Bereich mindestens 4 px mehr, als „Mathematik“ braucht', () => {
+    // Gemessen im Browser (Chromium und WebKit, Lagen): bei 248 px Leiste hat die Namensspalte 63 px, die Leiste
+    // nimmt also 185 px für Rücken, Pfeilspalte, Symbol, Punkt und Abstände. „Mathematik“ ist 88,4 px breit.
+    const festeAnteile = 248 - 63;
+    const breite = leiste(lagenCss, 'lagen', IPAD_LAGEN) ?? 0;
+    expect(breite - festeAnteile).toBeGreaterThanOrEqual(88.4 + 4);
+  });
+
+  it('Atelier bleibt unverändert: 264 px, im schmalen Bereich 232 px (dort gab es nie gekürzte Namen)', () => {
+    const atelier = lesen('atelier.css');
+    expect(leiste(atelier, 'atelier', null)).toBe(264);
+    expect(leiste(atelier, 'atelier', '(min-width: 768px) and (max-width: 1099.98px)')).toBe(232);
+  });
+
+  it('AppShell liest die Breite aus --sidebar-w, keine feste Zahl je Richtung', () => {
+    const shell = readFileSync(join(dir, '..', 'shell', 'AppShell.tsx'), 'utf8');
+    expect(shell).toContain('calc(var(--sidebar-w,17.25rem)+env(safe-area-inset-left))');
+    expect(shell).not.toMatch(/\b(216|232|236|248|264|276|278)px\b/);
+  });
+});
