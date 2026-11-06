@@ -147,7 +147,7 @@ export function ModelListEditor({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="min-h-11 min-w-0 flex-1 rounded-control border border-control-edge bg-sheet px-3 text-base text-ink"
+                    className="lg-field min-h-11 min-w-0 flex-1 rounded-control border border-control-edge bg-sheet px-3 text-base text-ink"
                   />
                   <button
                     type="button"
@@ -197,7 +197,7 @@ export function ModelListEditor({
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
-            className="min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink"
+            className="lg-field min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink"
           />
           {draftError && <FieldError>{draftError}</FieldError>}
         </div>
@@ -226,7 +226,7 @@ export function ModelListEditor({
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
-            className="min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink"
+            className="lg-field min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink"
           />
           {reports && (
             <div className="mt-2 flex flex-wrap gap-x-4">

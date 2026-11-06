@@ -487,4 +487,21 @@ describe('raum.css: Textfelder sind eingelassen mit Bodenlinie (D-089, B-20)', (
     expect(page).toMatch(/id="note-tags"[\s\S]*?className="lg-field /);
     expect(page).toMatch(/id="note-text"[\s\S]*?className="lg-field /);
   });
+
+  it('hängt die Eingabefelder der Bausteine Modellliste, Modellwahl und Vorlagenwahl an den Haken (Nachzug zu B-20)', () => {
+    const expected: Record<string, number> = {
+      'screens/providers/ModelListEditor.tsx': 3,
+      'screens/providers/ModelChoice.tsx': 1,
+      'screens/subjects/TemplatePicker.tsx': 1,
+    };
+    for (const [file, count] of Object.entries(expected)) {
+      const source = readFileSync(join(dir, '..', file), 'utf8');
+      // Kontrollkästchen (Fähigkeiten, Auswahl der Vorlagen) bleiben ohne Haken; jedes andere Eingabefeld trägt ihn.
+      const fields = (source.match(/<input[\s\S]*?\/>/g) ?? []).filter(
+        (tag) => !tag.includes('type="checkbox"'),
+      );
+      expect(fields, file).toHaveLength(count);
+      for (const tag of fields) expect(tag, file).toContain('className="lg-field ');
+    }
+  });
 });
