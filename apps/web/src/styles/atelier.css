@@ -266,6 +266,7 @@
   }
 
   /* Eine Kante, kein Panel: der Trennstrich rechts ist der Haarstrich des Glases */
+  /* biome-ignore lint/style/noDescendingSpecificity: Die Reihenfolge ist ohne Wirkung (die Dialogfüllung setzt nur background-color, diese Regel nicht); die Füllung muss vor dem @supports-Rückfall stehen. */
   :root[data-design="atelier"] .lg-binder {
     border: 0;
     border-radius: 0;
