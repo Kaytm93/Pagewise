@@ -316,6 +316,19 @@
     box-shadow: none;
   }
 
+  /* Wortmarke über der Karte (B-24, D-090): Die Karte von Anmeldung, Einrichtung, Verbindung und Onboarding hat in Atelier
+     weder Rand noch Fläche, ihr Polster (p-6, ab 640 px p-8) bleibt aber. Die Wortmarke rückt um dasselbe Polster ein,
+     damit sie bündig mit Überschrift und Feldern steht; die Seitenränder des Inhalts bleiben gleich. */
+  :root[data-design="atelier"] .lg-wordmark {
+    padding-inline: 1.5rem;
+  }
+
+  @media (min-width: 640px) {
+    :root[data-design="atelier"] .lg-wordmark {
+      padding-inline: 2rem;
+    }
+  }
+
   /* Karte: runde Fläche mit Rand und weichem Schatten, Fachfarbe als Licht */
   :root[data-design="atelier"] .lg-slip {
     padding: 20px 22px 18px;

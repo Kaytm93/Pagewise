@@ -403,3 +403,33 @@ describe('Fachfarbe als Text', () => {
     expect(icon).toMatch(/color:\s*var\(--hue-ink\)/);
   });
 });
+
+describe('Wortmarke über der Karte: bündig mit der Spalte in Atelier (B-24, D-090)', () => {
+  const wortmarke = ":root[data-design='atelier'] .lg-wordmark";
+  const bildschirme = [
+    join(dir, '..', 'screens', 'AuthLayout.tsx'),
+    join(dir, '..', 'screens', 'onboarding', 'StepFrame.tsx'),
+  ];
+
+  it('gibt die Wortmarke über der Karte den Haken lg-wordmark (Anmeldung, Einrichtung, Verbindung, Onboarding)', () => {
+    for (const file of bildschirme) {
+      expect(readFileSync(file, 'utf8'), file).toMatch(/<p className="lg-wordmark /);
+    }
+  });
+
+  it('rückt um dasselbe Polster ein wie die Karte: p-6 und ab sm p-8, also 24 px und 32 px', () => {
+    for (const file of bildschirme) {
+      expect(readFileSync(file, 'utf8'), file).toMatch(/className="lg-sheet[^"]*\sp-6 sm:p-8"/);
+    }
+    expect(rule(wortmarke).replace(/\s+/g, ' ').trim()).toBe('padding-inline: 1.5rem;');
+    expect(css).toMatch(
+      /@media \(min-width: 640px\) \{\s*:root\[data-design='atelier'\] \.lg-wordmark \{\s*padding-inline:\s*2rem;/,
+    );
+  });
+
+  it('lässt Raum und Lagen unberührt: deren Karte zeigt eine Fläche, dort gibt es keinen Haken-Stil', () => {
+    for (const name of ['raum.css', 'lagen.css']) {
+      expect(readFileSync(join(dir, name), 'utf8'), name).not.toContain('lg-wordmark');
+    }
+  });
+});
