@@ -87,6 +87,11 @@ Rahmen und Startfläche folgen der **gewählten** Darstellung, nicht nur dem Ger
 - Umschalter (`ui/Segmented.tsx`, D-093): gleich breite Stücke. Passt eine Beschriftung auf dem Telefon nicht in ihr Stück, trägt die Option eine Kurzform (`short`, z. B. „Auto“ für „Automatisch“, Text in `i18n/de.ts`); bis 480 px zeigt allein CSS (`lg-seg-short`, `lg-seg-long` in `lagen.css`) die Kurzform, der Name für Screenreader bleibt der volle Text (`aria-label`). Ein Text läuft nie aus seinem Stück.
 - Kopfzeile des Editors (D-093): Umschalter und Knöpfe schrumpfen nie (`shrink-0`, Knöpfe 44 × 44 px); reicht die Zeile nicht, bricht die Gruppe um (Umschalter oben, „Speichern“, Anheften, Löschen darunter, rechtsbündig).
 
+## Chat: Mitlesen (D-099, 7. November 2026)
+
+- **Mitlesen** (`screens/chat/useFollowEnd.ts`, präzisiert D-028): Die Ansicht folgt neuem Text und allem, was danach wächst (Formeln, Graphen, Moleküle laden nach), solange man unten ist; ein Beobachter der Größe am Verlauf und am Eingabebereich scrollt nach. Wer hochgescrollt hat, bleibt dort: Mausrad nach oben und eine Fingergeste nach unten lösen das Mitlesen sofort, auch unter 160 px (nicht, wenn die Geste nur ein scrollbares Feld bewegt, etwa einen Code-Block). Ein Bildlauf ohne Geste (Tastatur, Scrollleiste) löst es ab 160 px Abstand zum Ende. Wieder einrasten tut es, sobald man nach unten näher als 160 px ans Ende kommt oder eine Nachricht sendet. Ein Scroll-Ereignis, das nur das eigene Hinscrollen meldet, ändert nichts, auch wenn die Seite bis dahin gewachsen ist.
+- **„Zum Ende“-Knopf:** nicht gebaut, offen (F-082, Konzept in `docs/decisions.md` D-099 verlinkt).
+
 ## Unterstützte Browser
 
 Voll: Safari 17.2 und neuer (iOS und iPadOS 17.2+), Chrome und Firefox der letzten Jahre. Die Federn nutzen `linear()` (Safari 17.2), die Lichtfarbe `@property` (Safari 16.4), der Umschalter `:has()` (Safari 15.4), Mischfarben `color-mix()` (Safari 16.2). Ältere Geräte verlieren Bewegung und Licht, die Oberfläche bleibt benutzbar; Rückfälle sind vorgesehen (Feder als `cubic-bezier`, Licht ohne Übergang).
