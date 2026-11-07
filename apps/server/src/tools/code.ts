@@ -14,7 +14,7 @@ import {
  */
 
 /** Höchstzahl der Läufe je Antwort. */
-export const MAX_CODE_RUNS_PER_REPLY = 6;
+export const MAX_CODE_RUNS_PER_REPLY = 8;
 /** Größte Argumentzeichenfolge: das Skript darf 24.000 Zeichen haben, dazu kommt die Maskierung. */
 const MAX_CODE_ARGUMENT_CHARACTERS = 49_152;
 const MAX_SCRIPT_CHARACTERS = 24_000;

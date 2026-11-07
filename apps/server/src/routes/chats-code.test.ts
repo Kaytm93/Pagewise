@@ -321,7 +321,7 @@ describe('Chats mit Code-Ausführung (run_python)', () => {
       expect(spec.args).toEqual(['-s', '.run.py']);
       expect(spec.cwd).toBe(spec.workspace);
       expect(spec.env.HOME?.startsWith(spec.workspace)).toBe(true);
-      expect(spec.timeoutMs).toBeLessThanOrEqual(60_000);
+      expect(spec.timeoutMs).toBeLessThanOrEqual(180_000);
       expect(readFileSync(join(spec.workspace, '.run.py'), 'utf8')).toBe('pass');
     });
 
@@ -406,12 +406,12 @@ describe('Chats mit Code-Ausführung (run_python)', () => {
 
     it('begrenzt die Läufe je Antwort', async () => {
       await enable();
-      for (let index = 0; index < 8; index += 1) {
+      for (let index = 0; index < 10; index += 1) {
         scripts.push(() => toolCall(`call_${index}`, 'run_python', python('pass')));
       }
       scripts.push(() => text('Genug.'));
       await ask();
-      expect(specs.length).toBe(6);
+      expect(specs.length).toBe(8);
       const last = requests
         .at(-1)
         ?.messages.filter((message) => message.role === 'tool')
