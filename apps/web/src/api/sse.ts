@@ -59,10 +59,13 @@ const STATUSES: readonly string[] = ['complete', 'streaming', 'stopped', 'error'
 const ASSET_KINDS: readonly string[] = ['pdf', 'pptx', 'docx', 'xlsx', 'image', 'text'];
 const ACTIVITY_STATES: readonly string[] = ['running', 'done', 'error'];
 
+/** Größter Name einer Datei in einem Eintrag (Dateiname, nie Pfad). */
+const ACTIVITY_MAX_FILE = 80;
+
 /** Eintrag der Aktivität eines Agenten. Anzeigetexte werden gekürzt: Der Strom ist nicht vertrauenswürdig. */
 export function asActivity(value: unknown): ActivityEntry | null {
   if (!isRecord(value)) return null;
-  const { id, tool, target, state } = value;
+  const { id, tool, target, file, state } = value;
   if (
     typeof id !== 'string' ||
     typeof tool !== 'string' ||
@@ -71,10 +74,14 @@ export function asActivity(value: unknown): ActivityEntry | null {
   ) {
     return null;
   }
+  // Ein Dateiname hat keinen Ordneranteil: Alles bis zum letzten Schrägstrich wird verworfen.
+  const rawFile = typeof file === 'string' ? file : '';
+  const base = (rawFile.split(/[\\/]/).at(-1) ?? '').trim();
   return {
     id: id.slice(0, 100),
     tool: tool.slice(0, 40),
     target: typeof target === 'string' ? target.slice(0, 120) : null,
+    file: base ? base.slice(0, ACTIVITY_MAX_FILE) : null,
     state: state as ActivityEntry['state'],
   };
 }

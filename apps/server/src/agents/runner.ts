@@ -150,6 +150,7 @@ export class AgentRunner {
             id: event.id,
             tool: event.name,
             target: event.target,
+            file: event.file,
             state: 'running',
           };
           activity = upsertActivity(activity, entry);

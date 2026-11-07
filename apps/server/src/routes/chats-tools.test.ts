@@ -230,8 +230,8 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
     ]);
     const activity = events.filter((e) => e.event === 'activity').map((e) => e.data.entry);
     expect(activity).toEqual([
-      { id: 'tool-0', tool: 'get_exams', target: null, state: 'running' },
-      { id: 'tool-0', tool: 'get_exams', target: null, state: 'done' },
+      { id: 'tool-0', tool: 'get_exams', target: null, file: null, state: 'running' },
+      { id: 'tool-0', tool: 'get_exams', target: null, file: null, state: 'done' },
     ]);
     const final = last(events).data.message as {
       content: string;
@@ -255,7 +255,7 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
     const rows = harness.services.database.db.select().from(messages).all();
     const row = rows.find((entry) => entry.role === 'assistant');
     expect(JSON.parse(row?.activity ?? '[]')).toEqual([
-      { tool: 'get_exams', target: 'Beispiel-Chemie', state: 'done' },
+      { tool: 'get_exams', target: 'Beispiel-Chemie', file: null, state: 'done' },
     ]);
     // Nichts vom Ergebnis steht in der Datenbank, außer in der Antwort des Modells selbst.
     const everything = JSON.stringify(rows);
@@ -610,6 +610,7 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
         id: 'tool-0',
         tool: 'web_search',
         target: 'Photosynthese',
+        file: null,
         state: 'done',
       });
       expect(JSON.stringify(events)).not.toContain('Pflanzen nutzen Licht');
@@ -630,6 +631,7 @@ describe('Chats mit Werkzeugen (Stundenplan und Tests)', () => {
         id: 'tool-0',
         tool: 'web_search',
         target: 'Wetter Berlin',
+        file: null,
         state: 'error',
       });
       expect(lastToolData(requests[1])).toEqual({ error: 'unavailable' });

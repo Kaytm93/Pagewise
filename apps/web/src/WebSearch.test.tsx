@@ -63,7 +63,9 @@ describe('Chat: Hinweis zur Websuche', () => {
   it('zeigt die Websuche mit dem Suchbegriff, nie die Treffer', () => {
     render(
       <ToolNotes
-        steps={[{ id: 'tool-0', tool: 'web_search', target: 'Photosynthese', state: 'done' }]}
+        steps={[
+          { id: 'tool-0', tool: 'web_search', target: 'Photosynthese', file: null, state: 'done' },
+        ]}
       />,
     );
     expect(screen.getByText('Websuche: Photosynthese')).toBeTruthy();

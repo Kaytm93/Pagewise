@@ -160,6 +160,7 @@ describe('chatReducer', () => {
       id,
       tool: 'Write',
       target: `${id}.pdf`,
+      file: `${id}.pdf`,
       state,
     });
     const state = run([

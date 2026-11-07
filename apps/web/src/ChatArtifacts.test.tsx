@@ -62,7 +62,9 @@ describe('Chat: vom Modell angelegte Dateien', () => {
     server.addMessage(chat.id, 'user', 'Mach mir ein Arbeitsblatt.');
     server.addMessage(chat.id, 'assistant', 'Das Arbeitsblatt steht bereit.', {
       artifacts: [{ id: 'd1', kind: 'document', title: DOCUMENT.title, version: 1 }],
-      activity: [{ id: '0', tool: 'create_document', target: DOCUMENT.title, state: 'done' }],
+      activity: [
+        { id: '0', tool: 'create_document', target: DOCUMENT.title, file: null, state: 'done' },
+      ],
     });
     open(server, chatPath(subject.id, chat.id));
     expect(await screen.findByText('Das Arbeitsblatt steht bereit.')).toBeTruthy();

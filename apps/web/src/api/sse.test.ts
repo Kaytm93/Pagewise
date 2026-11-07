@@ -101,10 +101,35 @@ describe('parseStreamEvent', () => {
   });
 
   it('liest Schritte und Dateien eines Agenten und kürzt, was zu lang ist', () => {
-    const step = { id: 't1', tool: 'Write', target: 'bericht.pdf', state: 'running' };
+    const step = {
+      id: 't1',
+      tool: 'Write',
+      target: 'bericht.pdf',
+      file: 'bericht.pdf',
+      state: 'running',
+    };
     expect(parse('activity', { entry: step })).toEqual({ type: 'activity', entry: step });
     expect(parse('activity', { entry: { ...step, target: 'x'.repeat(500) } })).toMatchObject({
       entry: { target: 'x'.repeat(120) },
+    });
+    // Ein Dateiname behält keinen Ordneranteil und bleibt höchstens 80 Zeichen.
+    expect(
+      parse('activity', { entry: { ...step, file: 'ordner/unter/bericht.pdf' } }),
+    ).toMatchObject({
+      entry: { file: 'bericht.pdf' },
+    });
+    expect(parse('activity', { entry: { ...step, file: `${'x'.repeat(90)}.txt` } })).toMatchObject({
+      entry: { file: `${'x'.repeat(80)}.txt`.slice(0, 80) },
+    });
+    // Alte Absender ohne das Feld und Kaputtes: Datei entfällt, Eintrag bleibt lesbar.
+    expect(
+      parse('activity', { entry: { id: 't1', tool: 'Write', target: null, state: 'done' } }),
+    ).toEqual({
+      type: 'activity',
+      entry: { id: 't1', tool: 'Write', target: null, file: null, state: 'done' },
+    });
+    expect(parse('activity', { entry: { ...step, file: 42 } })).toMatchObject({
+      entry: { file: null },
     });
     expect(
       parse('snapshot', { assistantMessageId: 'm1', text: '', activity: [step] }),
@@ -122,7 +147,7 @@ describe('parseStreamEvent', () => {
     expect(done).toMatchObject({
       message: {
         engineProfileId: 'e1',
-        activity: [{ id: '0', tool: 'Write', target: null, state: 'done' }],
+        activity: [{ id: '0', tool: 'Write', target: null, file: null, state: 'done' }],
         assets: [asset],
       },
     });

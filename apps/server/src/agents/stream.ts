@@ -35,7 +35,7 @@ export type AgentEvent =
   | { type: 'break' }
   | { type: 'thinking' }
   /** Das Modell ruft ein Werkzeug auf. `target` ist ein kurzer Hinweis (Datei oder Befehl), keine Inhalte. */
-  | { type: 'tool'; id: string; name: string; target: string | null }
+  | { type: 'tool'; id: string; name: string; target: string | null; file: string | null }
   | { type: 'tool_result'; id: string; error: boolean }
   | { type: 'retry'; attempt: number; max: number }
   | {
@@ -103,9 +103,14 @@ const BY_TERMINAL: Readonly<Record<string, AgentErrorCode>> = {
 
 /** Kürzt und bereinigt einen Hinweis zur Anzeige: ohne Steuerzeichen, höchstens `max` Zeichen. */
 function shorten(text: string, max = 120): string {
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: Steuerzeichen werden hier bewusst entfernt.
-  const clean = text.replace(/[\u0000-\u001f\u007f]+/g, ' ').trim();
+  const clean = cleanText(text);
   return [...clean].length > max ? `${[...clean].slice(0, max - 1).join('')}…` : clean;
+}
+
+/** Entfernt Steuerzeichen und Randreste, ohne zu kürzen. */
+function cleanText(text: string): string {
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: Steuerzeichen werden hier bewusst entfernt.
+  return text.replace(/[\u0000-\u001f\u007f]+/g, ' ').trim();
 }
 
 /** Kurzer Hinweis, was ein Werkzeug anfasst: Datei bei Dateiwerkzeugen, der Anfang des Befehls bei Bash. */
@@ -120,6 +125,24 @@ export function toolTarget(name: string, input: unknown, workspace: string | nul
   if (name === 'Bash') return shorten(str(input.description) ?? str(input.command) ?? '') || null;
   const pattern = str(input.pattern);
   return pattern === null ? null : shorten(pattern);
+}
+
+/** Größter Name einer Datei im Ziel-Hinweis (Dateiname, nie Pfad). */
+const MAX_FILE = 80;
+
+/** Kürtzt einen reinen Dateinamen: erst der Name nach dem letzten Schrägstrich, dann höchstens 80 Zeichen. */
+function fileName(value: string): string | null {
+  const base = cleanText(value).split(/[\\/]/).at(-1)?.trim() ?? '';
+  if (!base) return null;
+  const chars = [...base];
+  return chars.length > MAX_FILE ? chars.slice(0, MAX_FILE).join('') : base;
+}
+
+/** Dateiname eines Dateiwerkzeugs, falls seine Eingabe eine Datei nennt — nicht den Suchordner `path`. */
+function toolFile(input: unknown): string | null {
+  if (!isRecord(input)) return null;
+  const path = str(input.file_path) ?? str(input.notebook_path);
+  return path === null ? null : fileName(path);
 }
 
 /**
@@ -214,6 +237,7 @@ export class AgentStreamParser {
           id,
           name,
           target: toolTarget(name, block.input, this.workspace),
+          file: toolFile(block.input),
         });
       }
     }

@@ -1023,7 +1023,13 @@ export class ChatService {
               calls += 1;
               generation.emit({
                 type: 'activity',
-                entry: { id, tool: call.name, target: null, state: 'running' },
+                entry: {
+                  id,
+                  tool: call.name,
+                  target: null,
+                  file: null,
+                  state: 'running',
+                },
               });
               const outcome = await registry.execute(call.name, call.arguments, toolContext);
               generation.emit({
@@ -1032,6 +1038,7 @@ export class ChatService {
                   id,
                   tool: call.name,
                   target: outcome.target,
+                  file: null,
                   state: outcome.ok ? 'done' : 'error',
                 },
               });

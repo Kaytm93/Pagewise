@@ -146,12 +146,24 @@ describe('Chat mit Agent: Antwort', () => {
 
     const generation = server.generation(chat.id);
     act(() =>
-      generation.activity({ id: 't1', tool: 'Write', target: 'uebersicht.pdf', state: 'running' }),
+      generation.activity({
+        id: 't1',
+        tool: 'Write',
+        target: 'uebersicht.pdf',
+        file: 'uebersicht.pdf',
+        state: 'running',
+      }),
     );
     expect(await screen.findByText('Der Agent arbeitet: uebersicht.pdf')).toBeTruthy();
     expect(screen.getByRole('list', { name: 'Schritte des Agenten' })).toBeTruthy();
     act(() =>
-      generation.activity({ id: 't1', tool: 'Write', target: 'uebersicht.pdf', state: 'done' }),
+      generation.activity({
+        id: 't1',
+        tool: 'Write',
+        target: 'uebersicht.pdf',
+        file: 'uebersicht.pdf',
+        state: 'done',
+      }),
     );
     act(() => {
       generation.delta('Die Übersicht ist fertig.');
@@ -192,7 +204,9 @@ describe('Chat mit Agent: Antwort', () => {
     server.addMessage(chat.id, 'user', 'Frage');
     server.addMessage(chat.id, 'assistant', 'Antwort mit Datei', {
       engineProfileId: chat.engineProfileId,
-      activity: [{ id: '0', tool: 'Bash', target: 'Tabelle berechnen', state: 'error' }],
+      activity: [
+        { id: '0', tool: 'Bash', target: 'Tabelle berechnen', file: null, state: 'error' },
+      ],
       assets: [{ id: 'asset-2', name: 'tabelle.xlsx', kind: 'xlsx', mime: 'x', size: 200 }],
     });
     open(server, chatPath(subject.id, chat.id));

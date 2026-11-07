@@ -6,7 +6,7 @@ import type { ActivityEntry } from '../../api/types';
 import { AgentActivity } from './AgentActivity';
 
 const steps: ActivityEntry[] = [
-  { id: 't1', tool: 'Write', target: 'uebersicht.pdf', state: 'done' },
+  { id: 't1', tool: 'Write', target: 'uebersicht.pdf', file: 'uebersicht.pdf', state: 'done' },
 ];
 
 describe('AgentActivity: Aufklapp-Zustand erkennbar (chat-render#06)', () => {
@@ -56,7 +56,7 @@ describe('AgentActivity: Aufklapp-Zustand erkennbar (chat-render#06)', () => {
 
     rerender(
       <AgentActivity
-        steps={[...steps, { id: 't2', tool: 'Bash', target: null, state: 'error' }]}
+        steps={[...steps, { id: 't2', tool: 'Bash', target: null, file: null, state: 'error' }]}
         live={false}
       />,
     );

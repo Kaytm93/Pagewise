@@ -121,7 +121,7 @@ describe('Chats mit Agent-CLI', () => {
         engineProfileId: string | null;
         model: string | null;
         errorCode: string | null;
-        activity: { tool: string; target: string | null; state: string }[];
+        activity: { tool: string; target: string | null; file: string | null; state: string }[];
         assets: { id: string; name: string; kind: string; size: number }[];
       }[];
     };
@@ -162,10 +162,20 @@ describe('Chats mit Agent-CLI', () => {
     const chatId = await newChat();
     const events = parseSse((await send(chatId, 'Mach das [[write:notiz.txt]]')).text);
     const activity = events.filter((e) => e.event === 'activity').map((e) => e.data.entry);
-    expect(activity[0]).toMatchObject({ tool: 'Write', target: 'notiz.txt', state: 'running' });
+    expect(activity[0]).toMatchObject({
+      tool: 'Write',
+      target: 'notiz.txt',
+      file: 'notiz.txt',
+      state: 'running',
+    });
     expect(activity.at(-1)).toMatchObject({ tool: 'Write', state: 'done' });
     expect((await detail(chatId)).messages[1]?.activity).toEqual([
-      expect.objectContaining({ tool: 'Write', target: 'notiz.txt', state: 'done' }),
+      expect.objectContaining({
+        tool: 'Write',
+        target: 'notiz.txt',
+        file: 'notiz.txt',
+        state: 'done',
+      }),
     ]);
   });
 

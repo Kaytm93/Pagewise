@@ -88,6 +88,7 @@ describe('Werkzeugzeile in „Lagen“', () => {
       id: 't1',
       tool: 'get_timetable',
       target: null,
+      file: null,
       state: 'running',
     };
     const { container, rerender } = render(<AgentActivity steps={[step]} live />);

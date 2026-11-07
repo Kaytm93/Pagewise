@@ -216,6 +216,8 @@ export interface ActivityEntry {
   /** Name des Werkzeugs, z. B. „Write“ oder „Bash“. */
   tool: string;
   target: string | null;
+  /** Reiner Dateiname, falls das Werkzeug eine Datei anfasst; sonst `null`. Nie ein Pfad, nie Inhalte. */
+  file: string | null;
   state: 'running' | 'done' | 'error';
 }
 

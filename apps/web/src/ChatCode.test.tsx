@@ -242,7 +242,9 @@ describe('Chat: Code, den das Modell ausgeführt hat', () => {
   it('zeigt am Werkzeugaufruf nur den Zweck, nie das Skript', async () => {
     const { server, subject, chat } = setup();
     server.addMessage(chat.id, 'assistant', 'Fertig.', {
-      activity: [{ id: '0', tool: 'run_python', target: 'Diagramm zeichnen', state: 'done' }],
+      activity: [
+        { id: '0', tool: 'run_python', target: 'Diagramm zeichnen', file: null, state: 'done' },
+      ],
     });
     open(server, chatPath(subject.id, chat.id));
     const notes = within(await screen.findByRole('list', { name: 'Abgefragte Daten' }));
@@ -252,7 +254,9 @@ describe('Chat: Code, den das Modell ausgeführt hat', () => {
   it('zeigt die Sichtprüfung als Hinweis an der Antwort', async () => {
     const { server, subject, chat } = setup();
     server.addMessage(chat.id, 'assistant', 'Fertig.', {
-      activity: [{ id: '0', tool: 'preview_file', target: 'folien.pptx', state: 'done' }],
+      activity: [
+        { id: '0', tool: 'preview_file', target: 'folien.pptx', file: null, state: 'done' },
+      ],
     });
     open(server, chatPath(subject.id, chat.id));
     const notes = within(await screen.findByRole('list', { name: 'Abgefragte Daten' }));
