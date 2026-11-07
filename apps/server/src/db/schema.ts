@@ -96,7 +96,7 @@ export const engineProfiles = sqliteTable(
   {
     id: id(),
     kind: text('kind', {
-      enum: ['claude-subscription', 'glm-coding-plan', 'anthropic-api'],
+      enum: ['claude-subscription', 'glm-coding-plan', 'anthropic-api', 'opencode', 'codex'],
     }).notNull(),
     name: text('name').notNull(),
     /** Modell (bei GLM für alle Stufen), `NULL`: Voreinstellung des Profils. */

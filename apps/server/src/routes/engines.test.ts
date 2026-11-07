@@ -46,7 +46,20 @@ describe('Agent-CLI: Zugänge und Erkennung', () => {
       'claude-subscription',
       'glm-coding-plan',
       'anthropic-api',
+      'opencode',
+      'codex',
     ]);
+    // Vorbereitete Arten (D-104): wie das Abo ohne Schlüssel, noch ohne Adapter.
+    expect(kinds.find((k) => k.kind === 'opencode')).toMatchObject({
+      needsToken: false,
+      defaultModel: null,
+      endpoint: null,
+    });
+    expect(kinds.find((k) => k.kind === 'codex')).toMatchObject({
+      needsToken: false,
+      defaultModel: null,
+      endpoint: null,
+    });
     expect(kinds.find((k) => k.kind === 'glm-coding-plan')).toMatchObject({
       needsToken: true,
       endpoint: 'https://api.z.ai/api/anthropic',

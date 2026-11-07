@@ -2,7 +2,7 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync }
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CliDetector, detectClaude, probeVersion } from './detect';
+import { CliDetector, detectClaude, detectCli, probeVersion } from './detect';
 
 let base: string;
 beforeEach(() => {
@@ -172,5 +172,81 @@ describe('Erkennung von claude', () => {
     });
     await Promise.all([detector.status(), detector.status(true)]);
     expect(calls).toBe(1);
+  });
+});
+
+describe('Erkennung von opencode und codex (D-104)', () => {
+  it.each(['opencode', 'codex'] as const)(
+    'findet „%s“ im Suchpfad anhand seines Namens',
+    async (name) => {
+      const file = script(join(base, 'bin'), 'echo "1.2.3"', name);
+      const status = await detectCli(name, {
+        searchPath: join(base, 'bin'),
+        extraDirs: [],
+      });
+      expect(status).toEqual({ state: 'ready', path: file, version: '1.2.3', skipped: [] });
+    },
+  );
+
+  it.each(['opencode', 'codex'] as const)(
+    'meldet für „%s“ „missing“, wenn es ihn nicht gibt — der Zugang ist dann nicht anbietbar',
+    async (name) => {
+      mkdirSync(join(base, 'leer'), { recursive: true });
+      // Nur das jeweils andere Programm liegt im Pfad; das gesuchte darf nicht gefunden werden.
+      const other = name === 'opencode' ? 'codex' : 'opencode';
+      script(join(base, 'leer'), 'echo "1.0.0"', other);
+      expect(await detectCli(name, { searchPath: join(base, 'leer'), extraDirs: [] })).toEqual({
+        state: 'missing',
+        skipped: [],
+      });
+    },
+  );
+
+  it.each(['opencode', 'codex'] as const)(
+    'sucht „%s“ auch im üblichen Installationsordner außerhalb des Suchpfads',
+    async (name) => {
+      const dir = join(base, 'home', name === 'opencode' ? '.opencode' : '.codex', 'bin');
+      const hidden = script(dir, good('0.6.9'), name);
+      const status = await detectCli(name, {
+        searchPath: join(base, 'leer'),
+        extraDirs: [dir],
+      });
+      expect(status).toMatchObject({ state: 'ready', path: hidden, version: '0.6.9' });
+    },
+  );
+
+  it.each(['opencode', 'codex'] as const)(
+    'melat für „%s“ „broken“, wenn Kandidaten da sind, aber keiner läuft',
+    async (name) => {
+      const one = script(join(base, 'a'), broken, name);
+      const status = await detectCli(name, {
+        searchPath: join(base, 'a'),
+        extraDirs: [],
+      });
+      expect(status).toEqual({ state: 'broken', skipped: [{ path: one, reason: 'failed' }] });
+    },
+  );
+
+  it('sucht mit CliDetector die gewählte CLI und nicht immer claude', async () => {
+    script(join(base, 'a'), broken, 'claude');
+    const found = script(join(base, 'a'), good('2.0.0'), 'opencode');
+    const detector = new CliDetector(
+      { searchPath: join(base, 'a'), extraDirs: [] },
+      60_000,
+      Date.now,
+      'opencode',
+    );
+    await expect(detector.status()).resolves.toMatchObject({
+      state: 'ready',
+      path: found,
+      version: '2.0.0',
+    });
+  });
+
+  it('bleibt bei claude ohne viertes Argument der Vorgabe treu', async () => {
+    const found = script(join(base, 'a'), good('3.1.4'));
+    script(join(base, 'a'), broken, 'opencode');
+    const detector = new CliDetector({ searchPath: join(base, 'a'), extraDirs: [] });
+    await expect(detector.status()).resolves.toMatchObject({ state: 'ready', path: found });
   });
 });
