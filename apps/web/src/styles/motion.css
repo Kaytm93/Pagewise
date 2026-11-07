@@ -391,8 +391,8 @@
 .mo-press {
   transition:
     transform var(--t-med) var(--spring-snap),
-    background-color var(--t-fast) ease,
-    color var(--t-fast) ease;
+    background-color var(--t-color) ease,
+    color var(--t-color) ease;
 }
 
 .mo-press:active {
@@ -404,7 +404,7 @@
   .mo-nudge {
     transition:
       transform var(--t-med) var(--spring-snap),
-      background-color var(--t-fast) ease;
+      background-color var(--t-color) ease;
   }
 
   .mo-nudge:hover {
