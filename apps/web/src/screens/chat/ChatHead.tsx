@@ -1,4 +1,11 @@
-import { ArrowLeft, Pencil, SlidersHorizontal, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  PanelRightClose,
+  PanelRightOpen,
+  Pencil,
+  SlidersHorizontal,
+  Trash2,
+} from 'lucide-react';
 import { messages as m } from '../../i18n';
 import type { Route } from '../../router';
 import { Link } from '../../ui/Link';
@@ -12,6 +19,9 @@ interface Props {
   modelAriaLabel: string;
   modelSource: string | null;
   onModel: () => void;
+  /** Datei-Panel auf-/zuklappen (D-106); dieselbe Stelle wie in den anderen Richtungen. */
+  onFilesToggle: () => void;
+  filesOpen: boolean;
   onRename: () => void;
   onDelete: () => void;
 }
@@ -29,6 +39,8 @@ export function ChatHead({
   modelAriaLabel,
   modelSource,
   onModel,
+  onFilesToggle,
+  filesOpen,
   onRename,
   onDelete,
 }: Props) {
@@ -44,6 +56,19 @@ export function ChatHead({
           <span className="min-w-0 truncate">{backName}</span>
         </Link>
         <div className="-mr-2 flex shrink-0">
+          <button
+            type="button"
+            onClick={onFilesToggle}
+            aria-label={filesOpen ? m.chat.files.close : m.chat.files.open}
+            aria-expanded={filesOpen}
+            className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+          >
+            {filesOpen ? (
+              <PanelRightClose aria-hidden="true" className="size-4" />
+            ) : (
+              <PanelRightOpen aria-hidden="true" className="size-4" />
+            )}
+          </button>
           <button
             type="button"
             onClick={onRename}

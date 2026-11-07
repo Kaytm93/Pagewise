@@ -823,6 +823,20 @@ export const de = {
       loading: 'Datei wird geladen …',
       failed: 'Die Datei konnte nicht geladen werden.',
     },
+    files: {
+      open: 'Dateien anzeigen',
+      close: 'Dateien verbergen',
+      panel: 'Dateien des Chats',
+      tabs: 'Dateien des Chats',
+      tabFiles: 'Dateien',
+      tabPreview: 'Vorschau',
+      loading: 'Dateien werden geladen …',
+      loadFailed: 'Die Dateien konnten nicht geladen werden.',
+      empty: 'Noch keine Dateien in diesem Chat.',
+      truncatedHint: 'Es werden die ersten 200 Dateien gezeigt.',
+      download: '{name} herunterladen ({size})',
+      previewTabComing: 'Die Vorschau ist noch nicht verfügbar.',
+    },
     modelDialog: {
       chatTitle: 'Modell für diesen Chat',
       chatLead:

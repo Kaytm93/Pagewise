@@ -499,6 +499,25 @@ export interface NoteInput {
 
 export type NotePatch = Partial<Pick<Note, 'title' | 'markdown' | 'pinned' | 'tags' | 'groupId'>>;
 
+// --- Datei-Panel (D-106, Phase 1d) ------------------------------------------------------------------
+
+/** Eine Datei im Arbeitsordner eines Chats: nur Name, Größe, Art und Änderungszeit, nie Inhalte. */
+export interface ChatFileEntry {
+  name: string;
+  /** Größe in Bytes. */
+  size: number;
+  /** Endung ohne Punkt, kleinbuchstaben; leer, wenn die Datei keine hat. */
+  extension: string;
+  /** Letzte Änderung in Millisekunden. */
+  mtimeMs: number;
+}
+
+/** Antwort von `GET /api/chats/:id/files`: die gekürzte Liste und ob es mehr gibt, als gezeigt wird. */
+export interface ChatFileList {
+  files: ChatFileEntry[];
+  truncated: boolean;
+}
+
 // --- Agent-CLI (Phase 1e) -----------------------------------------------------------------------
 
 export type EngineKind = 'claude-subscription' | 'glm-coding-plan' | 'anthropic-api';

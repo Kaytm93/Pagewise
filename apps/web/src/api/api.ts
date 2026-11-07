@@ -5,6 +5,7 @@ import type {
   AvailableModel,
   Chat,
   ChatDetail,
+  ChatFileList,
   CliStatus,
   CodeRunDetail,
   CodeStatus,
@@ -175,6 +176,8 @@ export function createApi(client: ApiClient) {
     ) => client.request<Chat>('PATCH', `/api/chats/${id}`, patch),
     deleteChat: (id: string) => client.request<void>('DELETE', `/api/chats/${id}`),
     stopChat: (id: string) => client.request<void>('POST', `/api/chats/${id}/stop`),
+    /** Flache Dateiliste des Arbeitsordners eines Chats (D-106); `truncated`: es gibt mehr, als gezeigt wird. */
+    chatFiles: (id: string) => client.request<ChatFileList>('GET', `/api/chats/${id}/files`),
     setSubjectModel: (subjectId: string, model: Selection | null) =>
       client.request<Subject>('PUT', `/api/subjects/${subjectId}/model`, { model }),
     setSubjectEngine: (subjectId: string, engineProfileId: string | null) =>

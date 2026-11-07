@@ -1,5 +1,20 @@
-import { ArrowLeft, Pencil, SlidersHorizontal, Trash2 } from 'lucide-react';
-import { type FormEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  ArrowLeft,
+  PanelRightClose,
+  PanelRightOpen,
+  Pencil,
+  SlidersHorizontal,
+  Trash2,
+} from 'lucide-react';
+import {
+  type FormEvent,
+  type PointerEvent as ReactPointerEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { ApiError } from '../../api/client';
 import { format, messages as m } from '../../i18n';
 import { navigate } from '../../router';
@@ -21,6 +36,7 @@ import { autoFixRequest, mayContainBlocks } from './autofix';
 import { ChatHead } from './ChatHead';
 import { Composer } from './Composer';
 import { takeQueuedSend } from './default-chat';
+import { FilePanel } from './FilePanel';
 import { MessageItem } from './MessageItem';
 import { ModelDialog } from './ModelDialog';
 import { describeEngine, describeSelection, effectiveModel, effectiveTarget } from './models';
@@ -29,6 +45,25 @@ import { useChat } from './useChat';
 const toSettings = { name: 'settings' } as const;
 
 type Dialog = 'rename' | 'delete' | 'model' | null;
+
+/** Ab dieser Fensterbreite darf das Panel aufklappen; darunter bleibt es eingeklappt (D-106). */
+const PANEL_MIN_WIDTH = 900;
+/** Breite des aufgeklappten Panels, Standard und untere Grenze des Resizers (in Pixeln). */
+const PANEL_DEFAULT_WIDTH = 320;
+const PANEL_MIN_COLUMN = 240;
+/** Obere Grenze des Resizers: mehr als die Hälfte des Fensters bekommt das Panel nie. */
+const PANEL_SHARE_MAX = 0.5;
+
+/** Sitzungsgemerkter Zustand des Panels (auf-/zugeklappt, Breite) im Speicher dieser Seite. */
+const panelState = { open: null as boolean | null, width: PANEL_DEFAULT_WIDTH };
+
+/** Ist das Fenster breit genug für das aufgeklappte Panel? Fehlt matchMedia (Tests): nein. */
+function panelFits(): boolean {
+  return (
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia(`(min-width: ${PANEL_MIN_WIDTH}px)`).matches
+  );
+}
 
 /** Wie nah am Ende die Ansicht sein muss, damit sie neuen Text mitverfolgt (in Pixeln). */
 const FOLLOW_DISTANCE = 160;
@@ -119,9 +154,59 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
   const [dialog, setDialog] = useState<Dialog>(null);
   const [announcement, setAnnouncement] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
+  // Datei-Panel (D-106): eingeklappt, solange das Fenster zu schmal ist (< 900 px), sonst wie zuletzt.
+  const [panelOpen, setPanelOpen] = useState(() =>
+    panelState.open === null ? panelFits() : panelState.open,
+  );
+  const [panelWidth, setPanelWidth] = useState(panelState.width);
+  panelState.open = panelOpen;
+  panelState.width = panelWidth;
+  const panelArea = useRef<HTMLDivElement | null>(null);
   const pinned = useRef(true);
   const previousLive = useRef<string | null>(null);
   const loadedChatId = state.phase === 'ready' ? (state.chat?.id ?? null) : null;
+
+  // Wird das Fenster schmaler als die Grenze, klappt das Panel von selbst zu (und bleibt zu, bis es
+  // auf einem breiten Fenster wieder von Hand oder über die Voreinstellung aufgeht). Ohne
+  // matchMedia (Tests) oder ohne addEventListener (gedeckelter Ersatz) bleibt der Zustand, wie er ist.
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia(`(max-width: ${PANEL_MIN_WIDTH - 1}px)`);
+    if (typeof query.addEventListener !== 'function') return;
+    const onChange = () => {
+      if (query.matches) setPanelOpen(false);
+    };
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+
+  // Die Breite des Panels geht nie als Inline-Stil ins Markup (CSP, Regel 5), sondern als CSS-Variable
+  // über das CSSOM; die Spaltenbreite selbst steht in styles/screens.css (lg-chat-mit-panel).
+  useLayoutEffect(() => {
+    const area = panelArea.current;
+    if (!area) return;
+    if (panelOpen) area.style.setProperty('--panel-w', `${Math.round(panelWidth)}px`);
+    else area.style.removeProperty('--panel-w');
+  }, [panelOpen, panelWidth]);
+
+  /** Ziehen am Resizer: Differenz zur Fensterkante, an Grenzen geklemmt, ohne Inline-Stil im Markup. */
+  const startPanelResize = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    const area = panelArea.current;
+    if (!area || event.button !== 0) return;
+    event.preventDefault();
+    const rightEdge = area.getBoundingClientRect().right;
+    const move = (moveEvent: PointerEvent) => {
+      const next = Math.round(rightEdge - moveEvent.clientX);
+      const capped = Math.round(window.innerWidth * PANEL_SHARE_MAX);
+      setPanelWidth(Math.max(PANEL_MIN_COLUMN, Math.min(capped, next)));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  }, []);
 
   // Eine Frage von der Startseite wird gesendet, sobald der Chat geladen ist (einmal, dann ist sie weg).
   // biome-ignore lint/correctness/useExhaustiveDependencies: nur beim Laden eines Chats; `chat.send` ist stabil genug
@@ -279,149 +364,204 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
     <Sheet flush>
       {/* „Atelier“: das Fachmotiv am Rand, neben der Lesespalte (reine Zier, nur bei breitem Fenster). */}
       {atelier && subject.kind !== 'default' && <ChatEdgeMotif kind={subject.icon} />}
-      {lagen ? (
-        <ChatHead
-          title={title}
-          backTo={backTo}
-          backName={group?.name ?? subject.name}
-          modelLabel={modelLabel}
-          modelAriaLabel={modelAriaLabel}
-          modelSource={modelSource}
-          onModel={() => setDialog('model')}
-          onRename={() => setDialog('rename')}
-          onDelete={() => setDialog('delete')}
-        />
-      ) : (
-        <header
-          className={`border-b border-line-warm px-4 py-3 sm:px-8 md:pl-10${atelier ? ' at-chat-head' : ''}`}
-        >
-          <Link to={backTo} className="mo-press inline-flex min-h-11 items-center gap-1.5 text-sm">
-            <ArrowLeft aria-hidden="true" className="size-4" />
-            {group?.name ?? subject.name}
-          </Link>
-          <div className="flex items-start justify-between gap-2">
-            <h1
-              id="chat-title"
-              className="min-w-0 py-1.5 font-heading text-[21px] break-words tracking-[-0.2px]"
-            >
-              {title}
-            </h1>
-            <div className="-mr-2 flex shrink-0">
-              <button
-                type="button"
-                onClick={() => setDialog('rename')}
-                aria-label={m.chat.rename}
-                className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
-              >
-                <Pencil aria-hidden="true" className="size-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setDialog('delete')}
-                aria-label={m.chat.delete}
-                className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
-              >
-                <Trash2 aria-hidden="true" className="size-4" />
-              </button>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setDialog('model')}
-            aria-label={modelAriaLabel}
-            className="-ml-2.5 inline-flex min-h-11 max-w-full items-center gap-2 rounded-control px-2.5 text-sm text-ink-secondary hover:bg-paper hover:text-ink"
-          >
-            <SlidersHorizontal aria-hidden="true" className="size-4 shrink-0" />
-            <span className="truncate">{modelLabel}</span>
-            {modelSource && (
-              <span className="hidden shrink-0 text-meta text-ink-muted sm:inline">
-                {modelSource}
-              </span>
-            )}
-          </button>
-          {atelier && <ChatStatus phase={phase} />}
-        </header>
-      )}
-
-      <section
-        aria-label={m.chat.messages}
-        className="mx-auto w-full max-w-[700px] flex-1 space-y-6 px-4 py-8 sm:px-7"
-      >
-        {messages.length === 0 ? (
-          <div className="rounded-box bg-paper p-4">
-            <p className="font-medium">{m.chat.emptyTitle}</p>
-            <p className="mt-1 text-sm text-ink-secondary">{m.chat.emptyHint}</p>
-          </div>
-        ) : (
-          messages.map((message) => (
-            <MessageItem
-              key={message.id}
-              message={message}
-              live={message.id === state.liveId}
-              thinking={state.thinking}
-              canRetry={canRetry && message === last}
-              onRetry={() => void chat.retry()}
-              engineKind={
-                engines.profiles.find((profile) => profile.id === message.engineProfileId)?.kind ??
-                null
-              }
-              assetUrl={api.assetUrl}
-              onRetryViaApi={apiModel ? () => void chat.retry(true) : undefined}
-              saveNote={{ subjectId, save: (messageId) => api.noteFromMessage(chatId, messageId) }}
-            />
-          ))
-        )}
-        <p role="status" className="sr-only">
-          {announcement}
-        </p>
-      </section>
-
       <div
-        ref={watchComposer}
-        onInput={chat.dismissProblem}
-        className={`sticky bottom-[var(--kb,0px)] z-10 rounded-b-[12px] border-t border-line-warm bg-sheet px-4 pt-3.5 pb-3.5 sm:px-8${atelier ? ' at-chat-dock' : ''}`}
+        ref={panelArea}
+        className={panelOpen ? 'lg-chat-mit-panel' : 'lg-chat-panel-bereich'}
+        data-panel={panelOpen ? 'open' : 'closed'}
       >
-        <div className="mx-auto w-full max-w-[700px]">
-          {chat.reconnecting && (
-            <p role="status" className="mb-2 text-sm text-ink-secondary">
-              {m.chat.reconnecting}
-            </p>
+        <div className="flex min-w-0 flex-1 flex-col">
+          {lagen ? (
+            <ChatHead
+              title={title}
+              backTo={backTo}
+              backName={group?.name ?? subject.name}
+              modelLabel={modelLabel}
+              modelAriaLabel={modelAriaLabel}
+              modelSource={modelSource}
+              onModel={() => setDialog('model')}
+              onFilesToggle={() => setPanelOpen((open) => !open)}
+              filesOpen={panelOpen}
+              onRename={() => setDialog('rename')}
+              onDelete={() => setDialog('delete')}
+            />
+          ) : (
+            <header
+              className={`border-b border-line-warm px-4 py-3 sm:px-8 md:pl-10${atelier ? ' at-chat-head' : ''}`}
+            >
+              <Link
+                to={backTo}
+                className="mo-press inline-flex min-h-11 items-center gap-1.5 text-sm"
+              >
+                <ArrowLeft aria-hidden="true" className="size-4" />
+                {group?.name ?? subject.name}
+              </Link>
+              <div className="flex items-start justify-between gap-2">
+                <h1
+                  id="chat-title"
+                  className="min-w-0 py-1.5 font-heading text-[21px] break-words tracking-[-0.2px]"
+                >
+                  {title}
+                </h1>
+                <div className="-mr-2 flex shrink-0 items-center">
+                  <button
+                    type="button"
+                    onClick={() => setPanelOpen((open) => !open)}
+                    aria-label={panelOpen ? m.chat.files.close : m.chat.files.open}
+                    aria-expanded={panelOpen}
+                    className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                  >
+                    {panelOpen ? (
+                      <PanelRightClose aria-hidden="true" className="size-4" />
+                    ) : (
+                      <PanelRightOpen aria-hidden="true" className="size-4" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDialog('rename')}
+                    aria-label={m.chat.rename}
+                    className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                  >
+                    <Pencil aria-hidden="true" className="size-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDialog('delete')}
+                    aria-label={m.chat.delete}
+                    className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                  >
+                    <Trash2 aria-hidden="true" className="size-4" />
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDialog('model')}
+                aria-label={modelAriaLabel}
+                className="-ml-2.5 inline-flex min-h-11 max-w-full items-center gap-2 rounded-control px-2.5 text-sm text-ink-secondary hover:bg-paper hover:text-ink"
+              >
+                <SlidersHorizontal aria-hidden="true" className="size-4 shrink-0" />
+                <span className="truncate">{modelLabel}</span>
+                {modelSource && (
+                  <span className="hidden shrink-0 text-meta text-ink-muted sm:inline">
+                    {modelSource}
+                  </span>
+                )}
+              </button>
+              {atelier && <ChatStatus phase={phase} />}
+            </header>
           )}
-          {chat.problem && (
-            <div className="mb-2 flex flex-wrap items-center gap-x-3">
-              <FieldError>{problemText(chat.problem)}</FieldError>
-              {chat.problem === 'network' && (
-                <Button variant="ghost" onClick={() => void chat.reconnect()}>
-                  {m.chat.reconnect}
-                </Button>
+
+          <section
+            aria-label={m.chat.messages}
+            className="mx-auto w-full max-w-[700px] flex-1 space-y-6 px-4 py-8 sm:px-7"
+          >
+            {messages.length === 0 ? (
+              <div className="rounded-box bg-paper p-4">
+                <p className="font-medium">{m.chat.emptyTitle}</p>
+                <p className="mt-1 text-sm text-ink-secondary">{m.chat.emptyHint}</p>
+              </div>
+            ) : (
+              messages.map((message) => (
+                <MessageItem
+                  key={message.id}
+                  message={message}
+                  live={message.id === state.liveId}
+                  thinking={state.thinking}
+                  canRetry={canRetry && message === last}
+                  onRetry={() => void chat.retry()}
+                  engineKind={
+                    engines.profiles.find((profile) => profile.id === message.engineProfileId)
+                      ?.kind ?? null
+                  }
+                  assetUrl={api.assetUrl}
+                  onRetryViaApi={apiModel ? () => void chat.retry(true) : undefined}
+                  saveNote={{
+                    subjectId,
+                    save: (messageId) => api.noteFromMessage(chatId, messageId),
+                  }}
+                />
+              ))
+            )}
+            <p role="status" className="sr-only">
+              {announcement}
+            </p>
+          </section>
+
+          <div
+            ref={watchComposer}
+            onInput={chat.dismissProblem}
+            className={`sticky bottom-[var(--kb,0px)] z-10 rounded-b-[12px] border-t border-line-warm bg-sheet px-4 pt-3.5 pb-3.5 sm:px-8${atelier ? ' at-chat-dock' : ''}`}
+          >
+            <div className="mx-auto w-full max-w-[700px]">
+              {chat.reconnecting && (
+                <p role="status" className="mb-2 text-sm text-ink-secondary">
+                  {m.chat.reconnecting}
+                </p>
+              )}
+              {chat.problem && (
+                <div className="mb-2 flex flex-wrap items-center gap-x-3">
+                  <FieldError>{problemText(chat.problem)}</FieldError>
+                  {chat.problem === 'network' && (
+                    <Button variant="ghost" onClick={() => void chat.reconnect()}>
+                      {m.chat.reconnect}
+                    </Button>
+                  )}
+                </div>
+              )}
+              {actionError && <FieldError>{actionError}</FieldError>}
+              {!model && (
+                <div className="mb-3 rounded-box bg-paper px-4 py-3 text-sm">
+                  <p className="font-medium">{m.chat.noModelTitle}</p>
+                  <p className="mt-1 text-ink-secondary">{m.chat.noModelHint}</p>
+                  <Link to={toSettings} className="mt-1 inline-flex min-h-11 items-center">
+                    {m.chat.openSettings}
+                  </Link>
+                </div>
+              )}
+              <Composer
+                chatId={chatId}
+                disabled={!model}
+                running={chat.running || current.generating}
+                stopping={chat.stopping}
+                onSend={send}
+                onStop={() => void chat.stop()}
+                subjectColor={subject.color}
+              />
+              {lagen && (
+                <p className="lg-chat-hint">
+                  {modelLabel} · {m.chat.verifyAnswers}
+                </p>
               )}
             </div>
-          )}
-          {actionError && <FieldError>{actionError}</FieldError>}
-          {!model && (
-            <div className="mb-3 rounded-box bg-paper px-4 py-3 text-sm">
-              <p className="font-medium">{m.chat.noModelTitle}</p>
-              <p className="mt-1 text-ink-secondary">{m.chat.noModelHint}</p>
-              <Link to={toSettings} className="mt-1 inline-flex min-h-11 items-center">
-                {m.chat.openSettings}
-              </Link>
-            </div>
-          )}
-          <Composer
-            chatId={chatId}
-            disabled={!model}
-            running={chat.running || current.generating}
-            stopping={chat.stopping}
-            onSend={send}
-            onStop={() => void chat.stop()}
-            subjectColor={subject.color}
-          />
-          {lagen && (
-            <p className="lg-chat-hint">
-              {modelLabel} · {m.chat.verifyAnswers}
-            </p>
-          )}
+          </div>
         </div>
+
+        {panelOpen && (
+          <>
+            {/* Resizer zwischen Chat-Spalte und Panel: zustandslos gezogen, nur ein Grabber über CSS.
+                Biome wünscht hier ein hr — der Ziehgriff ist aber eine Bedienfläche mit Zeiger-Ereignis
+                und eigenem zugänglichen Namen, darum bleibt das div mit Separator-Rolle. */}
+            {/* biome-ignore lint/a11y/useSemanticElements: der Resizer trägt Zeiger-Ereignisse und Fokus-Verhalten, kein Trennstrich */}
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label={m.chat.files.panel}
+              onPointerDown={startPanelResize}
+              className="lg-chat-panel-resizer hidden shrink-0 cursor-col-resize md:block"
+            >
+              <span aria-hidden="true" className="lg-chat-panel-griff" />
+            </div>
+            <aside
+              aria-label={m.chat.files.panel}
+              className="hidden min-h-0 shrink-0 flex-col overflow-hidden border-l border-line-warm md:flex lg-chat-panel"
+            >
+              <div className="min-h-0 flex-1 pt-3">
+                <FilePanel chatId={chatId} />
+              </div>
+            </aside>
+          </>
+        )}
       </div>
 
       {dialog === 'rename' && (
