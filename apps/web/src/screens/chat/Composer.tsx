@@ -250,7 +250,7 @@ export function Composer({
           className={
             lagen
               ? 'lg-composer-input min-w-0 flex-1 resize-none text-[1.0313rem] leading-snug text-ink placeholder:text-ink-muted disabled:opacity-60'
-              : 'max-h-48 min-h-11 min-w-0 flex-1 resize-none rounded-[16px] border border-control-edge bg-sheet px-4 py-2.5 text-[1.0313rem] leading-snug text-ink shadow-[0_1px_2px_rgba(var(--shadow),0.08)] transition-shadow duration-[var(--t-med)] placeholder:text-ink-muted focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none disabled:opacity-60'
+              : 'max-h-48 min-h-11 min-w-0 flex-1 resize-none rounded-[16px] border border-control-edge bg-sheet px-4 py-2.5 text-[1.0313rem] leading-snug text-ink shadow-[0_1px_2px_rgba(var(--shadow),0.08)] transition-shadow duration-[var(--t-color)] placeholder:text-ink-muted focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none disabled:opacity-60'
           }
         />
         {running ? (
