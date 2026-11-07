@@ -155,7 +155,9 @@ export const MessageItem = memo(function MessageItem({
         <p className="flex items-center gap-2 text-ink-muted">
           <span aria-hidden="true" className="size-2 animate-pulse rounded-pill bg-ink-muted" />
           {byAgent && working
-            ? format(m.chat.agent.workingOn, { step: working.target ?? working.tool })
+            ? format(m.chat.agent.workingOn, {
+                step: working.file ?? working.target ?? working.tool,
+              })
             : thinking
               ? m.chat.thinking
               : byAgent
