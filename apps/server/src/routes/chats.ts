@@ -1,8 +1,11 @@
+import { lstatSync, readdirSync } from 'node:fs';
+import { extname, join } from 'node:path';
 import type { Context, MiddlewareHandler } from 'hono';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
 import { MAX_ASSET_BYTES, MAX_ATTACHMENTS } from '../agents/assets';
+import type { WorkspaceManager } from '../agents/workspace';
 import type { Generation, GenerationEvent } from '../chats/generation';
 import type {
   ChatFailure,
@@ -70,6 +73,58 @@ function failure(c: Context, result: ChatFailure): Response {
 function idParam(c: Context): string | null {
   const parsed = idField.safeParse(c.req.param('id'));
   return parsed.success ? parsed.data : null;
+}
+
+/** Höchstzahl der Dateien in der Liste; gibt es mehr, bleibt die Antwort gekürzt (`truncated: true`). */
+export const CHAT_FILES_LIMIT = 200;
+
+interface ChatFileView {
+  name: string;
+  size: number;
+  /** Endung ohne Punkt, kleinbuchstaben; leer, wenn die Datei keine hat. */
+  extension: string;
+  mtimeMs: number;
+}
+
+/**
+ * Flache Dateiliste des Arbeitsordners eines Chats (D-106): nur gewöhnliche Dateien im Hauptordner,
+ * keine Unterordner, keine Verknüpfungen, keine versteckten Einträge (`.run.py`, `.home`, `.tmp`,
+ * `.mpl` und alles andere mit führendem Punkt). `null`: der Ordner fehlt oder liegt außerhalb.
+ */
+function listChatFiles(workspaces: WorkspaceManager, chatId: string): ChatFileView[] | null {
+  // `pathFor` wirft bei ungültigen IDs, bevor irgendein Pfad entsteht; die ID ist oben schon UUID-geprüft.
+  let root: string;
+  try {
+    root = workspaces.pathFor(chatId, null);
+  } catch {
+    return null;
+  }
+  let entries: string[];
+  try {
+    entries = readdirSync(root);
+  } catch {
+    return null;
+  }
+  const files: ChatFileView[] = [];
+  for (const name of entries.sort()) {
+    if (files.length >= CHAT_FILES_LIMIT) break;
+    if (name.startsWith('.')) continue;
+    let stat: ReturnType<typeof lstatSync>;
+    try {
+      stat = lstatSync(join(root, name));
+    } catch {
+      continue;
+    }
+    // Keine Verknüpfungen, keine Unterordner: nur gewöhnliche Dateien kommen auf die Liste.
+    if (stat.isSymbolicLink() || !stat.isFile()) continue;
+    files.push({
+      name,
+      size: stat.size,
+      extension: extname(name).slice(1).toLowerCase(),
+      mtimeMs: stat.mtimeMs,
+    });
+  }
+  return files;
 }
 
 /**
@@ -205,7 +260,7 @@ function streamGeneration(c: Context, generation: Generation, start: StartedGene
  * Chats, Nachrichten und Antworten. Alles hängt an einem Fach (und optional an einer Untergruppe): Chats
  * bleiben in ihrem Fach. Der Text der Nachrichten wird nie in Logs oder Fehlern wiederholt.
  */
-export function chatRoutes(chats: ChatService): Hono<AppEnv> {
+export function chatRoutes(chats: ChatService, workspaces?: WorkspaceManager): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
 
   const small = limitBody(16 * 1024);
@@ -249,6 +304,17 @@ export function chatRoutes(chats: ChatService): Hono<AppEnv> {
   app.get('/chats/:id', (c) => {
     const id = idParam(c);
     return id ? respond(c, chats.get(id)) : c.json({ error: 'not_found' }, 404);
+  });
+
+  // Dateien des Chat-Arbeitsordners: nur Name, Größe, Art, Zeit — nie Inhalte.
+  app.get('/chats/:id/files', (c) => {
+    const id = idParam(c);
+    if (!id) return c.json({ error: 'not_found' }, 404);
+    if (!chats.get(id).ok) return c.json({ error: 'not_found' }, 404);
+    if (!workspaces) return c.json({ error: 'not_found' }, 404);
+    const files = listChatFiles(workspaces, id);
+    if (!files) return c.json({ error: 'not_found' }, 404);
+    return c.json({ files, truncated: files.length >= CHAT_FILES_LIMIT });
   });
 
   app.patch('/chats/:id', async (c) => {
