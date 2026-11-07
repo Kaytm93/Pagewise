@@ -97,7 +97,7 @@ export function NoteList({ subjectId, groupId }: { subjectId: string; groupId: s
   const searching = query.trim() !== '';
 
   return (
-    <section className="mt-6" aria-label={m.notes.notes}>
+    <section id="hefte-eintraege-panel" className="mt-6" aria-label={m.notes.notes}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <label className="relative min-w-0 flex-1 basis-56">
           <span className="sr-only">{m.notes.searchLabel}</span>
@@ -112,7 +112,7 @@ export function NoteList({ subjectId, groupId }: { subjectId: string; groupId: s
             placeholder={m.notes.searchPlaceholder}
             maxLength={100}
             autoComplete="off"
-            className="lg-field min-h-11 w-full rounded-control border border-control-edge bg-sheet pr-3 pl-9 text-base text-ink transition-shadow duration-[var(--t-med)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none"
+            className="lg-field min-h-11 w-full rounded-control border border-control-edge bg-sheet pr-3 pl-9 text-base text-ink transition-shadow duration-[var(--t-color)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none"
           />
         </label>
         <Button variant="primary" busy={creating} onClick={() => void create()}>

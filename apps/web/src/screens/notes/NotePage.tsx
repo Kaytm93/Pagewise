@@ -359,11 +359,14 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
             {e.fromChat}
           </Link>
         )}
-        <div className="ml-auto flex items-center">
+        {/* Passt die Gruppe nicht in die Zeile (iPhone hoch: gut 300 px für gut 370), bricht sie um, statt dass die
+            Knöpfe schrumpfen: Anheften und Löschen waren dort 31 px breit, „Schreiben“ lief in „Vorschau“ (B-08).
+            Der Umschalter und die drei Knöpfe bleiben je für sich ganz und rücken als Block in die nächste Zeile. */}
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-y-1">
           {/* Ansichts-Umschalter nur unter 1024 px (M4-T007, notes#13): er gehört zum Kopf und darf
               keine eigene Zeile vor dem Textfeld belegen — auf iPhone quer füllte er mit der
               Einfügen-Leiste den ersten Bildschirm, das Textfeld begann erst bei y≈594 von 390 px. */}
-          <div className="mr-1 lg:hidden">
+          <div className="mr-1 max-w-full shrink-0 lg:hidden">
             <Segmented
               legend={e.editorView}
               options={[
@@ -374,29 +377,31 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
               onChange={setView}
             />
           </div>
-          <Button variant="ghost" onClick={() => void save()} disabled={saving === 'saving'}>
-            {e.save}
-          </Button>
-          <button
-            type="button"
-            onClick={() => setPinned((value) => !value)}
-            aria-label={pinned ? e.unpin : e.pin}
-            className="mo-press inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
-          >
-            {pinned ? (
-              <PinOff aria-hidden="true" className="size-4" />
-            ) : (
-              <Pin aria-hidden="true" className="size-4" />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeleting(true)}
-            aria-label={e.delete}
-            className="mo-press inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
-          >
-            <Trash2 aria-hidden="true" className="size-4" />
-          </button>
+          <div className="flex shrink-0 items-center">
+            <Button variant="ghost" onClick={() => void save()} disabled={saving === 'saving'}>
+              {e.save}
+            </Button>
+            <button
+              type="button"
+              onClick={() => setPinned((value) => !value)}
+              aria-label={pinned ? e.unpin : e.pin}
+              className="mo-press inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+            >
+              {pinned ? (
+                <PinOff aria-hidden="true" className="size-4" />
+              ) : (
+                <Pin aria-hidden="true" className="size-4" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleting(true)}
+              aria-label={e.delete}
+              className="mo-press inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+            >
+              <Trash2 aria-hidden="true" className="size-4" />
+            </button>
+          </div>
         </div>
       </div>
       {actionError && <FieldError>{actionError}</FieldError>}
@@ -437,7 +442,7 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
               aria-describedby={
                 stichwoerterZuViel ? 'note-tags-hint note-tags-limit' : 'note-tags-hint'
               }
-              className="lg-field mt-1.5 min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink transition-shadow duration-[var(--t-med)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none aria-invalid:border-danger aria-invalid:focus:border-danger aria-invalid:focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--danger)_22%,transparent)]"
+              className="lg-field mt-1.5 min-h-11 w-full rounded-control border border-control-edge bg-sheet px-3 text-base text-ink transition-shadow duration-[var(--t-color)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none aria-invalid:border-danger aria-invalid:focus:border-danger aria-invalid:focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--danger)_22%,transparent)]"
             />
             <p id="note-tags-hint" className="mt-1 text-sm text-ink-muted">
               {e.tagsHint}
@@ -482,7 +487,7 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
             maxLength={MAX_CHARACTERS}
             spellCheck
             aria-describedby="note-text-hint"
-            className="lg-field min-h-[24rem] w-full resize-y rounded-box border border-control-edge bg-sheet p-4 font-mono text-base leading-relaxed text-ink transition-shadow duration-[var(--t-med)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none lg:min-h-[32rem]"
+            className="lg-field min-h-[24rem] w-full resize-y rounded-box border border-control-edge bg-sheet p-4 font-mono text-base leading-relaxed text-ink transition-shadow duration-[var(--t-color)] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] focus:outline-none lg:min-h-[32rem]"
           />
           <p id="note-text-hint" className="mt-1 text-sm text-ink-muted">
             {e.textHint}

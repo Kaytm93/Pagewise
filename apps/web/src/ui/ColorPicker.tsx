@@ -23,7 +23,7 @@ export function ColorPicker({
   return (
     <fieldset>
       <legend className="text-sm font-medium text-ink">{legend}</legend>
-      <div className="mt-1.5 flex flex-wrap gap-2">
+      <div className="mt-1.5 grid grid-cols-4 gap-2">
         {Array.from({ length: SUBJECT_COLORS }, (_, color) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: feste Reihe aus acht Farben, die Nummer ist die Farbe
           <div key={color} className="relative" data-subj={color}>

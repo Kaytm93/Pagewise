@@ -505,3 +505,34 @@ describe('raum.css: Textfelder sind eingelassen mit Bodenlinie (D-089, B-20)', (
     }
   });
 });
+
+describe('raum.css: Seitenleiste ist breit genug für „Mathematik“ (B-04, D-094)', () => {
+  /** Breite aus `--sidebar-w` der Regel auf :root[data-design='raum'], mit oder ohne die iPad-Bedingung. */
+  const sidebarWidth = (media: string | null): number | null => {
+    const hit = all.find(
+      (rule) =>
+        rule.selector === ":root[data-design='raum']" &&
+        (media === null ? rule.medias.length === 0 : rule.medias.join(' ') === media) &&
+        '--sidebar-w' in declarationsOf(rule.body),
+    );
+    const value = hit ? declarationsOf(hit.body)['--sidebar-w'] : undefined;
+    return value ? Number.parseFloat(value) : null;
+  };
+
+  it('hält 240 px ab 1100 px Breite wie bisher', () => {
+    expect(sidebarWidth(null)).toBe(240);
+  });
+
+  it('macht die Leiste auf dem iPad hochkant und in kleinen Fenstern (768 bis 1099 px) 236 statt 216 px breit', () => {
+    expect(sidebarWidth('@media (min-width: 768px) and (max-width: 1099.98px)')).toBe(236);
+  });
+
+  it('lässt der Namensspalte dort mindestens 4 px mehr, als „Mathematik“ braucht', () => {
+    // Gemessen im Browser (Chromium und WebKit, Raum): bei 216 px Leiste hat die Namensspalte 73 px, die Leiste
+    // nimmt also 143 px für Pfeilspalte, Symbol, Punkt und Abstände. „Mathematik“ ist 88,4 px breit.
+    const festeAnteile = 216 - 73;
+    const mathematik = 88.4;
+    const breite = sidebarWidth('@media (min-width: 768px) and (max-width: 1099.98px)') ?? 0;
+    expect(breite - festeAnteile).toBeGreaterThanOrEqual(mathematik + 4);
+  });
+});

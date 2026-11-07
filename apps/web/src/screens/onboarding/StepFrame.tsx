@@ -28,7 +28,7 @@ export function StepFrame({
                 <span
                   // biome-ignore lint/suspicious/noArrayIndexKey: feste, nie umsortierte Leiste
                   key={index}
-                  className={`h-1 flex-1 rounded-pill transition-colors duration-[var(--t-slow)] ${index < step ? 'bg-primary' : 'bg-line'}`}
+                  className={`h-1 flex-1 rounded-pill ${index < step ? 'bg-primary' : 'bg-line'}`}
                 />
               ))}
             </div>

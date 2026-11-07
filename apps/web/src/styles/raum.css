@@ -33,7 +33,7 @@
    Reihenfolge (außen hell, außen dunkel, innen 1, innen 2), damit `transition: box-shadow` zwischen flach,
    gehoben und eingelassen weich überblendet. Die Tiefe skaliert über --raum-d (1 = normal). */
 :root[data-design="raum"] {
-  /* Maße der Hülle: Seitenleiste 240 px, auf dem iPad (768–1099 px) 216 px; der Blattrand bleibt */
+  /* Maße der Hülle: Seitenleiste 240 px, auf dem iPad (768–1099 px) 236 px (D-094: mit 216 px kürzte sie „Mathematik“); der Blattrand bleibt */
   --sidebar-w: 240px;
   --sheet-edge: 52px;
   /* Schatten-Tönung (Knopf des Primärknopfs, Ränder der Fensterflächen) */
@@ -91,7 +91,7 @@
 
 @media (min-width: 768px) and (max-width: 1099.98px) {
   :root[data-design="raum"] {
-    --sidebar-w: 216px;
+    --sidebar-w: 236px;
   }
 }
 

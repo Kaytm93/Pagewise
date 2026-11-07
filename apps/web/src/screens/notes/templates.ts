@@ -1,6 +1,9 @@
+import { messages as m } from '../../i18n';
+
 /**
  * Vorlagen für „Einfügen“ im Editor: kleine, gültige Beispiele für jede Blockart. Sie enthalten nur Technik und
  * erfundene Beispieldaten, keine Schulinhalte. Ein Test prüft, dass die App jede Vorlage zeichnen kann.
+ * Die Platzhaltersätze der vier Hinweise stehen in `i18n/de.ts` (`notes.templateText`).
  */
 export type TemplateKey =
   | 'formula'
@@ -18,10 +21,10 @@ export const TEMPLATES: Record<TemplateKey, string> = {
     '```graph\n{"functions":[{"expr":"x^2-4","label":"f(x)"}],"x":[-4,4],"y":[-6,6],"points":[{"x":2,"y":0,"label":"N"}]}\n```',
   mol: '```mol\nH2O\n```',
   abc: '```abc\nX:1\nM:4/4\nL:1/4\nK:C\nCDEF|GABc|\n```',
-  merksatz: '> [!merksatz]\n> Hier steht der Merksatz.',
-  beispiel: '> [!beispiel]\n> Hier steht ein Beispiel.',
-  aufgabe: '> [!aufgabe]\n> Hier steht die Aufgabe.',
-  definition: '> [!definition]\n> Hier steht die Definition.',
+  merksatz: `> [!merksatz]\n> ${m.notes.templateText.merksatz}`,
+  beispiel: `> [!beispiel]\n> ${m.notes.templateText.beispiel}`,
+  aufgabe: `> [!aufgabe]\n> ${m.notes.templateText.aufgabe}`,
+  definition: `> [!definition]\n> ${m.notes.templateText.definition}`,
 };
 
 export const TEMPLATE_KEYS = Object.keys(TEMPLATES) as TemplateKey[];

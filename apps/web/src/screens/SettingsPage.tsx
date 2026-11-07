@@ -88,8 +88,12 @@ function DesignChoice({ segClassName }: { segClassName?: string }) {
   );
 }
 
-const EFFECTS: { value: FxPreference; label: string }[] = [
-  { value: 'system', label: m.settings.appearance.effects.system },
+const EFFECTS: { value: FxPreference; label: string; short?: string }[] = [
+  {
+    value: 'system',
+    label: m.settings.appearance.effects.system,
+    short: m.settings.appearance.effects.systemShort,
+  },
   { value: 'full', label: m.settings.appearance.effects.full },
   { value: 'reduced', label: m.settings.appearance.effects.reduced },
   { value: 'off', label: m.settings.appearance.effects.off },

@@ -10,7 +10,8 @@
 /*
  * Maße der Hülle (Mockup A): Breite der Seitenleiste (`--sidebar-w`, AppShell.tsx) und Blattrand ab „md“
  * (`--sheet-edge`, Sheet.tsx). Die anderen Richtungen setzen ihre eigenen Werte in raum.css und atelier.css.
- * iPad hochkant und kleine Fenster (768–1023 px) bekommen eine schmalere Leiste und einen engeren Rand.
+ * iPad hochkant und kleine Fenster (768–1023 px) bekommen einen engeren Rand; die Leiste ist dort 278 px breit
+ * (B-04, D-094: mit 248 px kürzte sie „Mathematik“ und „Geschichte“, die Namensspalte brauchte 88 px, hatte 63).
  */
 :root[data-design="lagen"] {
   --sidebar-w: 276px;
@@ -19,7 +20,7 @@
 
 @media (min-width: 768px) and (max-width: 1023.98px) {
   :root[data-design="lagen"] {
-    --sidebar-w: 248px;
+    --sidebar-w: 278px;
     --sheet-edge: 34px;
   }
 }
@@ -358,9 +359,8 @@
       0 22px 34px -22px rgba(var(--shadow), calc(var(--shadow-a) * 1.2));
     transform: rotate(calc(var(--m) * -0.6deg));
     transform-origin: 50% 0;
-    transition:
-      transform var(--t-slow) var(--spring),
-      box-shadow var(--t-med) ease;
+    /* Der Zettel ist eine Fläche (ein <div>): nur transform, kein Schattenübergang (D-098). */
+    transition: transform var(--t-slow) var(--spring);
   }
 
   @media (hover: hover) {
@@ -408,8 +408,8 @@
     position: relative;
     transition:
       transform var(--t-med) var(--spring-snap),
-      background-color var(--t-fast) ease,
-      box-shadow var(--t-med) ease;
+      background-color var(--t-color) ease,
+      box-shadow var(--t-color) ease;
   }
 
   /* Balken in der Fachfarbe, der beim Darüberfahren oder Fokussieren aufklappt */
@@ -451,9 +451,9 @@
   .lg-nav-item {
     position: relative;
     transition:
-      background-color var(--t-fast) ease,
+      background-color var(--t-color) ease,
       transform var(--t-med) var(--spring-snap),
-      color var(--t-fast) ease;
+      color var(--t-color) ease;
   }
 
   @media (hover: hover) {
@@ -528,6 +528,28 @@
       inset 0 1px 0 var(--rim);
     transform: translateX(calc(var(--idx, 0) * 100%));
     transition: transform var(--t-slow) var(--spring);
+  }
+
+  /*
+   * Kurzform der Beschriftung (Segmented.tsx, `short`, B-05): Die Stücke sind gleich breit, und auf einem
+   * Telefon ist ein Stück nur etwa 75 px breit; „Automatisch“ lief dort in „Voll“. Bis 480 px (alle iPhones
+   * hoch, Entscheidung „etwa 430 px“; gemessen: bei 431 bis 445 px liefe die lange Form noch um bis zu 0,6 px
+   * aus dem Stück, bei 480 px bleiben 5,5 px Reserve) steht deshalb die Kurzform („Auto“), darüber die lange.
+   * Allein CSS, keine Messung im Skript. Nur Optionen mit `short` tragen die beiden Hüllen; der Name für
+   * Screenreader bleibt der volle Text (aria-label).
+   */
+  .lg-seg-short {
+    display: none;
+  }
+
+  @media (max-width: 480px) {
+    .lg-seg-long {
+      display: none;
+    }
+
+    .lg-seg-short {
+      display: inline;
+    }
   }
 
   /* ===== Schaltflächen ===== */
@@ -1076,8 +1098,8 @@ details[open] > summary .mo-arrow {
     0 1px 2px rgba(var(--shadow), 0.08),
     inset 0 1px 0 rgba(var(--shadow), 0.03);
   transition:
-    border-color var(--t-fast) var(--ease),
-    box-shadow var(--t-med) var(--ease);
+    border-color var(--t-color) var(--ease),
+    box-shadow var(--t-color) var(--ease);
 }
 
 :root[data-design="lagen"] .lg-composer-field > button {
