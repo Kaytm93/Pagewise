@@ -30,6 +30,10 @@ import type {
   ProviderInput,
   ProviderPatch,
   ProviderPreset,
+  ScanImportInput,
+  ScanImportResult,
+  ScanModel,
+  ScanResult,
   Selection,
   SessionInfo,
   Subject,
@@ -201,6 +205,27 @@ export function createApi(client: ApiClient) {
     updateTimetableEntry: (id: string, patch: Partial<TimetableInput>) =>
       client.request<TimetableEntry>('PATCH', `/api/timetable/${id}`, patch),
     deleteTimetableEntry: (id: string) => client.request<void>('DELETE', `/api/timetable/${id}`),
+    /** Modelle, die einen Stundenplan aus einem Bild lesen dürfen (D-107). */
+    async timetableScanModels(): Promise<ScanModel[]> {
+      return (await client.request<{ models: ScanModel[] }>('GET', '/api/timetable-scan/models'))
+        .models;
+    },
+    /** Bild erkennen lassen. Das Bild reist als Formular und wird auf dem Server nicht gespeichert. */
+    scanTimetable: (
+      image: Blob,
+      providerId: string,
+      model: string,
+      signal?: AbortSignal,
+    ): Promise<ScanResult> => {
+      const form = new FormData();
+      form.append('providerId', providerId);
+      form.append('model', model);
+      form.append('image', image, 'stundenplan.jpg');
+      return client.request<ScanResult>('POST', '/api/timetable-scan', form, signal);
+    },
+    /** Geprüfte Vorschläge übernehmen; erst hier entstehen Stunden und neue Fächer. */
+    importTimetableScan: (input: ScanImportInput) =>
+      client.request<ScanImportResult>('POST', '/api/timetable-scan/import', input),
     /** Legt fest, welche Wochenart die Woche mit diesem Datum hat, oder hebt es mit `null` auf. */
     async setWeekAnchor(
       anchor: { date: string; week: 'a' | 'b' } | null,

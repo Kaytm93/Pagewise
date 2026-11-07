@@ -602,6 +602,26 @@ describe('ProviderClient.streamChat', () => {
     ]);
   });
 
+  it('liest eine vollständige Antwort auch ohne Content-Type, wenn stream: false gesetzt ist', async () => {
+    const { fetch, calls } = fakeFetch(
+      () =>
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: 'ganze Antwort' }, finish_reason: 'stop' }],
+          }),
+          { status: 200 },
+        ),
+    );
+    const events = await drain(
+      new ProviderClient({ fetch }).streamChat(target, { ...request, stream: false }),
+    );
+    expect(calls[0]?.body).toMatchObject({ stream: false });
+    expect(events).toEqual([
+      { type: 'delta', text: 'ganze Antwort' },
+      { type: 'finish', reason: 'stop' },
+    ]);
+  });
+
   it('meldet HTTP-Fehler vor dem ersten Text mit Code', async () => {
     const { fetch } = fakeFetch(() => new Response('{"error":"zu viele"}', { status: 429 }));
     await expect(

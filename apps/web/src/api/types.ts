@@ -396,6 +396,55 @@ export interface TimetableData {
   weekAnchor: WeekAnchor | null;
 }
 
+// --- Stundenplan aus einem Bild (D-107) -------------------------------------------------------------
+
+/** Ein Modell, das Bilder lesen darf und dessen Anbieter Bilder empfangen darf. */
+export interface ScanModel {
+  providerId: string;
+  providerName: string;
+  model: string;
+  label: string;
+  /** Kostenloses Modell: der Anbieter kann Eingaben protokollieren. */
+  free: boolean;
+}
+
+/** Eine vom Modell vorgeschlagene Stunde. Die Vorschau schreibt noch nichts in die Datenbank. */
+export interface ScanProposal {
+  weekday: number;
+  startTime: string;
+  endTime: string;
+  /** Erkannter Fachname, `null` wenn nichts lesbar war. */
+  subject: string | null;
+  room: string | null;
+  note: string | null;
+  week: WeekKind;
+}
+
+export interface ScanProposalView extends ScanProposal {
+  /** `null`: das Fach wird beim Übernehmen neu angelegt oder bleibt leer. */
+  subjectId: string | null;
+  subjectState: 'existing' | 'new' | 'none';
+}
+
+export interface ScanResult {
+  proposals: ScanProposalView[];
+  /** Fachnamen, die beim Übernehmen neu angelegt würden. */
+  newSubjects: string[];
+  /** Vom Modell gelieferte, aber unbrauchbare oder doppelte Angaben. */
+  skipped: number;
+}
+
+export interface ScanImportInput {
+  entries: ScanProposal[];
+  createSubjects: boolean;
+  replaceExisting: boolean;
+}
+
+export interface ScanImportResult {
+  created: number;
+  subjectsCreated: number;
+}
+
 /** Ein Testeintrag (Schulaufgabe, Test, Ex, Referat …). `date` ist `YYYY-MM-DD`. */
 export interface Exam {
   id: string;

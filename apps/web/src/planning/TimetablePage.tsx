@@ -1,4 +1,4 @@
-import { Plus, TriangleAlert } from 'lucide-react';
+import { Plus, ScanLine, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import type { TimetableEntry } from '../api/types';
 import { format, messages as m } from '../i18n';
@@ -12,6 +12,7 @@ import { appliesInWeek, localDate, weekdayOf, weekKindOf } from './dates';
 import { LessonDialog } from './LessonDialog';
 import { usePlanner } from './PlannerProvider';
 import { currentLesson, overlapping } from './schedule';
+import { TimetableScanDialog } from './TimetableScanDialog';
 
 type Filter = 'all' | 'a' | 'b';
 type Dialog = { entry?: TimetableEntry; weekday?: number } | null;
@@ -162,6 +163,7 @@ export function TimetablePage() {
   const [filter, setFilter] = useState<Filter>(currentWeek ?? 'all');
   const [selectedDay, setSelectedDay] = useState(todayWeekday <= 5 ? todayWeekday : 1);
   const [dialog, setDialog] = useState<Dialog>(null);
+  const [scanOpen, setScanOpen] = useState(false);
 
   const days = [
     1,
@@ -199,10 +201,14 @@ export function TimetablePage() {
         </p>
       ) : (
         <>
-          <div className="mo-rise mo-i-2 mt-6">
+          <div className="mo-rise mo-i-2 mt-6 flex flex-wrap gap-2">
             <Button variant="primary" onClick={() => setDialog({ weekday: selectedDay })}>
               <Plus aria-hidden="true" className="size-4" />
               {t.add}
+            </Button>
+            <Button variant="secondary" onClick={() => setScanOpen(true)}>
+              <ScanLine aria-hidden="true" className="size-4" />
+              {m.planning.timetableScan.open}
             </Button>
           </div>
 
@@ -287,6 +293,7 @@ export function TimetablePage() {
           onClose={() => setDialog(null)}
         />
       )}
+      {scanOpen && <TimetableScanDialog onClose={() => setScanOpen(false)} />}
     </Sheet>
   );
 }

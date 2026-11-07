@@ -109,8 +109,8 @@ export class ApiClient {
     return new ApiError(code, response.status, details);
   }
 
-  async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const response = await this.send(method, path, 'application/json', body);
+  async request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+    const response = await this.send(method, path, 'application/json', body, signal);
     if (response.status === 204) return undefined as T;
     if (!response.ok) throw await this.failure(response);
 

@@ -33,6 +33,7 @@ import { type DataPaths, ensureDataLayout } from './storage/data-paths';
 import { DataEraser } from './storage/eraser';
 import { FileSecretStore, type SecretStore } from './storage/secret-store';
 import { LocalStorage, type Storage } from './storage/storage';
+import { TimetableScanService } from './timetable-scan/service';
 import { createToolRegistry, type ToolRegistry } from './tools';
 import { ToolSettings } from './tools/settings';
 
@@ -77,6 +78,8 @@ export interface Services {
   /** Sichtprüfung von Dateien mit LibreOffice und poppler in der Sandbox (D-080). */
   preview: PreviewService;
   chats: ChatService;
+  /** Stundenplan aus einem Bild erkennen (D-107): Vision-Modelle, Vorschau, Übernahme. */
+  timetableScan: TimetableScanService;
   eraser: DataEraser;
   close(): void;
 }
@@ -211,6 +214,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     workspaces,
   });
   const cleanup = new AgentCleanup(database.db, chats, assets, workspaces);
+  const timetableScan = new TimetableScanService(database.db, providers, catalog);
   // Das eingebaute Fach „Standard“ (fachunabhängiger Chat) gehört immer dazu.
   ensureDefaultSubject(database.db);
   return {
@@ -239,6 +243,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     code,
     preview,
     chats,
+    timetableScan,
     eraser: new DataEraser({ database, paths, secrets, chats }),
     close: () => database.close(),
   };

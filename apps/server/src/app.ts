@@ -20,6 +20,7 @@ import { profileRoutes } from './routes/profile';
 import { promptRoutes } from './routes/prompts';
 import { providerRoutes } from './routes/providers';
 import { subjectRoutes } from './routes/subjects';
+import { timetableScanRoutes } from './routes/timetable-scan';
 import { toolSettingsRoutes } from './routes/tool-settings';
 import { webSearchRoutes } from './routes/web-search';
 import type { Services } from './services';
@@ -89,6 +90,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
       '/api/assets',
       '/api/artifacts',
       '/api/timetable',
+      '/api/timetable-scan',
       '/api/exams',
       '/api/notes',
       '/api/tool-settings',
@@ -110,6 +112,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     app.route('/api', assetRoutes(services.assets));
     app.route('/api', artifactRoutes(services.artifacts));
     app.route('/api', plannerRoutes(db));
+    app.route('/api', timetableScanRoutes(services.timetableScan));
     app.route('/api', noteRoutes(db, 'Hefteintrag'));
     app.route('/api', toolSettingsRoutes(services.toolSettings));
     app.route(

@@ -91,6 +91,33 @@ export function createTimetableEntry(
   return { ok: true, value: toView(row) };
 }
 
+/**
+ * Übernimmt mehrere Stunden auf einmal (Erkennung aus einem Bild, D-107). Erst werden alle
+ * geprüft, dann läuft alles in einer Transaktion: bei `replace` wird der Plan vorher geleert.
+ * Scheitert eine Prüfung, bleibt der bisherige Stand unverändert.
+ */
+export function importTimetableEntries(
+  db: Db,
+  inputs: TimetableInput[],
+  options: { replace: boolean },
+): PlannerResult<number> {
+  for (const input of inputs) {
+    if (!validTimes(input)) return { ok: false, error: 'invalid_time' };
+    if (input.subjectId !== null && !isPlannerSubject(db, input.subjectId)) {
+      return { ok: false, error: 'invalid_subject' };
+    }
+  }
+  const total = db.select({ n: count() }).from(timetableEntries).get()?.n ?? 0;
+  const next = options.replace ? inputs.length : total + inputs.length;
+  if (next > MAX_TIMETABLE_ENTRIES) return { ok: false, error: 'too_many' };
+
+  db.transaction((tx) => {
+    if (options.replace) tx.delete(timetableEntries).run();
+    if (inputs.length > 0) tx.insert(timetableEntries).values(inputs).run();
+  });
+  return { ok: true, value: inputs.length };
+}
+
 export function updateTimetableEntry(
   db: Db,
   id: string,

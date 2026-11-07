@@ -52,6 +52,11 @@ export interface ChatRequest {
   maxTokens?: number;
   /** Werkzeuge, die das Modell aufrufen darf. Ohne Angabe gibt es keine. */
   tools?: ToolSpec[];
+  /**
+   * Ohne Angabe wird gestreamt. Für eine einmalige, vollständige Antwort (z. B. Bilderkennung,
+   * D-107) kann der Aufrufer `false` setzen: manche Modelle können Bilder lesen, aber nicht streamen.
+   */
+  stream?: boolean;
 }
 
 export type ChatEvent =
@@ -343,7 +348,7 @@ export class ProviderClient {
     const body: Record<string, unknown> = {
       model: request.model,
       messages: request.messages.map(wireMessage),
-      stream: true,
+      stream: request.stream ?? true,
     };
     if (request.temperature !== undefined) body.temperature = request.temperature;
     if (request.maxTokens !== undefined) body.max_tokens = request.maxTokens;
@@ -366,7 +371,8 @@ export class ProviderClient {
 
       const type = response.headers.get('content-type') ?? '';
       if (!response.body) throw new ProviderError('invalid_response');
-      if (type.includes('application/json')) {
+      // Bei `stream: false` ist die Antwort immer JSON, auch wenn der Content-Type fehlt.
+      if (request.stream === false || type.includes('application/json')) {
         yield* this.wholeReply(await this.readJson(response));
         return;
       }
