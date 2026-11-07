@@ -9,3 +9,5 @@ matplotlib
 numpy
 Pillow
 lxml
+pandas
+scipy
