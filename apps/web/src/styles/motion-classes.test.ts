@@ -14,6 +14,9 @@ import { describe, expect, it } from 'vitest';
  * Onboarding-Balken, und der Quelltext-Scan der Bestandsaufnahme sah sie nicht, weil er Klassenkonstanten
  * außerhalb von `className=` übersah (B-34, Beispiel `inputClass` in ui/Field.tsx).
  *
+ * Grenze: Er prüft nur die Dauer, nicht, ob das Element ein Bedienelement ist; ob eine Fläche einen Farb- oder
+ * Schattenwechsel haben darf, entscheidet die Regel oben und die Durchsicht der Befunde.
+ *
  * Dieser Test liest darum den ganzen Text jeder `.ts`-, `.tsx`- und `.css`-Datei unter apps/web/src (ohne
  * Tests) und prüft zwei Dinge:
  *   1. Tailwind-Klassen, wo auch immer sie im Text stehen: Jede Zeichenkette (zwischen `'`, `"` oder
