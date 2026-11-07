@@ -31,7 +31,8 @@
 /* ===== Tokens =====
    Die Schatten bestehen aus den Raum-Farben in tokens.css. Jede Liste hat genau vier Schichten in fester
    Reihenfolge (außen hell, außen dunkel, innen 1, innen 2), damit `transition: box-shadow` zwischen flach,
-   gehoben und eingelassen weich überblendet. Die Tiefe skaliert über --raum-d (1 = normal). */
+   gehoben und eingelassen weich überblendet. Die Tiefe skaliert über --raum-d (1 = normal); die
+   eingelassenen Flächen zusätzlich über --raum-di (D-101), damit Kays „etwas schwächer“ gilt. */
 :root[data-design="raum"] {
   /* Maße der Hülle: Seitenleiste 240 px, auf dem iPad (768–1099 px) 236 px (D-094: mit 216 px kürzte sie „Mathematik“); der Blattrand bleibt */
   --sidebar-w: 240px;
@@ -47,16 +48,19 @@
   --raum-surf: var(--raum-raised);
 
   --raum-d: 1;
+  /* Innentiefe der eingelassenen Flächen (D-101): auch --raum-di wirkt auf Versatz und Unschärfe
+     innen, damit die Mulde etwas weicher bleibt, ohne die Hülle zu verlieren */
+  --raum-di: 0.7;
   --raum-o1: calc(3px * var(--raum-d));
   --raum-b1: calc(7px * var(--raum-d));
   --raum-o2: calc(6px * var(--raum-d));
   --raum-b2: calc(15px * var(--raum-d));
   --raum-o3: calc(12px * var(--raum-d));
   --raum-b3: calc(30px * var(--raum-d));
-  --raum-i1: calc(2px * var(--raum-d));
-  --raum-ib1: calc(5px * var(--raum-d));
-  --raum-i2: calc(4px * var(--raum-d));
-  --raum-ib2: calc(10px * var(--raum-d));
+  --raum-i1: calc(2px * var(--raum-d) * var(--raum-di));
+  --raum-ib1: calc(5px * var(--raum-d) * var(--raum-di));
+  --raum-i2: calc(4px * var(--raum-d) * var(--raum-di));
+  --raum-ib2: calc(10px * var(--raum-d) * var(--raum-di));
 
   /* Feine Kante innen: hell oben links, dunkel unten rechts (zwei Schichten) */
   --raum-rim: inset 1px 1px 0 0 var(--raum-rim-hi), inset -1px -1px 0 0 var(--raum-rim-lo);
