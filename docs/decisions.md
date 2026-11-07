@@ -993,3 +993,42 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Wirkung:** Reiterleiste und Felder tragen im berechneten Stil (Chromium, hell und dunkel geprüft) den kleineren Versatz und die feinere Unschärfe; der übrige Bildschirm (Blatt, Karten, Schriften, Linien) ist unverändert. „Reduziert“ und „Aus“ sind nicht betroffen (Tokens, keine Bewegung).
 - **Prüfung:** `styles/raum-tokens.test.ts` (Struktur: vier Schichten, Reihenfolge, Tönung), `styles/raum.test.ts` (Felder, Composer, Reiter, Bodenlinien, Kontrastumrandung) grün; im Echtbrowser (Chromium) hell und dunkel kontrolliert.
 - **Bezug:** D-073, D-089, Kays Wunsch vom 7. November 2026.
+
+## D-102 Neue Grenzen für die Code-Ausführung (7. November 2026)
+
+- **Anlass:** Phase H „Volle Harness + smarte UI“ (Plan vom 7. November 2026): Hefteinträge mit Daten-Analyse und Kurvenfits brauchen längere Läufe, mehr Speicher und einen größeren Arbeitsordner, als die Grenzen aus D-079 zulassen (60 s, 1 GiB RAM, 200 MiB Arbeitsordner, 5.000 Einträge, 6 Läufe je Antwort, 200 je Chat). Kay hat den Plan-Vorschlag am 7. November 2026 abgenommen.
+- **Entscheidung:** Neue Grenzen in `CODE_LIMITS` (`apps/server/src/code/executor.ts`): 180 s je Lauf, 2 GiB Speicher, 1 GiB Arbeitsordner, 20.000 Einträge, 8 Läufe je Antwort, 300 je Chat, weiterhin 2 Läufe gleichzeitig, Skript weiter 24.000 Zeichen, Ausgabegrenzen unverändert.
+- **Warum weiterhin sicher (fail-closed bleibt):** Die Sandbox sperrt weiter Netz, Benutzerverzeichnis und Datenverzeichnis, der Selbsttest bleibt Pflicht; die Wächter (`run-limited.ts`) prüfen weiter alle 250 ms und beenden den Prozess bei Überschreitung. 180 s × 2 GiB × 2 gleichzeitig bleibt unter der Belastung eines Schülernotebooks; ein Skript kann wie bisher nur Rechenzeit und Platz bis zu den Grenzen verbrauchen. Kein Paket kommt zur Laufzeit hinein (weiterhin Hash-Lock, siehe D-103).
+- **Umsetzung:** Phase H, Task A-03 (Tests in derselben Änderung); die Dokumentation der Grenzen in `docs/tools.md` folgt mit A-06/D-01.
+- **Bezug:** D-079 (Code-Ausführung), D-103 (Pakete), `docs/security.md` „Bekannte Grenzen“.
+
+## D-103 pandas und scipy in die Sandbox-Paketliste (7. November 2026)
+
+- **Anlass:** Phase H: Daten-Analyse (Tabellen, Statistik, Kurvenfits) ist ohne pandas und scipy nicht sinnvoll möglich; die bisherigen 9 Pakete (D-079) decken Dokumente, Diagramme und Bildbearbeitung, aber keine Datenarbeit. Kay hat beide Pakete am 7. November 2026 freigegeben (Lock wächst um etwa 120–180 MB Festplatte).
+- **Entscheidung:** `requirements.in` bekommt `pandas` und `scipy` (ohne Versionspin), der Lock wird über `pnpm python:lock` mit Hash-Prüfsummen neu erzeugt; `CHECK_IMPORTS` in `lock.ts` wird erweitert. Keine weiteren Pakete (auch symengine nicht).
+- **Warum weiterhin sicher:** Das Hash-Lock-Verfahren ändert sich nicht: `--require-hashes --only-binary=:all: --no-deps`, feste Prüfsummen, keine Installation zur Laufzeit, Python-Umgebung bleibt Allowlist. pandas/scipy lesen zur Laufzeit nur Dateien im Arbeitsordner; scipy öffnet teils zusätzliche Systemdateien — der Selbsttest (Probe) muss mit dem neuen Lock bestehen, bevor das Werkzeug angeboten wird (fail closed); fällt er aus, bleibt das Werkzeug weg. Sollte scipy einen neuen Systempfad brauchen, wird dieser nur nach Messung und eigener D-Entscheidung in `SYSTEM_READ` aufgenommen, nie blind.
+- **Umsetzung:** Phase H, Task A-02 (Lock) und A-05 (Selbsttest + echter pandas/matplotlib-Lauf im Test-Chat, nur auf Kays Maschine).
+- **Bezug:** D-079 (Hash-Lock), D-102 (Grenzen).
+
+## D-104 Weitere Agent-Engines: OpenCode zuerst, dann Codex (7. November 2026)
+
+- **Anlass:** Phase H: Der Agent-Modus (D-039/D-040, Phase 1e) unterstützt nur Claude Code. Weitere CLI-Engines sollen vorbereitet werden, ohne die Sicherheitslage zu ändern. Kay hat am 7. November 2026 entschieden: OpenCode zuerst, dann Codex.
+- **Entscheidung:** `EngineKind` um `'opencode' | 'codex'` erweitern; Erkennung wie beim Vorbild `soffice`: CLI im PATH gefunden (Versionsprobe), sonst Zugang nicht anbietbar. Jede Engine läuft nur hinter dem bestehenden Selbsttest und den Pflicht-Flags des jeweiligen CLIs im Safe-Modus; hat ein CLI keinen vergleichbaren Safe-Modus, wird der Task BLOCKED gemeldet — es gibt keinen ungeschützten Fallback. Umgebung bleibt Allowlist, Prozessstart ohne Shell, Ausgabegrenzen und gestuftes Beenden der Prozessgruppe wie bei `engine.ts`.
+- **Umsetzung:** Phase H, Tasks B-01 (Registry/Erkennung), B-02 (OpenCode), B-03 (Codex, erst nach B-02 mergen — beide berühren `runner.ts`).
+- **Bezug:** D-039, D-040 (Agent-CLI), `docs/agent-cli.md`.
+
+## D-105 Agent-Grenzen: 3 gleichzeitig (7. November 2026)
+
+- **Anlass:** Phase H: mehr Agenten parallel und großzügigere Laufzeiten. Kay hat am 7. November 2026 den Plan-Vorschlag abgenommen.
+- **Entscheidung:** `maxAgents` in `chats/service.ts` von 2 auf 3 (je Arbeitsordner bleibt genau ein Agent, `busyWorkspaces`-Schlüssel `subjectId/groupId` bleibt). Die Plan-Eingabe „Timeout 10 → 15 Minuten“ war veraltet geprüft: Die Laufzeit ist je Agent-Profil konfiguriert mit Vorgabe 20 Minuten (`DEFAULT_TIMEOUT_MINUTES`, Höchstwert 120) und liegt damit bereits über dem anvisierten Wert — sie bleibt, wie sie ist. Das Arbeitsordner-Layout bleibt `workspaces/<Fach>` (zwei Chats teilen sich den Ordner je Fach mit Warteschlange); ein Wechsel zu Arbeitsordnern je Chat wird später als eigener Vorschlag gebracht.
+- **Warum weiterhin sicher:** Die Grenze ist ein Ressourcen-, kein Sicherheitshebel: Schlüssel bleiben serverseitig, Umgebung bleibt Allowlist, Safe-Modus bleibt Pflicht, Datei-Übernahme behält ihre Größen- und Mengengrenzen (D-039/D-040).
+- **Umsetzung:** Phase H, Task B-05.
+- **Bezug:** D-039, D-040, D-104 (Engines).
+
+## D-106 UI: Datei-Panel rechts, Aktivitätsstream live, Vorschau als Tab (7. November 2026)
+
+- **Anlass:** Phase H „smarte UI“: Agenten- und Code-Ergebnisse (Dateien im Arbeitsordner des Chats) sollen sichtbar werden, ohne Dateimanager. Kay hat die Skizze am 7. November 2026 abgenommen.
+- **Entscheidung:** Chat mittig; **Aktivitätsstream** als schmale Live-Spalte unter der laufenden Antwort (je Zeile Symbol + „Werkzeug → Ziel“, z. B. „Geschrieben: bericht.pdf“); **Datei-Panel rechts** mit Tabs „Dateien“ und „Vorschau“: links der Dateibaum des Arbeitsordners (Name, Größe, Art), rechts die gerenderte Seite (bestehende LibreOffice→PNG-Pipeline) oder Bild/Text direkt; je Datei ein Download-Knopf über die bestehende Asset-Route. Auf schmalen Fenstern (Desktop-App, iPhone) ist alles eingeklappt. Dateiliste nur flach, versteckte Dateien ausgeschlossen, höchstens 200 Einträge; Vorschau-Route prüft selbst (Code-Ausführung freigegeben, Datei liegt im Arbeitsordner, Werkzeuge vorhanden) — das Panel zeigt nie Dateien außerhalb des Arbeitsordners.
+- **Grenzen:** Die Liste zeigt Chat-Anhänge und Erzeugnisse (Anhänge mit Upload-Symbol); Inhalte von Dateien bleiben weiter aus der Oberfläche fern (nur Name/Größe/Art), gerenderte Vorschau geht nur an den Browser, nie als Modell-Eingabe über diesen Weg.
+- **Umsetzung:** Phase H, Tasks C-01 (Endpoint), C-02 (Panel), C-03 (Vorschau), C-04 (Aktivitätsstream live), C-06 (run_python-Karte).
+- **Bezug:** D-079, D-080 (Sichtprüfung), D-102 (Grenzen), C-02 vor C-03 mergen (gleiche Dateien).
