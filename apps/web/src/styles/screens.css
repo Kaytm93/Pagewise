@@ -20,6 +20,11 @@
    fließend. Werte aus den Entwürfen: Lagen 40 bis 64 px, Atelier 38 bis 56 px, Raum 38 bis 60 px. */
 :root {
   --subject-h1: clamp(28px, 8vw, 34px);
+
+  /* Höchsthöhe des Eingabefelds im Chat (F-017, D-099): 12 rem, aber nie mehr als 40 % des sichtbaren
+     Bereichs (Fensterhöhe ohne Tastatur `--kb`). Im Querformat und mit Tastatur wäre das Feld sonst höher
+     als der sichtbare Bereich. Ab etwa 480 px sichtbarer Höhe gilt unverändert 12 rem. */
+  --composer-max: min(12rem, calc((100dvh - var(--kb, 0px)) * 0.4));
 }
 
 @media (min-width: 48rem) {

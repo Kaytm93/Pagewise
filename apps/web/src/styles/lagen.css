@@ -1113,7 +1113,7 @@ details[open] > summary .mo-arrow {
 
 :root[data-design="lagen"] .lg-composer-input {
   min-height: 2.75rem;
-  max-height: 12rem;
+  max-height: var(--composer-max);
   flex: 1;
   min-width: 0;
   padding: 0.625rem 0;
