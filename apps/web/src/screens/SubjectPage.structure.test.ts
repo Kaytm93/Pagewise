@@ -83,8 +83,8 @@ describe('Fachseite in „Raum“: kein Register am Blattrand, keine Ringe (D-07
     expect(quelle).not.toMatch(/rm-reg|rm-rings/);
   });
 
-  it('behält Zierstreifen und Fachmotiv unverändert', () => {
-    expect(quelle).toContain('lg-tape');
+  it('trägt kein Klebeband mehr, behält das Fachmotiv unverändert (D-099)', () => {
+    expect(quelle).not.toContain('lg-tape');
     expect(quelle).toContain('<SubjectIcon');
   });
 });

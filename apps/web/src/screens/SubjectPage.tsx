@@ -167,18 +167,14 @@ export function SubjectPage({
 
   return (
     <Sheet width="wide">
-      {!lagen && (
-        <>
-          <span aria-hidden="true" className="lg-tape top-5 left-5 [--r:-1.8deg] md:left-11" />
-          {!builtin &&
-            !arbeitsplatz &&
-            (atelier ? (
-              <SubjectMotifs kind={subject.icon} className={motivKlasse} />
-            ) : (
-              <SubjectIcon icon={subject.icon} strokeWidth={0.4} className={motivKlasse} />
-            ))}
-        </>
-      )}
+      {!lagen &&
+        !builtin &&
+        !arbeitsplatz &&
+        (atelier ? (
+          <SubjectMotifs kind={subject.icon} className={motivKlasse} />
+        ) : (
+          <SubjectIcon icon={subject.icon} strokeWidth={0.4} className={motivKlasse} />
+        ))}
       {group && (
         <Link
           to={{ name: 'subject', subjectId: subject.id, groupId: null }}
