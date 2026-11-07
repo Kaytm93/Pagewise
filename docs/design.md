@@ -87,6 +87,12 @@ Rahmen und Startfläche folgen der **gewählten** Darstellung, nicht nur dem Ger
 - Umschalter (`ui/Segmented.tsx`, D-093): gleich breite Stücke. Passt eine Beschriftung auf dem Telefon nicht in ihr Stück, trägt die Option eine Kurzform (`short`, z. B. „Auto“ für „Automatisch“, Text in `i18n/de.ts`); bis 480 px zeigt allein CSS (`lg-seg-short`, `lg-seg-long` in `lagen.css`) die Kurzform, der Name für Screenreader bleibt der volle Text (`aria-label`). Ein Text läuft nie aus seinem Stück.
 - Kopfzeile des Editors (D-093): Umschalter und Knöpfe schrumpfen nie (`shrink-0`, Knöpfe 44 × 44 px); reicht die Zeile nicht, bricht die Gruppe um (Umschalter oben, „Speichern“, Anheften, Löschen darunter, rechtsbündig).
 
+## Klein-Nachträge zu Kays Wünschen (7. November 2026, D-099 bis D-101)
+
+- **Lagen, Fachkopf (D-099):** Kein Klebeband über dem Kicker mehr. Statt dessen steht die Fachfarbe als kurze Kante (32 × 3 px, Radius 2 px) unter dem Kickerwort. Auf den Testzetteln von Start und „Als Nächstes“ bleibt das Washi-Band (dort klebt ein Zettel weiter, es passt zur Metapher). Raum und Atelier blendeten das Band schon aus.
+- **Lagen, Etikett (D-100):** Das „Pagewise“-Schildchen im Umschlag ist jetzt eine weiche Pille (voll gerundet, ohne Rand, dazu ein hauchdünner Ring in 55 % `--control-edge`) statt der harten 2-px-Ecke. Name, Marke und Schrift bleiben.
+- **Raum, Innentiefe (D-101):** Eingelassene Flächen (Reiterleiste der Fachseite, Textfelder, Composer, Listenmulde) wirken etwas weicher: Versatz und Unschärfe innen skalieren zusätzlich zu `--raum-d` mit `--raum-di` = 0,7. Gehobene Flächen bleiben unverändert.
+
 ## Unterstützte Browser
 
 Voll: Safari 17.2 und neuer (iOS und iPadOS 17.2+), Chrome und Firefox der letzten Jahre. Die Federn nutzen `linear()` (Safari 17.2), die Lichtfarbe `@property` (Safari 16.4), der Umschalter `:has()` (Safari 15.4), Mischfarben `color-mix()` (Safari 16.2). Ältere Geräte verlieren Bewegung und Licht, die Oberfläche bleibt benutzbar; Rückfälle sind vorgesehen (Feder als `cubic-bezier`, Licht ohne Übergang).
