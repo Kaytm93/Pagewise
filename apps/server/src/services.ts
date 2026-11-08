@@ -4,6 +4,7 @@ import { AgentCleanup } from './agents/cleanup';
 import { CliPathSetting } from './agents/cli-path';
 import { CliDetector, type DetectOptions } from './agents/detect';
 import { ClaudeCodeEngine, type EngineOptions } from './agents/engine';
+import { OpenCodeEngine } from './agents/opencode';
 import { EngineProfileService } from './agents/profiles';
 import { AgentRunner } from './agents/runner';
 import { WorkspaceManager } from './agents/workspace';
@@ -169,6 +170,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     workspaces,
     assets,
     engine: new ClaudeCodeEngine({ ...options.agent, dataRoot: paths.root }),
+    opencode: new OpenCodeEngine({ ...options.agent, dataRoot: paths.root }),
   });
   const tools = createToolRegistry();
   const toolSettings = new ToolSettings(database.db);

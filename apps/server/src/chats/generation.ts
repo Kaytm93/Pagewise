@@ -13,7 +13,9 @@ export type AgentChatErrorCode =
   | 'cli_broken'
   | 'profile_missing'
   | 'sandbox_unavailable'
-  | 'workspace_too_deep';
+  | 'workspace_too_deep'
+  /** Die Engine dieses Zugangs hat noch keinen Adapter (bis B-03: `codex`). */
+  | 'engine_unavailable';
 
 /** Fehlercodes einer Antwort: die der Anbieter, die des Agenten und drei, die Pagewise selbst kennt. */
 export type ChatErrorCode =

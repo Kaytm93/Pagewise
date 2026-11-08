@@ -882,6 +882,8 @@ export const de = {
       no_model: 'Es ist noch kein Modell gewählt.',
       empty_response: 'Das Modell hat nichts geantwortet.',
       internal: 'In Pagewise ist ein Fehler aufgetreten.',
+      engine_unavailable:
+        'Für diese Engine gibt es noch keine Anbindung an Pagewise. Wähle einen anderen Agent-Zugang.',
       unknown: 'Die Antwort ist fehlgeschlagen.',
     },
     agent: {
@@ -952,6 +954,15 @@ export const de = {
             'Anthropic lehnt den Schlüssel dieses Zugangs ab. Prüfe ihn in den Einstellungen unter „Agent-CLI“.',
           rate_limited:
             'Anthropic meldet zu viele Anfragen. Warte etwas und versuch es noch einmal.',
+        },
+        opencode: {
+          auth_failed:
+            'OpenCode ist nicht angemeldet. Melde dich im Terminal mit „opencode“ an und versuch es dann noch einmal.',
+          rate_limited:
+            'Der Anbieter hinter OpenCode meldet zu viele Anfragen. Warte etwas und versuch es noch einmal.',
+          insufficient_credits: 'Beim Anbieter hinter OpenCode ist kein Guthaben mehr vorhanden.',
+          upstream_error: 'Beim Anbieter hinter OpenCode ist ein Fehler aufgetreten.',
+          agent_failed: 'Der Agent hat die Aufgabe nicht abgeschlossen. Versuch es noch einmal.',
         },
       },
     },
