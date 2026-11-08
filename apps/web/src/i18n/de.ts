@@ -1417,6 +1417,8 @@ export const de = {
       runtime: {
         missing: 'Python ist noch nicht eingerichtet.',
         outdated: 'Die eingerichtete Fassung ist veraltet. Richte Python neu ein.',
+        outdatedBanner:
+          'Python-Pakete veraltet — neu einrichten. Die eingerichtete Fassung passt nicht mehr zu dieser Fassung von Pagewise; bis dahin wird kein Code ausgeführt.',
         ready: 'Python ist eingerichtet, und die Sandbox sperrt wie erwartet.',
         notReady:
           'Python ist eingerichtet, aber die Sandbox hat den Selbsttest nicht bestanden. Es wird kein Code ausgeführt.',

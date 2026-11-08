@@ -116,6 +116,40 @@ describe('Einstellungen: Code ausführen', () => {
     expect(screen.getByRole('button', { name: 'Python entfernen' })).toBeTruthy();
   });
 
+  it('zeigt bei veraltetem Python ein Banner mit Neu-einrichten und hält die Zeile bereit', async () => {
+    const server = new FakeServer('unlocked');
+    // Wie routes/code.test.ts (7122d0e): fremder Lock-Sha führt zu runtime „outdated“.
+    server.codeStatus.runtime = 'outdated';
+    server.codeStatus.ready = false;
+    open(server, '/settings');
+    // Auffälliges Banner mit Handlungsaufruf (D-103-Folge), Text nur aus i18n.
+    const banner = await screen.findByTestId('code-outdated-banner');
+    expect(banner.getAttribute('role')).toBe('alert');
+    expect(banner.textContent).toContain('Python-Pakete veraltet — neu einrichten');
+    expect(within(banner).getByRole('button', { name: 'Neu einrichten' })).toBeTruthy();
+    // Die gewohnte Statuszeile bleibt daneben stehen.
+    expect(
+      screen.getByText('Die eingerichtete Fassung ist veraltet. Richte Python neu ein.'),
+    ).toBeTruthy();
+  });
+
+  it('zeigt bei eingerichtetem Python kein Banner', async () => {
+    const server = new FakeServer('unlocked');
+    server.codeStatus.runtime = 'ready';
+    server.codeStatus.ready = true;
+    open(server, '/settings');
+    expect(await screen.findByText(/Python ist eingerichtet, und die Sandbox sperrt/)).toBeTruthy();
+    expect(screen.queryByTestId('code-outdated-banner')).toBeNull();
+  });
+
+  it('zeigt bei fehlendem Python den Einrichten-Knopf ohne Banner', async () => {
+    const server = new FakeServer('unlocked');
+    open(server, '/settings');
+    expect(await screen.findByText('Python ist noch nicht eingerichtet.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Python einrichten' })).toBeTruthy();
+    expect(screen.queryByTestId('code-outdated-banner')).toBeNull();
+  });
+
   it('nennt, was für die Sichtprüfung fehlt', async () => {
     const server = new FakeServer('unlocked');
     server.codeStatus.preview = { office: false, raster: true, sandbox: true };

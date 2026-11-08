@@ -1,3 +1,4 @@
+import { TriangleAlert } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { CodeStatus } from '../api/types';
 import { format, messages as m } from '../i18n';
@@ -79,6 +80,7 @@ export function CodeChoice() {
       : status.runtime === 'outdated'
         ? t.runtime.outdated
         : t.runtime.missing;
+  const outdated = status.runtime === 'outdated' && !running;
 
   const missing = [
     ...(status.preview.office ? [] : [t.preview.office]),
@@ -96,6 +98,20 @@ export function CodeChoice() {
           else void run(() => api.setCodeEnabled(false));
         }}
       />
+
+      {outdated && (
+        <div
+          role="alert"
+          data-testid="code-outdated-banner"
+          className="mo-rise mt-3 flex flex-wrap items-start gap-x-3 gap-y-2 rounded-control border border-control-edge bg-surface px-4 py-3 text-sm text-ink"
+        >
+          <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-danger" />
+          <span className="min-w-0 flex-1">{t.runtime.outdatedBanner}</span>
+          <Button variant="secondary" disabled={busy} onClick={() => setDialog('setup')}>
+            {t.resetup}
+          </Button>
+        </div>
+      )}
 
       <div className="mt-3 text-sm">
         {running ? (
