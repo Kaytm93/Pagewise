@@ -43,7 +43,7 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | Agent-CLI mit Umgebungs-Allowlist und Workspace-Isolation (Sandbox und Berechtigungsregeln, `--safe-mode`) | umgesetzt (Phase 1e), siehe D-039, D-040 und [agent-cli.md](agent-cli.md) |
 | Strenge CORS-Regel: fremde Herkunft wird abgelehnt, keine `Access-Control-*`-Header | umgesetzt (Phase 1a), siehe D-031 |
 | „Alles löschen“ mit Passcode, leert Datenbank (`VACUUM`), Dateien, Sicherungen und Schlüssel; Test: Text nicht mehr in Datenbankdatei oder WAL | umgesetzt (Phase 1a), siehe D-032 |
-| Je Anbieter: Übersicht, was gesendet wird, und Schalter „Bilder nicht senden“ | Übersicht und Schalter umgesetzt (Phase 1a), Durchsetzung ab Phase 1c, siehe D-033 |
+| Je Anbieter: Übersicht, was gesendet wird, und Schalter „Bilder nicht senden“ | Übersicht und Schalter umgesetzt (Phase 1a), Durchsetzung für die Stundenplan-Erkennung umgesetzt (D-107: nur `vision`-Modelle und nur bei erlaubtem `sendImages`), für Chat-Anhänge ab Phase 1c, siehe D-033 |
 | Löschen von Fach, Chat oder Asset entfernt auch Dateien auf der Platte | Zeilen umgesetzt, Dateien mit Assets (ab 1b/1c) |
 | Standard-Prompts im öffentlichen Repo (D-034): neutral, ohne Namen, Orte, Schulen, Bundesländer, Lehrplan- oder Prüfungsangaben; Test prüft jede Datei | umgesetzt, siehe D-034 |
 | „Alles löschen“ leert jede Tabelle außer Anmeldung, Sitzungen und Migrationsprotokoll (auch künftige) | umgesetzt, siehe D-038 |

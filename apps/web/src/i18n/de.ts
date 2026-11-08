@@ -1036,7 +1036,7 @@ export const de = {
       sentText:
         'Deine Nachricht und der bisherige Verlauf dieses Chats, dazu die Prompts (Allgemein, Fach, Untergruppe) mit den Profilangaben, die du darin als Variable einsetzt.',
       sentImages:
-        'Bilder und Dateien nur, wenn du sie selbst anhängst (Bilder nur bei eingeschaltetem Schalter).',
+        'Bilder und Dateien nur, wenn du sie selbst anhängst (Bilder nur bei eingeschaltetem Schalter) — auch das Stundenplan-Bild in der Erkennung. Steht der Schalter auf „Aus“, zeigt die Erkennung kein Modell dieses Anbieters.',
       sentTools:
         'Stundenplan und Tests nur, wenn das Modell sie über ein Werkzeug abfragt (und es Werkzeuge kann), nie mit jeder Nachricht. Im Chat steht dann „Stundenplan eingesehen“.',
       sentNever:

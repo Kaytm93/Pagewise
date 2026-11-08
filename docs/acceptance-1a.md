@@ -1,6 +1,6 @@
 # Abnahme Phase 1a
 
-Stand: 3. Oktober 2026. Eine Phase gilt erst als abgenommen, wenn die berührten Punkte aus Abschnitt 12 des Pflichtenhefts erfüllt und getestet sind. Abschnitt 12 liegt vor und ist unten Punkt für Punkt abgeglichen. **Nicht abgenommen**, solange die Tests auf iPhone und iPad aus dem letzten Abschnitt fehlen.
+Stand: 3. Oktober 2026, ergänzt am 8. November 2026 (D-107). Eine Phase gilt erst als abgenommen, wenn die berührten Punkte aus Abschnitt 12 des Pflichtenhefts erfüllt und getestet sind. Abschnitt 12 liegt vor und ist unten Punkt für Punkt abgeglichen. **Nicht abgenommen**, solange die Tests auf iPhone und iPad aus dem letzten Abschnitt fehlen.
 
 ## Kriterien Phase 1a (Abschnitt 14)
 
@@ -40,16 +40,16 @@ Legende: **erfüllt** = umgesetzt und getestet, **später** = gehört zu einer s
 | 12.4 Markdown ohne rohes HTML, kein `eval` | erfüllt | D-028, Test gegen feindliches Markdown |
 | 12.4 SVG und HTML bereinigen (DOMPurify) | **später** (1b) | Hefteintrags-Blöcke |
 | 12.4 PDF-Rendering ohne Netzwerk | **später** (1d) | |
-| 12.4 Uploads: MIME, Größe, Pfade, EXIF/GPS entfernen | **später** (1c); Pfad-Sicherheit der Dateiablage erfüllt | Dateiablage prüft Schlüssel und Symlinks (storage) |
+| 12.4 Uploads: MIME, Größe, Pfade, EXIF/GPS entfernen | **für die Stundenplan-Erkennung erfüllt**, sonst **später** (1c) | D-107: Neuzeichnen im Browser (höchstens 1800 px, JPEG), Server prüft Art, Signatur und Größe (nur PNG/JPEG, höchstens 6 MiB) und entfernt PNG-Text-/EXIF-Blöcke sowie JPEG-APPn/COM-Segmente; Bild wird nie gespeichert. Pfad-Sicherheit der Dateiablage erfüllt (storage) |
 | 12.4 Prompt-Injection löst keine Aktionen aus | teils; Engine-Schutz **später** (1e) | Technische Ebene des Prompts (D-025); im Chat gibt es keine Aktionen |
 | 12.5 Agent-CLI: Umgebungs-Allowlist, Workspace-Isolation, keine Flags zum Überspringen aller Abfragen | **später** (1e) | Entwurf in agent-cli.md |
 | 12.6 Pro Anbieter zeigen, was gesendet wird, Hinweis bei Free-Modellen | **neu erfüllt** | Übersicht im Anbieter-Formular, Hinweis bei Free-Modellen (D-033, D-024) |
-| 12.6 Option „Bilder nicht an diesen Anbieter senden“ | Schalter erfüllt, Durchsetzung **später** (1c) | Feld `sendImages`, `allowsImages()`; Test mit echten Bildern ab 1c (D-033) |
+| 12.6 Option „Bilder nicht an diesen Anbieter senden“ | Schalter erfüllt, Durchsetzung **für die Stundenplan-Erkennung erfüllt**, sonst **später** (1c) | Feld `sendImages`, `allowsImages()`; der Server der Erkennung prüft den Schalter **und** das `vision`-Flag vor dem Senden und lehnt sonst ab (403/409), Test in `routes/timetable-scan.test.ts` (D-033, D-107). Test mit echten Bildern im Chat ab 1c |
 | 12.6 Keine Telemetrie, Analytics, externe CDN-Aufrufe | erfüllt | Schriften selbst gehostet (D-009), CSP `default-src 'self'`, Test: keine fremden Adressen in `index.html` und Manifest |
 | 12.7 „Alles löschen“ in den Einstellungen | **neu erfüllt** | Passcode-Abfrage, Datenbank, Dateien, Sicherungen, Schlüssel; Test: Text nicht mehr in Datenbankdatei oder WAL (D-032) |
 | 12.7 Löschen von Fach, Chat, Asset entfernt auch Dateien | Zeilen erfüllt, Dateien **später** (ab 1b/1c) | Es gibt in 1a noch keine Dateien; Test wird mit den Assets Pflicht |
 | 12.7 Backup/Export als Archiv, optional verschlüsselt (age) | **später** | |
-| 12.7 Logs ohne Prompts, Antworten, Bildinhalte, Keys | erfüllt | Der Server schreibt keine Logdatei; die Konsole zeigt nur Adresse, Datenverzeichnis und den Einrichtungscode |
+| 12.7 Logs ohne Prompts, Antworten, Bildinhalte, Keys | erfüllt | Der Server schreibt keine Logdatei; die Konsole zeigt nur Adresse, Datenverzeichnis und den Einrichtungscode. Das Stundenplanbild und die Antwort des Modells werden nicht protokolliert, das Bild nicht gespeichert (D-107) |
 | 12.8 `.gitignore` deckt Datenverzeichnisse, `*.sqlite*`, uploads, workspaces, exports, `.env*`, `secrets*`, `*.local.*` ab | erfüllt | `.gitignore` |
 | 12.8 Secret-Scan vor jedem Commit und in der CI | erfüllt | Eigenes Skript lokal, gitleaks in der CI (D-003) |
 | 12.8 Test auf echte Schul- und Personendaten mit lokaler Blacklist | erfüllt | D-004 |
