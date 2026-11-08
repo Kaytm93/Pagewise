@@ -6,6 +6,7 @@ import type {
   Chat,
   ChatDetail,
   ChatFileList,
+  ChatPreview,
   CliStatus,
   CodeRunDetail,
   CodeStatus,
@@ -178,6 +179,12 @@ export function createApi(client: ApiClient) {
     stopChat: (id: string) => client.request<void>('POST', `/api/chats/${id}/stop`),
     /** Flache Dateiliste des Arbeitsordners eines Chats (D-106); `truncated`: es gibt mehr, als gezeigt wird. */
     chatFiles: (id: string) => client.request<ChatFileList>('GET', `/api/chats/${id}/files`),
+    /** Vorschau einer Datei des Arbeitsordners als PNG (D-106, H-C03); Fehler bleiben Codes. */
+    chatPreview: (id: string, file: string, pages: number) =>
+      client.request<ChatPreview>(
+        'GET',
+        `/api/chats/${id}/preview?file=${encodeURIComponent(file)}&pages=${pages}`,
+      ),
     setSubjectModel: (subjectId: string, model: Selection | null) =>
       client.request<Subject>('PUT', `/api/subjects/${subjectId}/model`, { model }),
     setSubjectEngine: (subjectId: string, engineProfileId: string | null) =>

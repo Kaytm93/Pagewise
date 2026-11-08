@@ -5,6 +5,7 @@ import { format, messages as m } from '../../i18n';
 import { useSession } from '../../session/SessionProvider';
 import { Button } from '../../ui/Button';
 import { Tabs } from '../../ui/Tabs';
+import { FilePreview } from './FilePreview';
 import { formatSize } from './format-size';
 
 type Load =
@@ -40,15 +41,32 @@ function downloadOf(file: ChatFileEntry, assets: ChatAsset[]): string | null {
   return assets.find((asset) => asset.name === file.name && asset.size === file.size)?.id ?? null;
 }
 
-function FileRow({ file, assets }: { file: ChatFileEntry; assets: ChatAsset[] }) {
+function FileRow({
+  file,
+  assets,
+  selected,
+  onSelect,
+}: {
+  file: ChatFileEntry;
+  assets: ChatAsset[];
+  selected: boolean;
+  onSelect: (name: string) => void;
+}) {
   const assetId = downloadOf(file, assets);
   return (
     <li className="flex min-h-11 min-w-0 items-center gap-2 rounded-control px-1">
       <FileIcon extension={file.extension} />
       {/* Der volle Name steht im `title`, die Zeile kürzt am Ende (wie in AssetList). */}
-      <span title={file.name} className="min-w-0 truncate text-sm">
+      <button
+        type="button"
+        onClick={() => onSelect(file.name)}
+        title={file.name}
+        aria-pressed={selected}
+        className="min-h-11 min-w-0 flex-1 truncate text-left text-sm text-ink hover:text-ink mo-press"
+      >
         {file.name}
-      </span>
+        {selected ? ` · ${m.chat.files.selected}` : ''}
+      </button>
       <span className="ml-auto shrink-0 text-meta text-ink-muted">{formatSize(file.size)}</span>
       {assetId ? (
         <a
@@ -67,9 +85,10 @@ function FileRow({ file, assets }: { file: ChatFileEntry; assets: ChatAsset[] })
 }
 
 /**
- * Datei-Panel rechts im Chat (D-106, H-C02): flache Liste des Chat-Arbeitsordners mit Name, Größe und
- * Art-Symbol, truncated-Hinweis, Leer-, Lade- und Fehlerzustand. Die Reiter-Grundlage ist schon da;
- * funktional ist nur „Dateien“ — die Vorschau kommt mit H-C03 in einem eigenen Worktree.
+ * Datei-Panel rechts im Chat (D-106, H-C02/H-C03): flache Liste des Chat-Arbeitsordners mit Name,
+ * Größe und Art-Symbol, truncated-Hinweis, Leer-, Lade- und Fehlerzustand. Reiter „Dateien“ wählt
+ * eine Datei aus (Klick auf den Namen); der Reiter „Vorschau“ rendert sie mit dem PreviewService
+ * des Servers als PNG (FilePreview). Downloads laufen nur über die bestehende Asset-Route.
  */
 export function FilePanel({ chatId }: { chatId: string }) {
   const { api } = useSession();
@@ -78,6 +97,8 @@ export function FilePanel({ chatId }: { chatId: string }) {
   const [reloadKey, setReloadKey] = useState(0);
   // Assets des Chat-Verlaufs: nur sie lassen sich über die bestehende Route herunterladen.
   const [assets, setAssets] = useState<ChatAsset[]>([]);
+  // Für die Vorschau gewählte Datei (genau ein Name aus der Liste).
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
 
   // Neu laden auf Knopfdruck: der Schlüssel zählt mit, ohne selbst gelesen zu werden (biome: bewusst).
   // biome-ignore lint/correctness/useExhaustiveDependencies: reloadKey löst gezielt eine neue Ladung aus
@@ -150,7 +171,13 @@ export function FilePanel({ chatId }: { chatId: string }) {
                   ) : (
                     <ul className="space-y-0.5">
                       {load.files.map((file) => (
-                        <FileRow key={file.name} file={file} assets={assets} />
+                        <FileRow
+                          key={file.name}
+                          file={file}
+                          assets={assets}
+                          selected={selectedFile === file.name}
+                          onSelect={(name) => setSelectedFile(name)}
+                        />
                       ))}
                     </ul>
                   )}
@@ -161,9 +188,7 @@ export function FilePanel({ chatId }: { chatId: string }) {
               )}
             </div>
           ) : (
-            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-              <p className="text-sm text-ink-secondary">{m.chat.files.previewTabComing}</p>
-            </div>
+            <FilePreview chatId={chatId} file={selectedFile} />
           )
         }
       />

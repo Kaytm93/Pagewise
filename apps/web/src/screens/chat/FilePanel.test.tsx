@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { App } from '../../App';
 import { ApiClient } from '../../api/client';
 import type { ChatAsset, ChatFileEntry, ChatMessage } from '../../api/types';
+import { messages as m } from '../../i18n';
 import { SessionProvider } from '../../session/SessionProvider';
 import { FakeServer, json } from '../../test/fake-server';
 import { FilePanel } from './FilePanel';
@@ -132,7 +133,7 @@ describe('FilePanel: Liste (H-C02)', () => {
     expect(screen.queryByRole('status')).toBeNull();
   });
 
-  it('hält den Vorschau-Reiter als Platzhalter bereit, funktional ist nur „Dateien“', async () => {
+  it('hält den Vorschau-Reiter bereit; ohne gewählte Datei zeigt er den Hinweis', async () => {
     const server = panelServer(() => json(200, { files, truncated: false }));
     mountPanel(server);
 
@@ -142,7 +143,36 @@ describe('FilePanel: Liste (H-C02)', () => {
 
     const user = userEvent.setup();
     await user.click(within(tablist).getByRole('tab', { name: 'Vorschau' }));
-    expect(await screen.findByText('Die Vorschau ist noch nicht verfügbar.')).toBeTruthy();
+    expect(await screen.findByText(m.chat.files.previewNoFile)).toBeTruthy();
+  });
+
+  it('wählt eine Datei aus und lädt im Vorschau-Reiter ihre gerenderten Seiten', async () => {
+    const server = new FakeServer('unlocked');
+    const subject = server.addSubject('Beispielfach A');
+    server.addChat(subject.id, { id: 'chat-1' });
+    server.replyOnce('GET', '/api/chats/chat-1/files', () =>
+      json(200, { files, truncated: false }),
+    );
+    server.replyOnce('GET', '/api/chats/chat-1/preview?file=bericht.txt&pages=3', () =>
+      json(200, {
+        file: 'bericht.txt',
+        pagesTotal: null,
+        pages: [{ number: 1, png: 'data:image/png;base64,AAAA' }],
+      }),
+    );
+    mountPanel(server);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByTitle('bericht.txt'));
+    await user.click(screen.getByRole('tab', { name: 'Vorschau' }));
+
+    // Der Ladezustand kann im jsdom-Test schon wieder vorbei sein (Mock antwortet sofort);
+    // entscheidend ist das gerenderte Bild mit der Daten-Adresse vom Server.
+    expect(await screen.findByAltText('Vorschau der Seite 1')).toBeTruthy();
+    const bild = screen.getByAltText('Vorschau der Seite 1') as HTMLImageElement;
+    expect(bild.getAttribute('src')).toBe('data:image/png;base64,AAAA');
+    // CSP: kein Inline-Stil im Markup.
+    expect(document.querySelector('[style]')).toBeNull();
   });
 });
 

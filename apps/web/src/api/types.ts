@@ -518,6 +518,21 @@ export interface ChatFileList {
   truncated: boolean;
 }
 
+/** Eine gerenderte Vorschau-Seite: Seitenzahl und das PNG als Daten-Adresse. */
+export interface ChatPreviewPage {
+  number: number;
+  /** Daten-Adresse (`data:image/png;base64,…`) vom Server; die CSP erlaubt sie für Bilder. */
+  png: string;
+}
+
+/** Antwort von `GET /api/chats/:id/preview`: Metadaten und die gerenderten Seiten. */
+export interface ChatPreview {
+  file: string;
+  /** Gesamtzahl der Seiten, wenn der Server sie kennt; sonst `null`. */
+  pagesTotal: number | null;
+  pages: ChatPreviewPage[];
+}
+
 // --- Agent-CLI (Phase 1e) -----------------------------------------------------------------------
 
 export type EngineKind = 'claude-subscription' | 'glm-coding-plan' | 'anthropic-api';
