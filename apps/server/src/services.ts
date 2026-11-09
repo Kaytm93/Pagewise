@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { AssetService } from './agents/assets';
 import { AgentCleanup } from './agents/cleanup';
 import { CliPathSetting } from './agents/cli-path';
+import { CodexEngine } from './agents/codex';
 import { CliDetector, type DetectOptions } from './agents/detect';
 import { ClaudeCodeEngine, type EngineOptions } from './agents/engine';
 import { OpenCodeEngine } from './agents/opencode';
@@ -171,6 +172,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     assets,
     engine: new ClaudeCodeEngine({ ...options.agent, dataRoot: paths.root }),
     opencode: new OpenCodeEngine({ ...options.agent, dataRoot: paths.root }),
+    codex: new CodexEngine({ ...options.agent, dataRoot: paths.root }),
   });
   const tools = createToolRegistry();
   const toolSettings = new ToolSettings(database.db);

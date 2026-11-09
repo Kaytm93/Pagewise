@@ -4,16 +4,17 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Db } from '../db/client';
+import { CodexEngine } from './codex';
 import { ClaudeCodeEngine } from './engine';
 import { OpenCodeEngine } from './opencode';
-import type { EngineKind } from './profiles';
+import { ENGINE_KINDS, type EngineKind } from './profiles';
 import { type AgentRunInput, AgentRunner, type AgentRunnerDeps } from './runner';
 
 /**
- * Wahl der Engine je Art des Zugangs (D-104): Claude-Arten über `engine`, `opencode` über den eigenen
- * Adapter, `codex` abgewiesen — es gibt keinen Lauf ohne Safe-Modus. Beide Adapter werden hier nur
- * mit einem Stub-Lauf geflüstert; die Fake-CLI des jeweiligen Adapters prüfen engine.test.ts und
- * opencode.test.ts.
+ * Wahl der Engine je Art des Zugangs (D-104): Claude-Arten über `engine`, `opencode` und `codex` über ihre
+ * eigenen Adapter — es gibt keinen Lauf ohne den Safe-Modus des jeweiligen CLI. Alle drei Adapter werden hier
+ * nur mit einem Stub-Lauf geflüstert; die Fake-CLI des jeweiligen Adapters prüfen engine.test.ts,
+ * opencode.test.ts und codex.test.ts.
  */
 
 const FAKE_OPENCODE = fileURLToPath(new URL('./testing/fake-opencode.mjs', import.meta.url));
@@ -39,6 +40,7 @@ const PROFILE = {
 /** Aufgezeichnete Start-Aufrufe je Adapter. */
 let startedClaude: { cliPath: string; kind: string }[] = [];
 let startedOpencode: { cliPath: string; kind: string }[] = [];
+let startedCodex: { cliPath: string; kind: string }[] = [];
 
 /** Stub-Lauf für beide Adapter (ohne Prozess): `events` ist bereits der Strom. */
 function stubRun(): ReturnType<ClaudeCodeEngine['start']> {
@@ -67,7 +69,7 @@ function stubRun(): ReturnType<ClaudeCodeEngine['start']> {
   } as unknown as ReturnType<ClaudeCodeEngine['start']>;
 }
 
-/** Stubs an beiden Adaptern anbringen und aufzeichnen, wer startet. */
+/** Stubs an allen drei Adaptern anbringen und aufzeichnen, wer startet. */
 function installStubs(d: AgentRunnerDeps): void {
   vi.spyOn(d.engine, 'start').mockImplementation((input) => {
     startedClaude.push({ cliPath: input.cliPath, kind: input.kind });
@@ -75,6 +77,10 @@ function installStubs(d: AgentRunnerDeps): void {
   });
   vi.spyOn(d.opencode, 'start').mockImplementation((input) => {
     startedOpencode.push({ cliPath: input.cliPath, kind: input.kind });
+    return stubRun();
+  });
+  vi.spyOn(d.codex, 'start').mockImplementation((input) => {
+    startedCodex.push({ cliPath: input.cliPath, kind: input.kind });
     return stubRun();
   });
 }
@@ -124,10 +130,12 @@ function deps(
     } as unknown as AgentRunnerDeps['assets'],
     engine: new ClaudeCodeEngine({ dataRoot: join(base, 'daten') }),
     opencode: new OpenCodeEngine({ dataRoot: join(base, 'daten') }),
+    codex: new CodexEngine({ dataRoot: join(base, 'daten') }),
     ...overrides,
   };
   startedClaude = [];
   startedOpencode = [];
+  startedCodex = [];
   installStubs(d);
   return d;
 }
@@ -174,29 +182,36 @@ describe('Runner: Wahl der Engine je Art', () => {
     expect(outcome.status).toBe('complete');
     expect(startedOpencode).toEqual([{ cliPath: FAKE_OPENCODE, kind: 'opencode' }]);
     expect(startedClaude).toEqual([]);
+    expect(startedCodex).toEqual([]);
   });
 
-  it('weist codex mit einer klaren Meldung ab, ohne einen Prozess zu starten (bis B-03)', async () => {
+  it('startet codex über den Codex-Adapter (B-03)', async () => {
     const outcome = await new AgentRunner(deps('codex')).run(runInput());
-    expect(outcome.status).toBe('error');
-    expect(outcome.code).toBe('engine_unavailable');
-    expect(outcome.sessionId).toBeNull();
+    expect(outcome.status).toBe('complete');
+    expect(startedCodex).toEqual([{ cliPath: FAKE_OPENCODE, kind: 'codex' }]);
+    // Kein ungeschützter Fallback: Claude- und OpenCode-Adapter dürfen bei codex nie starten.
     expect(startedClaude).toEqual([]);
     expect(startedOpencode).toEqual([]);
   });
 
-  it('weist codex ab, bevor ein Arbeitsordner angelegt wird', async () => {
-    let angelegt = 0;
-    const d = deps('codex', {
-      workspaces: {
-        ensure: () => {
-          angelegt += 1;
-          return join(base, 'arbeitsordner');
-        },
-      } as unknown as AgentRunnerDeps['workspaces'],
-    });
-    const outcome = await new AgentRunner(d).run(runInput());
-    expect(outcome.code).toBe('engine_unavailable');
-    expect(angelegt).toBe(0);
+  it('bleibt bei der Registry: jede Art läuft über genau ihren eigenen Adapter, kein Ausweichen', async () => {
+    // Der frühere Abweisungs-Test („codex hat keinen Adapter, wird mit engine_unavailable abgewiesen“)
+    // ist mit B-03 sinngemäß überführt: Statt der Abweisung wird jetzt die Auswahl geprüft — und
+    // zugesichert, dass es für codex weiter keinen Lauf über einen fremden Adapter gibt.
+    for (const kind of ENGINE_KINDS) {
+      const outcome = await new AgentRunner(deps(kind)).run(runInput());
+      expect(outcome.status).toBe('complete');
+      // Nur genau ein Adapter hat je Lauf gestartet (die Aufzeichnungen wurden je deps() geleert).
+      const total = startedClaude.length + startedOpencode.length + startedCodex.length;
+      expect(total).toBe(1);
+    }
+  });
+
+  it('startet jeden codex-Lauf im eigenen Adapter, nie bei Claude oder OpenCode (Safe-Modus bleibt je CLI)', async () => {
+    const outcome = await new AgentRunner(deps('codex')).run(runInput());
+    expect(outcome.status).toBe('complete');
+    expect(startedCodex).toHaveLength(1);
+    expect(startedClaude).toEqual([]);
+    expect(startedOpencode).toEqual([]);
   });
 });

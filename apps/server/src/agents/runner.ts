@@ -4,6 +4,7 @@ import type { Db } from '../db/client';
 import { chats } from '../db/schema';
 import { type ActivityEntry, settleActivity, upsertActivity } from './activity';
 import type { AssetService, AssetView } from './assets';
+import type { CodexEngine } from './codex';
 import type { CliDetector } from './detect';
 import type { AgentRun, ClaudeCodeEngine } from './engine';
 import type { OpenCodeEngine } from './opencode';
@@ -66,17 +67,19 @@ export interface AgentRunnerDeps {
   engine: ClaudeCodeEngine;
   /** Adapter für OpenCode (D-104). */
   opencode: OpenCodeEngine;
+  /** Adapter für Codex (D-104, B-03). */
+  codex: CodexEngine;
 }
 
 /**
  * Welche Engine einen Lauf übernimmt: `claude-subscription`, `glm-coding-plan` und `anthropic-api` laufen über
- * die Claude-Code-Binary, `opencode` über seine eigene. `codex` hat noch keinen Adapter (B-03) und wird mit
- * einer klaren Meldung abgewiesen — es gibt keinen ungeschützten Fallback (D-104).
+ * die Claude-Code-Binary, `opencode` und `codex` über ihre eigenen (D-104). Für keine Art gibt es einen Lauf
+ * ohne den Safe-Modus des jeweiligen CLI.
  */
 function engineFor(
   kind: EngineKind,
   deps: AgentRunnerDeps,
-): { engine: ClaudeCodeEngine | OpenCodeEngine } | { error: ChatErrorCode } {
+): { engine: ClaudeCodeEngine | OpenCodeEngine | CodexEngine } | { error: ChatErrorCode } {
   switch (kind) {
     case 'claude-subscription':
     case 'glm-coding-plan':
@@ -85,7 +88,7 @@ function engineFor(
     case 'opencode':
       return { engine: deps.opencode };
     case 'codex':
-      return { error: 'engine_unavailable' };
+      return { engine: deps.codex };
   }
 }
 
@@ -122,10 +125,15 @@ export class AgentRunner {
     const resolved = await this.deps.engines.resolve(input.profileId);
     if (!resolved) return fail('profile_missing');
     const { profile, token } = resolved;
-    // `codex` hat noch keinen Adapter (B-03): klar abweisen, bevor irgendetwas vorbereitet wird (D-104).
     const chosen = engineFor(profile.kind, this.deps);
     if ('error' in chosen) return fail(chosen.error);
-    if (profile.kind !== 'claude-subscription' && profile.kind !== 'opencode' && !token) {
+    // Die CLI-Zugänge (opencode, codex) nutzen die Anmeldung ihrer App, nie einen Schlüssel von Pagewise.
+    if (
+      profile.kind !== 'claude-subscription' &&
+      profile.kind !== 'opencode' &&
+      profile.kind !== 'codex' &&
+      !token
+    ) {
       return fail('no_key');
     }
 
@@ -151,7 +159,7 @@ export class AgentRunner {
     cliPath: string,
     profile: NonNullable<Awaited<ReturnType<EngineProfileService['resolve']>>>['profile'],
     token: string | null,
-    engine: ClaudeCodeEngine | OpenCodeEngine,
+    engine: ClaudeCodeEngine | OpenCodeEngine | CodexEngine,
   ): Promise<AgentOutcome> {
     const before = snapshotDir(workspace);
     let activity: ActivityEntry[] = [];

@@ -12,8 +12,8 @@ import { type SecretStore, SecretStoreError } from '../storage/secret-store';
  * - `glm-coding-plan`: der GLM Coding Plan von Z.ai über die unveränderte `claude`-Binary mit
  *   `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic` (D-011). Nur für den Kontoinhaber, nur lokal.
  * - `anthropic-api`: ein eigener Anthropic-API-Schlüssel.
- * - `opencode` und `codex`: vorbereitet (D-104), noch ohne Adapter — kein Secret, kein Vorgabemodell.
- *   Die CLI wird über die Erkennung gesucht; starten darf sie erst der Adapter aus B-02/B-03.
+ * - `opencode` und `codex`: eigene Adapter (D-104, B-02/B-03) — kein Secret, kein Vorgabemodell.
+ *   Die CLI wird über die Erkennung gesucht; der Lauf läuft nur im Safe-Modus des jeweiligen CLI.
  *
  * Schlüssel stehen nie in der Datenbank, nur im Secret-Speicher unter `engine.<id>.token`.
  */

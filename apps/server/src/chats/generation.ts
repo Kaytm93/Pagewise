@@ -14,7 +14,7 @@ export type AgentChatErrorCode =
   | 'profile_missing'
   | 'sandbox_unavailable'
   | 'workspace_too_deep'
-  /** Die Engine dieses Zugangs hat noch keinen Adapter (bis B-03: `codex`). */
+  /** Eine Engine ohne Adapter (seit B-03 hat jede registrierte Art einen — der Code bleibt für die Zukunft). */
   | 'engine_unavailable';
 
 /** Fehlercodes einer Antwort: die der Anbieter, die des Agenten und drei, die Pagewise selbst kennt. */

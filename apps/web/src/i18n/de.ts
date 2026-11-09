@@ -974,6 +974,15 @@ export const de = {
           upstream_error: 'Beim Anbieter hinter OpenCode ist ein Fehler aufgetreten.',
           agent_failed: 'Der Agent hat die Aufgabe nicht abgeschlossen. Versuch es noch einmal.',
         },
+        codex: {
+          auth_failed:
+            'Codex ist nicht angemeldet. Melde dich im Terminal mit „codex“ an und versuch es dann noch einmal.',
+          rate_limited:
+            'Der Anbieter hinter Codex meldet zu viele Anfragen. Warte etwas und versuch es noch einmal.',
+          insufficient_credits: 'Beim Anbieter hinter Codex ist kein Guthaben mehr vorhanden.',
+          upstream_error: 'Beim Anbieter hinter Codex ist ein Fehler aufgetreten.',
+          agent_failed: 'Der Agent hat die Aufgabe nicht abgeschlossen. Versuch es noch einmal.',
+        },
       },
     },
     problems: {
