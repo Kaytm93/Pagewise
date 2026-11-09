@@ -5,7 +5,7 @@ import { format, messages as m } from '../i18n';
 import { Button } from '../ui/Button';
 import { Segmented } from '../ui/Segmented';
 import { Sheet } from '../ui/Sheet';
-import { sectionTitle } from '../ui/styles';
+import { emptyState, sectionTitle } from '../ui/styles';
 import { subjectColorAttr } from '../ui/subject-color';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { appliesInWeek, localDate, weekdayOf, weekKindOf } from './dates';
@@ -213,7 +213,7 @@ export function TimetablePage() {
           </div>
 
           {entries.length === 0 ? (
-            <div className="mt-8 rounded-box bg-paper p-4">
+            <div className={`mt-8 ${emptyState}`}>
               <p className="font-medium">{t.emptyTitle}</p>
               <p className="mt-1 text-sm text-ink-secondary">{t.emptyHint}</p>
             </div>

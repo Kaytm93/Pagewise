@@ -8,7 +8,7 @@ import { Button } from '../ui/Button';
 import { Link } from '../ui/Link';
 import { Sheet } from '../ui/Sheet';
 import { SubjectIcon } from '../ui/SubjectIcon';
-import { listRowAction, listRowHost, listRowLead, sectionTitle } from '../ui/styles';
+import { emptyState, listRowAction, listRowHost, listRowLead, sectionTitle } from '../ui/styles';
 import { Tabs } from '../ui/Tabs';
 import { useDesign } from '../ui/useDesign';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
@@ -257,7 +257,7 @@ export function SubjectPage({
             </Button>
           </div>
           {subject.groups.length === 0 ? (
-            <div className="mt-2 rounded-box bg-paper p-4">
+            <div className={`mt-2 ${emptyState}`}>
               <p className="font-medium">{m.subject.noGroupsTitle}</p>
               <p className="mt-1 text-sm text-ink-secondary">{m.subject.noGroupsHint}</p>
             </div>

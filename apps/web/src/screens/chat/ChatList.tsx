@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
 import {
+  emptyState,
   listRowAction,
   listRowHost,
   listRowLead,
@@ -168,7 +169,7 @@ export function ChatList({ subjectId, groupId }: { subjectId: string; groupId: s
         </div>
       )}
       {chats && chats.length === 0 && (
-        <div className="mt-3 rounded-box bg-paper p-4">
+        <div className={`mt-3 ${emptyState}`}>
           <p className="font-medium">{m.subject.noChatsTitle}</p>
           <p className="mt-1 text-sm text-ink-secondary">{m.subject.noChatsHint}</p>
         </div>

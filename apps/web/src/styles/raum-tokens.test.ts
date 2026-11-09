@@ -437,6 +437,13 @@ describe('Raum: Listen und Trennlinien', () => {
     ).toContain('content: none');
   });
 
+  it('zeigt einen leeren Zustand als leere Mulde, nicht als flache Fläche (D-111)', () => {
+    const leer = rule(raum, ":root[data-design='raum'] .lg-empty");
+    expect(leer).toContain('box-shadow: var(--raum-in-m)');
+    expect(leer).toContain('background-color: transparent');
+    expect(leer).toContain('border-radius: var(--raum-r-big)');
+  });
+
   it('gibt dem Ladegerüst der Listen dieselbe Mulde wie der echten Liste (D-108)', () => {
     expect(rule(raum, ":root[data-design='raum'] .lg-skel-rows")).toContain(
       'box-shadow: var(--raum-in-m)',

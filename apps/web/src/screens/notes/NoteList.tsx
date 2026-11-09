@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
 import {
+  emptyState,
   listRowAction,
   listRowHost,
   listRowLead,
@@ -146,7 +147,7 @@ export function NoteList({ subjectId, groupId }: { subjectId: string; groupId: s
         </p>
       )}
       {notes && notes.length === 0 && !searching && (
-        <div className="mt-3 rounded-box bg-paper p-4">
+        <div className={`mt-3 ${emptyState}`}>
           <p className="font-medium">{m.notes.emptyTitle}</p>
           <p className="mt-1 text-sm text-ink-secondary">{m.notes.emptyHint}</p>
         </div>

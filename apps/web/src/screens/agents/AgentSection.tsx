@@ -7,7 +7,7 @@ import { useSession } from '../../session/SessionProvider';
 import { Button } from '../../ui/Button';
 import { TextField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
-import { iconButton } from '../../ui/styles';
+import { emptyState, iconButton } from '../../ui/styles';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { commonErrorMessage } from '../auth-errors';
 import { EngineDialog } from './EngineDialog';
@@ -170,7 +170,7 @@ export function AgentSection() {
       <div>
         <h3 className="font-medium">{t.title}</h3>
         {engines.profiles.length === 0 ? (
-          <div className="mt-3 rounded-box bg-paper p-4">
+          <div className={`mt-3 ${emptyState}`}>
             <p className="font-medium">{t.empty}</p>
             <p className="mt-1 text-sm text-ink-secondary">{t.emptyHint}</p>
           </div>

@@ -1072,3 +1072,9 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Umsetzung:** `ui/SubjectIcon.tsx` (`SUBJECT_MOTIFS`, `SubjectGlyph`, `SubjectIcon`), `screens/lagen/SubjectMotif.tsx`, `screens/atelier/SubjectMotifs.tsx` (Motiv `neutral`), `i18n/de.ts`.
 - **Prüfung:** `ui/SubjectIcon.test.tsx` (neu: Raster, Rundung, Strichstärke, höchstens fünf Formen, kein `lucide-react`, Rückfall), `screens/lagen/SubjectMotif.test.tsx`, `i18n/texte-in-de.test.ts`.
 - **Offen:** Ein Fach ohne Kennung bekommt kein Motiv nach seinem Namen. Wer „Mathe“ von Hand angelegt hat, sieht den Abschlusshut, bis er im Dialog „Fach bearbeiten“ die Rechenzeichen wählt.
+
+## D-111 Leerer Zustand als leere Mulde (9. November 2026)
+
+- **Anlass:** Abnahme-Bild der Fachseite in Raum: „Noch keine Untergruppen“ stand in einer flachen, kaum sichtbaren Fläche (`rounded-box bg-paper p-4`), acht Listen wiederholten diese Klassen von Hand.
+- **Entscheidung:** `emptyState` in `ui/styles.ts` ist die gemeinsame Klasse für leere Listen (Haken `lg-empty`). In Raum ist sie eine leere Mulde (`--raum-in-m`, Radius 20 px) wie die Liste, die später dort steht. Lagen und Atelier bleiben, wie sie waren.
+- **Umsetzung:** `ui/styles.ts`, `styles/raum.css`, `screens/SubjectPage.tsx`, `screens/atelier/SubjectAtelier.tsx`, `screens/chat/ChatList.tsx`, `screens/notes/NoteList.tsx`, `planning/ExamsPage.tsx`, `planning/TimetablePage.tsx`, `screens/agents/AgentSection.tsx`, `screens/providers/ProvidersSection.tsx`. Tests: `ui/styles.test.ts`, `styles/raum-tokens.test.ts`.

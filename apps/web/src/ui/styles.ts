@@ -23,6 +23,12 @@ export const listRowAction =
 export const iconButton =
   'mo-tap inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink disabled:opacity-50';
 
+/**
+ * Leerer Zustand einer Liste („Noch keine …“ mit einem Satz dazu; D-111): eine ruhige Fläche mit 16 px Polster.
+ * In „Raum“ ist sie eine leere Mulde wie die Liste, die später an ihrer Stelle steht (raum.css, `.lg-empty`).
+ */
+export const emptyState = 'lg-empty rounded-box bg-paper p-4';
+
 /** Ladegerüst einer Liste: dieselben Linien wie die echte Liste (in „Raum“ dieselbe Mulde, siehe raum.css). */
 export const listSkeleton = 'lg-skel-rows mt-3 border-t border-line-warm';
 export const listSkeletonRow = 'lg-skel-row grid gap-2.5 border-b border-line-warm px-2 py-[18px]';

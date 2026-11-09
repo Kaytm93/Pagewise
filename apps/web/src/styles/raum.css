@@ -975,6 +975,14 @@
   padding-inline: 12px;
 }
 
+/* Leerer Zustand (D-111): eine leere Mulde statt einer flachen Fläche. So steht dort dieselbe Form wie die Liste,
+   die später an ihrer Stelle steht; der Text hat 16 px Abstand zum Rand der Mulde. */
+:root[data-design="raum"] .lg-empty {
+  border-radius: var(--raum-r-big);
+  background-color: transparent;
+  box-shadow: var(--raum-in-m);
+}
+
 /* Ladegerüst der Listen: dieselbe Mulde wie die echte Liste, ohne Linien. */
 :root[data-design="raum"] .lg-skel-rows {
   border: 0;

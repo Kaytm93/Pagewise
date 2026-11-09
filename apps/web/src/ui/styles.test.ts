@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { listRowAction, listRowHost, listRowLead } from './styles';
+import { emptyState, listRowAction, listRowHost, listRowLead } from './styles';
 
 /*
  * D-108: Ein Knopf am Ende einer Listenzeile sitzt in der Zeile. Früher stand er als eigene Spalte daneben und
@@ -43,5 +43,23 @@ describe('Zeile mit Knopf am Ende (D-108)', () => {
       expect(text, file).not.toMatch(/-m[rlx]-2 inline-flex size-11/);
     }
     expect(listRowAction).not.toMatch(/(^|\s)-m[rlx]-/);
+  });
+});
+
+describe('Leerer Zustand (D-111)', () => {
+  it('ist eine gemeinsame Klasse mit Haken für die Richtungen und 16 px Polster', () => {
+    expect(emptyState.split(' ')).toEqual(['lg-empty', 'rounded-box', 'bg-paper', 'p-4']);
+  });
+
+  it('wird von den Listen genutzt, statt die Klassen zu wiederholen', () => {
+    const dateien = quelltexte(src).filter(({ text }) => text.includes('{emptyState}'));
+    expect(dateien.length).toBeGreaterThanOrEqual(8);
+    for (const file of [
+      'screens/chat/ChatList.tsx',
+      'screens/notes/NoteList.tsx',
+      'screens/SubjectPage.tsx',
+    ]) {
+      expect(dateien.map((eintrag) => eintrag.file)).toContain(file);
+    }
   });
 });
