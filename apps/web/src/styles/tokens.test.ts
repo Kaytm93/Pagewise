@@ -314,6 +314,24 @@ describe.each([
     },
   );
 
+  // D-108: Auf dem Blatt und dem Raumton stehen auch Links und Fehlermeldungen.
+  it.each(['--link', '--danger'])(
+    '%s erreicht auf dem Raumton und auf dem Blatt mindestens 4,5 : 1',
+    (text) => {
+      for (const surface of ['--raum-canvas', '--raum-raised']) {
+        expect(contrast(color(text), color(surface))).toBeGreaterThanOrEqual(4.5);
+      }
+    },
+  );
+
+  // D-108: Der Knopf am Zeilenende trägt nur ein Symbol. In Ruhe steht es in --ink-muted auf der gehobenen
+  // Fläche, im Hover in --ink auf --paper; auch während des Farbwechsels (--ink-muted auf --paper) bleibt es lesbar.
+  it('das Symbol im Zeilenknopf erreicht in Ruhe und im Hover mindestens 4,5 : 1', () => {
+    expect(contrast(color('--ink-muted'), color('--raum-raised'))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(color('--ink'), color('--paper'))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(color('--ink-muted'), color('--paper'))).toBeGreaterThanOrEqual(4.5);
+  });
+
   it.each(['--raum-raised', '--raum-canvas'])(
     'die Fachfarben heben sich von %s mit mindestens 3 : 1 ab',
     (surface) => {

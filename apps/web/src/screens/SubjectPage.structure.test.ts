@@ -62,7 +62,11 @@ describe('Fachname (H1) bricht nicht mitten im Wort (subject#06)', () => {
 
   it('bedienflächen bleiben unberührt: min-h-11 / size-11 stehen weiter', () => {
     // Geist/Knopfflächen ≥ 44 px (Regel 6) — der Fix fasst nur die H1-Stelle an.
-    expect(quelle).toContain('size-11 shrink-0');
+    // Der Stift-Knopf der Gruppenzeile kommt seit D-108 aus `listRowAction` (ui/styles.ts) und bleibt 44 px groß.
+    expect(quelle).toContain('className={listRowAction}');
+    expect(readFileSync(join(root, '..', 'ui', 'styles.ts'), 'utf8')).toMatch(
+      /listRowAction =\s*'[^']*\bsize-11\b/,
+    );
     expect(quelle).toContain('min-h-11');
   });
 });

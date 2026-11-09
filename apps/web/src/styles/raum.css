@@ -958,6 +958,36 @@
   border-radius: 50%;
 }
 
+/* Zeile mit Knopf am Ende (Chats, Einträge, Gruppen; D-108): Der Knopf sitzt in der Zeile, 10 px vom Rand wie
+   nach oben und unten. Zeile, Trennlinie und Hover reichen so über die ganze Mulde, nichts ragt über ihren Rand,
+   und der Schatten des Knopfs liegt frei auf der Zeile statt im Schatten der Muldenkante. */
+:root[data-design="raum"] ul:has(> li > .lg-row) > li > .lg-row.lg-row-lead {
+  padding-inline-end: 64px;
+}
+
+:root[data-design="raum"] li:has(> .lg-row) > .lg-row-action {
+  right: 10px;
+}
+
+/* Chatliste: Die Tageszeile steht ohne eigene Linie in der Mulde, auf der Flucht des Zeilentexts (4 + 12 px). */
+:root[data-design="raum"] .lg-chats > .lg-day {
+  border: 0;
+  padding-inline: 12px;
+}
+
+/* Ladegerüst der Listen: dieselbe Mulde wie die echte Liste, ohne Linien. */
+:root[data-design="raum"] .lg-skel-rows {
+  border: 0;
+  padding: 4px;
+  border-radius: var(--raum-r-big);
+  box-shadow: var(--raum-in-m);
+}
+
+:root[data-design="raum"] .lg-skel-row {
+  border: 0;
+  padding-inline: 12px;
+}
+
 /* Die Trennlinie (eingraviert) zwischen Zeilen: die Balken aus lagen.css entfallen. */
 :root[data-design="raum"] .lg-row::before {
   content: none;
@@ -976,6 +1006,11 @@
   background: linear-gradient(var(--raum-dark) 1px, var(--raum-light) 1px);
   transform: none;
   transition: opacity var(--t-color) ease;
+}
+
+/* Chatliste: Die erste Zeile nach einer Tageszeile beginnt ohne Trennlinie, die Tageszeile trennt schon. */
+:root[data-design="raum"] .lg-chats > .lg-day + li > .lg-row::before {
+  content: none;
 }
 
 @media (hover: hover) {

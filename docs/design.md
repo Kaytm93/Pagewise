@@ -70,7 +70,7 @@ Rahmen und Startfläche folgen der **gewählten** Darstellung, nicht nur dem Ger
 
 ## Regeln für neue Bildschirme
 
-1. Ein Bildschirm ist ein Blatt: `Sheet` (`width="wide"` oder `"prose"`) und darin Abschnitte mit `sectionTitle` (`ui/styles.ts`). Listenzeilen nutzen `listRow` (Balken in Fachfarbe beim Darüberfahren).
+1. Ein Bildschirm ist ein Blatt: `Sheet` (`width="wide"` oder `"prose"`) und darin Abschnitte mit `sectionTitle` (`ui/styles.ts`). Listenzeilen nutzen `listRow` (Balken in Fachfarbe beim Darüberfahren). Hat eine Zeile einen Knopf am Ende (Löschen, Bearbeiten), sitzt er in der Zeile und nicht als Spalte daneben: `listRowHost` am `li`, `listRowLead` an der Zeile, `listRowAction` am Knopf; kein negativer Rand, nichts ragt über die Liste (D-108). Ladegerüste einer Liste nutzen `listSkeleton` und `listSkeletonRow`, damit Linien und Mulde zur echten Liste passen.
 2. Farben nur über Tokens (`bg-sheet`, `text-ink-muted`, `border-line-warm`, `bg-subj` …), keine festen Werte. Texte in `i18n/de.ts`.
 3. Bewegung nur über die `mo-*`-Klassen oder Variablen aus `motion.css`. Neue Keyframes brauchen `--m`, damit „Reduziert“ greift. Kein `style={…}` (CSP, D-023); dynamische Werte per `element.style.setProperty` über das CSSOM.
 4. Bedienflächen mindestens 44 px, sichtbarer Fokus (`:focus-visible`), Tastaturbedienung, Zielgröße auch bei Symbolen.

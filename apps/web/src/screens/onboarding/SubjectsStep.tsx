@@ -220,7 +220,7 @@ export function SubjectsStep({
                   type="button"
                   onClick={() => void remove(subject.id)}
                   aria-label={format(s.remove, { name: subject.name })}
-                  className="-mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                  className="inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
                 >
                   <X aria-hidden="true" className="size-4" />
                 </button>

@@ -420,4 +420,26 @@ describe('Raum: Listen und Trennlinien', () => {
       /:root\[data-design='raum'\] li:has\(> \.lg-row\) > button:not\(\.lg-row\)\s*\{[^}]*border-radius: 50%/,
     );
   });
+
+  it('setzt den Knopf am Zeilenende in die Zeile: Platz in der Zeile, 10 px vom Rand (D-108)', () => {
+    expect(
+      rule(raum, ":root[data-design='raum'] ul:has(> li > .lg-row) > li > .lg-row.lg-row-lead"),
+    ).toContain('padding-inline-end: 64px');
+    expect(rule(raum, ":root[data-design='raum'] li:has(> .lg-row) > .lg-row-action")).toContain(
+      'right: 10px',
+    );
+  });
+
+  it('lässt die Tageszeile der Chatliste ohne eigene Linie in der Mulde stehen (D-108)', () => {
+    expect(rule(raum, ":root[data-design='raum'] .lg-chats > .lg-day")).toContain('border: 0');
+    expect(
+      rule(raum, ":root[data-design='raum'] .lg-chats > .lg-day + li > .lg-row::before"),
+    ).toContain('content: none');
+  });
+
+  it('gibt dem Ladegerüst der Listen dieselbe Mulde wie der echten Liste (D-108)', () => {
+    expect(rule(raum, ":root[data-design='raum'] .lg-skel-rows")).toContain(
+      'box-shadow: var(--raum-in-m)',
+    );
+  });
 });

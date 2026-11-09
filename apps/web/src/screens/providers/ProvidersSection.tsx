@@ -49,7 +49,7 @@ export function ProvidersSection() {
                 type="button"
                 onClick={() => setDialog({ provider })}
                 aria-label={format(m.providers.editNamed, { name: provider.name })}
-                className="-mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
               >
                 <Pencil aria-hidden="true" className="size-4" />
               </button>

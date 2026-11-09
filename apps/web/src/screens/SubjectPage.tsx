@@ -8,7 +8,7 @@ import { Button } from '../ui/Button';
 import { Link } from '../ui/Link';
 import { Sheet } from '../ui/Sheet';
 import { SubjectIcon } from '../ui/SubjectIcon';
-import { listRow, sectionTitle } from '../ui/styles';
+import { listRowAction, listRowHost, listRowLead, sectionTitle } from '../ui/styles';
 import { Tabs } from '../ui/Tabs';
 import { useDesign } from '../ui/useDesign';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
@@ -264,10 +264,10 @@ export function SubjectPage({
           ) : (
             <ul className="mt-2 divide-y divide-line-warm border-y border-line-warm">
               {subject.groups.map((entry) => (
-                <li key={entry.id} className="flex items-center">
+                <li key={entry.id} className={listRowHost}>
                   <Link
                     to={{ name: 'subject', subjectId: subject.id, groupId: entry.id }}
-                    className={listRow}
+                    className={listRowLead}
                   >
                     <span className="truncate font-heading text-xl tracking-[-0.2px]">
                       {entry.name}
@@ -280,7 +280,7 @@ export function SubjectPage({
                     type="button"
                     onClick={() => setDialog({ type: 'group', group: entry })}
                     aria-label={format(m.subject.editGroupNamed, { name: entry.name })}
-                    className="mo-press -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] text-ink-muted hover:bg-paper hover:text-ink"
+                    className={listRowAction}
                   >
                     <Pencil aria-hidden="true" className="size-4" />
                   </button>
