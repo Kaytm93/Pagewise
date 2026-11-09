@@ -6,6 +6,7 @@ import { format, messages as m } from '../../i18n';
 import { useSession } from '../../session/SessionProvider';
 import { Button } from '../../ui/Button';
 import { FieldError } from '../../ui/FieldError';
+import { iconButton } from '../../ui/styles';
 import { isFreeModel } from './provider-text';
 
 const MAX_MODELS = 500;
@@ -153,7 +154,7 @@ export function ModelListEditor({
                     type="button"
                     onClick={() => onChange(models.filter((_, at) => at !== index))}
                     aria-label={format(m.providers.models.remove, { id: model.id })}
-                    className="inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                    className={iconButton}
                   >
                     <Trash2 aria-hidden="true" className="size-4" />
                   </button>

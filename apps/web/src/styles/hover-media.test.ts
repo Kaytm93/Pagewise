@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -7,6 +7,10 @@ import { describe, expect, it } from 'vitest';
  * Hover-Zustände dürfen auf Touch nicht kleben bleiben (static-css#04): Überschreibungen des Hovers von
  * `.lg-slip`/`.lg-row` in den Designrichtungen stehen deshalb — wie in lagen.css — hinter
  * `@media (hover: hover)`. Dieser Test liest den Quelltext und nagelt das fest.
+ *
+ * D-109 weitet die Regel auf jede Stildatei und jeden Selektor aus: `.lg-chip:hover` (lagen.css) und der Griff
+ * des Datei-Panels (screens.css) standen außerhalb der Abfrage und blieben unbemerkt, weil der Test nur
+ * raum.css und atelier.css und dort nur Zeilen und Karten ansah.
  */
 
 const dir = dirname(fileURLToPath(import.meta.url));
@@ -60,6 +64,50 @@ describe.each([
       expect(regel.medias, `außerhalb von @media (hover: hover): ${regel.selector}`).toContain(
         '@media (hover: hover)',
       );
+    }
+  });
+});
+
+const dateien = readdirSync(dir).filter((file) => file.endsWith('.css'));
+const alleHover = (file: string) =>
+  regeln(read(file)).filter((regel) => /:hover/.test(regel.selector));
+const hinterMaus = (regel: Regel) => regel.medias.some((media) => /\(hover: hover\)/.test(media));
+
+describe('Hover nur mit echter Maus, in jeder Stildatei (D-109)', () => {
+  it('sieht die Hover-Regeln aller Stildateien', () => {
+    expect(dateien).toEqual(expect.arrayContaining(['lagen.css', 'raum.css', 'atelier.css']));
+    expect(dateien.flatMap(alleHover).length).toBeGreaterThanOrEqual(28);
+  });
+
+  it.each(dateien)('%s: jede :hover-Regel steht in @media (hover: hover)', (file) => {
+    for (const regel of alleHover(file)) {
+      expect(hinterMaus(regel), `außerhalb von @media (hover: hover): ${regel.selector}`).toBe(
+        true,
+      );
+    }
+  });
+
+  it.each(dateien)(
+    '%s: kein Fokus- oder Gedrückt-Zustand steckt mit in der Maus-Abfrage',
+    (file) => {
+      // Teilt sich ein Selektor die Regel mit :hover, gälte er auf dem iPad nie.
+      for (const regel of alleHover(file)) {
+        for (const teil of regel.selector.split(',')) {
+          if (/:(focus-visible|active)/.test(teil)) {
+            expect(teil, `ohne :hover in der Maus-Abfrage: ${teil.trim()}`).toMatch(/:hover/);
+          }
+        }
+      }
+    },
+  );
+
+  it('lässt Tailwinds hover:-Klassen hinter (hover: hover): Version 4, keine eigene Variante', () => {
+    const paket = JSON.parse(readFileSync(join(dir, '..', '..', 'package.json'), 'utf8')) as {
+      devDependencies: Record<string, string>;
+    };
+    expect(paket.devDependencies.tailwindcss).toMatch(/^[\^~]?4\./);
+    for (const file of dateien) {
+      expect(read(file), file).not.toMatch(/@(custom-)?variant\s+hover\b/);
     }
   });
 });

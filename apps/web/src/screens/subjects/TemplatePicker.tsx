@@ -217,7 +217,7 @@ export function TemplatePicker({
                   aria-expanded={expanded}
                   aria-controls={panelId}
                   disabled={folded !== ''}
-                  className="flex min-h-11 w-full items-center gap-2 rounded-control px-1 text-left font-medium text-ink hover:bg-paper disabled:cursor-default disabled:hover:bg-transparent"
+                  className="mo-tap flex min-h-11 w-full items-center gap-2 rounded-control px-1 text-left font-medium text-ink hover:bg-paper disabled:cursor-default disabled:hover:bg-transparent"
                 >
                   <ChevronRight
                     aria-hidden="true"
@@ -245,7 +245,7 @@ export function TemplatePicker({
                       <li key={idOf(template)}>
                         <label
                           htmlFor={id}
-                          className="flex min-h-11 cursor-pointer items-center gap-3 rounded-control px-1 py-1.5 hover:bg-paper has-[:disabled]:cursor-default has-[:disabled]:text-ink-muted has-[:disabled]:hover:bg-transparent"
+                          className="mo-tap flex min-h-11 cursor-pointer items-center gap-3 rounded-control px-1 py-1.5 hover:bg-paper has-[:disabled]:cursor-default has-[:disabled]:text-ink-muted has-[:disabled]:hover:bg-transparent"
                         >
                           <input
                             id={id}
@@ -281,7 +281,7 @@ export function TemplatePicker({
           <button
             type="button"
             onClick={() => onCustom?.(query.trim())}
-            className="mt-2 flex min-h-11 w-full items-center gap-2.5 rounded-control px-1 text-left text-ink hover:bg-paper"
+            className="mo-tap mt-2 flex min-h-11 w-full items-center gap-2.5 rounded-control px-1 text-left text-ink hover:bg-paper"
           >
             <Plus aria-hidden="true" strokeWidth={1.6} className="size-[18px] shrink-0" />
             {format(t.createCustom, { name: query.trim() })}

@@ -399,6 +399,38 @@
   transform: scale(calc(1 - var(--m) * 0.03));
 }
 
+/* Flaches Bedienelement (Symbol-Knopf, Textknopf ohne eigene Fläche; D-109): gibt beim Drücken leicht nach und
+   wird blasser, damit der Zustand auch ohne Bewegung erkennbar bleibt. Anders als mo-press wird es in „Raum“
+   nicht zur gehobenen Fläche. */
+.mo-tap {
+  transition:
+    transform var(--t-fast) var(--ease),
+    opacity var(--t-color) ease,
+    background-color var(--t-color) ease,
+    border-color var(--t-color) ease,
+    color var(--t-color) ease;
+}
+
+.mo-tap:active {
+  opacity: 0.78;
+  transform: scale(calc(1 - var(--m) * 0.04));
+}
+
+/* Kleines Symbol mit 44 px Trefferfläche (D-109): die Fläche wächst unsichtbar um das Element. */
+.mo-hit {
+  position: relative;
+}
+
+.mo-hit::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+
 /* Zeile, die beim Darüberfahren etwas zur Seite rückt */
 @media (hover: hover) {
   .mo-nudge {

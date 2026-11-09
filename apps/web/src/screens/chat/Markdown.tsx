@@ -48,7 +48,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
         type="button"
         onClick={() => void copy(code)}
         aria-label={m.chat.copyCode}
-        className="absolute top-1 right-1 inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-sheet hover:text-ink"
+        className="mo-tap absolute top-1 right-1 inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-sheet hover:text-ink"
       >
         {copyState === 'copied' ? (
           <Check aria-hidden="true" className="size-4" />

@@ -7,6 +7,7 @@ import { TextField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
 import { Segmented } from '../../ui/Segmented';
 import { SubjectIcon } from '../../ui/SubjectIcon';
+import { iconButton } from '../../ui/styles';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { commonErrorMessage } from '../auth-errors';
 import { StepFrame } from './StepFrame';
@@ -126,7 +127,7 @@ function ImportTab() {
         aria-label={m.onboarding.subjects.importChoose}
         disabled={busy}
         onChange={(event) => void onFile(event.target)}
-        className="mt-3 block w-full text-sm text-ink-secondary file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-control file:border file:border-control-edge file:bg-sheet file:px-4 file:font-medium file:text-ink hover:file:bg-paper"
+        className="mt-3 block w-full text-sm text-ink-secondary disabled:opacity-50 file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-control file:border file:border-control-edge file:bg-sheet file:px-4 file:font-medium file:text-ink hover:file:bg-paper"
       />
       {error && <FieldError>{error}</FieldError>}
       {result && (
@@ -220,7 +221,7 @@ export function SubjectsStep({
                   type="button"
                   onClick={() => void remove(subject.id)}
                   aria-label={format(s.remove, { name: subject.name })}
-                  className="inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                  className={iconButton}
                 >
                   <X aria-hidden="true" className="size-4" />
                 </button>

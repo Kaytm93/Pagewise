@@ -16,6 +16,13 @@ export const listRowLead = `${listRow} lg-row-lead pr-14`;
 export const listRowAction =
   'lg-row-action mo-press absolute inset-y-0 right-1 my-auto inline-flex size-11 items-center justify-center rounded-[10px] text-ink-muted hover:bg-paper hover:text-ink disabled:opacity-50';
 
+/**
+ * Symbol-Knopf ohne eigene Fläche, 44 px (Kopfleisten, Listen, Einstellungen; D-109): Hover hinterlegt die Fläche,
+ * gedrückt gibt er nach (`mo-tap`), deaktiviert ist er blass. In „Raum“ bleibt er flach; gehoben ist nur `mo-press`.
+ */
+export const iconButton =
+  'mo-tap inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink disabled:opacity-50';
+
 /** Ladegerüst einer Liste: dieselben Linien wie die echte Liste (in „Raum“ dieselbe Mulde, siehe raum.css). */
 export const listSkeleton = 'lg-skel-rows mt-3 border-t border-line-warm';
 export const listSkeletonRow = 'lg-skel-row grid gap-2.5 border-b border-line-warm px-2 py-[18px]';

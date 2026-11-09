@@ -7,6 +7,7 @@ import { useSession } from '../../session/SessionProvider';
 import { Button } from '../../ui/Button';
 import { TextField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
+import { iconButton } from '../../ui/styles';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { commonErrorMessage } from '../auth-errors';
 import { EngineDialog } from './EngineDialog';
@@ -191,7 +192,7 @@ export function AgentSection() {
                     type="button"
                     onClick={() => setDialog({ profile })}
                     aria-label={format(t.editNamed, { name: profile.name })}
-                    className="inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                    className={iconButton}
                   >
                     <Pencil aria-hidden="true" className="size-4" />
                   </button>

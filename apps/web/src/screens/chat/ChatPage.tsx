@@ -27,6 +27,7 @@ import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
 import { Modal, ModalFooter } from '../../ui/modal';
 import { Sheet } from '../../ui/Sheet';
+import { iconButton } from '../../ui/styles';
 import { useDesign } from '../../ui/useDesign';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { ChatEdgeMotif, ChatStatus, chatPhase } from '../atelier/SubjectAtelierChat';
@@ -408,7 +409,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
                     onClick={() => setPanelOpen((open) => !open)}
                     aria-label={panelOpen ? m.chat.files.close : m.chat.files.open}
                     aria-expanded={panelOpen}
-                    className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                    className={iconButton}
                   >
                     {panelOpen ? (
                       <PanelRightClose aria-hidden="true" className="size-4" />
@@ -420,7 +421,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
                     type="button"
                     onClick={() => setDialog('rename')}
                     aria-label={m.chat.rename}
-                    className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                    className={iconButton}
                   >
                     <Pencil aria-hidden="true" className="size-4" />
                   </button>
@@ -428,7 +429,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
                     type="button"
                     onClick={() => setDialog('delete')}
                     aria-label={m.chat.delete}
-                    className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                    className={iconButton}
                   >
                     <Trash2 aria-hidden="true" className="size-4" />
                   </button>
@@ -438,7 +439,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
                 type="button"
                 onClick={() => setDialog('model')}
                 aria-label={modelAriaLabel}
-                className="-ml-2.5 inline-flex min-h-11 max-w-full items-center gap-2 rounded-control px-2.5 text-sm text-ink-secondary hover:bg-paper hover:text-ink"
+                className="mo-tap -ml-2.5 inline-flex min-h-11 max-w-full items-center gap-2 rounded-control px-2.5 text-sm text-ink-secondary hover:bg-paper hover:text-ink"
               >
                 <SlidersHorizontal aria-hidden="true" className="size-4 shrink-0" />
                 <span className="truncate">{modelLabel}</span>

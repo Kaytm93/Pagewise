@@ -86,7 +86,7 @@ export function SecretField({ showLabel, hideLabel, ...props }: SecretFieldProps
           onClick={() => setVisible((value) => !value)}
           aria-pressed={visible}
           aria-label={visible ? hideLabel : showLabel}
-          className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:text-ink"
+          className="mo-tap inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:text-ink"
         >
           {visible ? (
             <EyeOff aria-hidden="true" className="size-5" />

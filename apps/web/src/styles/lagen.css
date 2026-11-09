@@ -903,8 +903,14 @@ details[open] > summary .mo-arrow {
   text-decoration: none;
 }
 
-.lg-chip:hover {
-  background: color-mix(in srgb, var(--subj) 7%, transparent);
+@media (hover: hover) {
+  .lg-chip:hover {
+    background: color-mix(in srgb, var(--subj) 7%, transparent);
+  }
+}
+
+.lg-chip:active {
+  background: color-mix(in srgb, var(--subj) 14%, transparent);
 }
 
 .lg-dot {

@@ -132,7 +132,7 @@ export function AgentActivity({ steps, live }: { steps: ActivityEntry[]; live: b
     >
       <summary
         data-state={headState}
-        className="lg-agent-head inline-flex min-h-11 max-w-full cursor-pointer items-center gap-2 whitespace-nowrap text-ink-muted hover:text-ink"
+        className="lg-agent-head inline-flex min-h-11 max-w-full cursor-pointer items-center gap-2 whitespace-nowrap text-ink-muted hover:text-ink active:text-ink"
       >
         {/* Kopf in einer Zeile: Statuszeichen, Titel (kürzt sich bei Platzmangel), Pfeil. */}
         <StateMark state={headState} lagen={lagen} />

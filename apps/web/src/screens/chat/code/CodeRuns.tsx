@@ -140,7 +140,7 @@ function CodeRunItem({ run }: { run: ChatCodeRun }) {
           if (event.currentTarget.open) fetchScript();
         }}
       >
-        <summary className="inline-flex min-h-11 cursor-pointer items-center text-ink-secondary underline underline-offset-2 hover:text-ink">
+        <summary className="mo-tap inline-flex min-h-11 cursor-pointer items-center text-ink-secondary underline underline-offset-2 hover:text-ink">
           {open ? t.hide : t.show}
         </summary>
         <div className="pb-1">

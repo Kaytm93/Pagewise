@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { Provider } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { Button } from '../../ui/Button';
+import { iconButton } from '../../ui/styles';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { ModelChoice } from './ModelChoice';
 import { ProviderDialog } from './ProviderDialog';
@@ -49,7 +50,7 @@ export function ProvidersSection() {
                 type="button"
                 onClick={() => setDialog({ provider })}
                 aria-label={format(m.providers.editNamed, { name: provider.name })}
-                className="inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                className={iconButton}
               >
                 <Pencil aria-hidden="true" className="size-4" />
               </button>

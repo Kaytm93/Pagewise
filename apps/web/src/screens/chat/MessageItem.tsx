@@ -205,7 +205,7 @@ export const MessageItem = memo(function MessageItem({
                 type="button"
                 onClick={() => void copy(message.content)}
                 aria-label={m.chat.copy}
-                className="inline-flex size-11 items-center justify-center rounded-control hover:bg-paper hover:text-ink"
+                className="mo-tap inline-flex size-11 items-center justify-center rounded-control hover:bg-paper hover:text-ink"
               >
                 {copyState === 'copied' ? (
                   <Check aria-hidden="true" className="size-4" />
