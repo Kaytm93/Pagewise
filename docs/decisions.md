@@ -1078,3 +1078,9 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Anlass:** Abnahme-Bild der Fachseite in Raum: „Noch keine Untergruppen“ stand in einer flachen, kaum sichtbaren Fläche (`rounded-box bg-paper p-4`), acht Listen wiederholten diese Klassen von Hand.
 - **Entscheidung:** `emptyState` in `ui/styles.ts` ist die gemeinsame Klasse für leere Listen (Haken `lg-empty`). In Raum ist sie eine leere Mulde (`--raum-in-m`, Radius 20 px) wie die Liste, die später dort steht. Lagen und Atelier bleiben, wie sie waren.
 - **Umsetzung:** `ui/styles.ts`, `styles/raum.css`, `screens/SubjectPage.tsx`, `screens/atelier/SubjectAtelier.tsx`, `screens/chat/ChatList.tsx`, `screens/notes/NoteList.tsx`, `planning/ExamsPage.tsx`, `planning/TimetablePage.tsx`, `screens/agents/AgentSection.tsx`, `screens/providers/ProvidersSection.tsx`. Tests: `ui/styles.test.ts`, `styles/raum-tokens.test.ts`.
+
+## D-112 Raum: gehobene Knöpfe stehen bündig an der Inhaltskante (9. November 2026)
+
+- **Anlass:** Abnahme-Bild der Fachseite: „Untergruppe hinzufügen“ und „Test eintragen“ ragten 12 px über die rechte Kante des Inhalts (1192 statt 1180 px). Der negative Rand (`-mr-3`, `-ml-3`) gleicht bei flachen Textknöpfen das Polster aus; in Raum ist derselbe Knopf eine gehobene Fläche, und der Rand schiebt sie sichtbar hinaus.
+- **Entscheidung:** In Raum gilt für `mo-press` mit `-mr-3` oder `-ml-3` kein negativer Rand. Lagen und Atelier behalten die optische Ausrichtung. Betroffen: `screens/SubjectPage.tsx`, `planning/UpcomingExams.tsx`, `screens/HomePage.tsx`, `screens/providers/ModelChoice.tsx`, `screens/providers/ModelListEditor.tsx`. Der Schließen-Knopf der Dialoge (`-mr-2`, D-088 gemessen) bleibt unverändert.
+- **Umsetzung:** `styles/raum.css`, Test in `styles/raum-tokens.test.ts`.

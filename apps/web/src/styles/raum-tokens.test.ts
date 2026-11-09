@@ -437,6 +437,15 @@ describe('Raum: Listen und Trennlinien', () => {
     ).toContain('content: none');
   });
 
+  it('stellt gehobene Knöpfe bündig an die Inhaltskante: kein negativer Rand in Raum (D-112)', () => {
+    expect(rule(raum, ":root[data-design='raum'] .mo-press[class*='-mr-3']")).toContain(
+      'margin-right: 0',
+    );
+    expect(rule(raum, ":root[data-design='raum'] .mo-press[class*='-ml-3']")).toContain(
+      'margin-left: 0',
+    );
+  });
+
   it('zeigt einen leeren Zustand als leere Mulde, nicht als flache Fläche (D-111)', () => {
     const leer = rule(raum, ":root[data-design='raum'] .lg-empty");
     expect(leer).toContain('box-shadow: var(--raum-in-m)');
