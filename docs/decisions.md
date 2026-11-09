@@ -1084,3 +1084,10 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Anlass:** Abnahme-Bild der Fachseite: „Untergruppe hinzufügen“ und „Test eintragen“ ragten 12 px über die rechte Kante des Inhalts (1192 statt 1180 px). Der negative Rand (`-mr-3`, `-ml-3`) gleicht bei flachen Textknöpfen das Polster aus; in Raum ist derselbe Knopf eine gehobene Fläche, und der Rand schiebt sie sichtbar hinaus.
 - **Entscheidung:** In Raum gilt für `mo-press` mit `-mr-3` oder `-ml-3` kein negativer Rand. Lagen und Atelier behalten die optische Ausrichtung. Betroffen: `screens/SubjectPage.tsx`, `planning/UpcomingExams.tsx`, `screens/HomePage.tsx`, `screens/providers/ModelChoice.tsx`, `screens/providers/ModelListEditor.tsx`. Der Schließen-Knopf der Dialoge (`-mr-2`, D-088 gemessen) bleibt unverändert.
 - **Umsetzung:** `styles/raum.css`, Test in `styles/raum-tokens.test.ts`.
+
+## D-113 Textlinks und Aufklapper mit Hover (9. November 2026)
+
+- **Anlass:** Offener Punkt aus D-109: Schlichte Textlinks („Stundenplan eintragen“, „Test eintragen“, „Zu den Einstellungen“) und Aufklapper hatten gar keinen Hover, nur 44 px Zielhöhe.
+- **Entscheidung:** `textLink` in `ui/styles.ts` für Links, die allein in ihrer Zeile stehen (Hover unterstreicht, gedrückt `mo-tap`), und `disclosure` für `<summary>` (Hover färbt in Tinte). Der Test in `ui/states.test.ts` findet jede Klassenliste, die nur aus Zielhöhe und Ausrichtung besteht.
+- **Umsetzung:** `planning/NextUp.tsx`, `planning/UpcomingExams.tsx`, `planning/ExamsPage.tsx`, `screens/lagen/StartGrid.tsx`, `screens/raum/StartPlan.tsx`, `screens/chat/ModelDialog.tsx`, `screens/chat/MessageItem.tsx`, `screens/chat/ChatPage.tsx`, `screens/chat/Reasoning.tsx`, `screens/prompts/PromptDialog.tsx`, `screens/providers/ProviderForm.tsx`, `screens/NotFoundPage.tsx`.
+- **Offen:** Links im Fließtext der Chat-Antworten (`Markdown.tsx`) und Auswahl-Labels (`ui/Field.tsx`, `ModelListEditor.tsx`, `ProviderStep.tsx`) haben weiter nur den gedrückten Grundzustand.

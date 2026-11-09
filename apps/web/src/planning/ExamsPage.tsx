@@ -126,7 +126,9 @@ export function ExamsPage() {
 
               {past.length > 0 && (
                 <details className="mt-10">
-                  <summary className={`${sectionTitle} flex min-h-11 cursor-pointer items-center`}>
+                  <summary
+                    className={`${sectionTitle} mo-tap flex min-h-11 cursor-pointer items-center hover:text-ink`}
+                  >
                     {e.past} ({past.length})
                   </summary>
                   <ul className="mt-2 divide-y divide-line-warm border-y border-line-warm">

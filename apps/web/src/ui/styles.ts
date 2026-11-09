@@ -24,6 +24,16 @@ export const iconButton =
   'mo-tap inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink disabled:opacity-50';
 
 /**
+ * Textlink mit 44 px Zielhöhe, der allein in seiner Zeile steht („Stundenplan eintragen“; D-113): Hover
+ * unterstreicht, gedrückt gibt er nach (`mo-tap`). Die Farbe kommt von der Grundregel für Links.
+ */
+export const textLink =
+  'mo-tap inline-flex min-h-11 items-center underline-offset-4 hover:underline';
+
+/** Aufklapper (`<summary>`) mit 44 px Zielhöhe: Hover färbt die Zeile in Tinte, gedrückt gibt sie nach (D-113). */
+export const disclosure = 'mo-tap inline-flex min-h-11 cursor-pointer items-center hover:text-ink';
+
+/**
  * Leerer Zustand einer Liste („Noch keine …“ mit einem Satz dazu; D-111): eine ruhige Fläche mit 16 px Polster.
  * In „Raum“ ist sie eine leere Mulde wie die Liste, die später an ihrer Stelle steht (raum.css, `.lg-empty`).
  */

@@ -1,5 +1,6 @@
 import { format, messages as m } from '../i18n';
 import { Link } from '../ui/Link';
+import { textLink } from '../ui/styles';
 import { subjectColorAttr } from '../ui/subject-color';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { formatDate, localDate } from './dates';
@@ -70,7 +71,7 @@ export function NextUp() {
           {entries.length === 0 ? (
             <>
               <p className="text-ink-secondary">{n.noTimetable}</p>
-              <Link to={{ name: 'timetable' }} className="mt-1 inline-flex min-h-11 items-center">
+              <Link to={{ name: 'timetable' }} className={`mt-1 ${textLink}`}>
                 {n.setUp}
               </Link>
             </>
@@ -83,7 +84,7 @@ export function NextUp() {
               {room && (
                 <p className="mt-1 text-sm text-ink-muted">{format(n.lessonNowRoom, { room })}</p>
               )}
-              <Link to={{ name: 'timetable' }} className="mt-1 inline-flex min-h-11 items-center">
+              <Link to={{ name: 'timetable' }} className={`mt-1 ${textLink}`}>
                 {n.openTimetable}
               </Link>
             </>
@@ -111,14 +112,14 @@ export function NextUp() {
                 {formatDate(exam.date, 'long')}
                 {exam.time && `, ${format(m.planning.exams.at, { time: exam.time })}`}
               </p>
-              <Link to={{ name: 'exams' }} className="mt-3 inline-flex min-h-11 items-center">
+              <Link to={{ name: 'exams' }} className={`mt-3 ${textLink}`}>
                 {n.allExams}
               </Link>
             </div>
           ) : (
             <div>
               <p className="text-ink-secondary">{n.noExams}</p>
-              <Link to={{ name: 'exams' }} className="mt-1 inline-flex min-h-11 items-center">
+              <Link to={{ name: 'exams' }} className={`mt-1 ${textLink}`}>
                 {n.addExam}
               </Link>
             </div>

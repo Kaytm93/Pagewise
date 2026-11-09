@@ -5,6 +5,7 @@ import { SelectField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
 import { Modal, ModalFooter } from '../../ui/modal';
+import { textLink } from '../../ui/styles';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { commonErrorMessage } from '../auth-errors';
 import { parseSelectionKey, selectionKey } from '../providers/provider-text';
@@ -76,7 +77,7 @@ export function ModelDialog({
       {options.length === 0 && profiles.length === 0 ? (
         <div className="space-y-1">
           <p className="text-ink-secondary">{d.none}</p>
-          <Link to={{ name: 'settings' }} className="inline-flex min-h-11 items-center">
+          <Link to={{ name: 'settings' }} className={textLink}>
             {m.chat.openSettings}
           </Link>
         </div>

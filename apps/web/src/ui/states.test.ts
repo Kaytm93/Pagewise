@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { iconButton, listRowAction } from './styles';
+import { disclosure, iconButton, listRowAction, textLink } from './styles';
 
 /*
  * D-109: Jede Bedienfläche hat dieselben Zustände. Hover (nur mit Maus, siehe styles/hover-media.test.ts),
@@ -81,6 +81,23 @@ describe('Zustände der Bedienflächen (D-109)', () => {
       );
       expect(klassen).toMatch(GEDRUECKT);
     }
+  });
+});
+
+describe('Textlinks und Aufklapper (D-113)', () => {
+  it('haben Hover, gedrückten Zustand und 44 px Zielhöhe', () => {
+    for (const klassen of [textLink, disclosure]) {
+      expect(klassen.split(' ')).toEqual(expect.arrayContaining(['mo-tap', 'min-h-11']));
+      expect(klassen).toMatch(HOVER);
+    }
+    expect(textLink.split(' ')).toContain('hover:underline');
+  });
+
+  it('lässt keinen allein stehenden Link und keinen Aufklapper ohne Hover zurück', () => {
+    const schlicht =
+      /^((mt|mb)-\d+ )?(inline-flex min-h-11 (cursor-pointer )?items-center|min-h-11 cursor-pointer .*)$/;
+    const ohne = literale.filter(({ klassen }) => schlicht.test(klassen) && !HOVER.test(klassen));
+    expect(ohne.map(({ ort, klassen }) => `${ort}: ${klassen}`)).toEqual([]);
   });
 });
 

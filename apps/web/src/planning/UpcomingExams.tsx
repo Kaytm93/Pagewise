@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { messages as m } from '../i18n';
 import { Button } from '../ui/Button';
 import { Link } from '../ui/Link';
-import { sectionTitle } from '../ui/styles';
+import { sectionTitle, textLink } from '../ui/styles';
 import { localDate } from './dates';
 import { ExamDialog } from './ExamDialog';
 import { ExamRow } from './ExamsPage';
@@ -49,7 +49,7 @@ export function UpcomingExams({ subjectId }: { subjectId: string }) {
               <ExamRow key={exam.id} exam={exam} today={today} onOpen={() => setAdding({ exam })} />
             ))}
           </ul>
-          <Link to={{ name: 'exams' }} className="mt-1 inline-flex min-h-11 items-center">
+          <Link to={{ name: 'exams' }} className={`mt-1 ${textLink}`}>
             {t.all}
           </Link>
         </>

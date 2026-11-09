@@ -27,7 +27,7 @@ import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
 import { Modal, ModalFooter } from '../../ui/modal';
 import { Sheet } from '../../ui/Sheet';
-import { iconButton } from '../../ui/styles';
+import { iconButton, textLink } from '../../ui/styles';
 import { useDesign } from '../../ui/useDesign';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { ChatEdgeMotif, ChatStatus, chatPhase } from '../atelier/SubjectAtelierChat';
@@ -515,7 +515,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
                 <div className="mb-3 rounded-box bg-paper px-4 py-3 text-sm">
                   <p className="font-medium">{m.chat.noModelTitle}</p>
                   <p className="mt-1 text-ink-secondary">{m.chat.noModelHint}</p>
-                  <Link to={toSettings} className="mt-1 inline-flex min-h-11 items-center">
+                  <Link to={toSettings} className={`mt-1 ${textLink}`}>
                     {m.chat.openSettings}
                   </Link>
                 </div>

@@ -5,7 +5,7 @@ import { relativeDay } from '../../planning/labels';
 import { usePlanner } from '../../planning/PlannerProvider';
 import { groupExams, lessonsOn } from '../../planning/schedule';
 import { Link } from '../../ui/Link';
-import { sectionTitle } from '../../ui/styles';
+import { sectionTitle, textLink } from '../../ui/styles';
 import { subjectColorAttr } from '../../ui/subject-color';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 
@@ -89,7 +89,7 @@ export function StartGrid() {
               {lesson.subjectId && (
                 <Link
                   to={{ name: 'subject', subjectId: lesson.subjectId, groupId: null }}
-                  className="inline-flex min-h-11 items-center"
+                  className={textLink}
                 >
                   {m.planning.startGrid.openSubject}
                 </Link>
@@ -124,7 +124,7 @@ export function StartGrid() {
                   ? m.planning.nextUp.noTimetable
                   : m.planning.nextUp.nothingToday}
               </p>
-              <Link to={{ name: 'timetable' }} className="mt-1 inline-flex min-h-11 items-center">
+              <Link to={{ name: 'timetable' }} className={`mt-1 ${textLink}`}>
                 {entries.length === 0 ? m.planning.nextUp.setUp : m.planning.nextUp.openTimetable}
               </Link>
             </div>
@@ -174,7 +174,7 @@ export function StartGrid() {
                   ? m.planning.startGrid.topicsOne
                   : format(m.planning.startGrid.topicsMany, { count: topics.length })}
               </p>
-              <Link to={{ name: 'exams' }} className="mt-2 inline-flex min-h-11 items-center">
+              <Link to={{ name: 'exams' }} className={`mt-2 ${textLink}`}>
                 {m.planning.nextUp.allExams}
               </Link>
             </div>
@@ -184,7 +184,7 @@ export function StartGrid() {
                 {m.planning.nextUp.examTitle}
               </h3>
               <p className="text-ink-secondary">{m.planning.nextUp.noExams}</p>
-              <Link to={{ name: 'exams' }} className="mt-1 inline-flex min-h-11 items-center">
+              <Link to={{ name: 'exams' }} className={`mt-1 ${textLink}`}>
                 {m.planning.nextUp.addExam}
               </Link>
             </div>
