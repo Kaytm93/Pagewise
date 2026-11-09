@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
 import { ApiClient } from './api/client';
+import type { CodeOutcome } from './api/types';
 import { FakeServer } from './test/fake-server';
 
 function open(server: FakeServer, path: string) {
@@ -226,11 +227,38 @@ describe('Chat: Code, den das Modell ausgeführt hat', () => {
     expect(list.getByText('Code ausgeführt: Diagramm zeichnen')).toBeTruthy();
     expect(list.getByText('Erfolgreich')).toBeTruthy();
     expect(list.getByText('2,4 s')).toBeTruthy();
-    expect(list.getByText('Neue Dateien: diagramm.png')).toBeTruthy();
     expect(list.getByText('Zeitlimit erreicht')).toBeTruthy();
+    expect(list.getByText('1:00 min')).toBeTruthy();
+    // Ausgaben-Inhalte gibt es weiterhin nicht; der Lauf ohne Dateien bleibt gemeldet.
     expect(list.getByText('Keine neue Datei')).toBeTruthy();
     // Das Skript wird nicht ungefragt geladen.
     expect(server.calls('GET', '/api/code-runs/lauf-1')).toHaveLength(0);
+  });
+
+  it('zeigt je festem Ausgangscode Text und Symbol', async () => {
+    const codes: [CodeOutcome, string, string][] = [
+      ['ok', 'Erfolgreich', 'lucide-circle-check'],
+      ['error', 'Mit Fehler beendet', 'lucide-circle-x'],
+      ['timeout', 'Zeitlimit erreicht', 'lucide-clock-alert'],
+      ['cancelled', 'Abgebrochen', 'lucide-ban'],
+      ['output_limit', 'Zu viel Ausgabe', 'lucide-hourglass'],
+      ['memory_limit', 'Zu viel Speicher', 'lucide-hourglass'],
+      ['disk_limit', 'Zu viele oder zu große Dateien', 'lucide-hourglass'],
+      ['unavailable', 'Nicht verfügbar', 'lucide-circle-alert'],
+      ['failed', 'Nicht gestartet', 'lucide-circle-alert'],
+    ];
+    for (const [code, text, icon] of codes) {
+      const { server, subject, chat } = setup();
+      server.addMessage(chat.id, 'assistant', 'Fertig.', {
+        codeRuns: [{ id: 'lauf', purpose: null, outcome: code, durationMs: 100, files: [] }],
+      });
+      open(server, chatPath(subject.id, chat.id));
+      const list = await screen.findByRole('list', { name: 'Code dieser Antwort' });
+      expect(within(list).getByText(text)).toBeTruthy();
+      // Der feste Code hat sein Zeichen (lucide-SVG mit seinem Namen als Klasse).
+      expect(list.querySelector(`svg.${icon}`)).toBeTruthy();
+      cleanup();
+    }
   });
 
   it('lädt das Skript erst auf Klick und zeigt es nur als Text', async () => {
@@ -249,16 +277,64 @@ describe('Chat: Code, den das Modell ausgeführt hat', () => {
     });
     const { container } = open(server, chatPath(subject.id, chat.id));
     const user = userEvent.setup();
-    const button = await screen.findByRole('button', { name: 'Code anzeigen' });
-    expect(button.getAttribute('aria-expanded')).toBe('false');
-    await user.click(button);
+    // Eingeklappt wie in der Oberfläche (details/summary); gefunden wie in AgentActivity.test.tsx.
+    const summary = (await screen.findByText('Code anzeigen')).closest('summary');
+    if (!summary) throw new Error('Kein summary gerendert');
+    const details = summary.closest('details');
+    if (!details) throw new Error('Kein details gerendert');
+    expect(details.open).toBe(false);
+    expect(server.calls('GET', '/api/code-runs/lauf-1')).toHaveLength(0);
+    expect(container.querySelector('img')).toBeNull();
+    await user.click(summary);
     await waitFor(() => expect(server.calls('GET', '/api/code-runs/lauf-1')).toHaveLength(1));
+    expect(details.open).toBe(true);
     const code = await screen.findByText(/print\("<img src=x onerror=alert\(1\)>"\)/);
     expect(code.tagName).toBe('CODE');
     // Kein Markup aus dem Skript entsteht in der Seite.
     expect(container.querySelector('img')).toBeNull();
     expect(screen.getByText(/Dieses Programm hat das Modell geschrieben/)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Code ausblenden' })).toBeTruthy();
+    expect(screen.getByText('Code ausblenden')).toBeTruthy();
+    // Wieder zugeklappt: das Skript bleibt geladen, es gibt keine zweite Anfrage.
+    const hideSummary = await screen
+      .findByText('Code ausblenden')
+      .then((e) => e.closest('summary'));
+    if (!hideSummary) throw new Error('Kein summary gerendert');
+    await user.click(hideSummary);
+    expect(details.open).toBe(false);
+    await waitFor(() => expect(screen.getByText('Code anzeigen')).toBeTruthy());
+    expect(server.calls('GET', '/api/code-runs/lauf-1')).toHaveLength(1);
+  });
+
+  it('zeigt erzeugte Dateien als Raster mit Name und Art-Symbol', async () => {
+    const { server, subject, chat } = setup();
+    server.addMessage(chat.id, 'assistant', 'Vier Dateien sind entstanden.', {
+      codeRuns: [
+        {
+          id: 'lauf-1',
+          purpose: 'Belege bauen',
+          outcome: 'ok',
+          durationMs: 1500,
+          files: ['diagramm.png', 'noten.csv', 'bericht.md', 'archiv.zip'],
+        },
+      ],
+    });
+    open(server, chatPath(subject.id, chat.id));
+    const grid = await screen.findByRole('list', { name: 'Erzeugte Dateien' });
+    const items = within(grid).getAllByRole('listitem');
+    expect(items).toHaveLength(4);
+    for (const name of ['diagramm.png', 'noten.csv', 'bericht.md', 'archiv.zip']) {
+      const entry = within(grid).getByText(name);
+      // Der volle Name steht als Titel am Rasterfeld (wie in der Dateiliste des Panels).
+      expect(entry.closest('li')?.getAttribute('title')).toBe(name);
+    }
+    // Art-Symbole nach Endung, wie im Datei-Panel (H-C02): Bilder, Tabellen, Text, sonst allgemein.
+    const icons = [...grid.querySelectorAll('svg')].map((icon) => icon.getAttribute('class') ?? '');
+    expect(icons.some((name) => name.includes('lucide-file-image'))).toBe(true);
+    expect(icons.some((name) => name.includes('lucide-file-spreadsheet'))).toBe(true);
+    expect(icons.some((name) => name.includes('lucide-file-text'))).toBe(true);
+    expect(icons.filter((name) => name.includes('lucide-file'))).toHaveLength(4);
+    // Öffnen und Herunterladen bleibt beim Datei-Panel; hier gibt es keine Knöpfe.
+    expect(within(grid).queryByRole('button')).toBeNull();
   });
 
   it('meldet, wenn das Skript nicht geladen werden kann', async () => {
@@ -268,7 +344,7 @@ describe('Chat: Code, den das Modell ausgeführt hat', () => {
     });
     open(server, chatPath(subject.id, chat.id));
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Code anzeigen' }));
+    await user.click((await screen.findByText('Code anzeigen')).closest('summary') as Element);
     expect(await screen.findByText('Der Code konnte nicht geladen werden.')).toBeTruthy();
     expect(screen.getByText('Mit Fehler beendet')).toBeTruthy();
   });

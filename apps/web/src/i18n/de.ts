@@ -798,12 +798,15 @@ export const de = {
     code: {
       label: 'Code dieser Antwort',
       ran: 'Code ausgeführt',
+      ranWith: 'Code ausgeführt: {purpose}',
       show: 'Code anzeigen',
       hide: 'Code ausblenden',
       loading: 'Code wird geladen …',
       failed: 'Der Code konnte nicht geladen werden.',
       seconds: '{seconds} s',
+      minutes: '{minutes}:{seconds} min',
       files: 'Neue Dateien: {names}',
+      filesLabel: 'Erzeugte Dateien',
       noFiles: 'Keine neue Datei',
       note: 'Dieses Programm hat das Modell geschrieben. Es lief auf diesem Rechner in einer abgeschlossenen Umgebung ohne Netz.',
       outcomes: {
