@@ -76,6 +76,13 @@ Rahmen und Startfläche folgen der **gewählten** Darstellung, nicht nur dem Ger
 4. Bedienflächen mindestens 44 px, sichtbarer Fokus (`:focus-visible`), Tastaturbedienung, Zielgröße auch bei Symbolen. Jede Bedienfläche hat dieselben Zustände (D-109): Hover nur hinter `@media (hover: hover)` (Tailwinds `hover:` liegt in Version 4 von selbst dahinter), Fokus über die allgemeine Regel in `app.css`, gedrückt über `mo-press` (gehobene Knöpfe, in Raum eine gehobene Fläche) oder `mo-tap` (flache Symbol- und Textknöpfe), deaktiviert mit 50 % Deckkraft. Symbol-Knöpfe nutzen `iconButton` aus `ui/styles.ts`. Ist ein Symbol kleiner als 44 px, vergrößert `mo-hit` die Trefferfläche unsichtbar. `styles/hover-media.test.ts` und `ui/states.test.ts` prüfen das am Quelltext.
 5. Neue Abhängigkeiten (Animationsbibliothek, Shader, Canvas) nur nach Prüfung von Version, Größe, Lizenz und CSP-Verträglichkeit.
 
+## Fach-Motive (D-110, 9. November 2026)
+
+- Die Motive der Fächer sind **eigene Zeichnungen** in `apps/web/src/ui/SubjectIcon.tsx` (`SUBJECT_MOTIFS`), nicht mehr aus `lucide-react`. Das ersetzt die Regel „Icons nur aus `lucide-react`“ aus D-022 für die Fächer; die übrigen Symbole der Oberfläche (Papierkorb, Stift, Pfeile) bleiben bei `lucide-react`.
+- **Raster und Rundung:** 24 × 24, gezeichnet zwischen 2 und 22, nur absolute Pfadbefehle, nur Linien (`fill="none"`, `stroke="currentColor"`), runde Enden und Ecken, höchstens fünf Formen je Motiv. Strichstärke 1,6 im Normalfall, 0,4 als großes Motiv auf der Fachseite (`strokeWidth` in `SubjectPage.tsx`; Raum setzt dort 0,8 per CSS).
+- **15 Kennungen** (der Server speichert nur die Kennung): Buch, Stift, Sprechblasen, Rechenzeichen (Mathe: Plus, Minus, Mal, Gleich), Atom, Kolben, Mikroskop, Blatt, Globus, Säulenbau, Waage, Noten, Palette, Hantel, Code. Ein Fach ohne bekannte Kennung zeigt das **neutrale Motiv** (Abschlusshut), nie das Buch. In „Atelier“ gilt dasselbe für die große Zeichnung (`screens/atelier/SubjectMotifs.tsx`).
+- **Regeln für neue Motive:** keine fremden Marken, Figuren oder Werke (darum zwei Bahnen am Atom, nicht drei); die Fachfarbe färbt das Motiv über `currentColor` und ist nie Teil der Zeichnung; der Name für Bildschirmleser steht in `i18n/de.ts` (`subjectDialog.iconNames`) und beschreibt, was zu sehen ist. `ui/SubjectIcon.test.tsx` prüft Raster, Rundung, Strichstärke und den Rückfall.
+
 ## Interaktive Blöcke im Chat (D-059, 25. Oktober 2026)
 
 - Das Quiz ist ein Bedienelement, kein Bild: Antwortfelder sind echte Optionsfelder in einer Gruppe mit Legende (Tastatur: Pfeiltasten, Leertaste), Mindesthöhe 44 px, Fokus sichtbar über `outline` der Bedienfläche.

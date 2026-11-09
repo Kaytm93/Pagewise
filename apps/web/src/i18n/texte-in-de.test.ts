@@ -37,16 +37,16 @@ function literals(text: string): string[] {
 const ICON_NAMES = {
   book: 'Buch',
   pen: 'Stift',
-  languages: 'Sprachen',
-  calculator: 'Rechner',
+  languages: 'Sprechblasen',
+  calculator: 'Rechenzeichen',
   atom: 'Atom',
   flask: 'Kolben',
   microscope: 'Mikroskop',
   leaf: 'Blatt',
   globe: 'Globus',
-  landmark: 'Gebäude',
+  landmark: 'Säulenbau',
   scale: 'Waage',
-  music: 'Musik',
+  music: 'Noten',
   palette: 'Palette',
   sport: 'Hantel',
   code: 'Code',
@@ -67,7 +67,7 @@ const DATEIEN = [
 ];
 
 describe('Symbolnamen und Vorlagentexte stehen in i18n/de.ts (B-15)', () => {
-  it('de.ts trägt die 15 Symbolnamen im bisherigen Wortlaut', () => {
+  it('de.ts trägt die 15 Symbolnamen, passend zu den eigenen Motiven (D-110)', () => {
     expect(de.subjectDialog.iconNames).toEqual(ICON_NAMES);
   });
 
