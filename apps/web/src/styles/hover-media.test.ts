@@ -50,7 +50,9 @@ const hoverRegeln = (file: string) =>
   );
 
 describe.each([
-  ['raum.css', 3],
+  // Raum: 2 statt 3, seit der Zettel „Nächster Test“ dort keinen Hover mehr hat (D-116, Kay am 7. November 2026:
+  // nicht klickbar, also ruhig). Übrig bleiben die Zeile und ihre Trennlinien; beide stehen hinter der Maus-Abfrage.
+  ['raum.css', 2],
   ['atelier.css', 4],
 ])('%s: Hover von Zeilen und Karten', (file, anzahl) => {
   const hovers = hoverRegeln(file);
@@ -76,7 +78,8 @@ const hinterMaus = (regel: Regel) => regel.medias.some((media) => /\(hover: hove
 describe('Hover nur mit echter Maus, in jeder Stildatei (D-109)', () => {
   it('sieht die Hover-Regeln aller Stildateien', () => {
     expect(dateien).toEqual(expect.arrayContaining(['lagen.css', 'raum.css', 'atelier.css']));
-    expect(dateien.flatMap(alleHover).length).toBeGreaterThanOrEqual(28);
+    // 27 statt 28: Raum hat seit D-116 keine Hover-Regel am Zettel „Nächster Test“ mehr (nicht klickbar).
+    expect(dateien.flatMap(alleHover).length).toBeGreaterThanOrEqual(27);
   });
 
   it.each(dateien)('%s: jede :hover-Regel steht in @media (hover: hover)', (file) => {
