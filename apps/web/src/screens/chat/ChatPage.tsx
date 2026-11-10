@@ -42,6 +42,7 @@ import { MessageItem } from './MessageItem';
 import { ModelDialog } from './ModelDialog';
 import { describeEngine, describeSelection, effectiveModel, effectiveTarget } from './models';
 import { useChat } from './useChat';
+import { useFollowEnd } from './useFollowEnd';
 
 const toSettings = { name: 'settings' } as const;
 
@@ -64,20 +65,6 @@ function panelFits(): boolean {
     typeof window.matchMedia === 'function' &&
     window.matchMedia(`(min-width: ${PANEL_MIN_WIDTH}px)`).matches
   );
-}
-
-/** Wie nah am Ende die Ansicht sein muss, damit sie neuen Text mitverfolgt (in Pixeln). */
-const FOLLOW_DISTANCE = 160;
-
-function scrollToEnd() {
-  const element = document.scrollingElement;
-  if (element) element.scrollTop = element.scrollHeight;
-}
-
-function nearEnd(): boolean {
-  const element = document.scrollingElement;
-  if (!element) return true;
-  return element.scrollHeight - element.scrollTop - element.clientHeight < FOLLOW_DISTANCE;
 }
 
 function problemText(code: string): string {
@@ -163,7 +150,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
   panelState.open = panelOpen;
   panelState.width = panelWidth;
   const panelArea = useRef<HTMLDivElement | null>(null);
-  const pinned = useRef(true);
+  const { follow, pin, watch } = useFollowEnd();
   const previousLive = useRef<string | null>(null);
   const loadedChatId = state.phase === 'ready' ? (state.chat?.id ?? null) : null;
 
@@ -217,28 +204,11 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
     if (queued) void chat.send(queued);
   }, [loadedChatId]);
 
-  // Mitlesen: ist man nah am Ende, folgt die Ansicht dem neuen Text; wer hochgescrollt hat, bleibt dort.
-  useEffect(() => {
-    const onScroll = () => {
-      pinned.current = nearEnd();
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  // Wächst das Eingabefeld (mehrere Zeilen), bleibt das Ende des Verlaufs sichtbar.
-  const watchComposer = useCallback((element: HTMLDivElement | null) => {
-    if (!element || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(() => {
-      if (pinned.current) scrollToEnd();
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
+  // Mitlesen (D-028, D-115): Das Ende des Verlaufs bleibt im Blick, solange man nah daran ist. Das gilt auch,
+  // wenn das Eingabefeld wächst oder Blöcke (Formel, Graph, Molekül) erst nach dem Text ihre Höhe bekommen.
   // biome-ignore lint/correctness/useExhaustiveDependencies: bei jeder Änderung der Nachrichten ans Ende, falls angepinnt
   useLayoutEffect(() => {
-    if (pinned.current) scrollToEnd();
+    follow();
   }, [state.messages, state.thinking]);
 
   // Screenreader hören keine einzelnen Textstücke, sondern nur Anfang und Ende einer Antwort.
@@ -341,7 +311,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
   }
 
   async function send(text: string, files: File[] = []): Promise<boolean> {
-    pinned.current = true;
+    pin();
     setActionError(null);
     chat.dismissProblem();
     return chat.send(text, files);
@@ -454,6 +424,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
           )}
 
           <section
+            ref={watch}
             aria-label={m.chat.messages}
             className="mx-auto w-full max-w-[700px] flex-1 space-y-6 px-4 py-8 sm:px-7"
           >
@@ -490,7 +461,7 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
           </section>
 
           <div
-            ref={watchComposer}
+            ref={watch}
             onInput={chat.dismissProblem}
             className={`sticky bottom-[var(--kb,0px)] z-10 rounded-b-[12px] border-t border-line-warm bg-sheet px-4 pt-3.5 pb-3.5 sm:px-8${atelier ? ' at-chat-dock' : ''}`}
           >

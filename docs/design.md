@@ -100,6 +100,12 @@ Rahmen und Startfläche folgen der **gewählten** Darstellung, nicht nur dem Ger
 - **Lagen, Etikett (D-100):** Das „Pagewise“-Schildchen im Umschlag ist jetzt eine weiche Pille (voll gerundet, ohne Rand, dazu ein hauchdünner Ring in 55 % `--control-edge`) statt der harten 2-px-Ecke. Name, Marke und Schrift bleiben.
 - **Raum, Innentiefe (D-101):** Eingelassene Flächen (Reiterleiste der Fachseite, Textfelder, Composer, Listenmulde) wirken etwas weicher: Versatz und Unschärfe innen skalieren zusätzlich zu `--raum-d` mit `--raum-di` = 0,7. Gehobene Flächen bleiben unverändert.
 
+## Chat: Mitlesen und Eingabehöhe (D-115, 7. November 2026)
+
+- **Mitlesen** (`screens/chat/useFollowEnd.ts`, präzisiert D-028): Die Ansicht folgt neuem Text und allem, was danach wächst (Formeln, Graphen, Moleküle laden nach), solange man unten ist; ein Beobachter der Größe am Verlauf und am Eingabebereich scrollt nach. Wer hochgescrollt hat, bleibt dort: Mausrad nach oben und eine Fingergeste nach unten lösen das Mitlesen sofort, auch unter 160 px (nicht, wenn die Geste nur ein scrollbares Feld bewegt, etwa einen Code-Block). Ein Bildlauf ohne Geste (Tastatur, Scrollleiste) löst es ab 160 px Abstand zum Ende. Wieder einrasten tut es, sobald man nach unten näher als 160 px ans Ende kommt oder eine Nachricht sendet. Ein Scroll-Ereignis, das nur das eigene Hinscrollen meldet, ändert nichts, auch wenn die Seite bis dahin gewachsen ist.
+- **Eingabefeld im Chat:** Höchsthöhe `--composer-max` (`screens.css`): 12 rem, aber höchstens 40 % des sichtbaren Bereichs (`100dvh` minus Tastatur `--kb`). Gilt in Raum, Lagen und Atelier (`Composer.tsx`, `.lg-composer-input`). Ab etwa 480 px sichtbarer Höhe ändert sich nichts; im Querformat auf dem Telefon, besonders mit Tastatur, bleibt das Feld ganz sichtbar, und der Text im Feld scrollt, statt dass das Feld über den Rand wächst.
+- **„Zum Ende“-Knopf (F-082):** Kay hat am 7. November 2026 den Rundknopf mit Pfeil gewählt (unten rechts über der Eingabe, erscheint nach dem Hochscrollen); die Umsetzung folgt als eigenes Paket (S-04b), bisher nicht gebaut.
+
 ## Unterstützte Browser
 
 Voll: Safari 17.2 und neuer (iOS und iPadOS 17.2+), Chrome und Firefox der letzten Jahre. Die Federn nutzen `linear()` (Safari 17.2), die Lichtfarbe `@property` (Safari 16.4), der Umschalter `:has()` (Safari 15.4), Mischfarben `color-mix()` (Safari 16.2). Ältere Geräte verlieren Bewegung und Licht, die Oberfläche bleibt benutzbar; Rückfälle sind vorgesehen (Feder als `cubic-bezier`, Licht ohne Übergang).
