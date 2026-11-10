@@ -104,7 +104,7 @@ Rahmen und Startfläche folgen der **gewählten** Darstellung, nicht nur dem Ger
 
 - **Mitlesen** (`screens/chat/useFollowEnd.ts`, präzisiert D-028): Die Ansicht folgt neuem Text und allem, was danach wächst (Formeln, Graphen, Moleküle laden nach), solange man unten ist; ein Beobachter der Größe am Verlauf und am Eingabebereich scrollt nach. Wer hochgescrollt hat, bleibt dort: Mausrad nach oben und eine Fingergeste nach unten lösen das Mitlesen sofort, auch unter 160 px (nicht, wenn die Geste nur ein scrollbares Feld bewegt, etwa einen Code-Block). Ein Bildlauf ohne Geste (Tastatur, Scrollleiste) löst es ab 160 px Abstand zum Ende. Wieder einrasten tut es, sobald man nach unten näher als 160 px ans Ende kommt oder eine Nachricht sendet. Ein Scroll-Ereignis, das nur das eigene Hinscrollen meldet, ändert nichts, auch wenn die Seite bis dahin gewachsen ist.
 - **Eingabefeld im Chat:** Höchsthöhe `--composer-max` (`screens.css`): 12 rem, aber höchstens 40 % des sichtbaren Bereichs (`100dvh` minus Tastatur `--kb`). Gilt in Raum, Lagen und Atelier (`Composer.tsx`, `.lg-composer-input`). Ab etwa 480 px sichtbarer Höhe ändert sich nichts; im Querformat auf dem Telefon, besonders mit Tastatur, bleibt das Feld ganz sichtbar, und der Text im Feld scrollt, statt dass das Feld über den Rand wächst.
-- **„Zum Ende“-Knopf:** nicht gebaut, offen (F-082, Konzept in `docs/decisions.md` D-115 verlinkt).
+- **„Zum Ende“-Knopf (F-082):** Kay hat am 7. November 2026 den Rundknopf mit Pfeil gewählt (unten rechts über der Eingabe, erscheint nach dem Hochscrollen); die Umsetzung folgt als eigenes Paket (S-04b), bisher nicht gebaut.
 
 ## Unterstützte Browser
 
