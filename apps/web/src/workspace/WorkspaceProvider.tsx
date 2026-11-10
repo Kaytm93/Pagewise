@@ -48,6 +48,8 @@ interface WorkspaceValue {
   defaultSubject: Subject;
   /** Ein Fach nach ID, auch das eingebaute. */
   findSubject: (id: string) => Subject | undefined;
+  /** Fächer nach einer Änderung außerhalb dieses Providers neu laden (D-107, Bilderkennung). */
+  refreshSubjects: () => Promise<void>;
   saveProfile: (patch: ProfilePatch) => Promise<void>;
   completeOnboarding: () => Promise<void>;
   addSubject: (input: SubjectInput) => Promise<Subject>;
@@ -215,6 +217,7 @@ function buildValue(
     providers: state.providers,
     modelSettings: state.modelSettings,
     engines: state.engines,
+    refreshSubjects,
     setSubjectEngine: async (id, engineProfileId) => {
       await api.setSubjectEngine(id, engineProfileId);
       await refreshSubjects();

@@ -40,4 +40,23 @@
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
+
+  /* Grundzustand „gedrückt“ (D-109): Textlinks, Aufklapper und Auswahl-Labels ohne eigene Klasse werden beim
+     Drücken blasser. Bedienelemente mit eigenem Zustand (mo-press, mo-tap, Zeilen, Karten, active:…) sind
+     ausgenommen. :where() hält die Spezifität bei null, jede eigene Regel überstimmt das. */
+  :where(a[href], summary, label:has(input[type="checkbox"], input[type="radio"])):where(
+    :not(
+      .mo-press,
+      .mo-tap,
+      .lg-row,
+      .lg-slip,
+      .lg-nav-item,
+      .lg-chip,
+      .at-lesson,
+      .at-tile-main,
+      [class*="active:"]
+    )
+  ):active {
+    opacity: 0.78;
+  }
 }

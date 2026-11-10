@@ -213,7 +213,7 @@ export function PromptDialog({
                 {dirty && <span>{m.prompts.dirtyHint}</span>}
               </div>
               <details className="mt-4">
-                <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">
+                <summary className="mo-tap min-h-11 cursor-pointer py-2 text-sm font-medium hover:text-ink">
                   {m.prompts.variablesTitle}
                 </summary>
                 <p className="text-sm text-ink-secondary">{m.prompts.variablesLead}</p>

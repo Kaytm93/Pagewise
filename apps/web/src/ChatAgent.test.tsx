@@ -146,12 +146,45 @@ describe('Chat mit Agent: Antwort', () => {
 
     const generation = server.generation(chat.id);
     act(() =>
-      generation.activity({ id: 't1', tool: 'Write', target: 'uebersicht.pdf', state: 'running' }),
+      generation.activity({
+        id: 't1',
+        tool: 'Write',
+        target: 'uebersicht.pdf',
+        file: 'uebersicht.pdf',
+        state: 'running',
+      }),
     );
     expect(await screen.findByText('Der Agent arbeitet: uebersicht.pdf')).toBeTruthy();
     expect(screen.getByRole('list', { name: 'Schritte des Agenten' })).toBeTruthy();
+    // H-C04: Weitere Zeilen erscheinen live im selben Strom — ohne Reload, mit reinem Dateinamen.
     act(() =>
-      generation.activity({ id: 't1', tool: 'Write', target: 'uebersicht.pdf', state: 'done' }),
+      generation.activity({
+        id: 't2',
+        tool: 'Read',
+        target: 'quellen/notizen.md',
+        file: 'notizen.md',
+        state: 'running',
+      }),
+    );
+    act(() =>
+      generation.activity({
+        id: 't2',
+        tool: 'Read',
+        target: 'quellen/notizen.md',
+        file: 'notizen.md',
+        state: 'done',
+      }),
+    );
+    expect(await screen.findByText('Gelesen: notizen.md')).toBeTruthy();
+    expect(screen.queryByText(/quellen/)).toBeNull();
+    act(() =>
+      generation.activity({
+        id: 't1',
+        tool: 'Write',
+        target: 'uebersicht.pdf',
+        file: 'uebersicht.pdf',
+        state: 'done',
+      }),
     );
     act(() => {
       generation.delta('Die Übersicht ist fertig.');
@@ -176,15 +209,13 @@ describe('Chat mit Agent: Antwort', () => {
     });
     expect(link.getAttribute('href')).toBe('/api/assets/asset-1/download');
     expect(link.hasAttribute('download')).toBe(true);
-    // Nach dem Ende sind die Schritte eingeklappt.
-    const summary = screen.getByText('Was der Agent getan hat (1)');
+    // Nach dem Ende sind die Schritte eingeklappt (jetzt zwei Zeilen: t1 und t2).
+    const summary = screen.getByText('Was der Agent getan hat (2)');
     expect(summary.closest('details')?.open).toBe(false);
     await user.click(summary);
-    expect(
-      within(screen.getByRole('list', { name: 'Schritte des Agenten' })).getByText(
-        'Geschrieben: uebersicht.pdf',
-      ),
-    ).toBeTruthy();
+    const liste = within(screen.getByRole('list', { name: 'Schritte des Agenten' }));
+    expect(liste.getByText('Geschrieben: uebersicht.pdf')).toBeTruthy();
+    expect(liste.getByText('Gelesen: notizen.md')).toBeTruthy();
   });
 
   it('übernimmt Schritte und Dateien auch beim Wiederanhängen und beim Laden des Verlaufs', async () => {
@@ -192,7 +223,9 @@ describe('Chat mit Agent: Antwort', () => {
     server.addMessage(chat.id, 'user', 'Frage');
     server.addMessage(chat.id, 'assistant', 'Antwort mit Datei', {
       engineProfileId: chat.engineProfileId,
-      activity: [{ id: '0', tool: 'Bash', target: 'Tabelle berechnen', state: 'error' }],
+      activity: [
+        { id: '0', tool: 'Bash', target: 'Tabelle berechnen', file: null, state: 'error' },
+      ],
       assets: [{ id: 'asset-2', name: 'tabelle.xlsx', kind: 'xlsx', mime: 'x', size: 200 }],
     });
     open(server, chatPath(subject.id, chat.id));

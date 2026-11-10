@@ -7,8 +7,9 @@ import { describeSelection } from '../chat/models';
 import { SubjectMotif } from './SubjectMotif';
 
 /**
- * Kopf der Fachseite in der Richtung „Lagen“ (M1-T2): Kicker, Name, Klebeband und Fachmotiv wie im
- * Entwurf, darunter die Zeilen zu Modell, Stunden, Untergruppen und Lehrkraft. Der Modell-Chip führt
+ * Kopf der Fachseite in der Richtung „Lagen“ (M1-T2): Kicker mit Kante in der Fachfarbe, Name und
+ * Fachmotiv wie im Entwurf (D-099: kein Klebeband mehr, die Fachfarbe liegt als Linie unter dem
+ * Kicker), darunter die Zeilen zu Modell, Stunden, Untergruppen und Lehrkraft. Der Modell-Chip führt
  * zum vorhandenen Modell-Abschnitt; ein eigenes Menü gibt es hier nicht. Er bleibt ein Link (anders als im
  * Entwurf, wo er ein Menü öffnet), weil der Modell-Abschnitt sonst per Tastatur nur über das Durchtabben der
  * ganzen Seite erreichbar wäre. Das Fachmotiv zeichnet sich beim Erscheinen (`SubjectMotif`).
@@ -36,7 +37,6 @@ export function SubjectHead({
 
   return (
     <header className="relative mt-6 pt-7">
-      <span aria-hidden="true" className="lg-tape top-1 left-0 [--r:-1.8deg]" />
       {!builtin && (
         <SubjectMotif icon={subject.icon} className="top-0 right-0 size-[84px] md:size-[132px]" />
       )}

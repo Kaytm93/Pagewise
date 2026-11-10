@@ -8,7 +8,7 @@ import { Button } from '../ui/Button';
 import { Link } from '../ui/Link';
 import { Sheet } from '../ui/Sheet';
 import { SubjectIcon } from '../ui/SubjectIcon';
-import { listRow, sectionTitle } from '../ui/styles';
+import { emptyState, listRowAction, listRowHost, listRowLead, sectionTitle } from '../ui/styles';
 import { Tabs } from '../ui/Tabs';
 import { useDesign } from '../ui/useDesign';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
@@ -167,18 +167,14 @@ export function SubjectPage({
 
   return (
     <Sheet width="wide">
-      {!lagen && (
-        <>
-          <span aria-hidden="true" className="lg-tape top-5 left-5 [--r:-1.8deg] md:left-11" />
-          {!builtin &&
-            !arbeitsplatz &&
-            (atelier ? (
-              <SubjectMotifs kind={subject.icon} className={motivKlasse} />
-            ) : (
-              <SubjectIcon icon={subject.icon} strokeWidth={0.4} className={motivKlasse} />
-            ))}
-        </>
-      )}
+      {!lagen &&
+        !builtin &&
+        !arbeitsplatz &&
+        (atelier ? (
+          <SubjectMotifs kind={subject.icon} className={motivKlasse} />
+        ) : (
+          <SubjectIcon icon={subject.icon} strokeWidth={0.4} className={motivKlasse} />
+        ))}
       {group && (
         <Link
           to={{ name: 'subject', subjectId: subject.id, groupId: null }}
@@ -261,17 +257,17 @@ export function SubjectPage({
             </Button>
           </div>
           {subject.groups.length === 0 ? (
-            <div className="mt-2 rounded-box bg-paper p-4">
+            <div className={`mt-2 ${emptyState}`}>
               <p className="font-medium">{m.subject.noGroupsTitle}</p>
               <p className="mt-1 text-sm text-ink-secondary">{m.subject.noGroupsHint}</p>
             </div>
           ) : (
             <ul className="mt-2 divide-y divide-line-warm border-y border-line-warm">
               {subject.groups.map((entry) => (
-                <li key={entry.id} className="flex items-center">
+                <li key={entry.id} className={listRowHost}>
                   <Link
                     to={{ name: 'subject', subjectId: subject.id, groupId: entry.id }}
-                    className={listRow}
+                    className={listRowLead}
                   >
                     <span className="truncate font-heading text-xl tracking-[-0.2px]">
                       {entry.name}
@@ -284,7 +280,7 @@ export function SubjectPage({
                     type="button"
                     onClick={() => setDialog({ type: 'group', group: entry })}
                     aria-label={format(m.subject.editGroupNamed, { name: entry.name })}
-                    className="mo-press -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] text-ink-muted hover:bg-paper hover:text-ink"
+                    className={listRowAction}
                   >
                     <Pencil aria-hidden="true" className="size-4" />
                   </button>

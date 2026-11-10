@@ -11,10 +11,11 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | Fremder Zugriff im eigenen Netz | Passcode (Hash), Sitzungs-Cookies, Rate-Limit, CSRF-Schutz, strenge CORS-Regel, Security-Header |
 | Schadcode aus Modell-Ausgaben | Markdown ohne rohes HTML, Bereinigung von SVG und HTML, kein `eval` |
 | Prompt-Injection über Bilder, Dateien, Antworten, Notizen | Inhalte lösen nie selbstständig Aktionen aus, Agenten laufen mit Whitelist und im Workspace, Werkzeuge der KI lesen nur und ihre Ergebnisse gelten als Daten (D-044) |
-| Code, den ein Modell schreibt und der auf dem Rechner läuft (Code-Ausführung, D-079) | Standardmäßig aus, eigener Schalter plus Freigabe je Anbieter, Einschalten nur nach Erklärung. Sandbox `sandbox-exec`: kein Netz, Schreiben nur im Arbeitsordner, Benutzer- und Datenverzeichnis nicht lesbar, kein `fork`. Selbsttest vor dem ersten Lauf (fail closed), Umgebung nur Allowlist, Grenzen für Zeit, Speicher, Ausgabe, Dateien, Prozessgruppe wird beendet. Skript und Ausgabe sind Fremdtext, nie in Logs |
+| Code, den ein Modell schreibt und der auf dem Rechner läuft (Code-Ausführung, D-079) | Standardmäßig aus, eigener Schalter plus Freigabe je Anbieter, Einschalten nur nach Erklärung. Sandbox `sandbox-exec`: kein Netz, Schreiben nur im Arbeitsordner, Benutzer- und Datenverzeichnis nicht lesbar, kein `fork`. Selbsttest vor dem ersten Lauf (fail closed), Umgebung nur Allowlist, Grenzen für Zeit, Speicher, Ausgabe, Dateien (D-102: je Lauf bis 180 s, 2 GiB Speicher, 1 GiB Arbeitsordner, 20.000 Einträge, 8 Läufe je Antwort, 300 je Chat, 2 gleichzeitig; Wächter prüfen alle 250 ms), Prozessgruppe wird beendet. Pakete nur aus Hash-Lock, jetzt auch pandas und scipy (D-103). Skript und Ausgabe sind Fremdtext, nie in Logs |
 | Dateien aus Modell-Skripten beim Rendern (LibreOffice, poppler, D-080) | Eigener Temp-Ordner mit Kopie, Sandbox-Profil `office` (kein Netz, Schreiben nur im Temp-Ordner, Benutzer- und Datenverzeichnis nicht lesbar), Makros aus, Bilder nur an das Modell der Antwort und nur bei erlaubtem Bilder-Schalter |
 | Abfluss von Schlüsseln | Secrets nur serverseitig, nie in Antworten, Logs, Jobs oder Exporten, nie als Prozess-Argument |
 | Daten bei Anbietern | Transparente Anzeige pro Anbieter, Option „Bilder nicht senden“, Schalter für Stundenplan und Tests (global und je Anbieter, nur bei Abruf), Hinweis bei Free-Modellen |
+| Stundenplan-Foto an ein Vision-Modell (D-107) | Nur auf Klick, nur an Modelle mit `vision`-Flag und erlaubtem `sendImages`, Bild wird im Browser neu gezeichnet und auf dem Server von Metadaten befreit, nie gespeichert oder protokolliert, Vorschau vor dem Übernehmen |
 
 ## Stand der Umsetzung
 
@@ -37,12 +38,12 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | Chat-Antworten und Fehler: Texte der Anbieter und der Nachrichten erscheinen nie in Fehlern oder Logs, nur Codes | umgesetzt (Phase 1a), siehe D-026 und D-027 |
 | Service Worker speichert nur Startseite, `/assets` und `/icons`, nie `/api` oder den Antwort-Strom; Test liest den echten Quelltext | umgesetzt (Phase 1a), siehe D-029 |
 | Bereinigung von SVG, HTML und Formeln in Hefteinträgen | **umgesetzt (Phase 1b)**, siehe D-048 und [acceptance-1b.md](acceptance-1b.md) |
-| EXIF-Entfernung, Upload-Prüfung | geplant (Phase 1c) |
+| EXIF-Entfernung, Upload-Prüfung | **für die Stundenplan-Erkennung umgesetzt (D-107)**: Neuzeichnen im Browser, Signatur- und Größenprüfung, Entfernen von PNG-Text-/EXIF-Blöcken und JPEG-APPn/COM-Segmenten auf dem Server; für Chat-Anhänge weiter geplant (Phase 1c) |
 | PDF-Rendering ohne Netzwerk | geplant (Phase 1d) |
 | Agent-CLI mit Umgebungs-Allowlist und Workspace-Isolation (Sandbox und Berechtigungsregeln, `--safe-mode`) | umgesetzt (Phase 1e), siehe D-039, D-040 und [agent-cli.md](agent-cli.md) |
 | Strenge CORS-Regel: fremde Herkunft wird abgelehnt, keine `Access-Control-*`-Header | umgesetzt (Phase 1a), siehe D-031 |
 | „Alles löschen“ mit Passcode, leert Datenbank (`VACUUM`), Dateien, Sicherungen und Schlüssel; Test: Text nicht mehr in Datenbankdatei oder WAL | umgesetzt (Phase 1a), siehe D-032 |
-| Je Anbieter: Übersicht, was gesendet wird, und Schalter „Bilder nicht senden“ | Übersicht und Schalter umgesetzt (Phase 1a), Durchsetzung ab Phase 1c, siehe D-033 |
+| Je Anbieter: Übersicht, was gesendet wird, und Schalter „Bilder nicht senden“ | Übersicht und Schalter umgesetzt (Phase 1a), Durchsetzung für die Stundenplan-Erkennung umgesetzt (D-107: nur `vision`-Modelle und nur bei erlaubtem `sendImages`), für Chat-Anhänge ab Phase 1c, siehe D-033 |
 | Löschen von Fach, Chat oder Asset entfernt auch Dateien auf der Platte | Zeilen umgesetzt, Dateien mit Assets (ab 1b/1c) |
 | Standard-Prompts im öffentlichen Repo (D-034): neutral, ohne Namen, Orte, Schulen, Bundesländer, Lehrplan- oder Prüfungsangaben; Test prüft jede Datei | umgesetzt, siehe D-034 |
 | „Alles löschen“ leert jede Tabelle außer Anmeldung, Sitzungen und Migrationsprotokoll (auch künftige) | umgesetzt, siehe D-038 |
@@ -59,6 +60,7 @@ Pagewise verarbeitet Schul- und Personendaten, auch von Minderjährigen. Die Gru
 | Mac-App: Lizenzhinweise der mitgelieferten Pakete in der App | umgesetzt, siehe D-055 |
 | Mac-App: Update nur auf Klick, feste Quelle, Programme ohne Shell mit Allowlist-Umgebung, Austausch erst nach Signaturprüfung und Rauchtest, alte App kommt bei Fehlern zurück | umgesetzt, siehe D-057 (Vertrauensmodell dort) |
 | Mac-App: Developer-ID-Signatur und Notarisierung | **nicht eingerichtet** (Stufe 1: nur ad hoc), Entscheidungsvorlage D-056 |
+| Stundenplan aus Bild (D-107): getrennte Vorschau, nur bekannte Felder, keine Ausführung von Modelltext, Abbruch beendet die Anbieter-Anfrage | umgesetzt, siehe D-107 |
 
 ## Mac-App
 
@@ -91,6 +93,7 @@ Alles, was Nutzerdaten enthält, liegt im Datenverzeichnis: Datenbank, Uploads, 
 - Ein lokales Skript kann keine Garantie geben. Der Scan erkennt bekannte Muster, nicht jedes Geheimnis. Prüfe Commits vor dem Veröffentlichen selbst.
 - Wer Zugriff auf den Rechner hat, hat Zugriff auf die Daten. Das Datenverzeichnis ist nicht verschlüsselt, nutze die Festplattenverschlüsselung deines Systems.
 - Modell-Anbieter sehen, was du ihnen sendest. Free-Modelle können Prompts protokollieren. Pagewise prüft die Datenschutzregeln der Anbieter nicht, auch nicht die von OpenRouter und der Anbieter dahinter.
+- **Stundenplan-Erkennung (D-107):** Ein Bild des Stundenplans verlässt den Rechner, sobald du „Stunden erkennen“ klickst. Pagewise entfernt Metadaten und verkleinert das Bild, aber Name der Schule, Lehrkräfte oder Klasse, die **im Bild stehen**, bleiben sichtbar und gehen an den Anbieter. Prüfe das Bild vorher. Die Vorschläge des Modells sind Fremdtext und können falsch sein; Pagewise übernimmt nur die Felder, die in das bekannte Schema passen, und nichts ohne deine Bestätigung.
 - **Code-Ausführung (D-079):** `sandbox-exec` ist von Apple als veraltet markiert, ein Ersatz für Fremdprogramme ist nicht bekannt, und das Profil ist keine Garantie gegen Fehler im Betriebssystem. Darum prüft ein Selbsttest die Sperren, und die Funktion ist standardmäßig aus. Der Speicher wird nur überwacht (macOS setzt Grenzen nicht durch), ein Lauf kann ihn für Sekundenbruchteile überschreiten; dasselbe gilt für die Größe des Arbeitsordners. Ein Skript kann Rechenzeit und bis zu den Grenzen Speicher und Platz verbrauchen. Was das Modell schreibt und was der Code ausgibt, geht an den Anbieter des Modells; die Freigabe je Anbieter ist deshalb getrennt.
 - **Sichtprüfung (D-080):** LibreOffice braucht Fenstersystem, Grafik und Startdienste, ein Profil „alles verboten“ lässt es nicht starten. Sein Profil sperrt darum Netz, Schreiben außerhalb des Temp-Ordners und das Lesen des Benutzer- und Datenverzeichnisses, erlaubt aber das Lesen des übrigen Systems. Ein Fehler in LibreOffice könnte dort lesen und Inhalte in die gerenderte Seite schreiben, die ein Modell sieht. Senden oder Verändern kann er nichts. Das Abschalten von Makros ist gesetzt, aber nicht gemessen.
 - Die Websuche schickt Suchbegriffe, die das Modell schreibt, an Tavily, einen Dienst außerhalb dieses Geräts. Nach seiner Datenschutzerklärung darf Tavily Suchbegriffe an Anbieter von Suchindizes weitergeben. Die Websuche ist standardmäßig aus. Die Begriffsprüfung erkennt E-Mail-Adressen, Telefonnummern und lange Zahlen, aber keine Namen oder Schulen. Lies die Datenschutzbedingungen des Dienstes, bevor du die Suche einschaltest.

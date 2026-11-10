@@ -70,11 +70,18 @@ Rahmen und Startfläche folgen der **gewählten** Darstellung, nicht nur dem Ger
 
 ## Regeln für neue Bildschirme
 
-1. Ein Bildschirm ist ein Blatt: `Sheet` (`width="wide"` oder `"prose"`) und darin Abschnitte mit `sectionTitle` (`ui/styles.ts`). Listenzeilen nutzen `listRow` (Balken in Fachfarbe beim Darüberfahren).
+1. Ein Bildschirm ist ein Blatt: `Sheet` (`width="wide"` oder `"prose"`) und darin Abschnitte mit `sectionTitle` (`ui/styles.ts`). Listenzeilen nutzen `listRow` (Balken in Fachfarbe beim Darüberfahren). Hat eine Zeile einen Knopf am Ende (Löschen, Bearbeiten), sitzt er in der Zeile und nicht als Spalte daneben: `listRowHost` am `li`, `listRowLead` an der Zeile, `listRowAction` am Knopf; kein negativer Rand, nichts ragt über die Liste (D-108). Ladegerüste einer Liste nutzen `listSkeleton` und `listSkeletonRow`, damit Linien und Mulde zur echten Liste passen. Leere Listen nutzen `emptyState` (in Raum eine leere Mulde, D-111), allein stehende Textlinks `textLink` und Aufklapper `disclosure` (D-113). In Raum stehen gehobene Knöpfe bündig an der Inhaltskante, ohne negativen Rand (D-112).
 2. Farben nur über Tokens (`bg-sheet`, `text-ink-muted`, `border-line-warm`, `bg-subj` …), keine festen Werte. Texte in `i18n/de.ts`.
 3. Bewegung nur über die `mo-*`-Klassen oder Variablen aus `motion.css`. Neue Keyframes brauchen `--m`, damit „Reduziert“ greift. Kein `style={…}` (CSP, D-023); dynamische Werte per `element.style.setProperty` über das CSSOM.
-4. Bedienflächen mindestens 44 px, sichtbarer Fokus (`:focus-visible`), Tastaturbedienung, Zielgröße auch bei Symbolen.
+4. Bedienflächen mindestens 44 px, sichtbarer Fokus (`:focus-visible`), Tastaturbedienung, Zielgröße auch bei Symbolen. Jede Bedienfläche hat dieselben Zustände (D-109): Hover nur hinter `@media (hover: hover)` (Tailwinds `hover:` liegt in Version 4 von selbst dahinter), Fokus über die allgemeine Regel in `app.css`, gedrückt über `mo-press` (gehobene Knöpfe, in Raum eine gehobene Fläche) oder `mo-tap` (flache Symbol- und Textknöpfe), deaktiviert mit 50 % Deckkraft. Symbol-Knöpfe nutzen `iconButton` aus `ui/styles.ts`. Ist ein Symbol kleiner als 44 px, vergrößert `mo-hit` die Trefferfläche unsichtbar. `styles/hover-media.test.ts` und `ui/states.test.ts` prüfen das am Quelltext.
 5. Neue Abhängigkeiten (Animationsbibliothek, Shader, Canvas) nur nach Prüfung von Version, Größe, Lizenz und CSP-Verträglichkeit.
+
+## Fach-Motive (D-110, 9. November 2026)
+
+- Die Motive der Fächer sind **eigene Zeichnungen** in `apps/web/src/ui/SubjectIcon.tsx` (`SUBJECT_MOTIFS`), nicht mehr aus `lucide-react`. Das ersetzt die Regel „Icons nur aus `lucide-react`“ aus D-022 für die Fächer; die übrigen Symbole der Oberfläche (Papierkorb, Stift, Pfeile) bleiben bei `lucide-react`.
+- **Raster und Rundung:** 24 × 24, gezeichnet zwischen 2 und 22, nur absolute Pfadbefehle, nur Linien (`fill="none"`, `stroke="currentColor"`), runde Enden und Ecken, höchstens fünf Formen je Motiv. Strichstärke 1,6 im Normalfall, 0,4 als großes Motiv auf der Fachseite (`strokeWidth` in `SubjectPage.tsx`; Raum setzt dort 0,8 per CSS).
+- **15 Kennungen** (der Server speichert nur die Kennung): Buch, Stift, Sprechblasen, Rechenzeichen (Mathe: Plus, Minus, Mal, Gleich), Atom, Kolben, Mikroskop, Blatt, Globus, Säulenbau, Waage, Noten, Palette, Hantel, Code. Ein Fach ohne bekannte Kennung zeigt das **neutrale Motiv** (Abschlusshut), nie das Buch. Vorher fragt der Server den Fächerkatalog: Passt der Name des Fachs zu einer Vorlage (auch über Suchbegriffe, „Mathe“), liefert er deren Motiv mit, ohne es zu speichern (D-114). In „Atelier“ gilt dasselbe für die große Zeichnung (`screens/atelier/SubjectMotifs.tsx`).
+- **Regeln für neue Motive:** keine fremden Marken, Figuren oder Werke (darum zwei Bahnen am Atom, nicht drei); die Fachfarbe färbt das Motiv über `currentColor` und ist nie Teil der Zeichnung; der Name für Bildschirmleser steht in `i18n/de.ts` (`subjectDialog.iconNames`) und beschreibt, was zu sehen ist. `ui/SubjectIcon.test.tsx` prüft Raster, Rundung, Strichstärke und den Rückfall.
 
 ## Interaktive Blöcke im Chat (D-059, 25. Oktober 2026)
 
@@ -87,11 +94,17 @@ Rahmen und Startfläche folgen der **gewählten** Darstellung, nicht nur dem Ger
 - Umschalter (`ui/Segmented.tsx`, D-093): gleich breite Stücke. Passt eine Beschriftung auf dem Telefon nicht in ihr Stück, trägt die Option eine Kurzform (`short`, z. B. „Auto“ für „Automatisch“, Text in `i18n/de.ts`); bis 480 px zeigt allein CSS (`lg-seg-short`, `lg-seg-long` in `lagen.css`) die Kurzform, der Name für Screenreader bleibt der volle Text (`aria-label`). Ein Text läuft nie aus seinem Stück.
 - Kopfzeile des Editors (D-093): Umschalter und Knöpfe schrumpfen nie (`shrink-0`, Knöpfe 44 × 44 px); reicht die Zeile nicht, bricht die Gruppe um (Umschalter oben, „Speichern“, Anheften, Löschen darunter, rechtsbündig).
 
-## Chat: Mitlesen und Eingabehöhe (D-099, 7. November 2026)
+## Klein-Nachträge zu Kays Wünschen (7. November 2026, D-099 bis D-101)
+
+- **Lagen, Fachkopf (D-099):** Kein Klebeband über dem Kicker mehr. Statt dessen steht die Fachfarbe als kurze Kante (32 × 3 px, Radius 2 px) unter dem Kickerwort. Auf den Testzetteln von Start und „Als Nächstes“ bleibt das Washi-Band (dort klebt ein Zettel weiter, es passt zur Metapher). Raum und Atelier blendeten das Band schon aus.
+- **Lagen, Etikett (D-100):** Das „Pagewise“-Schildchen im Umschlag ist jetzt eine weiche Pille (voll gerundet, ohne Rand, dazu ein hauchdünner Ring in 55 % `--control-edge`) statt der harten 2-px-Ecke. Name, Marke und Schrift bleiben.
+- **Raum, Innentiefe (D-101):** Eingelassene Flächen (Reiterleiste der Fachseite, Textfelder, Composer, Listenmulde) wirken etwas weicher: Versatz und Unschärfe innen skalieren zusätzlich zu `--raum-d` mit `--raum-di` = 0,7. Gehobene Flächen bleiben unverändert.
+
+## Chat: Mitlesen und Eingabehöhe (D-115, 7. November 2026)
 
 - **Mitlesen** (`screens/chat/useFollowEnd.ts`, präzisiert D-028): Die Ansicht folgt neuem Text und allem, was danach wächst (Formeln, Graphen, Moleküle laden nach), solange man unten ist; ein Beobachter der Größe am Verlauf und am Eingabebereich scrollt nach. Wer hochgescrollt hat, bleibt dort: Mausrad nach oben und eine Fingergeste nach unten lösen das Mitlesen sofort, auch unter 160 px (nicht, wenn die Geste nur ein scrollbares Feld bewegt, etwa einen Code-Block). Ein Bildlauf ohne Geste (Tastatur, Scrollleiste) löst es ab 160 px Abstand zum Ende. Wieder einrasten tut es, sobald man nach unten näher als 160 px ans Ende kommt oder eine Nachricht sendet. Ein Scroll-Ereignis, das nur das eigene Hinscrollen meldet, ändert nichts, auch wenn die Seite bis dahin gewachsen ist.
 - **Eingabefeld im Chat:** Höchsthöhe `--composer-max` (`screens.css`): 12 rem, aber höchstens 40 % des sichtbaren Bereichs (`100dvh` minus Tastatur `--kb`). Gilt in Raum, Lagen und Atelier (`Composer.tsx`, `.lg-composer-input`). Ab etwa 480 px sichtbarer Höhe ändert sich nichts; im Querformat auf dem Telefon, besonders mit Tastatur, bleibt das Feld ganz sichtbar, und der Text im Feld scrollt, statt dass das Feld über den Rand wächst.
-- **„Zum Ende“-Knopf:** nicht gebaut, offen (F-082, Konzept in `docs/decisions.md` D-099 verlinkt).
+- **„Zum Ende“-Knopf:** nicht gebaut, offen (F-082, Konzept in `docs/decisions.md` D-115 verlinkt).
 
 ## Unterstützte Browser
 

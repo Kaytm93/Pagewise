@@ -7,6 +7,8 @@ export interface ActivityEntry {
   id: string;
   tool: string;
   target: string | null;
+  /** Reiner Dateiname, falls das Werkzeug eine Datei anfasst; sonst `null`. Nie ein Pfad, nie Inhalte. */
+  file: string | null;
   state: 'running' | 'done' | 'error';
 }
 
@@ -35,6 +37,16 @@ export function serializeActivity(list: ActivityEntry[]): string | null {
   return list.length === 0 ? null : JSON.stringify(list.map(({ id: _id, ...rest }) => rest));
 }
 
+/** Höchster Name einer Datei in einem Eintrag (Dateiname, nie Pfad). */
+const MAX_FILE = 80;
+
+/** Kürtzt einen Dateinamen auf Namen und Zeichen: ohne Ordneranteile und Steuerzeichen. */
+const asFile = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const base = (value.split(/[\\/]/).at(-1) ?? '').trim();
+  return base ? base.slice(0, MAX_FILE) : null;
+};
+
 /** Liest gespeicherte Einträge. Was nicht passt, wird übersprungen (die Datenbank ist nicht vertrauenswürdig genug für `as`). */
 export function parseActivity(json: string | null): ActivityEntry[] {
   if (!json) return [];
@@ -49,12 +61,13 @@ export function parseActivity(json: string | null): ActivityEntry[] {
   for (const [index, item] of value.entries()) {
     if (list.length >= MAX_ACTIVITY) break;
     if (typeof item !== 'object' || item === null) continue;
-    const { tool, target, state } = item as Record<string, unknown>;
+    const { tool, target, file, state } = item as Record<string, unknown>;
     if (typeof tool !== 'string' || !STATES.has(state as ActivityEntry['state'])) continue;
     list.push({
       id: String(index),
       tool: tool.slice(0, 40),
       target: typeof target === 'string' ? target.slice(0, 120) : null,
+      file: asFile(file),
       state: state as ActivityEntry['state'],
     });
   }

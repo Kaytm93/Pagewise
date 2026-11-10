@@ -9,7 +9,7 @@ Ein selbst gehosteter Schul-Workspace für den Browser. Jede Person richtet ihre
 - **Fächer und Untergruppen**: aus einem Katalog von über 60 neutralen Vorlagen (Sprachen, Naturwissenschaften, Gesellschaft, Kunst, Sport …) mit Suche oder frei angelegt, dazu Untergruppen (z. B. „Referat“ oder „Schulaufgabe“). Chats gehören fest zu einem Fach.
 - **Standard-Chat** für Fragen ohne Fach: ein Klick auf „Pagewise“. Er liegt im eingebauten Fach „Standard“.
 - **Standard-Prompt je Fach**: ein neutraler, für alle gleicher Text, der gilt, solange du nichts Eigenes einträgst. Du kannst ihn ändern und jederzeit zurücksetzen.
-- **Stundenplan und Tests** (Schulaufgabe, Test, Ex, Referat … mit Datum): Übersicht „Als Nächstes“ auf der Startseite. Die KI kann beides nur lesend nachschlagen, wenn du es erlaubst (Schalter global und je Anbieter), und zeigt im Chat, wann sie es getan hat.
+- **Stundenplan und Tests** (Schulaufgabe, Test, Ex, Referat … mit Datum): Übersicht „Als Nächstes“ auf der Startseite. Die KI kann beides nur lesend nachschlagen, wenn du es erlaubst (Schalter global und je Anbieter), und zeigt im Chat, wann sie es getan hat. Ein Foto oder Screenshot des Stundenplans lässt sich per Vision-Modell erkennen: Pagewise schlägt Stunden und Fächer vor, du prüfst und korrigierst sie, erst dann werden sie übernommen ([D-107](docs/decisions.md)).
 - **Hefteinträge** mit Formeln, Funktionsgraphen, chemischen Strukturen und Noten, einzeln angelegt oder aus einem Chat oder Foto erzeugt.
 - **Export als PDF und PPTX.**
 - **Fotos von Heft und Tafel** als Eingabe für ein Vision-Modell.
@@ -58,6 +58,7 @@ Mit `PAGEWISE_DATA_DIR` legst du einen anderen Ort fest. Liegt das Datenverzeich
 ## Hinweise zu Anbietern und Abos
 
 - Wenn du Modelle über API-Keys nutzt, gehen deine Eingaben an den jeweiligen Anbieter. Free-Modelle können Prompts protokollieren, gib dort keine sensiblen Daten ein.
+- Für die Stundenplan-Erkennung gilt zusätzlich: Das Bild geht nur an ein Modell mit Bildverstehen **und** nur, wenn du diesem Anbieter Bilder erlaubt hast (`sendImages`). Pagewise zeichnet das Bild vorher neu und entfernt Metadaten, speichert es aber nirgends. Was im Bild selbst steht (Schule, Namen, Klasse), sieht der Anbieter trotzdem.
 - Die Agent-CLI-Anbindung startet **unveränderte, offizielle Programme** (z. B. Claude Code) auf deinem Rechner, in einer Sandbox und nur im Arbeitsordner des Fachs. Du installierst das Programm selbst und meldest dich dort selbst an. Pagewise liest, speichert oder vermittelt keine Zugangsdaten deiner Abos. Nutzungslimits deines Abos gelten auch für Aufträge aus Pagewise; sie zählen wie deine eigene Nutzung.
 - Abo-Kontingente (z. B. Claude-Abo oder GLM Coding Plan) gelten nur für die gewöhnliche, persönliche Nutzung des Kontoinhabers. Anbieter können ihre Regeln jederzeit ändern. Prüfe die aktuellen Bedingungen selbst, bevor du ein Abo-Profil nutzt.
 - „Claude Code“ und „Anthropic“ sind Marken ihrer Inhaber. Pagewise ist kein Produkt dieser Firmen und wird von ihnen nicht unterstützt.

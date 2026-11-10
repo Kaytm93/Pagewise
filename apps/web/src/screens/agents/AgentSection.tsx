@@ -7,6 +7,7 @@ import { useSession } from '../../session/SessionProvider';
 import { Button } from '../../ui/Button';
 import { TextField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
+import { emptyState, iconButton } from '../../ui/styles';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { commonErrorMessage } from '../auth-errors';
 import { EngineDialog } from './EngineDialog';
@@ -169,7 +170,7 @@ export function AgentSection() {
       <div>
         <h3 className="font-medium">{t.title}</h3>
         {engines.profiles.length === 0 ? (
-          <div className="mt-3 rounded-box bg-paper p-4">
+          <div className={`mt-3 ${emptyState}`}>
             <p className="font-medium">{t.empty}</p>
             <p className="mt-1 text-sm text-ink-secondary">{t.emptyHint}</p>
           </div>
@@ -191,7 +192,7 @@ export function AgentSection() {
                     type="button"
                     onClick={() => setDialog({ profile })}
                     aria-label={format(t.editNamed, { name: profile.name })}
-                    className="-mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                    className={iconButton}
                   >
                     <Pencil aria-hidden="true" className="size-4" />
                   </button>

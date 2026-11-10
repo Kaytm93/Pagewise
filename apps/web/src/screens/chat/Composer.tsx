@@ -195,7 +195,7 @@ export function Composer({
                 type="button"
                 onClick={() => removeFile(entry.id)}
                 aria-label={format(m.chat.removeAttachment, { name: entry.file.name })}
-                className="mo-press inline-flex size-8 shrink-0 items-center justify-center rounded-control text-ink-muted hover:text-ink"
+                className="mo-press mo-hit inline-flex size-8 shrink-0 items-center justify-center rounded-control text-ink-muted hover:text-ink"
               >
                 <X aria-hidden="true" className="size-4" />
               </button>

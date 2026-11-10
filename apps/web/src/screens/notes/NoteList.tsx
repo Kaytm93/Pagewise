@@ -8,7 +8,14 @@ import { Button } from '../../ui/Button';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
-import { listRow } from '../../ui/styles';
+import {
+  emptyState,
+  listRowAction,
+  listRowHost,
+  listRowLead,
+  listSkeleton,
+  listSkeletonRow,
+} from '../../ui/styles';
 import { formatWhen } from '../chat/when';
 
 /**
@@ -124,14 +131,10 @@ export function NoteList({ subjectId, groupId }: { subjectId: string; groupId: s
       {error && <FieldError>{error}</FieldError>}
       {failed && <p className="mt-3 text-ink-secondary">{m.notes.loadFailed}</p>}
       {!failed && notes === null && (
-        <div role="status" className="mt-3">
+        <div role="status" className={listSkeleton}>
           <span className="sr-only">{m.notes.loading}</span>
           {[0, 1, 2].map((row) => (
-            <div
-              key={row}
-              aria-hidden="true"
-              className="grid gap-2.5 border-b border-line-warm px-2 py-[18px]"
-            >
+            <div key={row} aria-hidden="true" className={listSkeletonRow}>
               <span className="mo-shimmer h-[17px] w-[46%] rounded-[7px] bg-ink-muted/20" />
               <span className="mo-shimmer h-[13px] w-[78%] rounded-[7px] bg-ink-muted/20" />
             </div>
@@ -144,7 +147,7 @@ export function NoteList({ subjectId, groupId }: { subjectId: string; groupId: s
         </p>
       )}
       {notes && notes.length === 0 && !searching && (
-        <div className="mt-3 rounded-box bg-paper p-4">
+        <div className={`mt-3 ${emptyState}`}>
           <p className="font-medium">{m.notes.emptyTitle}</p>
           <p className="mt-1 text-sm text-ink-secondary">{m.notes.emptyHint}</p>
         </div>
@@ -162,8 +165,8 @@ export function NoteList({ subjectId, groupId }: { subjectId: string; groupId: s
           className="mt-3 divide-y divide-line-warm border-y border-line-warm outline-none"
         >
           {notes.map((note) => (
-            <li key={note.id} className="flex items-center">
-              <Link to={{ name: 'note', subjectId, noteId: note.id }} className={listRow}>
+            <li key={note.id} className={listRowHost}>
+              <Link to={{ name: 'note', subjectId, noteId: note.id }} className={listRowLead}>
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="truncate font-heading text-[19px] tracking-[-0.15px]">
                     {note.title}
@@ -192,7 +195,7 @@ export function NoteList({ subjectId, groupId }: { subjectId: string; groupId: s
                 type="button"
                 onClick={() => setDeleting(note)}
                 aria-label={format(m.notes.deleteNamed, { name: note.title })}
-                className="mo-press -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] text-ink-muted hover:bg-paper hover:text-ink"
+                className={listRowAction}
               >
                 <Trash2 aria-hidden="true" className="size-4" />
               </button>

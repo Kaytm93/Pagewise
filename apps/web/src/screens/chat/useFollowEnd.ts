@@ -24,7 +24,7 @@ function scrollsInside(target: EventTarget | null): boolean {
 }
 
 /**
- * Mitlesen (D-028, D-099): Die Ansicht folgt dem neuen Text und dem, was nachträglich wächst (Formeln, Graphen,
+ * Mitlesen (D-028, D-115): Die Ansicht folgt dem neuen Text und dem, was nachträglich wächst (Formeln, Graphen,
  * Moleküle laden nach). Wer hochgescrollt hat, bleibt dort. Wieder eingerastet wird, sobald man zurück näher
  * als 160 px ans Ende kommt oder eine Nachricht sendet.
  *

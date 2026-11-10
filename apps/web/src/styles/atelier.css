@@ -746,6 +746,11 @@
     }
   }
 
+  /* Gedrückt (D-109): kräftigerer Fachton, auch ohne Maus. */
+  a.at-lesson:active {
+    background-color: color-mix(in srgb, var(--subj) 16%, transparent);
+  }
+
   a.at-lesson:focus-visible {
     background-color: color-mix(in srgb, var(--subj) 9%, transparent);
   }

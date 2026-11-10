@@ -73,6 +73,16 @@ Die Auswahl pro Fach steht auf der Seite des Fachs („Modell ändern“), die p
 
 `openrouter/free` ist ein Router über kostenlose Modelle und steht in der Vorschlagsliste, ist aber **nicht** das Standardmodell. Kostenlose Modelle (Kennung `openrouter/free` oder auf `:free` endend) sind in der Oberfläche als „kostenlos“ markiert, und das Formular zeigt den Hinweis, dass sie Eingaben protokollieren oder auswerten können. Die Dokumentation von OpenRouter unterscheidet dabei nicht ausdrücklich zwischen kostenlosen und bezahlten Modellen, jeder Anbieter dahinter hat eigene Regeln. Der Hinweis ist deshalb bewusst vorsichtig: keine persönlichen oder sensiblen Daten eingeben.
 
+## Bilder an Anbieter
+
+Bilder verlassen den Rechner nur auf deinen Klick und nur, wenn der Anbieter sie empfangen darf:
+
+- **Stundenplan aus einem Bild (D-107):** Der Dialog „Aus Bild erkennen“ bietet nur Modelle an, die Bilder verstehen (`vision`), und nur Anbieter, bei denen „Bilder an diesen Anbieter senden“ eingeschaltet ist. Der Server prüft beides noch einmal, bevor er das Bild schickt, und lehnt es sonst ab (403 beziehungsweise 409). Das Bild wird vorher im Browser neu gezeichnet (höchstens 1800 px Kante, JPEG, weißer Hintergrund) und auf dem Server noch einmal von Metadaten befreit; gespeichert wird es nirgends.
+- **Chat-Anhänge:** Der Schalter gilt, die Durchsetzung für Chats kommt mit Phase 1c.
+- **Sichtprüfung (D-080):** Bilder aus der Vorschau gehen nur an das Modell, das die Antwort schreibt, und nur bei erlaubtem Schalter.
+
+Steht der Schalter bei einem Anbieter auf „aus“, kommt kein Modell dieses Anbieters im Erkennungsdialog vor. Bei kostenlosen Modellen weist der Dialog zusätzlich darauf hin, dass Eingaben protokolliert werden können.
+
 ## Z.ai Coding Plan
 
 Der Coding Plan darf laut Z.ai nicht für direkte Modell-API-Aufrufe aus eigenen Apps genutzt werden (siehe D-011). Deshalb:

@@ -38,8 +38,8 @@ describe('Chat: Werkzeuge des Modells', () => {
     server.addMessage(chat.id, 'user', 'Wann schreibe ich den nächsten Test?');
     server.addMessage(chat.id, 'assistant', 'Am Donnerstag.', {
       activity: [
-        { id: '0', tool: 'get_exams', target: null, state: 'done' },
-        { id: '1', tool: 'get_timetable', target: 'Donnerstag', state: 'done' },
+        { id: '0', tool: 'get_exams', target: null, file: null, state: 'done' },
+        { id: '1', tool: 'get_timetable', target: 'Donnerstag', file: null, state: 'done' },
       ],
     });
     open(server, chatPath(subject.id, chat.id));
@@ -62,14 +62,26 @@ describe('Chat: Werkzeuge des Modells', () => {
     const generation = server.generation(chat.id);
 
     act(() =>
-      generation.activity({ id: 'tool-0', tool: 'get_timetable', target: null, state: 'running' }),
+      generation.activity({
+        id: 'tool-0',
+        tool: 'get_timetable',
+        target: null,
+        file: null,
+        state: 'running',
+      }),
     );
     const list = await screen.findByRole('list', { name: 'Abgefragte Daten' });
     expect(within(list).getByText('Stundenplan eingesehen')).toBeTruthy();
     expect(within(list).getByText('wird abgefragt')).toBeTruthy();
 
     act(() => {
-      generation.activity({ id: 'tool-0', tool: 'get_timetable', target: null, state: 'done' });
+      generation.activity({
+        id: 'tool-0',
+        tool: 'get_timetable',
+        target: null,
+        file: null,
+        state: 'done',
+      });
       generation.delta('Morgen hast du Chemie.');
       generation.finish();
     });
@@ -85,7 +97,7 @@ describe('Chat: Werkzeuge des Modells', () => {
     const { server, subject, chat } = setup();
     server.addMessage(chat.id, 'user', 'Frage');
     server.addMessage(chat.id, 'assistant', 'Das ging nicht.', {
-      activity: [{ id: '0', tool: 'get_exams', target: null, state: 'error' }],
+      activity: [{ id: '0', tool: 'get_exams', target: null, file: null, state: 'error' }],
     });
     open(server, chatPath(subject.id, chat.id));
     const list = await screen.findByRole('list', { name: 'Abgefragte Daten' });

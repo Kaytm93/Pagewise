@@ -5,6 +5,8 @@ import type {
   AvailableModel,
   Chat,
   ChatDetail,
+  ChatFileList,
+  ChatPreview,
   CliStatus,
   CodeRunDetail,
   CodeStatus,
@@ -30,6 +32,10 @@ import type {
   ProviderInput,
   ProviderPatch,
   ProviderPreset,
+  ScanImportInput,
+  ScanImportResult,
+  ScanModel,
+  ScanResult,
   Selection,
   SessionInfo,
   Subject,
@@ -171,6 +177,14 @@ export function createApi(client: ApiClient) {
     ) => client.request<Chat>('PATCH', `/api/chats/${id}`, patch),
     deleteChat: (id: string) => client.request<void>('DELETE', `/api/chats/${id}`),
     stopChat: (id: string) => client.request<void>('POST', `/api/chats/${id}/stop`),
+    /** Flache Dateiliste des Arbeitsordners eines Chats (D-106); `truncated`: es gibt mehr, als gezeigt wird. */
+    chatFiles: (id: string) => client.request<ChatFileList>('GET', `/api/chats/${id}/files`),
+    /** Vorschau einer Datei des Arbeitsordners als PNG (D-106, H-C03); Fehler bleiben Codes. */
+    chatPreview: (id: string, file: string, pages: number) =>
+      client.request<ChatPreview>(
+        'GET',
+        `/api/chats/${id}/preview?file=${encodeURIComponent(file)}&pages=${pages}`,
+      ),
     setSubjectModel: (subjectId: string, model: Selection | null) =>
       client.request<Subject>('PUT', `/api/subjects/${subjectId}/model`, { model }),
     setSubjectEngine: (subjectId: string, engineProfileId: string | null) =>
@@ -201,6 +215,27 @@ export function createApi(client: ApiClient) {
     updateTimetableEntry: (id: string, patch: Partial<TimetableInput>) =>
       client.request<TimetableEntry>('PATCH', `/api/timetable/${id}`, patch),
     deleteTimetableEntry: (id: string) => client.request<void>('DELETE', `/api/timetable/${id}`),
+    /** Modelle, die einen Stundenplan aus einem Bild lesen dürfen (D-107). */
+    async timetableScanModels(): Promise<ScanModel[]> {
+      return (await client.request<{ models: ScanModel[] }>('GET', '/api/timetable-scan/models'))
+        .models;
+    },
+    /** Bild erkennen lassen. Das Bild reist als Formular und wird auf dem Server nicht gespeichert. */
+    scanTimetable: (
+      image: Blob,
+      providerId: string,
+      model: string,
+      signal?: AbortSignal,
+    ): Promise<ScanResult> => {
+      const form = new FormData();
+      form.append('providerId', providerId);
+      form.append('model', model);
+      form.append('image', image, 'stundenplan.jpg');
+      return client.request<ScanResult>('POST', '/api/timetable-scan', form, signal);
+    },
+    /** Geprüfte Vorschläge übernehmen; erst hier entstehen Stunden und neue Fächer. */
+    importTimetableScan: (input: ScanImportInput) =>
+      client.request<ScanImportResult>('POST', '/api/timetable-scan/import', input),
     /** Legt fest, welche Wochenart die Woche mit diesem Datum hat, oder hebt es mit `null` auf. */
     async setWeekAnchor(
       anchor: { date: string; week: 'a' | 'b' } | null,

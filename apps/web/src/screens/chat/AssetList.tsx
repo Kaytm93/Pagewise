@@ -67,7 +67,7 @@ export function AssetList({ assets, images, url }: AssetListProps) {
                 name: asset.name,
                 size: formatSize(asset.size),
               })}
-              className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-control border border-line bg-paper px-3 text-sm text-ink no-underline hover:border-ink-muted"
+              className="mo-tap inline-flex min-h-11 max-w-full items-center gap-2 rounded-control border border-line bg-paper px-3 text-sm text-ink no-underline hover:border-ink-muted"
             >
               <AssetIcon kind={asset.kind} />
               {/* Der Name kürzt am Anfang nicht, die Endung bleibt immer sichtbar: Regie nimmt dem

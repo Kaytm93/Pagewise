@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { Provider } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { Button } from '../../ui/Button';
+import { emptyState, iconButton } from '../../ui/styles';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { ModelChoice } from './ModelChoice';
 import { ProviderDialog } from './ProviderDialog';
@@ -31,7 +32,7 @@ export function ProvidersSection() {
   return (
     <div>
       {providers.length === 0 ? (
-        <div className="rounded-box bg-paper p-4">
+        <div className={emptyState}>
           <p className="font-medium">{m.providers.empty}</p>
           <p className="mt-1 text-sm text-ink-secondary">{m.providers.emptyHint}</p>
         </div>
@@ -49,7 +50,7 @@ export function ProvidersSection() {
                 type="button"
                 onClick={() => setDialog({ provider })}
                 aria-label={format(m.providers.editNamed, { name: provider.name })}
-                className="-mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                className={iconButton}
               >
                 <Pencil aria-hidden="true" className="size-4" />
               </button>

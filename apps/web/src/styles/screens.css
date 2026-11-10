@@ -21,7 +21,7 @@
 :root {
   --subject-h1: clamp(28px, 8vw, 34px);
 
-  /* Höchsthöhe des Eingabefelds im Chat (F-017, D-099): 12 rem, aber nie mehr als 40 % des sichtbaren
+  /* Höchsthöhe des Eingabefelds im Chat (F-017, D-115): 12 rem, aber nie mehr als 40 % des sichtbaren
      Bereichs (Fensterhöhe ohne Tastatur `--kb`). Im Querformat und mit Tastatur wäre das Feld sonst höher
      als der sichtbare Bereich. Ab etwa 480 px sichtbarer Höhe gilt unverändert 12 rem. */
   --composer-max: min(12rem, calc((100dvh - var(--kb, 0px)) * 0.4));
@@ -54,6 +54,57 @@
     stroke-dasharray: 1 2;
     stroke-dashoffset: 0;
     animation: tool-check-draw var(--t-med) var(--ease) both;
+  }
+
+  /* ===== Datei-Panel rechts im Chat (D-106, H-C02) =====
+     Layout: Chat-Spalte und Panel liegen nebeneinander auf dem Blatt (kein Overlay). Die Panel-Breite
+     kommt ausschließlich aus der CSS-Variablen --panel-w, die ChatPage.tsx über das CSSOM setzt
+     (element.style.setProperty, Regel 5: kein Inline-Stil im Markup, keine festen Farbwerte). Ohne die
+     Variable gilt die Standardbreite. Unter 900 px bleibt das Panel zu (Zustand in ChatPage.tsx). */
+  .lg-chat-panel-bereich,
+  .lg-chat-mit-panel {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+  }
+
+  .lg-chat-mit-panel {
+    --panel-w: 320px;
+  }
+
+  .lg-chat-mit-panel > .lg-chat-panel {
+    width: var(--panel-w);
+    max-width: 50vw;
+  }
+
+  /* Der Ziehgriff: schmale Spalte mit mittiger Leiste als Griff, mindestens 44 px Bedienfläche in der
+     Höhe (die Spalte reicht über die ganze Blatthöhe). Sichtbar nur bei Mauszeiger-Fine-Pointer-Geräten
+     ist unnötig — wer zieht, hat eine Maus; die Fläche bleibt für Tastatur-Nutzung i. A. (H-C03+). */
+  .lg-chat-panel-resizer {
+    width: 10px;
+    touch-action: none;
+  }
+
+  .lg-chat-panel-griff {
+    display: block;
+    width: 2px;
+    height: 44px;
+    margin: auto;
+    border-radius: 999px;
+    background: var(--ink-muted);
+    opacity: 0.5;
+    transition: opacity var(--t-color) var(--ease);
+  }
+
+  @media (hover: hover) {
+    .lg-chat-panel-resizer:hover .lg-chat-panel-griff {
+      opacity: 1;
+    }
+  }
+
+  .lg-chat-panel-resizer:focus-visible .lg-chat-panel-griff,
+  .lg-chat-panel-resizer:active .lg-chat-panel-griff {
+    opacity: 1;
   }
 
   /* Erklärung der drei Effektstufen: reiner Text, keine Bedienfläche. */

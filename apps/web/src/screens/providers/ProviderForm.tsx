@@ -236,7 +236,7 @@ export function ProviderForm({
                 setRemoveKey((value) => !value);
                 setApiKey('');
               }}
-              className="min-h-11 text-accent underline underline-offset-2"
+              className="mo-tap min-h-11 text-accent underline underline-offset-2 hover:text-ink"
             >
               {removeKey ? m.providers.form.keepKey : m.providers.form.removeKey}
             </button>

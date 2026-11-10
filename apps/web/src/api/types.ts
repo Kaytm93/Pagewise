@@ -216,6 +216,8 @@ export interface ActivityEntry {
   /** Name des Werkzeugs, z. B. „Write“ oder „Bash“. */
   tool: string;
   target: string | null;
+  /** Reiner Dateiname, falls das Werkzeug eine Datei anfasst; sonst `null`. Nie ein Pfad, nie Inhalte. */
+  file: string | null;
   state: 'running' | 'done' | 'error';
 }
 
@@ -396,6 +398,55 @@ export interface TimetableData {
   weekAnchor: WeekAnchor | null;
 }
 
+// --- Stundenplan aus einem Bild (D-107) -------------------------------------------------------------
+
+/** Ein Modell, das Bilder lesen darf und dessen Anbieter Bilder empfangen darf. */
+export interface ScanModel {
+  providerId: string;
+  providerName: string;
+  model: string;
+  label: string;
+  /** Kostenloses Modell: der Anbieter kann Eingaben protokollieren. */
+  free: boolean;
+}
+
+/** Eine vom Modell vorgeschlagene Stunde. Die Vorschau schreibt noch nichts in die Datenbank. */
+export interface ScanProposal {
+  weekday: number;
+  startTime: string;
+  endTime: string;
+  /** Erkannter Fachname, `null` wenn nichts lesbar war. */
+  subject: string | null;
+  room: string | null;
+  note: string | null;
+  week: WeekKind;
+}
+
+export interface ScanProposalView extends ScanProposal {
+  /** `null`: das Fach wird beim Übernehmen neu angelegt oder bleibt leer. */
+  subjectId: string | null;
+  subjectState: 'existing' | 'new' | 'none';
+}
+
+export interface ScanResult {
+  proposals: ScanProposalView[];
+  /** Fachnamen, die beim Übernehmen neu angelegt würden. */
+  newSubjects: string[];
+  /** Vom Modell gelieferte, aber unbrauchbare oder doppelte Angaben. */
+  skipped: number;
+}
+
+export interface ScanImportInput {
+  entries: ScanProposal[];
+  createSubjects: boolean;
+  replaceExisting: boolean;
+}
+
+export interface ScanImportResult {
+  created: number;
+  subjectsCreated: number;
+}
+
 /** Ein Testeintrag (Schulaufgabe, Test, Ex, Referat …). `date` ist `YYYY-MM-DD`. */
 export interface Exam {
   id: string;
@@ -447,6 +498,40 @@ export interface NoteInput {
 }
 
 export type NotePatch = Partial<Pick<Note, 'title' | 'markdown' | 'pinned' | 'tags' | 'groupId'>>;
+
+// --- Datei-Panel (D-106, Phase 1d) ------------------------------------------------------------------
+
+/** Eine Datei im Arbeitsordner eines Chats: nur Name, Größe, Art und Änderungszeit, nie Inhalte. */
+export interface ChatFileEntry {
+  name: string;
+  /** Größe in Bytes. */
+  size: number;
+  /** Endung ohne Punkt, kleinbuchstaben; leer, wenn die Datei keine hat. */
+  extension: string;
+  /** Letzte Änderung in Millisekunden. */
+  mtimeMs: number;
+}
+
+/** Antwort von `GET /api/chats/:id/files`: die gekürzte Liste und ob es mehr gibt, als gezeigt wird. */
+export interface ChatFileList {
+  files: ChatFileEntry[];
+  truncated: boolean;
+}
+
+/** Eine gerenderte Vorschau-Seite: Seitenzahl und das PNG als Daten-Adresse. */
+export interface ChatPreviewPage {
+  number: number;
+  /** Daten-Adresse (`data:image/png;base64,…`) vom Server; die CSP erlaubt sie für Bilder. */
+  png: string;
+}
+
+/** Antwort von `GET /api/chats/:id/preview`: Metadaten und die gerenderten Seiten. */
+export interface ChatPreview {
+  file: string;
+  /** Gesamtzahl der Seiten, wenn der Server sie kennt; sonst `null`. */
+  pagesTotal: number | null;
+  pages: ChatPreviewPage[];
+}
 
 // --- Agent-CLI (Phase 1e) -----------------------------------------------------------------------
 

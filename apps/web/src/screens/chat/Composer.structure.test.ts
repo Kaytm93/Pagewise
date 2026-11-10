@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Höhe des Eingabefelds im Chat (F-017, D-099): Die Obergrenze war fest 12 rem. Im Querformat mit Tastatur
+ * Höhe des Eingabefelds im Chat (F-017, D-115): Die Obergrenze war fest 12 rem. Im Querformat mit Tastatur
  * (sichtbar etwa 190 px) wurde die Eingabezeile 244 bis 283 px hoch, das Feld ragte über den oberen Rand.
  * Jetzt gilt `--composer-max` (12 rem, höchstens 40 % des sichtbaren Bereichs, also Fensterhöhe minus
  * Tastatur `--kb`) in allen drei Richtungen. jsdom misst kein Layout, darum Strukturtest am Quelltext; die

@@ -48,10 +48,12 @@ describe('SubjectMotif (Lagen)', () => {
     expect(staffel.every((name) => name && Number(name.slice(5)) <= 6)).toBe(true);
   });
 
-  it('zeigt für unbekannte oder fehlende Kennungen das Buchmotiv', () => {
+  it('zeigt für unbekannte oder fehlende Kennungen das neutrale Motiv, nicht das Buch (D-110)', () => {
     const buch = render(<SubjectMotif icon="book" />).container.innerHTML;
-    expect(render(<SubjectMotif icon={null} />).container.innerHTML).toBe(buch);
-    expect(render(<SubjectMotif icon="gibt-es-nicht" />).container.innerHTML).toBe(buch);
+    const neutral = render(<SubjectMotif icon={null} />).container.innerHTML;
+    expect(neutral).toContain('data-icon="neutral"');
+    expect(neutral).not.toBe(buch);
+    expect(render(<SubjectMotif icon="gibt-es-nicht" />).container.innerHTML).toBe(neutral);
   });
 });
 

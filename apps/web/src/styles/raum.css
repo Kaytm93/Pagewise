@@ -31,7 +31,8 @@
 /* ===== Tokens =====
    Die Schatten bestehen aus den Raum-Farben in tokens.css. Jede Liste hat genau vier Schichten in fester
    Reihenfolge (außen hell, außen dunkel, innen 1, innen 2), damit `transition: box-shadow` zwischen flach,
-   gehoben und eingelassen weich überblendet. Die Tiefe skaliert über --raum-d (1 = normal). */
+   gehoben und eingelassen weich überblendet. Die Tiefe skaliert über --raum-d (1 = normal); die
+   eingelassenen Flächen zusätzlich über --raum-di (D-101), damit Kays „etwas schwächer“ gilt. */
 :root[data-design="raum"] {
   /* Maße der Hülle: Seitenleiste 240 px, auf dem iPad (768–1099 px) 236 px (D-094: mit 216 px kürzte sie „Mathematik“); der Blattrand bleibt */
   --sidebar-w: 240px;
@@ -47,16 +48,19 @@
   --raum-surf: var(--raum-raised);
 
   --raum-d: 1;
+  /* Innentiefe der eingelassenen Flächen (D-101): auch --raum-di wirkt auf Versatz und Unschärfe
+     innen, damit die Mulde etwas weicher bleibt, ohne die Hülle zu verlieren */
+  --raum-di: 0.7;
   --raum-o1: calc(3px * var(--raum-d));
   --raum-b1: calc(7px * var(--raum-d));
   --raum-o2: calc(6px * var(--raum-d));
   --raum-b2: calc(15px * var(--raum-d));
   --raum-o3: calc(12px * var(--raum-d));
   --raum-b3: calc(30px * var(--raum-d));
-  --raum-i1: calc(2px * var(--raum-d));
-  --raum-ib1: calc(5px * var(--raum-d));
-  --raum-i2: calc(4px * var(--raum-d));
-  --raum-ib2: calc(10px * var(--raum-d));
+  --raum-i1: calc(2px * var(--raum-d) * var(--raum-di));
+  --raum-ib1: calc(5px * var(--raum-d) * var(--raum-di));
+  --raum-i2: calc(4px * var(--raum-d) * var(--raum-di));
+  --raum-ib2: calc(10px * var(--raum-d) * var(--raum-di));
 
   /* Feine Kante innen: hell oben links, dunkel unten rechts (zwei Schichten) */
   --raum-rim: inset 1px 1px 0 0 var(--raum-rim-hi), inset -1px -1px 0 0 var(--raum-rim-lo);
@@ -799,6 +803,17 @@
   transform: translateY(calc(var(--m) * 1px));
 }
 
+/* Gehobene Knöpfe stehen bündig (D-112): Der negative Rand (-mr-3, -ml-3) gleicht bei flachen Textknöpfen das
+   Polster aus, damit die Schrift auf der Kante des Inhalts steht. In Raum ist derselbe Knopf eine gehobene Fläche;
+   mit dem Rand ragte sie 12 px über die Kante hinaus. */
+:root[data-design="raum"] .mo-press[class*="-mr-3"] {
+  margin-right: 0;
+}
+
+:root[data-design="raum"] .mo-press[class*="-ml-3"] {
+  margin-left: 0;
+}
+
 :root[data-design="raum"] .lg-btn-primary {
   box-shadow: 0 6px 14px -6px rgba(var(--shadow), 0.45);
 }
@@ -954,6 +969,44 @@
   border-radius: 50%;
 }
 
+/* Zeile mit Knopf am Ende (Chats, Einträge, Gruppen; D-108): Der Knopf sitzt in der Zeile, 10 px vom Rand wie
+   nach oben und unten. Zeile, Trennlinie und Hover reichen so über die ganze Mulde, nichts ragt über ihren Rand,
+   und der Schatten des Knopfs liegt frei auf der Zeile statt im Schatten der Muldenkante. */
+:root[data-design="raum"] ul:has(> li > .lg-row) > li > .lg-row.lg-row-lead {
+  padding-inline-end: 64px;
+}
+
+:root[data-design="raum"] li:has(> .lg-row) > .lg-row-action {
+  right: 10px;
+}
+
+/* Chatliste: Die Tageszeile steht ohne eigene Linie in der Mulde, auf der Flucht des Zeilentexts (4 + 12 px). */
+:root[data-design="raum"] .lg-chats > .lg-day {
+  border: 0;
+  padding-inline: 12px;
+}
+
+/* Leerer Zustand (D-111): eine leere Mulde statt einer flachen Fläche. So steht dort dieselbe Form wie die Liste,
+   die später an ihrer Stelle steht; der Text hat 16 px Abstand zum Rand der Mulde. */
+:root[data-design="raum"] .lg-empty {
+  border-radius: var(--raum-r-big);
+  background-color: transparent;
+  box-shadow: var(--raum-in-m);
+}
+
+/* Ladegerüst der Listen: dieselbe Mulde wie die echte Liste, ohne Linien. */
+:root[data-design="raum"] .lg-skel-rows {
+  border: 0;
+  padding: 4px;
+  border-radius: var(--raum-r-big);
+  box-shadow: var(--raum-in-m);
+}
+
+:root[data-design="raum"] .lg-skel-row {
+  border: 0;
+  padding-inline: 12px;
+}
+
 /* Die Trennlinie (eingraviert) zwischen Zeilen: die Balken aus lagen.css entfallen. */
 :root[data-design="raum"] .lg-row::before {
   content: none;
@@ -972,6 +1025,11 @@
   background: linear-gradient(var(--raum-dark) 1px, var(--raum-light) 1px);
   transform: none;
   transition: opacity var(--t-color) ease;
+}
+
+/* Chatliste: Die erste Zeile nach einer Tageszeile beginnt ohne Trennlinie, die Tageszeile trennt schon. */
+:root[data-design="raum"] .lg-chats > .lg-day + li > .lg-row::before {
+  content: none;
 }
 
 @media (hover: hover) {

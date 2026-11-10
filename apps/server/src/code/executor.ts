@@ -22,16 +22,16 @@ import { runSandboxed, type SandboxEnd } from '../sandbox/runner';
  */
 
 export const CODE_LIMITS = {
-  timeoutMs: 60_000,
+  timeoutMs: 180_000,
   maxOutputBytes: 1024 * 1024,
   /** Davon sieht das Modell: Anfang von stdout, Ende von stderr. */
   keepBytes: 3_000,
-  maxMemoryBytes: 1024 * 1024 * 1024,
-  maxWorkspaceBytes: 200 * 1024 * 1024,
-  maxWorkspaceEntries: 5_000,
+  maxMemoryBytes: 2 * 1024 * 1024 * 1024,
+  maxWorkspaceBytes: 1024 * 1024 * 1024,
+  maxWorkspaceEntries: 20_000,
   maxScriptCharacters: 24_000,
-  maxRunsPerReply: 6,
-  maxRunsPerChat: 200,
+  maxRunsPerReply: 8,
+  maxRunsPerChat: 300,
   maxConcurrent: 2,
 } as const;
 

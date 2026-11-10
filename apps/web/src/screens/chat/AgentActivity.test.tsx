@@ -1,13 +1,41 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ActivityEntry } from '../../api/types';
 import { AgentActivity } from './AgentActivity';
 
 const steps: ActivityEntry[] = [
-  { id: 't1', tool: 'Write', target: 'uebersicht.pdf', state: 'done' },
+  { id: 't1', tool: 'Write', target: 'uebersicht.pdf', file: 'uebersicht.pdf', state: 'done' },
 ];
+
+/**matchMedia-Ersatz wie fx.test.ts: eine Frage, umschaltbar, Zuhörer werden benachrichtigt. */
+function mockMedia(fits: boolean) {
+  const listeners = new Set<() => void>();
+  const query = {
+    matches: fits,
+    addEventListener: (_: string, listener: () => void) => listeners.add(listener),
+    removeEventListener: (_: string, listener: () => void) => listeners.delete(listener),
+  };
+  vi.stubGlobal('matchMedia', (text: string) =>
+    text.includes('min-width: 900px')
+      ? query
+      : { matches: false, addEventListener() {}, removeEventListener() {} },
+  );
+  return {
+    narrow() {
+      query.matches = false;
+      for (const listener of listeners) listener();
+    },
+  };
+}
+
+/** Aufgeklappte Live-Spalte (kein details) oder eingeklappte Fläche? (jsdom zeigt Details-Kinder weiter an.) */
+function offeneSpalte(container: HTMLElement): Element | null {
+  return container.querySelector('details') === null ? container.querySelector('ol') : null;
+}
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('AgentActivity: Aufklapp-Zustand erkennbar (chat-render#06)', () => {
   it('der Zusammenfassung ist der Zusatz „Details anzeigen“ zugeordnet, solange sie zugeklappt ist', () => {
@@ -56,7 +84,7 @@ describe('AgentActivity: Aufklapp-Zustand erkennbar (chat-render#06)', () => {
 
     rerender(
       <AgentActivity
-        steps={[...steps, { id: 't2', tool: 'Bash', target: null, state: 'error' }]}
+        steps={[...steps, { id: 't2', tool: 'Bash', target: null, file: null, state: 'error' }]}
         live={false}
       />,
     );
@@ -76,5 +104,108 @@ describe('AgentActivity: Aufklapp-Zustand erkennbar (chat-render#06)', () => {
     render(<AgentActivity steps={steps} live />);
     expect(screen.queryByText('Was der Agent getan hat (1)')).toBeNull();
     expect(screen.queryByText('Details anzeigen')).toBeNull();
+  });
+});
+
+/*
+ * H-C04 (D-106): Der Aktivitätsstream lebt vom bestehenden Ereignisstrom — neue Zeilen erscheinen per
+ * rerender mit gewachsenem steps-Array (im Chat: dispatch je `activity`-Ereignis), ohne Remount und ohne
+ * Polling. Gezeigt wird je Zeile Symbol + „Werkzeug → Ziel“ (B-04: file vor target), nie Inhalte.
+ */
+describe('AgentActivity: Live-Spalte (H-C04)', () => {
+  const laufend: ActivityEntry = {
+    id: 'a1',
+    tool: 'Bash',
+    target: 'Ordner zeigen',
+    file: null,
+    state: 'running',
+  };
+  const fertig: ActivityEntry = { ...laufend, state: 'done' };
+  const geschrieben: ActivityEntry = {
+    id: 'a2',
+    tool: 'Write',
+    target: 'ordner/bericht.pdf',
+    file: 'bericht.pdf',
+    state: 'done',
+  };
+
+  it('Zeilen erscheinen nacheinander ohne Remount: dasselbe <ol> trägt wachsende Einträge', () => {
+    const { container, rerender } = render(<AgentActivity steps={[laufend]} live />);
+    const liste = container.querySelector('ol');
+    expect(liste).toBeTruthy();
+    expect(liste?.textContent).toContain('Befehl: Ordner zeigen');
+
+    rerender(<AgentActivity steps={[laufend, fertig]} live />);
+    rerender(<AgentActivity steps={[laufend, fertig, geschrieben]} live />);
+    // Dasselbe Element, kein Remount; die Zeile mit file zeigt nur den reinen Namen, nie den Pfad.
+    expect(container.querySelector('ol')).toBe(liste);
+    const zeilen = liste ? [...liste.querySelectorAll('li')] : [];
+    expect(zeilen).toHaveLength(3);
+    expect(zeilen[0]?.textContent).toContain('Befehl: Ordner zeigen');
+    expect(zeilen[2]?.textContent).toContain('Geschrieben: bericht.pdf');
+    expect(zeilen[2]?.textContent).not.toContain('ordner');
+    // Der laufende Schritt trägt den pulsierenden Punkt.
+    expect(zeilen[0]?.querySelector('.animate-pulse')).not.toBeNull();
+    expect(zeilen[2]?.querySelector('.lg-tool-check')).not.toBeNull();
+    expect(container.querySelector('style')).toBeNull();
+  });
+
+  it('übersetzte Werkzeugnamen mit Datei (file) und ohne (target), Zustand unsichtbar für Sehende', () => {
+    const { container } = render(
+      <AgentActivity
+        steps={[
+          { id: 'b1', tool: 'Read', target: 'x', file: 'notiz.md', state: 'done' },
+          { id: 'b2', tool: 'Grep', target: 'Suchwort', file: null, state: 'running' },
+          { id: 'b3', tool: 'TodoWrite', target: null, file: null, state: 'error' },
+        ]}
+        live
+      />,
+    );
+    const texte = [...container.querySelectorAll('li span')].map((span) => span.textContent);
+    expect(texte).toContain('Gelesen: notiz.md');
+    expect(texte).toContain('Durchsucht: Suchwort');
+    expect(texte).toContain('Liste geführt');
+    expect(container.querySelector('.lg-tool-cross')).not.toBeNull();
+    // Fehlermeldung als sr-only-Zusatz.
+    expect(screen.getByText('fehlgeschlagen')).toBeTruthy();
+  });
+
+  it('unbekanntes Werkzeug fällt auf den Rohnamen zurück (Fallback)', () => {
+    const { container } = render(
+      <AgentActivity
+        steps={[{ id: 'c1', tool: 'Keksdose', target: 'Kekse', file: null, state: 'done' }]}
+        live
+      />,
+    );
+    expect(container.querySelector('li')?.textContent).toContain('Keksdose: Kekse');
+  });
+
+  it('zeigt ohne matchMedia (jsdom) die offene Spalte wie bisher', () => {
+    const { container } = render(<AgentActivity steps={[laufend, fertig]} live />);
+    expect(offeneSpalte(container)).not.toBeNull();
+    expect(screen.queryByText('Was der Agent getan hat (2)')).toBeNull();
+  });
+
+  it('zeigt auf schmalen Fenstern die eingeklappte Fläche mit laufendem Punkt, keine offene Spalte', () => {
+    mockMedia(false);
+    const { container } = render(<AgentActivity steps={[laufend, fertig]} live />);
+    // Eingeklappt: Zusammenfassung mit Anzahl, keine offene Spalte (Details-Kinder bleiben im jsdom-DOM).
+    expect(screen.getByText('Was der Agent getan hat (2)')).toBeTruthy();
+    expect(offeneSpalte(container)).toBeNull();
+    // Während der Arbeit trägt der Kopf den laufenden Punkt statt des fertigen Hakens.
+    const summary = screen.getByText('Was der Agent getan hat (2)').closest('summary');
+    expect(summary?.getAttribute('data-state')).toBe('running');
+    expect(summary?.querySelector('.animate-pulse')).not.toBeNull();
+    // Bedienfläche bleibt 44 px hoch.
+    expect(summary?.className).toContain('min-h-11');
+  });
+
+  it('wird das Fenster beim Lauf schmaler, klappt die Spalte von selbst zu (matchMedia-Muster)', () => {
+    const media = mockMedia(true);
+    const { container } = render(<AgentActivity steps={[laufend, fertig]} live />);
+    expect(offeneSpalte(container)).not.toBeNull();
+    act(() => media.narrow());
+    expect(offeneSpalte(container)).toBeNull();
+    expect(screen.getByText('Was der Agent getan hat (2)')).toBeTruthy();
   });
 });

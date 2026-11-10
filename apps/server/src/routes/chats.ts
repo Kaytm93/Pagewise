@@ -1,8 +1,11 @@
+import { lstatSync, readdirSync } from 'node:fs';
+import { extname, join } from 'node:path';
 import type { Context, MiddlewareHandler } from 'hono';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
 import { MAX_ASSET_BYTES, MAX_ATTACHMENTS } from '../agents/assets';
+import type { WorkspaceManager } from '../agents/workspace';
 import type { Generation, GenerationEvent } from '../chats/generation';
 import type {
   ChatFailure,
@@ -14,7 +17,10 @@ import type {
 import { idField, MESSAGE_MAX_CHARACTERS, messageField, titleField } from '../http/fields';
 import { limitBody, readJson } from '../http/json';
 import type { AppEnv } from '../http/types';
+import type { PreviewService } from '../preview/render';
+import { PreviewError } from '../preview/render';
 import { SelectionSchema } from '../providers/models';
+import type { ToolSettings } from '../tools/settings';
 
 const CreateChatBody = z.strictObject({
   subjectId: idField,
@@ -70,6 +76,74 @@ function failure(c: Context, result: ChatFailure): Response {
 function idParam(c: Context): string | null {
   const parsed = idField.safeParse(c.req.param('id'));
   return parsed.success ? parsed.data : null;
+}
+
+/** Höchstzahl der Dateien in der Liste; gibt es mehr, bleibt die Antwort gekürzt (`truncated: true`). */
+export const CHAT_FILES_LIMIT = 200;
+
+/**
+ * Seiten der Vorschau: zwischen einer und drei (D-106). Der Dienst selbst rendert höchstens
+ * {@link PREVIEW_LIMITS.maxPages}; die Route für das Panel bleibt bewusst darunter.
+ */
+export const CHAT_PREVIEW_PAGE_LIMIT = { min: 1, max: 3, default: 3 } as const;
+
+/**
+ * Prüft den `file`-Parameter, bevor irgendein Pfad entsteht: nur ein Name, kein Verzeichnisanteil,
+ * kein versteckter Eintrag (führender Punkt), keine leere Zeichenkette. Der PreviewService prüft
+ * mit demselben Muster noch einmal; die Route lehnt hier schon fest ab, statt 400 zu antworten.
+ */
+function isPreviewFileName(file: string): boolean {
+  if (file === '' || file.includes('/') || file.includes('\\')) return false;
+  return !file.startsWith('.');
+}
+
+interface ChatFileView {
+  name: string;
+  size: number;
+  /** Endung ohne Punkt, kleinbuchstaben; leer, wenn die Datei keine hat. */
+  extension: string;
+  mtimeMs: number;
+}
+
+/**
+ * Flache Dateiliste des Arbeitsordners eines Chats (D-106): nur gewöhnliche Dateien im Hauptordner,
+ * keine Unterordner, keine Verknüpfungen, keine versteckten Einträge (`.run.py`, `.home`, `.tmp`,
+ * `.mpl` und alles andere mit führendem Punkt). `null`: der Ordner fehlt oder liegt außerhalb.
+ */
+function listChatFiles(workspaces: WorkspaceManager, chatId: string): ChatFileView[] | null {
+  // `pathFor` wirft bei ungültigen IDs, bevor irgendein Pfad entsteht; die ID ist oben schon UUID-geprüft.
+  let root: string;
+  try {
+    root = workspaces.pathFor(chatId, null);
+  } catch {
+    return null;
+  }
+  let entries: string[];
+  try {
+    entries = readdirSync(root);
+  } catch {
+    return null;
+  }
+  const files: ChatFileView[] = [];
+  for (const name of entries.sort()) {
+    if (files.length >= CHAT_FILES_LIMIT) break;
+    if (name.startsWith('.')) continue;
+    let stat: ReturnType<typeof lstatSync>;
+    try {
+      stat = lstatSync(join(root, name));
+    } catch {
+      continue;
+    }
+    // Keine Verknüpfungen, keine Unterordner: nur gewöhnliche Dateien kommen auf die Liste.
+    if (stat.isSymbolicLink() || !stat.isFile()) continue;
+    files.push({
+      name,
+      size: stat.size,
+      extension: extname(name).slice(1).toLowerCase(),
+      mtimeMs: stat.mtimeMs,
+    });
+  }
+  return files;
 }
 
 /**
@@ -204,8 +278,15 @@ function streamGeneration(c: Context, generation: Generation, start: StartedGene
 /**
  * Chats, Nachrichten und Antworten. Alles hängt an einem Fach (und optional an einer Untergruppe): Chats
  * bleiben in ihrem Fach. Der Text der Nachrichten wird nie in Logs oder Fehlern wiederholt.
+ * `preview` fehlt in Tests, die die Sichtprüfung nicht brauchen; ohne ihn antwortet die
+ * Vorschau-Route mit 404.
  */
-export function chatRoutes(chats: ChatService): Hono<AppEnv> {
+export function chatRoutes(
+  chats: ChatService,
+  workspaces?: WorkspaceManager,
+  preview?: PreviewService,
+  toolSettings?: ToolSettings,
+): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
 
   const small = limitBody(16 * 1024);
@@ -249,6 +330,65 @@ export function chatRoutes(chats: ChatService): Hono<AppEnv> {
   app.get('/chats/:id', (c) => {
     const id = idParam(c);
     return id ? respond(c, chats.get(id)) : c.json({ error: 'not_found' }, 404);
+  });
+
+  // Dateien des Chat-Arbeitsordners: nur Name, Größe, Art, Zeit — nie Inhalte.
+  app.get('/chats/:id/files', (c) => {
+    const id = idParam(c);
+    if (!id) return c.json({ error: 'not_found' }, 404);
+    if (!chats.get(id).ok) return c.json({ error: 'not_found' }, 404);
+    if (!workspaces) return c.json({ error: 'not_found' }, 404);
+    const files = listChatFiles(workspaces, id);
+    if (!files) return c.json({ error: 'not_found' }, 404);
+    return c.json({ files, truncated: files.length >= CHAT_FILES_LIMIT });
+  });
+
+  // Live-Vorschau (D-106, H-C03): die ersten Seiten einer Datei des Arbeitsordners als PNG an den
+  // Browser. Eigene Freigabe-Prüfung (D-106): Code-Ausführung global freigegeben, Werkzeuge da
+  // (Sandbox, LibreOffice, poppler — `available()`), und die Datei muss im Arbeitsordner liegen
+  // (der PreviewService prüft Name, gewöhnliche Datei, keine Verknüpfung, Realpfad). Die Bilder
+  // gehen nie an ein Modell; das previewOn-Gating des Modell-Werkzeugs (Bildverstehen, sendImages,
+  // D-033/D-080) gilt nur dort und bleibt hier bewusst außen vor. Fehler bleiben feste Codes ohne
+  // Dateiinhalte; der Temp-Ordner jedes Laufs verschwindet im Dienst.
+  app.get('/chats/:id/preview', async (c) => {
+    const id = idParam(c);
+    if (!id) return c.json({ error: 'not_found' }, 404);
+    if (!chats.get(id).ok || !workspaces || !preview || !toolSettings)
+      return c.json({ error: 'not_found' }, 404);
+    if (!toolSettings.codeEnabled() || !preview.available())
+      return c.json({ error: 'forbidden' }, 403);
+    const file = c.req.query('file') ?? '';
+    if (!isPreviewFileName(file)) return c.json({ error: 'not_found' }, 404);
+    const rawPages = Number(c.req.query('pages'));
+    const pages = Number.isFinite(rawPages)
+      ? Math.min(
+          Math.max(Math.floor(rawPages), CHAT_PREVIEW_PAGE_LIMIT.min),
+          CHAT_PREVIEW_PAGE_LIMIT.max,
+        )
+      : CHAT_PREVIEW_PAGE_LIMIT.default;
+    try {
+      const result = await preview.render({ chatId: id, file, pages, signal: c.req.raw.signal });
+      c.header('Cache-Control', 'no-store');
+      return c.json({
+        file,
+        pagesTotal: result.pagesTotal,
+        pages: result.pages.map((page) => ({
+          number: page.number,
+          png: `data:image/png;base64,${page.png.toString('base64')}`,
+        })),
+      });
+    } catch (error) {
+      const code = error instanceof PreviewError ? error.code : 'render_failed';
+      const status =
+        code === 'not_found' || code === 'bad_name' || code === 'bad_type'
+          ? 404
+          : code === 'cancelled'
+            ? 408
+            : code === 'unavailable'
+              ? 409
+              : 502;
+      return c.json({ error: code }, status);
+    }
   });
 
   app.patch('/chats/:id', async (c) => {

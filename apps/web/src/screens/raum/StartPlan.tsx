@@ -4,7 +4,7 @@ import { formatDate, localDate, minutesOfDay, toMinutes, weekdayOf } from '../..
 import { usePlanner } from '../../planning/PlannerProvider';
 import { lessonsOn } from '../../planning/schedule';
 import { Link } from '../../ui/Link';
-import { sectionTitle } from '../../ui/styles';
+import { sectionTitle, textLink } from '../../ui/styles';
 import { subjectColorAttr } from '../../ui/subject-color';
 import { useDesign } from '../../ui/useDesign';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
@@ -79,7 +79,7 @@ export function StartPlan() {
           <p className="text-ink-secondary">
             {entries.length === 0 ? m.planning.nextUp.noTimetable : r.empty}
           </p>
-          <Link to={{ name: 'timetable' }} className="mt-1 inline-flex min-h-11 items-center">
+          <Link to={{ name: 'timetable' }} className={`mt-1 ${textLink}`}>
             {m.planning.nextUp.setUp}
           </Link>
         </div>

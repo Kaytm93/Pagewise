@@ -5,6 +5,7 @@ import { format, messages as m } from '../../i18n';
 import { Button } from '../../ui/Button';
 import { SelectField } from '../../ui/Field';
 import { FieldError } from '../../ui/FieldError';
+import { iconButton } from '../../ui/styles';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { commonErrorMessage } from '../auth-errors';
 import { parseSelectionKey, selectionKey } from './provider-text';
@@ -159,7 +160,7 @@ export function ModelChoice() {
                     setFallbackKeys((current) => current.filter((_, at) => at !== index));
                     touched();
                   }}
-                  className="inline-flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+                  className={iconButton}
                 >
                   <Trash2 aria-hidden="true" className="size-4" />
                 </button>

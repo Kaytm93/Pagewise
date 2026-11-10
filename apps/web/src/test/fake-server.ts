@@ -17,6 +17,9 @@ import type {
   PromptPreview,
   Provider,
   ProviderPreset,
+  ScanModel,
+  ScanProposal,
+  ScanResult,
   Selection,
   Subject,
   SubjectCatalog,
@@ -198,6 +201,13 @@ export class FakeServer {
   subjects: Subject[] = [];
   /** Stundenplan, Tests, bekannte Woche und der Schalter für den Werkzeugzugriff der KI (Welle 3). */
   timetable: TimetableEntry[] = [];
+  /** Antworten der Stundenplan-Erkennung aus einem Bild (D-107). */
+  scanModels: ScanModel[] = [];
+  scanResult: ScanResult = { proposals: [], newSubjects: [], skipped: 0 };
+  /** Fehlercode statt einer Antwort auf den Erkennungsaufruf. */
+  scanError: string | null = null;
+  /** Das zuletzt hochgeladene Formular, für Prüfungen im Test. */
+  lastScanForm: FormData | null = null;
   weekAnchor: WeekAnchor | null = null;
   exams: Exam[] = [];
   notes: Note[] = [];
@@ -385,7 +395,12 @@ export class FakeServer {
     const method = (init?.method ?? 'GET').toUpperCase();
     const path = String(input);
     const headers = new Headers(init?.headers);
-    const body = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined;
+    const body =
+      typeof init?.body === 'string'
+        ? JSON.parse(init.body)
+        : init?.body instanceof FormData
+          ? init.body
+          : undefined;
     const request: RecordedRequest = { method, path, body, headers, signal: init?.signal };
     this.requests.push(request);
 
@@ -488,6 +503,7 @@ export class FakeServer {
     if (groupMatch) return this.group(method, groupMatch[1] as string, data);
 
     const extra =
+      this.handleScan(method, path, data, body) ??
       this.handleProviders(method, path, data) ??
       this.handleEngines(method, path, data) ??
       this.handlePrompts(method, path, data) ??
@@ -554,6 +570,39 @@ export class FakeServer {
           : null,
       fallback: this.modelSettings.fallback.filter(valid),
     };
+  }
+
+  /** Stundenplan-Erkennung aus einem Bild (D-107): Modelle, Vorschau und Übernahme. */
+  private handleScan(
+    method: string,
+    path: string,
+    data: Record<string, unknown>,
+    body: unknown,
+  ): Response | undefined {
+    if (method === 'GET' && path === '/api/timetable-scan/models') {
+      return json(200, { models: this.scanModels });
+    }
+    if (method === 'POST' && path === '/api/timetable-scan') {
+      this.lastScanForm = body instanceof FormData ? body : null;
+      if (this.scanError) return json(502, { error: this.scanError, code: 'upstream_error' });
+      return json(200, this.scanResult);
+    }
+    if (method === 'POST' && path === '/api/timetable-scan/import') {
+      const entries = Array.isArray(data.entries) ? (data.entries as ScanProposal[]) : [];
+      if (data.replaceExisting === true) this.timetable = [];
+      for (const entry of entries) {
+        this.addLesson({
+          weekday: entry.weekday,
+          startTime: entry.startTime,
+          endTime: entry.endTime,
+          room: entry.room,
+          note: entry.note,
+          week: entry.week,
+        });
+      }
+      return json(201, { created: entries.length, subjectsCreated: 0 });
+    }
+    return undefined;
   }
 
   private handleProviders(

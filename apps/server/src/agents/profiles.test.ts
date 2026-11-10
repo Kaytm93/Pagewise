@@ -44,6 +44,48 @@ describe('EngineProfileService', () => {
     },
   );
 
+  it.each(['opencode', 'codex'] as const)(
+    'nimmt die vorbereitete Art %s ohne Schlüssel an und lehnt einen Schlüssel ab',
+    async (kind) => {
+      const created = await engines().create({ kind, name: 'Ohne Schlüssel' });
+      expect(created).toMatchObject({
+        ok: true,
+        value: { kind, name: 'Ohne Schlüssel', hasToken: false, timeoutMinutes: 20 },
+      });
+      expect(await engines().create({ kind, name: 'Mit Schlüssel', token: TOKEN })).toEqual({
+        ok: false,
+        error: 'token_not_allowed',
+      });
+      expect(await secrets().list()).toEqual([]);
+    },
+  );
+
+  it('listet alle Registry-Arten (D-104) in fester Reihenfolge', async () => {
+    for (const kind of [
+      'claude-subscription',
+      'glm-coding-plan',
+      'anthropic-api',
+      'opencode',
+      'codex',
+    ] as const) {
+      // Nur das Abo und die vorbereiteten Arten kommen ohne Schlüssel aus.
+      const token =
+        kind === 'claude-subscription' || kind === 'opencode' || kind === 'codex'
+          ? undefined
+          : TOKEN;
+      const created = await engines().create({ kind, name: `Zugang ${kind}`, token });
+      expect(created.ok).toBe(true);
+    }
+    const kinds = (await engines().list()).map((entry) => entry.kind);
+    expect(kinds).toEqual([
+      'claude-subscription',
+      'glm-coding-plan',
+      'anthropic-api',
+      'opencode',
+      'codex',
+    ]);
+  });
+
   it('speichert den Schlüssel nur im Secret-Speicher und gibt ihn nie heraus', async () => {
     const created = await engines().create({ kind: 'glm-coding-plan', name: 'GLM', token: TOKEN });
     if (!created.ok) throw new Error('Anlegen fehlgeschlagen');

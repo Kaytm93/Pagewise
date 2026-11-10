@@ -4,12 +4,14 @@ import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
 
 /**
- * Findet das Programm „claude“ (Claude Code) auf diesem Rechner. Es zählt nur, was wirklich läuft:
+ * Findet die Programme der Agent-CLIs auf diesem Rechner. Es zählt nur, was wirklich läuft:
  * Jeder Kandidat wird mit `--version` gestartet, der erste funktionierende gewinnt. So wird ein defekter
  * Platzhalter (z. B. ein Wrapper, der auf eine nicht mehr vorhandene App zeigt) übersprungen, statt
  * Pagewise zu blockieren, wenn weiter hinten im Pfad eine funktionierende Installation liegt.
  *
  * Pagewise startet nur die vom Hersteller veröffentlichte, unveränderte Binary (siehe docs/agent-cli.md).
+ * Für `opencode` und `codex` gilt dasselbe Muster (D-104): Nicht gefunden heißt, der Zugang ist auf diesem
+ * Rechner nicht anbietbar — es gibt keinen Fallback ohne den Safe-Modus des jeweiligen CLI.
  */
 
 export type RejectedReason = 'not_executable' | 'failed' | 'timeout' | 'bad_output';
@@ -26,6 +28,22 @@ export type CliStatus =
   | { state: 'missing'; skipped: [] }
   /** Es gibt Kandidaten, aber keiner läuft. */
   | { state: 'broken'; skipped: RejectedCli[] };
+
+/** Die erkannten Agent-CLIs (D-104). */
+export type CliName = 'claude' | 'opencode' | 'codex';
+
+/** Dateiname und übliche Zusatzorte je CLI; die Suche selbst ist für alle gleich. */
+const CLI_SEARCH: Record<CliName, { binary: string; extraDirs: (home: string) => string[] }> = {
+  claude: { binary: 'claude', extraDirs: () => [] },
+  opencode: {
+    binary: 'opencode',
+    extraDirs: (home) => [join(home, '.opencode', 'bin')],
+  },
+  codex: {
+    binary: 'codex',
+    extraDirs: (home) => [join(home, '.codex', 'bin')],
+  },
+};
 
 export interface DetectOptions {
   /**
@@ -109,18 +127,23 @@ export function probeVersion(path: string, timeoutMs = PROBE_TIMEOUT_MS): Promis
   });
 }
 
-export async function detectClaude(options: DetectOptions = {}): Promise<CliStatus> {
-  const name = options.binaryName ?? 'claude';
+/** Sucht eine der Agent-CLIs (D-104): `claude`, `opencode` oder `codex`. */
+export async function detectCli(name: CliName, options: DetectOptions = {}): Promise<CliStatus> {
+  const binary = options.binaryName ?? CLI_SEARCH[name].binary;
   const searchPath = options.searchPath ?? process.env.PATH ?? '';
   const probe = options.probe ?? probeVersion;
   const timeoutMs = options.timeoutMs ?? PROBE_TIMEOUT_MS;
 
-  const dirs = [...searchPath.split(delimiter), ...(options.extraDirs ?? defaultExtraDirs())];
+  const extra = options.extraDirs ?? [
+    ...defaultExtraDirs(),
+    ...CLI_SEARCH[name].extraDirs(homedir()),
+  ];
+  const dirs = [...searchPath.split(delimiter), ...extra];
   const candidates: string[] = [];
   const explicit =
     typeof options.explicitPath === 'function' ? options.explicitPath() : options.explicitPath;
   if (explicit) candidates.push(explicit);
-  for (const dir of dirs) if (dir) candidates.push(join(dir, name));
+  for (const dir of dirs) if (dir) candidates.push(join(dir, binary));
 
   const seen = new Set<string>();
   const skipped: RejectedCli[] = [];
@@ -144,6 +167,10 @@ export async function detectClaude(options: DetectOptions = {}): Promise<CliStat
   return found ? { state: 'broken', skipped } : { state: 'missing', skipped: [] };
 }
 
+/** Sucht das Programm „claude“ (Claude Code). */
+export const detectClaude = (options: DetectOptions = {}): Promise<CliStatus> =>
+  detectCli('claude', options);
+
 /** Merkt sich das Ergebnis kurz, damit nicht jede Seitenansicht Programme startet. */
 export class CliDetector {
   private cached: { at: number; status: CliStatus } | null = null;
@@ -153,13 +180,15 @@ export class CliDetector {
     private readonly options: DetectOptions = {},
     private readonly ttlMs = 60_000,
     private readonly now: () => number = Date.now,
+    /** Welche CLI gesucht wird (D-104). Vorgabe: `claude`. */
+    private readonly name: CliName = 'claude',
   ) {}
 
   async status(refresh = false): Promise<CliStatus> {
     if (!refresh && this.cached && this.now() - this.cached.at < this.ttlMs) {
       return this.cached.status;
     }
-    this.pending ??= detectClaude(this.options)
+    this.pending ??= detectCli(this.name, this.options)
       .then((status) => {
         this.cached = { at: this.now(), status };
         return status;

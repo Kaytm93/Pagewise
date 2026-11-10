@@ -7,12 +7,12 @@ import { ApiClient } from './api/client';
 import { FakeServer } from './test/fake-server';
 
 /**
- * Mitlesen im Chat (S-04, D-099): jsdom misst kein Layout, darum stehen `document.scrollingElement` und der
+ * Mitlesen im Chat (S-04, D-115): jsdom misst kein Layout, darum stehen `document.scrollingElement` und der
  * ResizeObserver als Ersatz da. Die Ersatz-Seite rechnet wie ein Browser: `scrollTop` wird auf das Ende
  * begrenzt, und das Ereignis `scroll` löst der Test selbst aus (im Browser kommt es erst im nächsten Bild).
  *
  * Belege der Befunde: F-016 und F-023 (Blöcke laden nach, die Ansicht bleibt davor stehen), F-019 (Hochscrollen
- * während des Schreibens wird zurückgeholt), gemessen in Playwright-Chromium und -WebKit, siehe D-099.
+ * während des Schreibens wird zurückgeholt), gemessen in Playwright-Chromium und -WebKit, siehe D-115.
  */
 
 class FakeScroller {

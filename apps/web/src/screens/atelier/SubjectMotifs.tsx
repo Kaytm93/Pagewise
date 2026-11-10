@@ -115,6 +115,12 @@ const MOTIFS: Record<string, readonly Motif[]> = {
     ['slash', 'M56 26 L44 74'],
     ['line', 'M28 82 H72'],
   ],
+  // Ohne (bekannte) Kennung: Abschlusshut mit Quaste, steht für „ein Schulfach“ (D-110).
+  neutral: [
+    ['board', 'M50 22 L86 38 L50 54 L14 38 Z M30 46 V62 Q50 74 70 62 V46'],
+    ['tassel', 'M86 38 V58'],
+    ['lines', 'M24 84 H52 M60 84 H76'],
+  ],
 };
 
 /** Erste Linienzüge, die eine geschlossene Form bilden und darum eine Fläche tragen (nicht: offene Linien). */
@@ -131,14 +137,14 @@ const FILLED = new Set([
   'board',
 ]);
 
-/** Ohne eigenes Symbol (oder bei unbekannter Kennung) das ruhige Buchmotiv, wie beim Symbol selbst. */
-const FALLBACK = 'book';
+/** Ohne eigenes Symbol (oder bei unbekannter Kennung) das neutrale Motiv, wie beim Symbol selbst (D-110). */
+const FALLBACK = 'neutral';
 
 export function SubjectMotifs({
   kind,
   className,
 }: {
-  /** Kennung des Fachsymbols (`subject.icon`), etwa „flask“; `null` und Unbekanntes zeigen das Buch. */
+  /** Kennung des Fachsymbols (`subject.icon`), etwa „flask“; `null` und Unbekanntes zeigen das neutrale Motiv. */
   kind: string | null;
   className?: string;
 }) {

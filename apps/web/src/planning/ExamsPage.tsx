@@ -4,7 +4,7 @@ import type { Exam } from '../api/types';
 import { format, messages as m } from '../i18n';
 import { Button } from '../ui/Button';
 import { Sheet } from '../ui/Sheet';
-import { sectionTitle } from '../ui/styles';
+import { emptyState, sectionTitle } from '../ui/styles';
 import { subjectColorAttr } from '../ui/subject-color';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { localDate, monthShort } from './dates';
@@ -98,7 +98,7 @@ export function ExamsPage() {
           </div>
 
           {exams.length === 0 ? (
-            <div className="mt-8 rounded-box bg-paper p-4">
+            <div className={`mt-8 ${emptyState}`}>
               <p className="font-medium">{e.emptyTitle}</p>
               <p className="mt-1 text-sm text-ink-secondary">{e.emptyHint}</p>
             </div>
@@ -126,7 +126,9 @@ export function ExamsPage() {
 
               {past.length > 0 && (
                 <details className="mt-10">
-                  <summary className={`${sectionTitle} flex min-h-11 cursor-pointer items-center`}>
+                  <summary
+                    className={`${sectionTitle} mo-tap flex min-h-11 cursor-pointer items-center hover:text-ink`}
+                  >
                     {e.past} ({past.length})
                   </summary>
                   <ul className="mt-2 divide-y divide-line-warm border-y border-line-warm">

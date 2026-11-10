@@ -123,7 +123,7 @@ describe('AgentStreamParser: normaler Verlauf', () => {
     );
     expect(events).toEqual([
       { type: 'text', text: 'Ich lege die Datei an.' },
-      { type: 'tool', id: 'toolu_1', name: 'Write', target: 'ergebnis.txt' },
+      { type: 'tool', id: 'toolu_1', name: 'Write', target: 'ergebnis.txt', file: 'ergebnis.txt' },
       { type: 'tool_result', id: 'toolu_1', error: false },
       { type: 'break' },
       { type: 'text', text: 'Fertig.' },
@@ -144,6 +144,75 @@ describe('AgentStreamParser: normaler Verlauf', () => {
         }),
       ]),
     ).toEqual([{ type: 'tool_result', id: 't9', error: true }]);
+  });
+
+  it('reichert Werkzeugaufrufe mit Ziel und reinem Dateinamen an', () => {
+    const events = run(
+      [
+        line({
+          type: 'assistant',
+          message: {
+            content: [
+              {
+                type: 'tool_use',
+                id: 'a',
+                name: 'Read',
+                input: { file_path: '/ws/unter/bericht.pdf' },
+              },
+              { type: 'tool_use', id: 'b', name: 'Edit', input: { file_path: '/anderes/c.txt' } },
+              {
+                type: 'tool_use',
+                id: 'c',
+                name: 'NotebookEdit',
+                input: { notebook_path: '/ws/d.ipynb' },
+              },
+              {
+                type: 'tool_use',
+                id: 'd',
+                name: 'Bash',
+                input: { command: 'ls -la', description: 'Ordner zeigen' },
+              },
+              { type: 'tool_use', id: 'e', name: 'Grep', input: { pattern: 'abc', path: '/ws/x' } },
+              { type: 'tool_use', id: 'f', name: 'WebSearch', input: { query: 'wetter berlin' } },
+              {
+                type: 'tool_use',
+                id: 'g',
+                name: 'Write',
+                input: { file_path: '/ws/geheim.txt', content: 'GEHEIM' },
+              },
+              {
+                type: 'tool_use',
+                id: 'h',
+                name: 'Write',
+                input: { file_path: `/ws/${'x'.repeat(90)}.txt` },
+              },
+              { type: 'tool_use', id: 'i', name: 'Write', input: { file_path: 42 } },
+            ],
+          },
+          parent_tool_use_id: null,
+        }),
+      ],
+      '/ws',
+    );
+    expect(events).toEqual([
+      { type: 'tool', id: 'a', name: 'Read', target: 'unter/bericht.pdf', file: 'bericht.pdf' },
+      { type: 'tool', id: 'b', name: 'Edit', target: '/anderes/c.txt', file: 'c.txt' },
+      { type: 'tool', id: 'c', name: 'NotebookEdit', target: 'd.ipynb', file: 'd.ipynb' },
+      { type: 'tool', id: 'd', name: 'Bash', target: 'Ordner zeigen', file: null },
+      { type: 'tool', id: 'e', name: 'Grep', target: 'x', file: null },
+      { type: 'tool', id: 'f', name: 'WebSearch', target: null, file: null },
+      { type: 'tool', id: 'g', name: 'Write', target: 'geheim.txt', file: 'geheim.txt' },
+      {
+        type: 'tool',
+        id: 'h',
+        name: 'Write',
+        target: `${'x'.repeat(90)}.txt`,
+        file: 'x'.repeat(80),
+      },
+      { type: 'tool', id: 'i', name: 'Write', target: null, file: null },
+    ]);
+    // Weder Dateiinhalte noch Ordner der Umgebung kommen heraus.
+    expect(JSON.stringify(events)).not.toContain('GEHEIM');
   });
 
   it('meldet Denken und Wiederholungen', () => {

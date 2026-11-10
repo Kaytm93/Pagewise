@@ -4,9 +4,11 @@ import type { Db } from '../db/client';
 import { chats } from '../db/schema';
 import { type ActivityEntry, settleActivity, upsertActivity } from './activity';
 import type { AssetService, AssetView } from './assets';
+import type { CodexEngine } from './codex';
 import type { CliDetector } from './detect';
-import type { ClaudeCodeEngine } from './engine';
-import type { EngineProfileService } from './profiles';
+import type { AgentRun, ClaudeCodeEngine } from './engine';
+import type { OpenCodeEngine } from './opencode';
+import type { EngineKind, EngineProfileService } from './profiles';
 import type { AgentEvent } from './stream';
 import { snapshotDir, type WorkspaceManager } from './workspace';
 
@@ -61,7 +63,33 @@ export interface AgentRunnerDeps {
   cli: CliDetector;
   workspaces: WorkspaceManager;
   assets: AssetService;
+  /** Adapter für Claude Code. */
   engine: ClaudeCodeEngine;
+  /** Adapter für OpenCode (D-104). */
+  opencode: OpenCodeEngine;
+  /** Adapter für Codex (D-104, B-03). */
+  codex: CodexEngine;
+}
+
+/**
+ * Welche Engine einen Lauf übernimmt: `claude-subscription`, `glm-coding-plan` und `anthropic-api` laufen über
+ * die Claude-Code-Binary, `opencode` und `codex` über ihre eigenen (D-104). Für keine Art gibt es einen Lauf
+ * ohne den Safe-Modus des jeweiligen CLI.
+ */
+function engineFor(
+  kind: EngineKind,
+  deps: AgentRunnerDeps,
+): { engine: ClaudeCodeEngine | OpenCodeEngine | CodexEngine } | { error: ChatErrorCode } {
+  switch (kind) {
+    case 'claude-subscription':
+    case 'glm-coding-plan':
+    case 'anthropic-api':
+      return { engine: deps.engine };
+    case 'opencode':
+      return { engine: deps.opencode };
+    case 'codex':
+      return { engine: deps.codex };
+  }
 }
 
 export class AgentRunner {
@@ -97,7 +125,17 @@ export class AgentRunner {
     const resolved = await this.deps.engines.resolve(input.profileId);
     if (!resolved) return fail('profile_missing');
     const { profile, token } = resolved;
-    if (profile.kind !== 'claude-subscription' && !token) return fail('no_key');
+    const chosen = engineFor(profile.kind, this.deps);
+    if ('error' in chosen) return fail(chosen.error);
+    // Die CLI-Zugänge (opencode, codex) nutzen die Anmeldung ihrer App, nie einen Schlüssel von Pagewise.
+    if (
+      profile.kind !== 'claude-subscription' &&
+      profile.kind !== 'opencode' &&
+      profile.kind !== 'codex' &&
+      !token
+    ) {
+      return fail('no_key');
+    }
 
     const cli = await this.deps.cli.status();
     if (cli.state === 'missing') return fail('cli_missing');
@@ -112,7 +150,7 @@ export class AgentRunner {
     if (workspace.split('/').filter(Boolean).length > MAX_WORKSPACE_DEPTH) {
       return fail('workspace_too_deep');
     }
-    return this.runIn(input, workspace, cli.path, profile, token);
+    return this.runIn(input, workspace, cli.path, profile, token, chosen.engine);
   }
 
   private async runIn(
@@ -121,6 +159,7 @@ export class AgentRunner {
     cliPath: string,
     profile: NonNullable<Awaited<ReturnType<EngineProfileService['resolve']>>>['profile'],
     token: string | null,
+    engine: ClaudeCodeEngine | OpenCodeEngine | CodexEngine,
   ): Promise<AgentOutcome> {
     const before = snapshotDir(workspace);
     let activity: ActivityEntry[] = [];
@@ -150,6 +189,7 @@ export class AgentRunner {
             id: event.id,
             tool: event.name,
             target: event.target,
+            file: event.file,
             state: 'running',
           };
           activity = upsertActivity(activity, entry);
@@ -178,7 +218,7 @@ export class AgentRunner {
     }
 
     const attempt = async (resume: string | null): Promise<Attempt> => {
-      const run = this.deps.engine.start({
+      const run: AgentRun = engine.start({
         cliPath,
         profileId: profile.id,
         kind: profile.kind,

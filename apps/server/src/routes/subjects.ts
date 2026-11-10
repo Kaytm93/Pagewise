@@ -8,7 +8,11 @@ import {
   type ImportParse,
   parseSubjectImport,
 } from '../domain/subject-import';
-import { KEY_PATTERN, type SubjectCatalog } from '../domain/subject-templates';
+import {
+  findCatalogEntryByName,
+  KEY_PATTERN,
+  type SubjectCatalog,
+} from '../domain/subject-templates';
 import {
   createGroup,
   createSubject,
@@ -84,6 +88,18 @@ export function subjectRoutes(
   const { catalog } = options;
   const app = new Hono<AppEnv>();
 
+  /**
+   * Motiv nach Namen (D-114): Ein Fach ohne gespeicherte Kennung bekommt in der Antwort das Motiv der Vorlage, die
+   * zu seinem Namen passt, auch über Suchbegriffe („Mathe“ zeigt das Motiv von Mathematik). Gespeichert wird dabei
+   * nichts: Wer im Dialog ein Motiv wählt, überschreibt die Zuordnung, und ohne passende Vorlage bleibt `null`
+   * (die Oberfläche zeigt dann das neutrale Motiv). Das eingebaute Fach „Standard“ läuft nicht hier durch.
+   */
+  const withMotif = <T extends { name: string; icon: string | null }>(subject: T): T => {
+    if (subject.icon !== null) return subject;
+    const icon = findCatalogEntryByName(catalog, subject.name)?.icon ?? null;
+    return icon === null ? subject : { ...subject, icon };
+  };
+
   // Nur für die eigenen Pfade; der Import darf größer sein als alles andere.
   const small = limitBody(16 * 1024);
   const unlessImport: MiddlewareHandler = (c, next) =>
@@ -96,7 +112,10 @@ export function subjectRoutes(
   // `subjects` sind die Fächer des Nutzers, `defaultSubject` ist das eingebaute Fach „Standard“ für den
   // fachunabhängigen Chat (wird bei Bedarf angelegt).
   app.get('/subjects', (c) =>
-    c.json({ subjects: listSubjects(db), defaultSubject: ensureDefaultSubject(db) }),
+    c.json({
+      subjects: listSubjects(db).map(withMotif),
+      defaultSubject: ensureDefaultSubject(db),
+    }),
   );
 
   // Neutrale Vorlagen (Kategorien, Namen, Suchbegriffe) fürs Onboarding und den Dialog „Fach anlegen“.
@@ -113,7 +132,7 @@ export function subjectRoutes(
       return c.json({ error: 'invalid_input', field: 'templateKey' }, 400);
     }
     const result = createSubject(db, name, { ...details, templateKey });
-    return result.ok ? c.json(result.value, 201) : failure(c, result);
+    return result.ok ? c.json(withMotif(result.value), 201) : failure(c, result);
   });
 
   // Import aus einer lokalen Datei (JSON oder CSV), die der Browser als Text mitschickt.
@@ -123,7 +142,11 @@ export function subjectRoutes(
     const parsed = parseSubjectImport(body.data.format, body.data.content);
     if (!parsed.ok) return importFailure(c, parsed);
     const summary = importSubjects(db, parsed.entries);
-    return c.json({ ...summary, invalid: parsed.invalid, subjects: listSubjects(db) });
+    return c.json({
+      ...summary,
+      invalid: parsed.invalid,
+      subjects: listSubjects(db).map(withMotif),
+    });
   });
 
   app.patch('/subjects/:id', async (c) => {
@@ -132,7 +155,7 @@ export function subjectRoutes(
     const body = await readJson(c, UpdateSubjectBody);
     if (!body.ok) return body.response;
     const result = updateSubject(db, id, body.data);
-    return result.ok ? c.json(result.value) : failure(c, result);
+    return result.ok ? c.json(withMotif(result.value)) : failure(c, result);
   });
 
   app.delete('/subjects/:id', async (c) => {

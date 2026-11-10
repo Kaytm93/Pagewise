@@ -1,7 +1,15 @@
-import { ArrowLeft, Pencil, SlidersHorizontal, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  PanelRightClose,
+  PanelRightOpen,
+  Pencil,
+  SlidersHorizontal,
+  Trash2,
+} from 'lucide-react';
 import { messages as m } from '../../i18n';
 import type { Route } from '../../router';
 import { Link } from '../../ui/Link';
+import { iconButton } from '../../ui/styles';
 
 interface Props {
   title: string;
@@ -12,6 +20,9 @@ interface Props {
   modelAriaLabel: string;
   modelSource: string | null;
   onModel: () => void;
+  /** Datei-Panel auf-/zuklappen (D-106); dieselbe Stelle wie in den anderen Richtungen. */
+  onFilesToggle: () => void;
+  filesOpen: boolean;
   onRename: () => void;
   onDelete: () => void;
 }
@@ -29,6 +40,8 @@ export function ChatHead({
   modelAriaLabel,
   modelSource,
   onModel,
+  onFilesToggle,
+  filesOpen,
   onRename,
   onDelete,
 }: Props) {
@@ -46,9 +59,22 @@ export function ChatHead({
         <div className="-mr-2 flex shrink-0">
           <button
             type="button"
+            onClick={onFilesToggle}
+            aria-label={filesOpen ? m.chat.files.close : m.chat.files.open}
+            aria-expanded={filesOpen}
+            className={iconButton}
+          >
+            {filesOpen ? (
+              <PanelRightClose aria-hidden="true" className="size-4" />
+            ) : (
+              <PanelRightOpen aria-hidden="true" className="size-4" />
+            )}
+          </button>
+          <button
+            type="button"
             onClick={onRename}
             aria-label={m.chat.rename}
-            className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+            className={iconButton}
           >
             <Pencil aria-hidden="true" className="size-4" />
           </button>
@@ -56,7 +82,7 @@ export function ChatHead({
             type="button"
             onClick={onDelete}
             aria-label={m.chat.delete}
-            className="inline-flex size-11 items-center justify-center rounded-control text-ink-muted hover:bg-paper hover:text-ink"
+            className={iconButton}
           >
             <Trash2 aria-hidden="true" className="size-4" />
           </button>
@@ -73,7 +99,7 @@ export function ChatHead({
           type="button"
           onClick={onModel}
           aria-label={modelAriaLabel}
-          className="-mr-2.5 inline-flex min-h-11 max-w-[45%] shrink-0 items-center gap-2 rounded-control px-2.5 text-sm text-ink-secondary hover:bg-paper hover:text-ink"
+          className="mo-tap -mr-2.5 inline-flex min-h-11 max-w-[45%] shrink-0 items-center gap-2 rounded-control px-2.5 text-sm text-ink-secondary hover:bg-paper hover:text-ink"
         >
           <SlidersHorizontal aria-hidden="true" className="size-4 shrink-0" />
           <span className="min-w-0 truncate">{modelLabel}</span>

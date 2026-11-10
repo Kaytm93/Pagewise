@@ -82,6 +82,9 @@ const KINDS = [
     endpoint: GLM_BASE_URL,
   },
   { kind: 'anthropic-api', needsToken: true, defaultModel: null, endpoint: null },
+  // Vorbereitet (D-104): Registry-Eintrag ja, Adapter kommt erst mit B-02/B-03.
+  { kind: 'opencode', needsToken: false, defaultModel: null, endpoint: null },
+  { kind: 'codex', needsToken: false, defaultModel: null, endpoint: null },
 ] as const;
 
 /**

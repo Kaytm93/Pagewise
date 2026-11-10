@@ -12,10 +12,18 @@ import { type SecretStore, SecretStoreError } from '../storage/secret-store';
  * - `glm-coding-plan`: der GLM Coding Plan von Z.ai über die unveränderte `claude`-Binary mit
  *   `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic` (D-011). Nur für den Kontoinhaber, nur lokal.
  * - `anthropic-api`: ein eigener Anthropic-API-Schlüssel.
+ * - `opencode` und `codex`: eigene Adapter (D-104, B-02/B-03) — kein Secret, kein Vorgabemodell.
+ *   Die CLI wird über die Erkennung gesucht; der Lauf läuft nur im Safe-Modus des jeweiligen CLI.
  *
  * Schlüssel stehen nie in der Datenbank, nur im Secret-Speicher unter `engine.<id>.token`.
  */
-export const ENGINE_KINDS = ['claude-subscription', 'glm-coding-plan', 'anthropic-api'] as const;
+export const ENGINE_KINDS = [
+  'claude-subscription',
+  'glm-coding-plan',
+  'anthropic-api',
+  'opencode',
+  'codex',
+] as const;
 export type EngineKind = (typeof ENGINE_KINDS)[number];
 
 /** Adresse der Anthropic-kompatiblen Schnittstelle von Z.ai für Claude Code (Quelle: docs.z.ai/devpack/tool/claude). */
@@ -33,6 +41,9 @@ const TOKEN_RULE: Record<EngineKind, 'none' | 'required'> = {
   'claude-subscription': 'none',
   'glm-coding-plan': 'required',
   'anthropic-api': 'required',
+  // Vorbereitet (D-104): Die CLIs nutzen die eigene Anmeldung ihrer App, Pagewise vermittelt keine Schlüssel.
+  opencode: 'none',
+  codex: 'none',
 };
 
 export interface EngineProfileView {

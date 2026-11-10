@@ -4,6 +4,7 @@ import type { ChatMessage, EngineKind } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { Button } from '../../ui/Button';
 import { Link } from '../../ui/Link';
+import { textLink } from '../../ui/styles';
 import { useDesign } from '../../ui/useDesign';
 import { BotHead } from '../atelier/BotHead';
 import { AgentActivity } from './AgentActivity';
@@ -155,7 +156,9 @@ export const MessageItem = memo(function MessageItem({
         <p className="flex items-center gap-2 text-ink-muted">
           <span aria-hidden="true" className="size-2 animate-pulse rounded-pill bg-ink-muted" />
           {byAgent && working
-            ? format(m.chat.agent.workingOn, { step: working.target ?? working.tool })
+            ? format(m.chat.agent.workingOn, {
+                step: working.file ?? working.target ?? working.tool,
+              })
             : thinking
               ? m.chat.thinking
               : byAgent
@@ -186,7 +189,7 @@ export const MessageItem = memo(function MessageItem({
         <div className="mt-3 rounded-box bg-paper px-4 py-3 text-sm">
           <p className="font-medium text-danger">{errorText(message.errorCode, engineKind)}</p>
           {message.errorCode && NEEDS_SETTINGS.has(message.errorCode) && (
-            <Link to={{ name: 'settings' }} className="mt-1 inline-flex min-h-11 items-center">
+            <Link to={{ name: 'settings' }} className={`mt-1 ${textLink}`}>
               {m.chat.openSettings}
             </Link>
           )}
@@ -203,7 +206,7 @@ export const MessageItem = memo(function MessageItem({
                 type="button"
                 onClick={() => void copy(message.content)}
                 aria-label={m.chat.copy}
-                className="inline-flex size-11 items-center justify-center rounded-control hover:bg-paper hover:text-ink"
+                className="mo-tap inline-flex size-11 items-center justify-center rounded-control hover:bg-paper hover:text-ink"
               >
                 {copyState === 'copied' ? (
                   <Check aria-hidden="true" className="size-4" />

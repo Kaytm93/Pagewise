@@ -1,5 +1,5 @@
 import { ChevronRight, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ActivityEntry } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { useDesign } from '../../ui/useDesign';
@@ -9,9 +9,11 @@ function toolLabel(tool: string): string {
   return labels[tool] ?? tool;
 }
 
+/** Ziel einer Zeile: der reine Dateiname (B-04), sonst der gekürzte Hinweis — nie Inhalte, nie Pfade. */
 function stepText(step: ActivityEntry): string {
   const label = toolLabel(step.tool);
-  return step.target ? `${label}: ${step.target}` : label;
+  const ziel = step.file ?? step.target;
+  return ziel ? `${label}: ${ziel}` : label;
 }
 
 /**
@@ -62,6 +64,17 @@ const stateName = (state: ActivityEntry['state']): string =>
 /** Wie viele Schritte während der Arbeit sichtbar bleiben (die neuesten). */
 const LIVE_VISIBLE = 4;
 
+/** Ab dieser Fensterbreite läuft die Live-Spalte offen; darunter bleibt sie eingeklappt (D-106). */
+const LIVE_MIN_WIDTH = 900;
+
+/** Ist das Fenster breit genug für die offene Live-Spalte? Fehlt matchMedia (Tests): ja, wie bisher offen. */
+function liveFits(): boolean {
+  return (
+    typeof window.matchMedia !== 'function' ||
+    window.matchMedia(`(min-width: ${LIVE_MIN_WIDTH}px)`).matches
+  );
+}
+
 function Steps({ steps, lagen }: { steps: ActivityEntry[]; lagen: boolean }) {
   return (
     <ol aria-label={m.chat.agent.steps} className="space-y-1 text-sm text-ink-secondary">
@@ -80,15 +93,31 @@ function Steps({ steps, lagen }: { steps: ActivityEntry[]; lagen: boolean }) {
 }
 
 /**
- * Was ein Agent tut: während der Arbeit die neuesten Schritte, danach eingeklappt als „Was der Agent getan
- * hat“. Es sind nur Werkzeug und Ziel zu sehen, nie Inhalte.
+ * Was ein Agent tut: während der Arbeit die neuesten Schritte als schmale Live-Spalte unter der laufenden
+ * Antwort (D-106). Die Zeilen kommen über den bestehenden Ereignisstrom — kein Reload, kein Polling; auf
+ * schmalen Fenstern bleibt die Spalte eingeklappt (gleiche Grenze wie das Datei-Panel), danach ist sie es
+ * immer. Es sind nur Werkzeug und Ziel zu sehen, nie Inhalte.
  */
 export function AgentActivity({ steps, live }: { steps: ActivityEntry[]; live: boolean }) {
   const [open, setOpen] = useState(false);
+  // Wird das Fenster schmaler als die Grenze, klappt die Spalte von selbst zu (Muster des Datei-Panels).
+  // Ohne matchMedia (Tests) bleibt der Zustand, wie er ist: eingeklappt.
+  const [wide, setWide] = useState(liveFits);
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia(`(min-width: ${LIVE_MIN_WIDTH}px)`);
+    if (typeof query.addEventListener !== 'function') return;
+    const onChange = () => setWide(query.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
   const lagen = useDesign() === 'lagen';
   if (steps.length === 0) return null;
   const failed = steps.some((step) => step.state === 'error');
-  if (live) {
+  const working = live && steps.some((step) => step.state === 'running');
+  // Kopf der eingeklappten Fläche: während der Arbeit der laufende Punkt, sonst Haken oder Kreuz.
+  const headState: ActivityEntry['state'] = working ? 'running' : failed ? 'error' : 'done';
+  if (live && wide) {
     return (
       <div className="mt-3">
         {/* In „Lagen“ bleibt jeder Schritt stehen; die anderen Richtungen zeigen die neuesten vier. */}
@@ -102,11 +131,11 @@ export function AgentActivity({ steps, live }: { steps: ActivityEntry[]; live: b
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary
-        data-state={failed ? 'error' : 'done'}
-        className="lg-agent-head inline-flex min-h-11 max-w-full cursor-pointer items-center gap-2 whitespace-nowrap text-ink-muted hover:text-ink"
+        data-state={headState}
+        className="lg-agent-head inline-flex min-h-11 max-w-full cursor-pointer items-center gap-2 whitespace-nowrap text-ink-muted hover:text-ink active:text-ink"
       >
         {/* Kopf in einer Zeile: Statuszeichen, Titel (kürzt sich bei Platzmangel), Pfeil. */}
-        <StateMark state={failed ? 'error' : 'done'} lagen={lagen} />
+        <StateMark state={headState} lagen={lagen} />
         <span className="min-w-0 truncate">
           {format(m.chat.agent.summary, { count: steps.length })}
         </span>

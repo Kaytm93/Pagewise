@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PreviewError } from '../preview/render';
+import { platformKey } from '../python/pins';
 import { PythonRuntime, type PythonRuntimeInfo } from '../python/runtime';
 import { SandboxGuard } from '../sandbox/probe';
 import {
@@ -320,7 +321,7 @@ describe('Chats mit Code-Ausführung (run_python)', () => {
       expect(spec.args).toEqual(['-s', '.run.py']);
       expect(spec.cwd).toBe(spec.workspace);
       expect(spec.env.HOME?.startsWith(spec.workspace)).toBe(true);
-      expect(spec.timeoutMs).toBeLessThanOrEqual(60_000);
+      expect(spec.timeoutMs).toBeLessThanOrEqual(180_000);
       expect(readFileSync(join(spec.workspace, '.run.py'), 'utf8')).toBe('pass');
     });
 
@@ -405,12 +406,12 @@ describe('Chats mit Code-Ausführung (run_python)', () => {
 
     it('begrenzt die Läufe je Antwort', async () => {
       await enable();
-      for (let index = 0; index < 8; index += 1) {
+      for (let index = 0; index < 10; index += 1) {
         scripts.push(() => toolCall(`call_${index}`, 'run_python', python('pass')));
       }
       scripts.push(() => text('Genug.'));
       await ask();
-      expect(specs.length).toBe(6);
+      expect(specs.length).toBe(8);
       const last = requests
         .at(-1)
         ?.messages.filter((message) => message.role === 'tool')
@@ -621,9 +622,16 @@ describe('Chats mit Code-Ausführung (run_python)', () => {
       expect(status.body.preview).toMatchObject({ office: false, raster: false });
     });
 
-    it('startet die Einrichtung nur mit Bestätigung', async () => {
-      expect((await session.call('POST', '/api/code/setup', {})).status).toBe(400);
-      expect((await session.call('POST', '/api/code/setup', { confirm: false })).status).toBe(400);
+    it('startet die Einrichtung nur mit Bestätigung (ohne Sandbox: 409 „unsupported“)', async () => {
+      // Der Weg prüft die Umgebung vor dem Körper (D-079: wo die Sandbox fehlt, läuft nichts). Die Sandbox
+      // ist bewusst nur macOS; auf Linux (CI) antwortet der Weg mit 409, ehe „confirm“ geprüft wird. Beide
+      // Zustände sind auf ihrer Maschine fest verlangt, der Test schwächt nicht.
+      const supported = platformKey() !== null && sandboxSupported();
+      const erwartet = supported ? 400 : 409;
+      expect((await session.call('POST', '/api/code/setup', {})).status).toBe(erwartet);
+      expect((await session.call('POST', '/api/code/setup', { confirm: false })).status).toBe(
+        erwartet,
+      );
     });
   });
 });

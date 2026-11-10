@@ -29,7 +29,7 @@ export function IconPicker({
             />
             <label
               htmlFor={`${name}-${id}`}
-              className="flex size-11 cursor-pointer items-center justify-center rounded-control border border-line text-ink-secondary hover:bg-paper peer-checked:border-ink peer-checked:bg-paper peer-checked:text-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent"
+              className="mo-tap flex size-11 cursor-pointer items-center justify-center rounded-control border border-line text-ink-secondary hover:bg-paper peer-checked:border-ink peer-checked:bg-paper peer-checked:text-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent"
             >
               <SubjectIcon icon={id} className="size-5" />
               <span className="sr-only">{label}</span>

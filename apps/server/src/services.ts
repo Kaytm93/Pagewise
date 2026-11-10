@@ -2,8 +2,10 @@ import { join } from 'node:path';
 import { AssetService } from './agents/assets';
 import { AgentCleanup } from './agents/cleanup';
 import { CliPathSetting } from './agents/cli-path';
+import { CodexEngine } from './agents/codex';
 import { CliDetector, type DetectOptions } from './agents/detect';
 import { ClaudeCodeEngine, type EngineOptions } from './agents/engine';
+import { OpenCodeEngine } from './agents/opencode';
 import { EngineProfileService } from './agents/profiles';
 import { AgentRunner } from './agents/runner';
 import { WorkspaceManager } from './agents/workspace';
@@ -33,6 +35,7 @@ import { type DataPaths, ensureDataLayout } from './storage/data-paths';
 import { DataEraser } from './storage/eraser';
 import { FileSecretStore, type SecretStore } from './storage/secret-store';
 import { LocalStorage, type Storage } from './storage/storage';
+import { TimetableScanService } from './timetable-scan/service';
 import { createToolRegistry, type ToolRegistry } from './tools';
 import { ToolSettings } from './tools/settings';
 
@@ -77,6 +80,8 @@ export interface Services {
   /** Sichtprüfung von Dateien mit LibreOffice und poppler in der Sandbox (D-080). */
   preview: PreviewService;
   chats: ChatService;
+  /** Stundenplan aus einem Bild erkennen (D-107): Vision-Modelle, Vorschau, Übernahme. */
+  timetableScan: TimetableScanService;
   eraser: DataEraser;
   close(): void;
 }
@@ -166,6 +171,8 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     workspaces,
     assets,
     engine: new ClaudeCodeEngine({ ...options.agent, dataRoot: paths.root }),
+    opencode: new OpenCodeEngine({ ...options.agent, dataRoot: paths.root }),
+    codex: new CodexEngine({ ...options.agent, dataRoot: paths.root }),
   });
   const tools = createToolRegistry();
   const toolSettings = new ToolSettings(database.db);
@@ -211,6 +218,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     workspaces,
   });
   const cleanup = new AgentCleanup(database.db, chats, assets, workspaces);
+  const timetableScan = new TimetableScanService(database.db, providers, catalog);
   // Das eingebaute Fach „Standard“ (fachunabhängiger Chat) gehört immer dazu.
   ensureDefaultSubject(database.db);
   return {
@@ -239,6 +247,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     code,
     preview,
     chats,
+    timetableScan,
     eraser: new DataEraser({ database, paths, secrets, chats }),
     close: () => database.close(),
   };

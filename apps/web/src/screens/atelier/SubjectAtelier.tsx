@@ -7,7 +7,7 @@ import { usePlanner } from '../../planning/PlannerProvider';
 import { groupExams } from '../../planning/schedule';
 import { Button } from '../../ui/Button';
 import { Link } from '../../ui/Link';
-import { sectionTitle } from '../../ui/styles';
+import { emptyState, sectionTitle } from '../../ui/styles';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { describeSelection, engineName } from '../chat/models';
 import { groupCount, subjectMeta } from '../subject-meta';
@@ -151,7 +151,7 @@ export function SubjectAtelierTiles({
         </Button>
       </div>
       {subject.groups.length === 0 ? (
-        <div className="mt-2 rounded-box bg-paper p-4">
+        <div className={`mt-2 ${emptyState}`}>
           <p className="font-medium">{m.subject.noGroupsTitle}</p>
           <p className="mt-1 text-sm text-ink-secondary">{m.subject.noGroupsHint}</p>
         </div>

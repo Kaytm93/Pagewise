@@ -8,7 +8,14 @@ import { Button } from '../../ui/Button';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { FieldError } from '../../ui/FieldError';
 import { Link } from '../../ui/Link';
-import { listRow } from '../../ui/styles';
+import {
+  emptyState,
+  listRowAction,
+  listRowHost,
+  listRowLead,
+  listSkeleton,
+  listSkeletonRow,
+} from '../../ui/styles';
 import { formatWhen } from './when';
 
 const DAY_MS = 86_400_000;
@@ -91,8 +98,8 @@ export function ChatList({ subjectId, groupId }: { subjectId: string; groupId: s
   function row(chat: Chat) {
     const title = chat.title === '' ? m.subject.chatUntitled : chat.title;
     return (
-      <li key={chat.id} className="flex items-center">
-        <Link to={{ name: 'chat', subjectId, chatId: chat.id }} className={listRow}>
+      <li key={chat.id} className={listRowHost}>
+        <Link to={{ name: 'chat', subjectId, chatId: chat.id }} className={listRowLead}>
           <span className="truncate font-heading text-[19px] tracking-[-0.15px]">{title}</span>
           <span className="truncate text-sm text-ink-muted">
             {chat.generating ? m.subject.chatGenerating : formatWhen(chat.updatedAt)}
@@ -102,7 +109,7 @@ export function ChatList({ subjectId, groupId }: { subjectId: string; groupId: s
           type="button"
           onClick={() => setDeleting(chat)}
           aria-label={format(m.subject.chatDeleteNamed, { name: title })}
-          className="mo-press -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] text-ink-muted hover:bg-paper hover:text-ink"
+          className={listRowAction}
         >
           <Trash2 aria-hidden="true" className="size-4" />
         </button>
@@ -151,14 +158,10 @@ export function ChatList({ subjectId, groupId }: { subjectId: string; groupId: s
       {error && <FieldError>{error}</FieldError>}
       {failed && <p className="mt-3 text-ink-secondary">{m.subject.chatsFailed}</p>}
       {!failed && chats === null && (
-        <div role="status" className="mt-3">
+        <div role="status" className={listSkeleton}>
           <span className="sr-only">{m.subject.chatsLoading}</span>
           {[0, 1, 2].map((row) => (
-            <div
-              key={row}
-              aria-hidden="true"
-              className="grid gap-2.5 border-b border-line-warm px-2 py-[18px]"
-            >
+            <div key={row} aria-hidden="true" className={listSkeletonRow}>
               <span className="mo-shimmer h-[17px] w-[46%] rounded-[7px] bg-ink-muted/20" />
               <span className="mo-shimmer h-[13px] w-[78%] rounded-[7px] bg-ink-muted/20" />
             </div>
@@ -166,7 +169,7 @@ export function ChatList({ subjectId, groupId }: { subjectId: string; groupId: s
         </div>
       )}
       {chats && chats.length === 0 && (
-        <div className="mt-3 rounded-box bg-paper p-4">
+        <div className={`mt-3 ${emptyState}`}>
           <p className="font-medium">{m.subject.noChatsTitle}</p>
           <p className="mt-1 text-sm text-ink-secondary">{m.subject.noChatsHint}</p>
         </div>
