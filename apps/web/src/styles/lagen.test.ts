@@ -406,17 +406,26 @@ describe('Seitenleiste: Breite je Richtung (B-04, D-094)', () => {
   const lagenCss = lesen('lagen.css');
   const IPAD_LAGEN = '(min-width: 768px) and (max-width: 1023.98px)';
 
-  it('Lagen: 276 px wie bisher ab 1024 px, im schmalen Bereich 278 statt 248 px', () => {
-    expect(leiste(lagenCss, 'lagen', null)).toBe(276);
-    expect(leiste(lagenCss, 'lagen', IPAD_LAGEN)).toBe(278);
+  // Wirksame Breite im schmalen Bereich: der eigene Wert der Bedingung, sonst der Grundwert.
+  const lagenSchmal = leiste(lagenCss, 'lagen', IPAD_LAGEN) ?? leiste(lagenCss, 'lagen', null);
+
+  it('Lagen: 278 px überall, auch ab 1024 px (D-117, vorher dort 276 px; im schmalen Bereich schon 278 px, D-094)', () => {
+    expect(leiste(lagenCss, 'lagen', null)).toBe(278);
+    expect(lagenSchmal).toBe(278);
   });
 
-  it('Lagen: die Namensspalte hat im schmalen Bereich mindestens 4 px mehr, als „Mathematik“ braucht', () => {
+  it('Lagen: der schmale Bereich hat keinen eigenen Wert mehr, damit die Breite an einer Stelle steht', () => {
+    expect(leiste(lagenCss, 'lagen', IPAD_LAGEN)).toBeNull();
+  });
+
+  it('Lagen: die Namensspalte hat überall mindestens 4 px mehr, als „Mathematik“ braucht', () => {
     // Gemessen im Browser (Chromium und WebKit, Lagen): bei 248 px Leiste hat die Namensspalte 63 px, die Leiste
     // nimmt also 185 px für Rücken, Pfeilspalte, Symbol, Punkt und Abstände. „Mathematik“ ist 88,4 px breit.
+    // Mit 278 px bleiben 93 px Namensspalte, 4,6 px Reserve, in beiden Breitenbereichen.
     const festeAnteile = 248 - 63;
-    const breite = leiste(lagenCss, 'lagen', IPAD_LAGEN) ?? 0;
-    expect(breite - festeAnteile).toBeGreaterThanOrEqual(88.4 + 4);
+    for (const breite of [leiste(lagenCss, 'lagen', null) ?? 0, lagenSchmal ?? 0]) {
+      expect(breite - festeAnteile).toBeGreaterThanOrEqual(88.4 + 4);
+    }
   });
 
   it('Atelier bleibt unverändert: 264 px, im schmalen Bereich 232 px (dort gab es nie gekürzte Namen)', () => {

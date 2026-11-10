@@ -6,6 +6,10 @@ import { SUBJECT_COLORS } from './subject-color';
 /**
  * Auswahl der Fachfarbe aus den acht gedämpften Tönen der Oberfläche. Ohne Auswahl (`null`) wählt der Server
  * beim Anlegen die am seltensten genutzte. Der Name steht für Screenreader dabei: Die Farbe allein sagt nichts.
+ *
+ * Das Raster ist das der Symbolwahl (`IconPicker`: fünf Spalten, gleiche Abstände, derselbe Knopf von 44 px links in
+ * der Zelle), damit die Punkte bündig auf den Symbolspalten stehen (D-117). Acht Farben in zwei Reihen zu vier: Die
+ * Reihen beginnen in der ersten Spalte (`col-start-1`) und stehen so auf den ersten vier Symbolspalten.
  */
 export function ColorPicker({
   legend,
@@ -23,10 +27,14 @@ export function ColorPicker({
   return (
     <fieldset>
       <legend className="text-sm font-medium text-ink">{legend}</legend>
-      <div className="mt-1.5 grid grid-cols-4 gap-2">
+      <div className="mt-1.5 grid grid-cols-5 gap-1.5">
         {Array.from({ length: SUBJECT_COLORS }, (_, color) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: feste Reihe aus acht Farben, die Nummer ist die Farbe
-          <div key={color} className="relative" data-subj={color}>
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: feste Reihe aus acht Farben, die Nummer ist die Farbe
+            key={color}
+            className={color % 4 === 0 ? 'relative col-start-1' : 'relative'}
+            data-subj={color}
+          >
             <input
               type="radio"
               name={name}
