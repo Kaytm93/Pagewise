@@ -436,6 +436,69 @@ describe('Fächer und Untergruppen', () => {
     });
   });
 
+  describe('Motiv nach Namen (D-114)', () => {
+    let catalogHarness: Harness;
+    let catalogSession: Session;
+
+    beforeEach(async () => {
+      catalogHarness = createHarness({
+        catalogFile: join(APP_ROOT, 'config', 'subject-catalog.json'),
+      });
+      catalogSession = await catalogHarness.signIn();
+    });
+    afterEach(() => catalogHarness.close());
+
+    async function create(body: Record<string, unknown>): Promise<Subject> {
+      const reply = await catalogSession.call('POST', '/api/subjects', body);
+      expect(reply.status).toBe(201);
+      return reply.body as unknown as Subject;
+    }
+    async function listed(): Promise<Subject[]> {
+      return (await catalogSession.call('GET', '/api/subjects')).body.subjects as Subject[];
+    }
+
+    it('gibt einem Fach ohne Kennung das Motiv der Vorlage mit demselben Namen', async () => {
+      const created = await create({ name: 'Mathematik' });
+      expect(created.icon).toBe('calculator');
+      expect((await listed()).find((entry) => entry.id === created.id)?.icon).toBe('calculator');
+    });
+
+    it('findet die Vorlage auch über Suchbegriffe und ohne Groß- und Kleinschreibung', async () => {
+      expect((await create({ name: 'Mathe' })).icon).toBe('calculator');
+      expect((await create({ name: 'leibesübungen' })).icon).toBe('sport');
+    });
+
+    it('lässt ein gewähltes Motiv stehen, auch wenn der Name zu einer anderen Vorlage passt', async () => {
+      const created = await create({ name: 'Mathe', icon: 'leaf' });
+      expect(created.icon).toBe('leaf');
+      expect((await listed()).find((entry) => entry.id === created.id)?.icon).toBe('leaf');
+    });
+
+    it('bleibt ohne passende Vorlage bei null (die Oberfläche zeigt das neutrale Motiv)', async () => {
+      expect((await create({ name: 'Beispielfach ohne Vorlage' })).icon).toBeNull();
+    });
+
+    it('speichert die Zuordnung nicht: Sie folgt dem Namen, bis ein Motiv gewählt wird', async () => {
+      const created = await create({ name: 'Mathe' });
+      const renamed = await catalogSession.call('PATCH', `/api/subjects/${created.id}`, {
+        name: 'Beispielfach ohne Vorlage',
+      });
+      expect(renamed.status).toBe(200);
+      expect((renamed.body as unknown as Subject).icon).toBeNull();
+
+      const chosen = await catalogSession.call('PATCH', `/api/subjects/${created.id}`, {
+        name: 'Mathe',
+        icon: 'atom',
+      });
+      expect((chosen.body as unknown as Subject).icon).toBe('atom');
+    });
+
+    it('lässt das eingebaute Fach „Standard“ ohne Motiv', async () => {
+      const reply = await catalogSession.call('GET', '/api/subjects');
+      expect((reply.body.defaultSubject as unknown as Subject).icon).toBeNull();
+    });
+  });
+
   describe('Import', () => {
     const json = (subjects: unknown[]) => JSON.stringify({ version: 1, subjects });
     const upload = (format: 'json' | 'csv', content: string) =>

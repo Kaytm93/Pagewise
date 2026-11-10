@@ -1091,3 +1091,12 @@ jsdom 30 scheitert in der CI an `--frozen-lockfile`, weil es Node ab 22.22.2 ver
 - **Entscheidung:** `textLink` in `ui/styles.ts` für Links, die allein in ihrer Zeile stehen (Hover unterstreicht, gedrückt `mo-tap`), und `disclosure` für `<summary>` (Hover färbt in Tinte). Der Test in `ui/states.test.ts` findet jede Klassenliste, die nur aus Zielhöhe und Ausrichtung besteht.
 - **Umsetzung:** `planning/NextUp.tsx`, `planning/UpcomingExams.tsx`, `planning/ExamsPage.tsx`, `screens/lagen/StartGrid.tsx`, `screens/raum/StartPlan.tsx`, `screens/chat/ModelDialog.tsx`, `screens/chat/MessageItem.tsx`, `screens/chat/ChatPage.tsx`, `screens/chat/Reasoning.tsx`, `screens/prompts/PromptDialog.tsx`, `screens/providers/ProviderForm.tsx`, `screens/NotFoundPage.tsx`.
 - **Offen:** Links im Fließtext der Chat-Antworten (`Markdown.tsx`) und Auswahl-Labels (`ui/Field.tsx`, `ModelListEditor.tsx`, `ProviderStep.tsx`) haben weiter nur den gedrückten Grundzustand.
+
+## D-114 Motiv nach Fachname, wenn keine Kennung gespeichert ist (10. November 2026)
+
+- **Anlass:** Offener Punkt aus D-110. Ein von Hand angelegtes Fach „Mathe“ hat keine Kennung und zeigte nach D-110 den Abschlusshut statt der Rechenzeichen. Kay hat am 10. November 2026 entschieden: Fächer ohne Kennung bekommen ihr Motiv nach dem Namen.
+- **Entscheidung:** Der Server ordnet zu, nicht die Oberfläche. Die Fach-Routen (`GET /api/subjects`, Anlegen, Ändern, Import) liefern für ein Fach mit `icon: null` das Motiv der Katalogvorlage, deren Name oder Suchbegriff zum Fachnamen passt (`findCatalogEntryByName`, derselbe Weg wie beim Standard-Prompt). Der Katalog kennt die Namen und Suchbegriffe schon; eine zweite Tabelle in der Oberfläche gibt es nicht.
+- **Gespeichert wird nichts:** Die Zuordnung gilt nur in der Antwort. Sie folgt dem Namen, bis jemand im Dialog „Fach bearbeiten“ ein Motiv wählt; ab dann gilt die gespeicherte Kennung. Ohne passende Vorlage bleibt `null`, und die Oberfläche zeigt das neutrale Motiv. Das eingebaute Fach „Standard“ ist nicht betroffen. Bestehende Daten ändern sich nicht, eine Migration gibt es nicht.
+- **Umsetzung:** `apps/server/src/routes/subjects.ts` (`withMotif`).
+- **Prüfung:** sechs neue Tests in `routes/subjects.test.ts` mit dem echten Katalog (Name, Suchbegriff, gewähltes Motiv bleibt, kein Treffer, Umbenennen, „Standard“).
+- **Grenzen:** Kürzel, die der Katalog nicht kennt („Ma“, „M“), bekommen kein Motiv. Nicht am Bild geprüft, nur über die Schnittstelle.
