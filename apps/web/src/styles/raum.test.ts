@@ -536,3 +536,89 @@ describe('raum.css: Seitenleiste ist breit genug für „Mathematik“ (B-04, D-
     expect(breite - festeAnteile).toBeGreaterThanOrEqual(mathematik + 4);
   });
 });
+
+describe('raum.css: Bodenlinie der Chat-Eingabe und des Startfelds steht zuoberst (D-116, Nachtrag zu D-073)', () => {
+  const selector = (tail: string) => `:root[data-design='raum'] ${tail}`;
+  const startField = all.find((rule) => rule.selector === selector('.rm-start-dock form > div'));
+  const chatField = all.find((rule) => rule.selector === selector('.lg-composer textarea'));
+  const startFocus = all.find(
+    (rule) => rule.selector === selector('.rm-start-dock form > div:focus-within'),
+  );
+  const chatFocus = all.find((rule) => rule.selector === selector('.lg-composer textarea:focus'));
+  const field = all.find((rule) => rule.selector === selector('.lg-field'));
+  const flat = (text: string | undefined) => (text ?? '').replace(/\s+/g, ' ');
+
+  it('malt die Bodenlinie als erste Schicht, vor der hellen Innenschicht der Mulde (gemessen 1,5 : 1 hell, sonst unter 3 : 1)', () => {
+    for (const rule of [startField, chatField]) {
+      expect(flat(rule?.body), rule?.selector).toContain(
+        'box-shadow: inset 0 -2px 0 0 var(--raum-edge), var(--raum-in-m);',
+      );
+    }
+  });
+
+  it('hat dieselbe Schattenfolge wie das neue Feld lg-field (D-089)', () => {
+    const shadowOf = (rule: Rule | undefined) =>
+      /box-shadow:\s*([^;]+);/.exec(flat(rule?.body))?.[1]?.trim();
+    expect(shadowOf(field)).toBeDefined();
+    expect(shadowOf(startField)).toBe(shadowOf(field));
+    expect(shadowOf(chatField)).toBe(shadowOf(field));
+  });
+
+  it('lässt den Fokus an Startfeld und Chat-Eingabe stehen: Ring 2 px mit 3 px Abstand in --accent', () => {
+    for (const rule of [startFocus, chatFocus]) {
+      expect(rule, 'keine Fokusregel').toBeDefined();
+      expect(rule?.body, rule?.selector).toContain('outline: 2px solid var(--accent)');
+      expect(rule?.body, rule?.selector).toContain('outline-offset: 3px');
+      expect(flat(rule?.body), rule?.selector).toContain('inset 0 -2px 0 0 var(--accent)');
+    }
+  });
+
+  it('behält Mulde, Fläche, Ecke und den Übergang nur mit --t-color', () => {
+    for (const rule of [startField, chatField]) {
+      expect(rule?.body, rule?.selector).toContain('background-color: var(--raum-raised)');
+      expect(rule?.body, rule?.selector).toContain('border-radius: var(--raum-r-big)');
+      expect(rule?.body, rule?.selector).toContain('transition: box-shadow var(--t-color) ease');
+    }
+  });
+});
+
+describe('raum.css: Zettel „Nächster Test“ steht ruhig, ohne Heben und Einsinken (D-116)', () => {
+  const slipRules = all.filter((rule) => rule.selector.includes('.lg-slip'));
+  const slip = all.find((rule) => rule.selector === ":root[data-design='raum'] .lg-slip");
+
+  it('sieht die Regeln des Zettels', () => {
+    expect(slip, 'keine Raum-Regel für .lg-slip').toBeDefined();
+    expect(slipRules.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('hat keine Regel mit :hover oder :active (der Zettel ist ein div ohne Klick)', () => {
+    for (const rule of slipRules) {
+      expect(rule.selector, `Zustand am Zettel: ${rule.selector}`).not.toMatch(/:(hover|active)/);
+    }
+  });
+
+  it('bewegt sich nicht: transform none, kein Übergang, kein Schattenwechsel auf die Mulde', () => {
+    expect(slip?.body).toMatch(/transform:\s*none;/);
+    expect(slip?.body).toMatch(/transition:\s*none;/);
+    expect(slip?.body).not.toMatch(/translate|--raum-in-/);
+  });
+
+  it('behält den Ruhestil: gehobene Fläche mit großem Schatten, Radius und Raumfläche', () => {
+    expect(slip?.body).toContain('box-shadow: var(--raum-up-l)');
+    expect(slip?.body).toContain('background-color: var(--raum-raised)');
+    expect(slip?.body).toContain('border-radius: var(--raum-r-big)');
+  });
+
+  it('ist an beiden Stellen ein einfaches div ohne Knopf oder Link um den Zettel', () => {
+    for (const file of ['planning/NextUp.tsx', 'screens/lagen/StartGrid.tsx']) {
+      const source = readFileSync(join(dir, '..', file), 'utf8');
+      expect(source, file).toContain('<div className="lg-slip">');
+      expect(source, file).not.toMatch(/<(a|button|Link)[^>]*className="lg-slip/);
+    }
+  });
+
+  it('lässt Lagen und Atelier unberührt: dort hebt sich der Zettel weiter (Kay: nur Raum)', () => {
+    expect(readFileSync(join(dir, 'lagen.css'), 'utf8')).toContain('.lg-slip:hover');
+    expect(readFileSync(join(dir, 'atelier.css'), 'utf8')).toContain('.lg-slip:hover');
+  });
+});

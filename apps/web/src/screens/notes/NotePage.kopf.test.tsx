@@ -58,4 +58,14 @@ describe('Editor-Kopf: Bedienelemente schrumpfen nicht', () => {
     expect(gruppe.classList.contains('flex-wrap')).toBe(true);
     expect(gruppe.classList.contains('ml-auto')).toBe(true);
   });
+
+  it('umgebrochene Zeilen der Gruppe beginnen links, nicht rechts (D-117, Kay am 7. November 2026)', async () => {
+    await openEditor();
+    const umschalter = screen.getByRole('group', { name: 'Ansicht' });
+    const gruppe = (umschalter.parentElement as HTMLElement).parentElement as HTMLElement;
+    expect(gruppe.classList.contains('justify-start')).toBe(true);
+    expect(gruppe.classList.contains('justify-end')).toBe(false);
+    // In einer Zeile (Mac, iPad, iPhone quer) sitzt die Gruppe unverändert rechts: über ml-auto, nicht über justify.
+    expect(gruppe.classList.contains('ml-auto')).toBe(true);
+  });
 });

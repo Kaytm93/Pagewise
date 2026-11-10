@@ -307,9 +307,9 @@
     background-image: none;
     box-shadow: var(--raum-up-l);
     transform: none;
-    transition:
-      transform var(--t-med) var(--spring),
-      box-shadow var(--t-color) ease;
+    /* Der Zettel ist ein div ohne Klick (D-116): kein Heben beim Überfahren, kein Einsinken beim Drücken, also
+       auch kein Übergang. Nur der Ring auf der LED (::after) lebt. */
+    transition: none;
   }
 
   :root[data-design="raum"] .lg-slip::before {
@@ -1112,26 +1112,19 @@
   box-shadow: var(--raum-up-s);
 }
 
-/* Die Karten und die Mulden: Zettel („Nächster Test“) ohne Körnung, und Hover nur mit echter Maus. */
+/* Die Karten und die Mulden: Hover nur mit echter Maus. Der Zettel („Nächster Test“) hat keinen Hover und keinen
+   gedrückten Zustand mehr (D-116): er ist ein div ohne Klick; Lagen und Atelier heben ihn weiter. */
 @media (hover: hover) {
-  :root[data-design="raum"] .lg-slip:hover {
-    background-color: var(--raum-raised);
-    transform: translateY(calc(var(--m) * -2px));
-  }
-
   :root[data-design="raum"] .rm-plan-item[data-state="next"] .rm-plan-card:hover {
     background-color: var(--raum-raised);
     box-shadow: var(--raum-up-s);
   }
 }
 
-:root[data-design="raum"] .lg-slip:active {
-  box-shadow: var(--raum-in-m);
-  transform: translateY(calc(var(--m) * 1px));
-}
-
 /* Eingabe der Startseite: ein eingelassenes Feld, Radius 20, mit der Bodenlinie als einzigem Rand. Der Knopf
-   (Senden) sitzt rechts darin. */
+   (Senden) sitzt rechts darin. Die Bodenlinie steht als erste Schicht, also zuoberst (D-116, wie bei lg-field):
+   hinter der hellen Innenschicht der Mulde (--raum-in-m) verblasste sie auf 1,5 : 1 hell; zuoberst zeigt sie
+   --raum-edge unverfälscht (3,51 : 1 hell, 4,07 : 1 dunkel gegen die Mulde, WCAG 1.4.11). Der Fokus ist unverändert. */
 :root[data-design="raum"] .rm-start-dock form > div {
   border: 0;
   border-radius: var(--raum-r-big);
@@ -1139,8 +1132,8 @@
   padding-left: 16px;
   background-color: var(--raum-raised);
   box-shadow:
-    var(--raum-in-m),
-    inset 0 -2px 0 0 var(--raum-edge);
+    inset 0 -2px 0 0 var(--raum-edge),
+    var(--raum-in-m);
   transition: box-shadow var(--t-color) ease;
 }
 
@@ -1152,14 +1145,15 @@
   outline-offset: 3px;
 }
 
-/* Die Eingabe im Chat: dasselbe eingelassene Feld. Die Knöpfe daneben sind Kreise (44 px). */
+/* Die Eingabe im Chat: dasselbe eingelassene Feld, dieselbe Schattenfolge (Bodenlinie zuoberst, D-116). Die Knöpfe
+   daneben sind Kreise (44 px). */
 :root[data-design="raum"] .lg-composer textarea {
   border: 0;
   border-radius: var(--raum-r-big);
   background-color: var(--raum-raised);
   box-shadow:
-    var(--raum-in-m),
-    inset 0 -2px 0 0 var(--raum-edge);
+    inset 0 -2px 0 0 var(--raum-edge),
+    var(--raum-in-m);
   transition: box-shadow var(--t-color) ease;
 }
 

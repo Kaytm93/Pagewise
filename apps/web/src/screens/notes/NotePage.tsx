@@ -361,8 +361,10 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
         )}
         {/* Passt die Gruppe nicht in die Zeile (iPhone hoch: gut 300 px für gut 370), bricht sie um, statt dass die
             Knöpfe schrumpfen: Anheften und Löschen waren dort 31 px breit, „Schreiben“ lief in „Vorschau“ (B-08).
-            Der Umschalter und die drei Knöpfe bleiben je für sich ganz und rücken als Block in die nächste Zeile. */}
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-y-1">
+            Der Umschalter und die drei Knöpfe bleiben je für sich ganz und rücken als Block in die nächste Zeile.
+            Umgebrochene Zeilen beginnen links, in Leserichtung (D-117); steht alles in einer Zeile (Mac, iPad,
+            iPhone quer), sitzt die Gruppe über `ml-auto` rechts. */}
+        <div className="ml-auto flex flex-wrap items-center justify-start gap-y-1">
           {/* Ansichts-Umschalter nur unter 1024 px (M4-T007, notes#13): er gehört zum Kopf und darf
               keine eigene Zeile vor dem Textfeld belegen — auf iPhone quer füllte er mit der
               Einfügen-Leiste den ersten Bildschirm, das Textfeld begann erst bei y≈594 von 390 px. */}

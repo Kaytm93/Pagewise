@@ -10,17 +10,17 @@
 /*
  * Maße der Hülle (Mockup A): Breite der Seitenleiste (`--sidebar-w`, AppShell.tsx) und Blattrand ab „md“
  * (`--sheet-edge`, Sheet.tsx). Die anderen Richtungen setzen ihre eigenen Werte in raum.css und atelier.css.
- * iPad hochkant und kleine Fenster (768–1023 px) bekommen einen engeren Rand; die Leiste ist dort 278 px breit
- * (B-04, D-094: mit 248 px kürzte sie „Mathematik“ und „Geschichte“, die Namensspalte brauchte 88 px, hatte 63).
+ * Die Leiste ist überall 278 px breit (B-04, D-094: mit 248 px kürzte sie „Mathematik“ und „Geschichte“, die
+ * Namensspalte brauchte 88 px, hatte 63; D-117: auch ab 1024 px 278 statt 276 px, eine Breite für alle Fenster,
+ * 4,6 px Reserve für „Mathematik“). iPad hochkant und kleine Fenster (768–1023 px) bekommen nur einen engeren Rand.
  */
 :root[data-design="lagen"] {
-  --sidebar-w: 276px;
+  --sidebar-w: 278px;
   --sheet-edge: 52px;
 }
 
 @media (min-width: 768px) and (max-width: 1023.98px) {
   :root[data-design="lagen"] {
-    --sidebar-w: 278px;
     --sheet-edge: 34px;
   }
 }
