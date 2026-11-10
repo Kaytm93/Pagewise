@@ -1124,7 +1124,7 @@
 /* Eingabe der Startseite: ein eingelassenes Feld, Radius 20, mit der Bodenlinie als einzigem Rand. Der Knopf
    (Senden) sitzt rechts darin. Die Bodenlinie steht als erste Schicht, also zuoberst (D-116, wie bei lg-field):
    hinter der hellen Innenschicht der Mulde (--raum-in-m) verblasste sie auf 1,5 : 1 hell; zuoberst zeigt sie
-   --raum-edge unverfälscht (3,36 : 1 hell, 3,70 : 1 dunkel gegen die Mulde, WCAG 1.4.11). Der Fokus ist unverändert. */
+   --raum-edge unverfälscht (3,51 : 1 hell, 4,07 : 1 dunkel gegen die Mulde, WCAG 1.4.11). Der Fokus ist unverändert. */
 :root[data-design="raum"] .rm-start-dock form > div {
   border: 0;
   border-radius: var(--raum-r-big);
