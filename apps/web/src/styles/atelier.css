@@ -1197,6 +1197,30 @@
   outline: none;
 }
 
+/* „Zum Ende“-Knopf im Chat (F-082, D-118): rund und deckend, ohne Glas. Er läge über dem Chat-Text, und auf Text liegt
+   nie Glas (Kopf dieser Datei); dazu stehen im Chat schon bis zu drei Glasflächen (Seitenleiste, Eingabe, und mit
+   offenem Dialog oder Schublade eine dritte), eine vierte wäre über der Grenze von D-070. Fläche im Grund (--canvas),
+   Haarstrich innen, die Schatten der Glasflächen. Der Haarstrich ist --control-edge, zu 28 % in die Tinte gemischt: Auf dem
+   getönten Grund des Chats (das Lichtfeld der Fachfarbe) erreichte --control-edge allein im Hellen 2,6 bis 3,0 : 1, mit der
+   Mischung stehen es mindestens 3 : 1 (gemessen, D-118). Hover (nur mit Maus) hinterlegt mit --paper, gedrückt gibt
+   `mo-press` nach. Der Fokusring kommt von der Regel für Bedienelemente oben. Lage, Größe und das Ein- und Ausblenden
+   stehen in screens.css. */
+:root[data-design="atelier"] .lg-toend-button {
+  --toend-surface: var(--canvas);
+  border: 0;
+  background-color: var(--canvas);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--control-edge) 72%, var(--ink)),
+    var(--glass-shadow-near),
+    0 10px 20px -10px rgba(var(--shadow), var(--shadow-a));
+}
+
+@media (hover: hover) {
+  :root[data-design="atelier"] .lg-toend-button:hover {
+    background-color: var(--paper);
+  }
+}
+
 /* Segmentsteuerung (Wochenart, Darstellung, Effektstufe): Pille, der Schieber ist eine Glaspille */
 :root[data-design="atelier"] .lg-seg {
   border-radius: 999px;

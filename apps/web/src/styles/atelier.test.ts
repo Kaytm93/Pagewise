@@ -433,3 +433,41 @@ describe('Wortmarke über der Karte: bündig mit der Spalte in Atelier (B-24, D-
     }
   });
 });
+
+describe('„Zum Ende“-Knopf: rund und deckend, ohne Glas (F-082, D-118, D-070)', () => {
+  const button = rule(":root[data-design='atelier'] .lg-toend-button");
+
+  it('hat eine deckende Fläche im Grund und den Haarstrich innen in --control-edge', () => {
+    expect(button).toContain('background-color: var(--canvas)');
+    expect(button).toContain('--toend-surface: var(--canvas)');
+    expect(button).toContain(
+      'inset 0 0 0 1px color-mix(in srgb, var(--control-edge) 72%, var(--ink))',
+    );
+    expect(button).toContain('var(--glass-shadow-near)');
+  });
+
+  it('ist keine Glasfläche: kein backdrop-filter, nicht in der Liste der Glas-Hüllen', () => {
+    expect(button).not.toMatch(/backdrop-filter/);
+    const glass = css.slice(
+      css.indexOf(":root[data-design='atelier'] .at-glass,"),
+      css.indexOf('backdrop-filter: blur(var(--glass-blur))'),
+    );
+    expect(glass).toContain('.lg-composer');
+    expect(glass).not.toContain('toend');
+  });
+
+  it('hat keinen eigenen Rand und keine feste Farbe; Hover nur mit Maus', () => {
+    expect(button).toMatch(/border:\s*0;/);
+    expect(button).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
+    expect(css).toMatch(
+      /@media \(hover: hover\) \{\s*:root\[data-design='atelier'\] \.lg-toend-button:hover \{\s*background-color: var\(--paper\);/,
+    );
+  });
+
+  it('der Fokusring kommt von der Regel für Bedienelemente (Text-Ton), nicht von einer eigenen', () => {
+    expect(css).toContain(
+      ":root[data-design='atelier'] :is(a, button, input, select, textarea, summary):focus-visible",
+    );
+    expect(button).not.toMatch(/outline/);
+  });
+});

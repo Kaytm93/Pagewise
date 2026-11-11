@@ -622,3 +622,52 @@ describe('raum.css: Zettel „Nächster Test“ steht ruhig, ohne Heben und Eins
     expect(readFileSync(join(dir, 'atelier.css'), 'utf8')).toContain('.lg-slip:hover');
   });
 });
+
+describe('raum.css: „Zum Ende“-Knopf ist ein gehobener Rundknopf wie die übrigen gehobenen Knöpfe (F-082, D-118)', () => {
+  const button = all.find((rule) => rule.selector === ":root[data-design='raum'] .lg-toend-button");
+  const pressed = all.find(
+    (rule) => rule.selector === ":root[data-design='raum'] .lg-toend-button:active",
+  );
+  const dot = all.find(
+    (rule) => rule.selector === ":root[data-design='raum'] .lg-toend-button[data-writing]::after",
+  );
+  const toend = all.filter((rule) => rule.selector.includes('.lg-toend'));
+
+  it('sieht die Regeln des Knopfs', () => {
+    expect(button, 'keine Raum-Regel für .lg-toend-button').toBeDefined();
+    expect(pressed, 'kein :active').toBeDefined();
+    expect(dot, 'kein Punkt beim Schreiben').toBeDefined();
+  });
+
+  it('ist gehoben: --raum-raised, kein Rand, die kleine Stufe der Schatten, gedrückt eingelassen', () => {
+    expect(button?.body).toContain('background-color: var(--raum-raised)');
+    expect(button?.body).toMatch(/border:\s*0;/);
+    expect(button?.body).toContain('box-shadow: var(--raum-up-s)');
+    expect(pressed?.body).toContain('box-shadow: var(--raum-in-s)');
+  });
+
+  it('der Ring des Punkts hat die Fläche des Knopfs (--toend-surface), die Rundung bleibt ein Kreis (rounded-full)', () => {
+    expect(button?.body).toContain('--toend-surface: var(--raum-raised)');
+    expect(readFileSync(join(dir, '..', 'screens', 'chat', 'ScrollToEnd.tsx'), 'utf8')).toContain(
+      'rounded-full',
+    );
+  });
+
+  it('hat keinen Hover (gehobene Knöpfe bleiben in Raum flach, D-109) und keine eigene Bewegung', () => {
+    for (const rule of toend) {
+      expect(rule.selector, rule.selector).not.toContain(':hover');
+      expect(rule.body, rule.selector).not.toMatch(/transform|transition|animation/);
+    }
+  });
+
+  it('der Punkt ist eine LED wie .lg-dot: Fachfarbe mit Rückfall Akzent, Fassung aus --raum-dark', () => {
+    expect(dot?.body).toContain('var(--subj, var(--accent))');
+    expect(dot?.body).toContain('var(--raum-dark)');
+    expect(dot?.body).toContain('var(--raum-raised)');
+  });
+
+  it('steht außerhalb von @layer wie die übrigen Raum-Regeln an Bedienelementen', () => {
+    const at = css.indexOf(":root[data-design='raum'] .lg-toend-button {");
+    expect(at).toBeGreaterThan(layerEnd);
+  });
+});

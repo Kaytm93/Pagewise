@@ -1142,6 +1142,27 @@ details[open] > summary .mo-arrow {
   resize: none;
 }
 
+/* „Zum Ende“-Knopf im Chat (F-082, D-118): ein runder Papierknopf. Zettelton (--slip) wie die Zettel der Startseite,
+   die Randlinie der Bedienelemente (--control-edge, mindestens 3 : 1 gegen das Blatt) und der Zettelschatten
+   (Lichtkante oben, dünner Kontaktschatten, weicher Wurf), kein Drehen. Hover (nur mit Maus) hinterlegt mit --paper,
+   gedrückt gibt `mo-press` nach (D-109). Lage, Größe und das Ein- und Ausblenden stehen in screens.css. Die Regeln
+   stehen ohne Layer und schlagen die Grundgestalt dort. */
+:root[data-design="lagen"] .lg-toend-button {
+  --toend-surface: var(--slip);
+  border: 1px solid var(--control-edge);
+  background-color: var(--slip);
+  box-shadow:
+    inset 0 1px 0 var(--rim),
+    0 1px 2px rgba(var(--shadow), 0.1),
+    0 8px 14px -6px rgba(var(--shadow), var(--shadow-a));
+}
+
+@media (hover: hover) {
+  :root[data-design="lagen"] .lg-toend-button:hover {
+    background-color: var(--paper);
+  }
+}
+
 /* ===== Streifen hinter dem aktiven Eintrag der Leiste (M1-T4) =====
  *
  * Nur in „Lagen“: Ein einziger Streifen liegt hinter allen Einträgen und gleitet beim Wechsel zum
