@@ -107,6 +107,76 @@
     opacity: 1;
   }
 
+  /* ===== „Zum Ende“-Knopf im Chat (F-082, D-118, screens/chat/ScrollToEnd.tsx) =====
+     Die Hülle (.lg-toend) sitzt im klebenden Eingabebereich (`sticky bottom-[var(--kb,0px)]`, ChatPage.tsx) und liegt
+     mit ihrer Unterkante 12 px über dessen Oberkante: Sie wandert mit der Höhe der Eingabe und der Tastatur und
+     liegt nie dahinter. Rechts schließt sie mit der Eingabespalte ab (700 px, mittig; darunter der Rand des Bereichs
+     16 px, ab 640 px 32 px), also über dem Senden-Knopf. Randabstände der Seite (Safe-Area) rechnet die Hülle der
+     Ansicht schon ein. Der Knopf selbst ist 44 px (size-11).
+     Verborgen: durchsichtig, um 8 px nach unten gerückt (nur über --m, bei „Reduziert“ und „Aus“ also nur
+     durchsichtig), `visibility: hidden` erst nach dem Ausblenden; die Hülle ist außerdem `inert`. Dauer: --t-fast mal
+     --m, das heißt 140 ms bei „Voll“ und 0 ms bei „Reduziert“ und „Aus“. Nur `opacity` und `transform` bewegen sich. */
+  .lg-toend {
+    --toend-t: calc(var(--m) * var(--t-fast));
+    position: absolute;
+    right: max(1rem, calc((100% - 700px) / 2));
+    bottom: 100%;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin-bottom: 0.75rem;
+    transition:
+      opacity var(--toend-t) var(--ease),
+      transform var(--toend-t) var(--ease);
+  }
+
+  @media (min-width: 40rem) {
+    .lg-toend {
+      right: max(2rem, calc((100% - 700px) / 2));
+    }
+  }
+
+  .lg-toend[data-visible="false"] {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(calc(var(--m) * 8px));
+    pointer-events: none;
+    transition:
+      opacity var(--toend-t) var(--ease),
+      transform var(--toend-t) var(--ease),
+      visibility 0s linear var(--toend-t);
+  }
+
+  /* Grundgestalt für jede Richtung: runde Fläche mit Haarrand und leichtem Schatten. Raum, Lagen und Atelier
+     gestalten sie in ihren Dateien neu. Hover nur mit Maus; gedrückt gibt `mo-press` nach, der Fokusring kommt aus
+     der Grundregel (app.css). */
+  .lg-toend-button {
+    --toend-surface: var(--sheet);
+    position: relative;
+    border: 1px solid var(--control-edge);
+    background-color: var(--toend-surface);
+    color: var(--ink);
+    box-shadow: 0 2px 8px rgba(var(--shadow), 0.16);
+  }
+
+  @media (hover: hover) {
+    .lg-toend-button:hover {
+      background-color: var(--paper);
+    }
+  }
+
+  /* Es kommt Text: ein kleiner Punkt in der Fachfarbe (Rückfall Akzent), umrahmt von der Fläche des Knopfs. */
+  .lg-toend-button[data-writing]::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--subj, var(--accent));
+    box-shadow: 0 0 0 2px var(--toend-surface);
+  }
+
   /* Erklärung der drei Effektstufen: reiner Text, keine Bedienfläche. */
   .lg-fx-list {
     display: grid;

@@ -440,3 +440,32 @@ describe('Seitenleiste: Breite je Richtung (B-04, D-094)', () => {
     expect(shell).not.toMatch(/\b(216|232|236|248|264|276|278)px\b/);
   });
 });
+
+describe('lagen.css: „Zum Ende“-Knopf ist ein runder Papierknopf (F-082, D-118)', () => {
+  const button = regelBlock(lagen, ':root[data-design="lagen"] .lg-toend-button');
+  const hover = regelBlock(lagen, ':root[data-design="lagen"] .lg-toend-button:hover');
+
+  it('hat Zettelton, die Randlinie der Bedienelemente und den Zettelschatten', () => {
+    expect(button).not.toBeNull();
+    expect(button).toContain('background-color: var(--slip)');
+    expect(button).toContain('--toend-surface: var(--slip)');
+    expect(button).toMatch(/border:\s*1px solid var\(--control-edge\)/);
+    expect(button).toContain('inset 0 1px 0 var(--rim)');
+    expect(button).toContain('rgba(var(--shadow), var(--shadow-a))');
+  });
+
+  it('dreht sich nicht und hat keine eigene Bewegung (gedrückt gibt mo-press nach)', () => {
+    expect(button).not.toMatch(/rotate|transform|transition/);
+  });
+
+  it('hinterlegt beim Überfahren mit --paper, nur hinter @media (hover: hover)', () => {
+    expect(hover).toContain('background-color: var(--paper)');
+    expect(lagen).toMatch(
+      /@media \(hover: hover\) \{\s*:root\[data-design="lagen"\] \.lg-toend-button:hover \{/,
+    );
+  });
+
+  it('nimmt nur Tokens, keine festen Farben', () => {
+    expect(button).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
+  });
+});

@@ -60,6 +60,13 @@ function resized(element: Element) {
   act(() => observer.fire());
 }
 
+/** Eine Taste, wie sie auf der Seite ankommt (Ziel: der Körper, nicht das Eingabefeld, dort bewegen Pfeile den Cursor). */
+const key = (name: string) =>
+  act(
+    () =>
+      void document.body.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true })),
+  );
+
 const scrollEvent = () => act(() => void window.dispatchEvent(new Event('scroll')));
 
 /** Mausrad nach oben (oder unten) über dem Ziel. */
@@ -286,5 +293,194 @@ describe('Chat: Hochscrollen während des Schreibens (F-019)', () => {
     await user.click(screen.getByRole('button', { name: 'Senden' }));
     await waitFor(() => expect(server.generations.has(chat.id)).toBe(true));
     expect(scroller.scrollTop).toBe(scroller.end);
+  });
+});
+
+describe('Chat: Hochscrollen per Tastatur und Scrollleiste (D-118, Lücke aus D-115)', () => {
+  it('lässt ein kurzes Hochscrollen per Tastatur (Pfeil hoch, 40 px, ohne Geste) stehen', async () => {
+    const { server, chat } = await openAtEnd();
+    const generation = await startWriting(server, chat.id);
+
+    // Pfeil hoch: Es kommt weder Mausrad noch Fingergeste, nur die Taste und das Scroll-Ereignis mit der neuen Position.
+    key('ArrowUp');
+    scroller.scrollTop = scroller.end - 40;
+    scrollEvent();
+    const dort = scroller.scrollTop;
+    act(() => generation.delta('Zweites Stück. '));
+    await screen.findByText(/Zweites Stück/);
+    expect(scroller.scrollTop).toBe(dort);
+  });
+
+  it('lässt auch Hochscrollen stehen, wenn das Ereignis erst nach dem nächsten Textstück kommt', async () => {
+    const { server, chat } = await openAtEnd();
+    const generation = await startWriting(server, chat.id);
+
+    key('PageUp');
+    scroller.scrollTop = scroller.end - 60;
+    const dort = scroller.scrollTop;
+    act(() => generation.delta('Zweites Stück. '));
+    await screen.findByText(/Zweites Stück/);
+    expect(scroller.scrollTop).toBe(dort);
+  });
+
+  it('holt zurück, wenn die Position ohne Beleg um wenige Pixel sinkt (Klemmen und Nachwachsen, F-016), nicht aber nach Pfeil hoch im Eingabefeld', async () => {
+    const { server, chat } = await openAtEnd();
+    const generation = await startWriting(server, chat.id);
+
+    // Pfeil hoch im Eingabefeld bewegt den Cursor, nicht die Seite: Das ist kein Beleg.
+    const field = await screen.findByRole('textbox', { name: 'Nachricht' });
+    act(
+      () =>
+        void field.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true })),
+    );
+    scroller.scrollTop = scroller.end - 34;
+    scrollEvent();
+    scroller.scrollHeight = 2300;
+    act(() => generation.delta('Zweites Stück. '));
+    await screen.findByText(/Zweites Stück/);
+    expect(scroller.scrollTop).toBe(scroller.end);
+  });
+
+  it('lässt langsames Ziehen an der Scrollleiste stehen (viele kleine Schritte, je 1 px)', async () => {
+    const { server, chat } = await openAtEnd();
+    const generation = await startWriting(server, chat.id);
+
+    for (let step = 1; step <= 40; step++) {
+      scroller.scrollTop = scroller.end - step;
+      scrollEvent();
+    }
+    const dort = scroller.scrollTop;
+    scroller.scrollHeight = 2300;
+    act(() => generation.delta('Zweites Stück. '));
+    await screen.findByText(/Zweites Stück/);
+    expect(scroller.scrollTop).toBe(dort);
+  });
+
+  it('bleibt am Ende, wenn die Position nur um höchstens 2 px schwankt', async () => {
+    const { server, chat } = await openAtEnd();
+    const generation = await startWriting(server, chat.id);
+
+    for (const jitter of [1, 2, 1, 0, 2]) {
+      scroller.scrollTop = scroller.end - jitter;
+      scrollEvent();
+    }
+    scroller.scrollHeight = 2300;
+    act(() => generation.delta('Zweites Stück. '));
+    await screen.findByText(/Zweites Stück/);
+    expect(scroller.scrollTop).toBe(scroller.end);
+  });
+});
+
+describe('Chat: „Zum Ende“-Knopf (F-082, D-118)', () => {
+  const NAME = 'Zum Ende des Chats';
+  const button = () => screen.queryByRole('button', { name: NAME });
+
+  it('fehlt am Ende und bei kurzem Hochscrollen (bis 160 px), erscheint darüber', async () => {
+    await openAtEnd();
+    expect(button()).toBeNull();
+
+    scroller.scrollTop = scroller.end - 100;
+    scrollEvent();
+    expect(button()).toBeNull();
+
+    scroller.scrollTop = scroller.end - 161;
+    scrollEvent();
+    expect(button()).not.toBeNull();
+  });
+
+  it('sitzt im Eingabebereich vor dem Eingabefeld (Tab erreicht ihn zuletzt nach der Nachrichtenliste)', async () => {
+    const { composer, messages } = await openAtEnd();
+    scroller.scrollTop = 300;
+    scrollEvent();
+    const toEnd = button() as HTMLElement;
+    expect(composer.contains(toEnd)).toBe(true);
+    expect(messages.contains(toEnd)).toBe(false);
+    const field = screen.getByRole('textbox', { name: 'Nachricht' });
+    expect(toEnd.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(messages.compareDocumentPosition(toEnd) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('bringt ans Ende, verschwindet und nimmt das Mitlesen wieder auf', async () => {
+    const { messages } = await openAtEnd();
+    scroller.scrollTop = 300;
+    scrollEvent();
+    const user = userEvent.setup();
+    await user.click(button() as HTMLElement);
+    expect(scroller.scrollTop).toBe(scroller.end);
+    expect(button()).toBeNull();
+
+    // Das Mitlesen gilt wieder: wächst der Verlauf, folgt die Ansicht.
+    scroller.scrollHeight = 2600;
+    resized(messages);
+    expect(scroller.scrollTop).toBe(scroller.end);
+  });
+
+  it('beim Schreiben: der Punkt „es kommt Text“ steht am Knopf, und nach dem Klick wird der nächste Text verfolgt', async () => {
+    const { server, chat } = await openAtEnd();
+    const generation = await startWriting(server, chat.id);
+    scroller.scrollTop = 200;
+    scrollEvent();
+    const toEnd = button() as HTMLElement;
+    expect(toEnd.getAttribute('data-writing')).toBe('true');
+
+    const user = userEvent.setup();
+    await user.click(toEnd);
+    expect(scroller.scrollTop).toBe(scroller.end);
+    scroller.scrollHeight = 2600;
+    act(() => generation.delta('Zweites Stück. '));
+    await screen.findByText(/Zweites Stück/);
+    expect(scroller.scrollTop).toBe(scroller.end);
+  });
+
+  it('zeigt den Punkt nicht, wenn nichts schreibt', async () => {
+    await openAtEnd();
+    scroller.scrollTop = 200;
+    scrollEvent();
+    expect((button() as HTMLElement).hasAttribute('data-writing')).toBe(false);
+  });
+
+  it('löst mit der Tastatur aus (Enter) und gibt den Fokus an das Eingabefeld, nicht an die Seite', async () => {
+    await openAtEnd();
+    scroller.scrollTop = 300;
+    scrollEvent();
+    const user = userEvent.setup();
+    (button() as HTMLElement).focus();
+    await user.keyboard('{Enter}');
+    expect(scroller.scrollTop).toBe(scroller.end);
+    expect(button()).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Nachricht' }));
+  });
+
+  it('löst mit der Maus aus, ohne den Fokus in das Eingabefeld zu holen (Tastatur auf dem Telefon)', async () => {
+    await openAtEnd();
+    scroller.scrollTop = 300;
+    scrollEvent();
+    const user = userEvent.setup();
+    await user.click(button() as HTMLElement);
+    expect(document.activeElement).not.toBe(screen.getByRole('textbox', { name: 'Nachricht' }));
+  });
+
+  it('verschwindet wieder, wenn die Person zurück nah ans Ende scrollt', async () => {
+    await openAtEnd();
+    scroller.scrollTop = 300;
+    scrollEvent();
+    expect(button()).not.toBeNull();
+    scroller.scrollTop = scroller.end - 100;
+    scrollEvent();
+    expect(button()).toBeNull();
+  });
+
+  it('verschwindet nach dem Senden (die Ansicht kehrt ans Ende zurück)', async () => {
+    const { server, chat } = await openAtEnd();
+    scroller.scrollTop = 200;
+    scrollEvent();
+    expect(button()).not.toBeNull();
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('textbox', { name: 'Nachricht' }));
+    await user.paste('Noch eine Frage');
+    await user.click(screen.getByRole('button', { name: 'Senden' }));
+    await waitFor(() => expect(server.generations.has(chat.id)).toBe(true));
+    expect(button()).toBeNull();
   });
 });

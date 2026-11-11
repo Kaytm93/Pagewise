@@ -1178,6 +1178,38 @@
   box-shadow: var(--raum-in-s);
 }
 
+/* „Zum Ende“-Knopf im Chat (F-082, D-118): ein gehobener Rundknopf wie die übrigen gehobenen Knöpfe (mo-press, D-112):
+   --raum-raised, kein Rand, die kleine Stufe der Schatten, gedrückt eingelassen mit 1 px Verschieben. Lage, Größe und das
+   Ein- und Ausblenden stehen in screens.css, hier nur die Fläche. Übergänge hängen an `mo-press` (--t-color, 0 ms bei
+   „Reduziert“ und „Aus“); Hover gibt es in Raum bei gehobenen Knöpfen nicht. Der Punkt beim Schreiben ist eine LED wie
+   `.lg-dot`: Fachfarbe, Fassung aus der Schattenfarbe, leises Glühen. Die Regeln stehen außerhalb von @layer wie die
+   übrigen Raum-Regeln an Bedienelementen. */
+:root[data-design="raum"] .lg-toend-button {
+  --toend-surface: var(--raum-raised);
+  border: 0;
+  background-color: var(--raum-raised);
+  box-shadow: var(--raum-up-s);
+}
+
+:root[data-design="raum"] .lg-toend-button:active {
+  box-shadow: var(--raum-in-s);
+}
+
+:root[data-design="raum"] .lg-toend-button[data-writing]::after {
+  top: 3px;
+  right: 3px;
+  background: radial-gradient(
+    circle at 34% 30%,
+    color-mix(in srgb, var(--subj, var(--accent)) 45%, #fff) 0 16%,
+    var(--subj, var(--accent)) 58%,
+    color-mix(in srgb, var(--subj, var(--accent)) 80%, #000) 100%
+  );
+  box-shadow:
+    0 0 0 2px var(--raum-raised),
+    0 0 0 3px var(--raum-dark),
+    0 0 8px 1px color-mix(in srgb, var(--subj, var(--accent)) 42%, transparent);
+}
+
 /* Textfelder außerhalb der Eingabezeile (B-20, D-089): Anmeldung, Einrichtung, Onboarding, Dialoge, Einstellungen, Editor
    (Stichwörter, Text), Hefte-Suche. Das Feld hängt über den Haken `lg-field` an (ui/Field.tsx: Text, Passcode, Auswahl,
    Textbereich; NoteList, NotePage) und hat dieselbe Gestalt wie die Chat-Eingabe: Mulde in der Fläche, auf der es liegt
