@@ -722,6 +722,7 @@ export const de = {
     send: 'Senden',
     stop: 'Antwort stoppen',
     stopping: 'Wird gestoppt …',
+    toEnd: 'Zum Ende des Chats',
     waiting: 'Warte auf das Modell …',
     writing: 'Pagewise schreibt …',
     thinking: 'Das Modell überlegt …',

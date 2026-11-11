@@ -41,6 +41,7 @@ import { FilePanel } from './FilePanel';
 import { MessageItem } from './MessageItem';
 import { ModelDialog } from './ModelDialog';
 import { describeEngine, describeSelection, effectiveModel, effectiveTarget } from './models';
+import { ScrollToEnd } from './ScrollToEnd';
 import { useChat } from './useChat';
 import { useFollowEnd } from './useFollowEnd';
 
@@ -150,7 +151,8 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
   panelState.open = panelOpen;
   panelState.width = panelWidth;
   const panelArea = useRef<HTMLDivElement | null>(null);
-  const { follow, pin, watch } = useFollowEnd();
+  const { follow, pin, toEnd, away, watch } = useFollowEnd();
+  const composerBox = useRef<HTMLDivElement | null>(null);
   const previousLive = useRef<string | null>(null);
   const loadedChatId = state.phase === 'ready' ? (state.chat?.id ?? null) : null;
 
@@ -317,6 +319,14 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
     return chat.send(text, files);
   }
 
+  // „Zum Ende“ (F-082, D-118): ans Ende und wieder mitlesen. Der Knopf wird dabei verborgen und kann den Fokus nicht
+  // behalten. Hat ihn die Tastatur ausgelöst, geht der Fokus ins Eingabefeld statt auf die Seite; nach einem Klick
+  // bleibt er unberührt (auf dem Telefon würde das Feld sonst die Tastatur öffnen).
+  function backToEnd(byKeyboard: boolean) {
+    toEnd();
+    if (byKeyboard) composerBox.current?.querySelector('textarea')?.focus({ preventScroll: true });
+  }
+
   const sourceText = model ? m.chat.source[model.source] : null;
   const modelLabel = model ? model.label : m.chat.modelNone;
   const modelSource = sourceText && model?.source !== 'default' ? sourceText : null;
@@ -465,7 +475,13 @@ export function ChatPage({ subjectId, chatId }: { subjectId: string; chatId: str
             onInput={chat.dismissProblem}
             className={`sticky bottom-[var(--kb,0px)] z-10 rounded-b-[12px] border-t border-line-warm bg-sheet px-4 pt-3.5 pb-3.5 sm:px-8${atelier ? ' at-chat-dock' : ''}`}
           >
-            <div className="mx-auto w-full max-w-[700px]">
+            <ScrollToEnd
+              visible={away}
+              writing={chat.running || current.generating}
+              subjectColor={subject.color}
+              onToEnd={backToEnd}
+            />
+            <div ref={composerBox} className="mx-auto w-full max-w-[700px]">
               {chat.reconnecting && (
                 <p role="status" className="mb-2 text-sm text-ink-secondary">
                   {m.chat.reconnecting}
