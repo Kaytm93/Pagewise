@@ -577,6 +577,96 @@ describe('Editor', () => {
     expect(await screen.findByText('Gespeichert')).toBeTruthy();
   });
 
+  it('sichert sofort, wenn die Seite ausgeblendet wird, und ohne Änderung nicht (F-008, D-119)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { markdown: '' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    const text = await screen.findByRole('textbox', { name: 'Text (Markdown)' });
+    const hidden = () => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'hidden',
+      });
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      delete (document as { visibilityState?: unknown }).visibilityState;
+    };
+    // Gegenprobe: ohne Änderung schickt das Ausblenden nichts.
+    hidden();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(0);
+
+    await user.type(text, 'App-Wechsel');
+    hidden();
+    // Deutlich vor der Pause des Autospeicherns (1,2 s): das Ausblenden selbst löst das Senden aus.
+    await waitFor(() => expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(1), {
+      timeout: 500,
+    });
+    const patch = server.calls('PATCH', `/api/notes/${note.id}`)[0];
+    expect(patch?.body).toMatchObject({ markdown: 'App-Wechsel' });
+    expect(patch?.keepalive).toBeUndefined();
+    expect(await screen.findByText('Gespeichert')).toBeTruthy();
+    expect(server.notes[0]?.markdown).toBe('App-Wechsel');
+  });
+
+  it('schickt beim Schließen der Seite (pagehide) den Stand mit keepalive (F-008, D-119)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { markdown: '' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole('textbox', { name: 'Text (Markdown)' }), 'Tab zu');
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    await waitFor(() => expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(1), {
+      timeout: 500,
+    });
+    const patch = server.calls('PATCH', `/api/notes/${note.id}`)[0];
+    expect(patch?.keepalive).toBe(true);
+    expect(patch?.body).toEqual({
+      title: 'Beispieleintrag',
+      markdown: 'Tab zu',
+      pinned: false,
+      tags: [],
+    });
+    // Ohne offene Änderung schickt pagehide nichts mehr.
+    await waitFor(() => expect(server.notes[0]?.markdown).toBe('Tab zu'));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const before = server.calls('PATCH', `/api/notes/${note.id}`).length;
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(before);
+  });
+
+  it('schickt über 64 KiB beim Schließen nichts mit keepalive, beim Ausblenden aber normal (D-119)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { markdown: 'x'.repeat(70_000) });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    const text = await screen.findByRole('textbox', { name: 'Text (Markdown)' });
+    await user.type(text, 'y');
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(0);
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    delete (document as { visibilityState?: unknown }).visibilityState;
+    await waitFor(() => expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(1), {
+      timeout: 500,
+    });
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)[0]?.keepalive).toBeUndefined();
+    expect(server.notes[0]?.markdown).toBe(`${'x'.repeat(70_000)}y`);
+  });
+
   it('löscht nach Bestätigung und kehrt zur Liste zurück', async () => {
     const { server, subject } = setup();
     const note = server.addNote(subject.id, { title: 'Zu löschen' });

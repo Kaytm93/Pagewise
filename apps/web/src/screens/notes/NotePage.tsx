@@ -23,6 +23,8 @@ type View = 'write' | 'preview';
 /** Zeit nach der letzten Eingabe, bis automatisch gespeichert wird. */
 const AUTOSAVE_MS = 1200;
 const MAX_CHARACTERS = 100_000;
+/** Größter Körper, den `fetch` mit `keepalive` noch annimmt (Fetch-Standard: 64 KiB je Dokument). */
+const KEEPALIVE_MAX_BYTES = 64 * 1024;
 
 const parseTags = (value: string): string[] => {
   const seen = new Set<string>();
@@ -198,6 +200,32 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
     const timer = setTimeout(() => void save(), AUTOSAVE_MS);
     return () => clearTimeout(timer);
   }, [title, markdown, pinned, tagsText]);
+
+  // Ausblenden und Schließen (F-008, D-119): Wird die Seite ausgeblendet (App-Wechsel, Sperre, anderer
+  // Tab), geht ein offener Stand sofort auf dem normalen Weg raus, die Seite lebt ja weiter. Beim
+  // Entladen (`pagehide`: Neuladen, Tab schließen) geht er zusätzlich mit `keepalive`, damit der Browser
+  // die Anfrage zu Ende schickt, auch wenn das Dokument schon weg ist; das deckt auch ein Speichern, das
+  // gerade noch läuft und sonst abgebrochen würde. `keepalive` trägt höchstens 64 KiB, größere Einträge
+  // sichert nur der Weg über das Ausblenden. Kein `beforeunload` (hält in der Mac-App das Beenden an),
+  // kein `sendBeacon` (kann das CSRF-Token nicht als Kopfzeile mitgeben, D-023).
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden' && dirty.current) void save();
+    };
+    const onPageHide = () => {
+      if (!stored.current || (!dirty.current && !inFlight.current)) return;
+      const patch = buildPatch(latest.current, stored.current);
+      if (!patch) return;
+      if (new TextEncoder().encode(JSON.stringify(patch)).length > KEEPALIVE_MAX_BYTES) return;
+      void api.updateNote(noteId, patch, { keepalive: true }).catch(() => undefined);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onPageHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', onPageHide);
+    };
+  }, [api, noteId, save]);
 
   // Beim Verlassen der Seite: was noch nicht gespeichert ist, abschicken; bei ungültigem Titel ohne ihn (D-119).
   useEffect(

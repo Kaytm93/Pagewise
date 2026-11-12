@@ -1,4 +1,4 @@
-import type { ApiClient } from './client';
+import type { ApiClient, RequestOptions } from './client';
 import type { SseMessage } from './sse';
 import type {
   ArtifactDetail,
@@ -264,8 +264,8 @@ export function createApi(client: ApiClient) {
     },
     note: (id: string) => client.request<Note>('GET', `/api/notes/${id}`),
     createNote: (input: NoteInput) => client.request<Note>('POST', '/api/notes', input),
-    updateNote: (id: string, patch: NotePatch) =>
-      client.request<Note>('PATCH', `/api/notes/${id}`, patch),
+    updateNote: (id: string, patch: NotePatch, options?: RequestOptions) =>
+      client.request<Note>('PATCH', `/api/notes/${id}`, patch, undefined, options),
     deleteNote: (id: string) => client.request<void>('DELETE', `/api/notes/${id}`),
     /** Macht aus einer fertigen Antwort einen Hefteintrag; den Text liest der Server selbst aus der Nachricht. */
     noteFromMessage: (chatId: string, messageId: string) =>
