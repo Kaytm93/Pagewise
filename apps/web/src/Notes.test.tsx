@@ -564,9 +564,7 @@ describe('Editor', () => {
       pinned: false,
       tags: [],
     });
-    expect(
-      await screen.findByText('Text gespeichert, der Titel nicht: Er braucht 1 bis 120 Zeichen.'),
-    ).toBeTruthy();
+    expect(await screen.findByText('Text gespeichert. Titel fehlt.')).toBeTruthy();
     expect(title.getAttribute('aria-invalid')).toBe('true');
     expect(server.notes[0]?.title).toBe('Alter Titel');
     // Schleifenwächter: der unveränderte, ungültige Titel löst kein weiteres Speichern aus.
@@ -576,6 +574,25 @@ describe('Editor', () => {
     await user.type(title, 'Neuer Titel');
     await waitFor(() => expect(server.notes[0]?.title).toBe('Neuer Titel'), { timeout: 4000 });
     expect(await screen.findByText('Gespeichert')).toBeTruthy();
+  });
+
+  it('sagt bei einem vorhandenen, zu langen Titel „Titel zu lang“ und sichert den Text (D-119)', async () => {
+    const { server, subject } = setup();
+    const longTitle = 'T'.repeat(125); // nur aus Bestandsdaten möglich, das Feld begrenzt auf 120
+    const note = server.addNote(subject.id, { title: longTitle, markdown: '' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole('textbox', { name: 'Text (Markdown)' }), 'wichtig');
+    await waitFor(() => expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(1), {
+      timeout: 4000,
+    });
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)[0]?.body).toEqual({
+      markdown: 'wichtig',
+      pinned: false,
+      tags: [],
+    });
+    expect(await screen.findByText('Text gespeichert. Titel zu lang.')).toBeTruthy();
+    expect(server.notes[0]?.title).toBe(longTitle);
   });
 
   it('sichert sofort, wenn die Seite ausgeblendet wird, und ohne Änderung nicht (F-008, D-119)', async () => {

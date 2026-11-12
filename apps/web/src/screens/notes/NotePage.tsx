@@ -367,7 +367,10 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
             ? e.invalidTitle
             : e.saveFailed
           : titleInvalid
-            ? e.savedTitleInvalid // Text ist gesichert, der alte Titel steht noch (D-119)
+            ? // Text ist gesichert, der alte Titel steht noch (D-119)
+              title.trim() === ''
+              ? e.savedTitleMissing
+              : e.savedTitleTooLong
             : e.saved;
 
   return (
