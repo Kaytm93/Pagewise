@@ -5,6 +5,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
 import { createApi } from './api/api';
 import { ApiClient } from './api/client';
+import { navigate } from './router';
 import { FakeServer } from './test/fake-server';
 
 const MODEL = { id: 'modell-a', vision: false, tools: false, reasoning: false, streaming: true };
@@ -665,6 +666,73 @@ describe('Editor', () => {
     });
     expect(server.calls('PATCH', `/api/notes/${note.id}`)[0]?.keepalive).toBeUndefined();
     expect(server.notes[0]?.markdown).toBe(`${'x'.repeat(70_000)}y`);
+  });
+
+  it('hält einen beim Verlassen nicht gesendeten Stand bis zum nächsten Öffnen und schickt ihn dann (S-03, D-119)', async () => {
+    // Der Rückweg über den Link holt die Liste mit scrollIntoView in den Blick (M4-T017); jsdom kennt
+    // das nicht (Muster NoteReturn.test.tsx), darum hier ein Stummel nur für diesen Fall.
+    const prototype = Element.prototype as { scrollIntoView?: () => void };
+    prototype.scrollIntoView = () => undefined;
+    try {
+      const { server, subject } = setup();
+      const note = server.addNote(subject.id, { title: 'Eintrag', markdown: 'Start' });
+      open(server, notePath(subject.id, note.id));
+      const user = userEvent.setup();
+      const text = await screen.findByRole('textbox', { name: 'Text (Markdown)' });
+      server.replyOnce('PATCH', `/api/notes/${note.id}`, () => new Response(null, { status: 500 }));
+      await user.type(text, ' offline');
+      await user.click(screen.getByRole('link', { name: /Zurück zu den Hefteinträgen/ }));
+      await waitFor(() => expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(1));
+      expect(server.notes[0]?.markdown).toBe('Start');
+
+      // Denselben Eintrag aus der Liste wieder öffnen: die Eingabe steht da, als „Nicht gespeichert“,
+      // und geht erneut raus.
+      await user.click(await screen.findByRole('link', { name: /Eintrag/ }));
+      const again = (await screen.findByRole('textbox', {
+        name: 'Text (Markdown)',
+      })) as HTMLTextAreaElement;
+      expect(again.value).toBe('Start offline');
+      expect(screen.getByText('Nicht gespeichert')).toBeTruthy();
+      await waitFor(() => expect(server.notes[0]?.markdown).toBe('Start offline'), {
+        timeout: 4000,
+      });
+      expect(await screen.findByText('Gespeichert')).toBeTruthy();
+    } finally {
+      delete prototype.scrollIntoView;
+    }
+  });
+
+  it('hält den Stand auch ohne Netz beim Verlassen und verwirft ihn nach dem Senden (D-119)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { title: 'Eintrag', markdown: '' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    const text = await screen.findByRole('textbox', { name: 'Text (Markdown)' });
+    await user.type(text, 'ohne Netz');
+    server.unreachable = true;
+    await user.click(screen.getByRole('link', { name: /Zurück zu den Hefteinträgen/ }));
+    await waitFor(() => expect(window.location.pathname).toBe(notesPath(subject.id)));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    server.unreachable = false;
+    expect(server.notes[0]?.markdown).toBe('');
+
+    act(() => navigate({ name: 'note', subjectId: subject.id, noteId: note.id }));
+    const again = (await screen.findByRole('textbox', {
+      name: 'Text (Markdown)',
+    })) as HTMLTextAreaElement;
+    expect(again.value).toBe('ohne Netz');
+    expect(screen.getByText('Nicht gespeichert')).toBeTruthy();
+    await waitFor(() => expect(server.notes[0]?.markdown).toBe('ohne Netz'), { timeout: 4000 });
+
+    // Nach dem Senden ist der Stand verbraucht: ein drittes Öffnen zeigt den Server-Stand.
+    act(() => navigate({ name: 'subject', subjectId: subject.id, groupId: null, tab: 'notes' }));
+    await screen.findByRole('link', { name: /Eintrag/ });
+    act(() => navigate({ name: 'note', subjectId: subject.id, noteId: note.id }));
+    const third = (await screen.findByRole('textbox', {
+      name: 'Text (Markdown)',
+    })) as HTMLTextAreaElement;
+    expect(third.value).toBe('ohne Netz');
+    expect(screen.getByText('Gespeichert')).toBeTruthy();
   });
 
   it('löscht nach Bestätigung und kehrt zur Liste zurück', async () => {

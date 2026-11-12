@@ -14,6 +14,7 @@ import { Sheet } from '../../ui/Sheet';
 import { useWorkspace } from '../../workspace/WorkspaceProvider';
 import { Markdown } from '../chat/Markdown';
 import { NotFoundPage } from '../NotFoundPage';
+import { forgetPending, type NoteDraft, rememberPending, takePending } from './pending';
 import { TEMPLATE_KEYS, TEMPLATES, type TemplateKey } from './templates';
 
 type Phase = 'loading' | 'ready' | 'not-found' | 'error';
@@ -38,14 +39,6 @@ const parseTags = (value: string): string[] => {
   return tags.slice(0, 10);
 };
 
-/** Der Stand der vier Felder, so wie die Person ihn eingegeben hat. */
-interface Draft {
-  title: string;
-  markdown: string;
-  pinned: boolean;
-  tagsText: string;
-}
-
 const titleValid = (title: string) => title !== '' && [...title].length <= 120;
 
 /**
@@ -54,7 +47,7 @@ const titleValid = (title: string) => title !== '' && [...title].length <= 120;
  * Ist der Titel ungültig und sonst nichts anders als gespeichert, gibt es nichts zu senden (`null`),
  * sonst liefe nach jedem Speichern gleich das nächste.
  */
-function buildPatch(draft: Draft, stored: Note): NotePatch | null {
+function buildPatch(draft: NoteDraft, stored: Note): NotePatch | null {
   const title = draft.title.trim();
   const tags = parseTags(draft.tagsText);
   const rest = { markdown: draft.markdown, pinned: draft.pinned, tags };
@@ -64,6 +57,16 @@ function buildPatch(draft: Draft, stored: Note): NotePatch | null {
     rest.pinned !== stored.pinned ||
     tags.join('\u0000') !== stored.tags.join('\u0000');
   return restChanged ? rest : null;
+}
+
+/** Ob ein Stand in allen vier Feldern dem gespeicherten Eintrag entspricht. */
+function sameAsStored(draft: NoteDraft, stored: Note): boolean {
+  return (
+    draft.title === stored.title &&
+    draft.markdown === stored.markdown &&
+    draft.pinned === stored.pinned &&
+    parseTags(draft.tagsText).join('\u0000') === stored.tags.join('\u0000')
+  );
 }
 
 /**
@@ -110,7 +113,7 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
   const titleField = useRef<HTMLTextAreaElement>(null);
 
   // Der neueste Stand für das Speichern, unabhängig vom Rendern (auch beim Verlassen der Seite).
-  const latest = useRef<Draft>({ title, markdown, pinned, tagsText });
+  const latest = useRef<NoteDraft>({ title, markdown, pinned, tagsText });
   latest.current = { title, markdown, pinned, tagsText };
   // Der zuletzt vom Server bestätigte Stand, für den Abgleich außerhalb des Renderns.
   const stored = useRef<Note | null>(null);
@@ -135,12 +138,17 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
       .then((loaded) => {
         if (cancelled) return;
         setNote(loaded);
-        setTitle(loaded.title);
-        setMarkdown(loaded.markdown);
-        setPinned(loaded.pinned);
-        setTagsText(loaded.tags.join(', '));
-        dirty.current = false;
-        setSaving('saved');
+        // Ein beim letzten Verlassen nicht gesendeter Stand (D-119) kommt zurück und gilt als „Nicht
+        // gespeichert“; der Autospeicher schickt ihn dann erneut. Entspricht er dem Gespeicherten
+        // (ein zweiter Weg war schneller), bleibt der Server-Stand.
+        const pending = takePending(noteId);
+        const draft = pending && !sameAsStored(pending, loaded) ? pending : null;
+        setTitle(draft ? draft.title : loaded.title);
+        setMarkdown(draft ? draft.markdown : loaded.markdown);
+        setPinned(draft ? draft.pinned : loaded.pinned);
+        setTagsText(draft ? draft.tagsText : loaded.tags.join(', '));
+        dirty.current = draft !== null;
+        setSaving(draft ? 'dirty' : 'saved');
         setPhase('ready');
       })
       .catch((error) => {
@@ -176,6 +184,8 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
     } catch {
       dirty.current = true;
       if (alive.current) setSaving('failed');
+      // Die Seite ist schon verlassen: der Stand bleibt bis zum nächsten Öffnen des Eintrags (D-119).
+      else rememberPending(noteId, latest.current);
     } finally {
       inFlight.current = false;
       if (again.current) {
@@ -227,12 +237,15 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
     };
   }, [api, noteId, save]);
 
-  // Beim Verlassen der Seite: was noch nicht gespeichert ist, abschicken; bei ungültigem Titel ohne ihn (D-119).
+  // Beim Verlassen der Seite: was noch nicht gespeichert ist, abschicken; bei ungültigem Titel ohne ihn.
+  // Scheitert das (kein Netz, Serverfehler), bleibt der Stand im Speicher der Seite und kommt beim
+  // nächsten Öffnen desselben Eintrags zurück (D-119); nach dem Neuladen ist er weg.
   useEffect(
     () => () => {
       if (!dirty.current || !stored.current) return;
-      const patch = buildPatch(latest.current, stored.current);
-      if (patch) void api.updateNote(noteId, patch).catch(() => undefined);
+      const draft = latest.current;
+      const patch = buildPatch(draft, stored.current);
+      if (patch) void api.updateNote(noteId, patch).catch(() => rememberPending(noteId, draft));
     },
     [api, noteId],
   );
@@ -339,6 +352,7 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
       }
     }
     dirty.current = false;
+    forgetPending(noteId);
     zurueckMarkieren();
     navigate(backTo);
   }
