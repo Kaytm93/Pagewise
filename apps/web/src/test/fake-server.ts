@@ -34,6 +34,8 @@ export interface RecordedRequest {
   body: unknown;
   headers: Headers;
   signal?: AbortSignal | null;
+  /** `fetch`-Option `keepalive` (Senden beim Schließen der Seite); fehlt, wenn nicht gesetzt. */
+  keepalive?: boolean;
 }
 
 type Override = (request: RecordedRequest) => Response | undefined;
@@ -401,7 +403,14 @@ export class FakeServer {
         : init?.body instanceof FormData
           ? init.body
           : undefined;
-    const request: RecordedRequest = { method, path, body, headers, signal: init?.signal };
+    const request: RecordedRequest = {
+      method,
+      path,
+      body,
+      headers,
+      signal: init?.signal,
+      ...(init?.keepalive === undefined ? {} : { keepalive: init.keepalive }),
+    };
     this.requests.push(request);
 
     for (const override of this.overrides) {

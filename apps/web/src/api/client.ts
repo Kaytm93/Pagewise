@@ -22,6 +22,15 @@ export class ApiError extends Error {
   }
 }
 
+/** Zusätze für eine einzelne Anfrage; ohne Angabe bleibt alles wie bisher. */
+export interface RequestOptions {
+  /**
+   * Die Anfrage darf das Entladen der Seite überleben (`fetch` mit `keepalive`), etwa beim Schließen
+   * des Tabs. Der Browser begrenzt den Körper dann auf 64 KiB; der Aufrufer prüft das vorher.
+   */
+  keepalive?: boolean;
+}
+
 export interface ApiClientOptions {
   fetch?: typeof fetch;
   /** Wird aufgerufen, wenn der Server die Sitzung nicht (mehr) kennt oder das CSRF-Token nicht passt. */
@@ -67,6 +76,7 @@ export class ApiClient {
     accept: string,
     body: unknown,
     signal?: AbortSignal,
+    options: RequestOptions = {},
   ): Promise<Response> {
     const headers: Record<string, string> = { Accept: accept };
     if (body !== undefined && !(body instanceof FormData))
@@ -81,6 +91,7 @@ export class ApiClient {
           body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
         credentials: 'same-origin',
         signal,
+        ...(options.keepalive ? { keepalive: true } : {}),
       });
     } catch (error) {
       if (isAbort(error)) throw error;
@@ -109,8 +120,14 @@ export class ApiClient {
     return new ApiError(code, response.status, details);
   }
 
-  async request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-    const response = await this.send(method, path, 'application/json', body, signal);
+  async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    signal?: AbortSignal,
+    options?: RequestOptions,
+  ): Promise<T> {
+    const response = await this.send(method, path, 'application/json', body, signal, options);
     if (response.status === 204) return undefined as T;
     if (!response.ok) throw await this.failure(response);
 

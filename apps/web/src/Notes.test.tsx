@@ -5,6 +5,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
 import { createApi } from './api/api';
 import { ApiClient } from './api/client';
+import { navigate } from './router';
 import { FakeServer } from './test/fake-server';
 
 const MODEL = { id: 'modell-a', vision: false, tools: false, reasoning: false, streaming: true };
@@ -530,6 +531,225 @@ describe('Editor', () => {
     await user.click(screen.getByRole('link', { name: /Zurück zu den Hefteinträgen/ }));
     await waitFor(() => expect(server.notes[0]?.markdown).toBe('noch schnell'));
     expect(window.location.pathname).toBe(notesPath(subject.id));
+  });
+
+  it('speichert beim Verlassen den Text auch bei leerem Titel, der alte Titel bleibt (F-001, D-119)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { title: 'Alter Titel', markdown: 'Start' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    await user.clear(await screen.findByRole('textbox', { name: 'Titel' }));
+    await user.type(screen.getByRole('textbox', { name: 'Text (Markdown)' }), ' mehr');
+    await user.click(screen.getByRole('link', { name: /Zurück zu den Hefteinträgen/ }));
+    await waitFor(() => expect(server.notes[0]?.markdown).toBe('Start mehr'));
+    expect(server.notes[0]?.title).toBe('Alter Titel');
+    const patch = server.calls('PATCH', `/api/notes/${note.id}`);
+    expect(patch).toHaveLength(1);
+    expect(patch[0]?.body).toEqual({ markdown: 'Start mehr', pinned: false, tags: [] });
+  });
+
+  it('speichert bei leerem Titel nach der Pause genau einmal ohne Titel und sagt es (D-119)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { title: 'Alter Titel', markdown: '' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    const title = await screen.findByRole('textbox', { name: 'Titel' });
+    await user.clear(title);
+    await user.type(screen.getByRole('textbox', { name: 'Text (Markdown)' }), 'wichtig');
+    await waitFor(() => expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(1), {
+      timeout: 4000,
+    });
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)[0]?.body).toEqual({
+      markdown: 'wichtig',
+      pinned: false,
+      tags: [],
+    });
+    expect(await screen.findByText('Text gespeichert. Titel fehlt.')).toBeTruthy();
+    expect(title.getAttribute('aria-invalid')).toBe('true');
+    expect(server.notes[0]?.title).toBe('Alter Titel');
+    // Schleifenwächter: der unveränderte, ungültige Titel löst kein weiteres Speichern aus.
+    await new Promise((resolve) => setTimeout(resolve, 1600));
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(1);
+    // Ein gültiger Titel wird danach mitgeschickt.
+    await user.type(title, 'Neuer Titel');
+    await waitFor(() => expect(server.notes[0]?.title).toBe('Neuer Titel'), { timeout: 4000 });
+    expect(await screen.findByText('Gespeichert')).toBeTruthy();
+  });
+
+  it('sagt bei einem vorhandenen, zu langen Titel „Titel zu lang“ und sichert den Text (D-119)', async () => {
+    const { server, subject } = setup();
+    const longTitle = 'T'.repeat(125); // nur aus Bestandsdaten möglich, das Feld begrenzt auf 120
+    const note = server.addNote(subject.id, { title: longTitle, markdown: '' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole('textbox', { name: 'Text (Markdown)' }), 'wichtig');
+    await waitFor(() => expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(1), {
+      timeout: 4000,
+    });
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)[0]?.body).toEqual({
+      markdown: 'wichtig',
+      pinned: false,
+      tags: [],
+    });
+    expect(await screen.findByText('Text gespeichert. Titel zu lang.')).toBeTruthy();
+    expect(server.notes[0]?.title).toBe(longTitle);
+  });
+
+  it('sichert sofort, wenn die Seite ausgeblendet wird, und ohne Änderung nicht (F-008, D-119)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { markdown: '' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    const text = await screen.findByRole('textbox', { name: 'Text (Markdown)' });
+    const hidden = () => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'hidden',
+      });
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      delete (document as { visibilityState?: unknown }).visibilityState;
+    };
+    // Gegenprobe: ohne Änderung schickt das Ausblenden nichts.
+    hidden();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(0);
+
+    await user.type(text, 'App-Wechsel');
+    hidden();
+    // Deutlich vor der Pause des Autospeicherns (1,2 s): das Ausblenden selbst löst das Senden aus.
+    await waitFor(() => expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(1), {
+      timeout: 500,
+    });
+    const patch = server.calls('PATCH', `/api/notes/${note.id}`)[0];
+    expect(patch?.body).toMatchObject({ markdown: 'App-Wechsel' });
+    expect(patch?.keepalive).toBeUndefined();
+    expect(await screen.findByText('Gespeichert')).toBeTruthy();
+    expect(server.notes[0]?.markdown).toBe('App-Wechsel');
+  });
+
+  it('schickt beim Schließen der Seite (pagehide) den Stand mit keepalive (F-008, D-119)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { markdown: '' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole('textbox', { name: 'Text (Markdown)' }), 'Tab zu');
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    await waitFor(() => expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(1), {
+      timeout: 500,
+    });
+    const patch = server.calls('PATCH', `/api/notes/${note.id}`)[0];
+    expect(patch?.keepalive).toBe(true);
+    expect(patch?.body).toEqual({
+      title: 'Beispieleintrag',
+      markdown: 'Tab zu',
+      pinned: false,
+      tags: [],
+    });
+    // Ohne offene Änderung schickt pagehide nichts mehr.
+    await waitFor(() => expect(server.notes[0]?.markdown).toBe('Tab zu'));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const before = server.calls('PATCH', `/api/notes/${note.id}`).length;
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(before);
+  });
+
+  it('schickt über 64 KiB beim Schließen nichts mit keepalive, beim Ausblenden aber normal (D-119)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { markdown: 'x'.repeat(70_000) });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    const text = await screen.findByRole('textbox', { name: 'Text (Markdown)' });
+    await user.type(text, 'y');
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(0);
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    delete (document as { visibilityState?: unknown }).visibilityState;
+    await waitFor(() => expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(1), {
+      timeout: 500,
+    });
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)[0]?.keepalive).toBeUndefined();
+    expect(server.notes[0]?.markdown).toBe(`${'x'.repeat(70_000)}y`);
+  });
+
+  it('hält einen beim Verlassen nicht gesendeten Stand bis zum nächsten Öffnen und schickt ihn dann (S-03, D-119)', async () => {
+    // Der Rückweg über den Link holt die Liste mit scrollIntoView in den Blick (M4-T017); jsdom kennt
+    // das nicht (Muster NoteReturn.test.tsx), darum hier ein Stummel nur für diesen Fall.
+    const prototype = Element.prototype as { scrollIntoView?: () => void };
+    prototype.scrollIntoView = () => undefined;
+    try {
+      const { server, subject } = setup();
+      const note = server.addNote(subject.id, { title: 'Eintrag', markdown: 'Start' });
+      open(server, notePath(subject.id, note.id));
+      const user = userEvent.setup();
+      const text = await screen.findByRole('textbox', { name: 'Text (Markdown)' });
+      server.replyOnce('PATCH', `/api/notes/${note.id}`, () => new Response(null, { status: 500 }));
+      await user.type(text, ' offline');
+      await user.click(screen.getByRole('link', { name: /Zurück zu den Hefteinträgen/ }));
+      await waitFor(() => expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(1));
+      expect(server.notes[0]?.markdown).toBe('Start');
+
+      // Denselben Eintrag aus der Liste wieder öffnen: die Eingabe steht da, als „Nicht gespeichert“,
+      // und geht erneut raus.
+      await user.click(await screen.findByRole('link', { name: /Eintrag/ }));
+      const again = (await screen.findByRole('textbox', {
+        name: 'Text (Markdown)',
+      })) as HTMLTextAreaElement;
+      expect(again.value).toBe('Start offline');
+      expect(screen.getByText('Nicht gespeichert')).toBeTruthy();
+      await waitFor(() => expect(server.notes[0]?.markdown).toBe('Start offline'), {
+        timeout: 4000,
+      });
+      expect(await screen.findByText('Gespeichert')).toBeTruthy();
+    } finally {
+      delete prototype.scrollIntoView;
+    }
+  });
+
+  it('hält den Stand auch ohne Netz beim Verlassen und verwirft ihn nach dem Senden (D-119)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { title: 'Eintrag', markdown: '' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    const text = await screen.findByRole('textbox', { name: 'Text (Markdown)' });
+    await user.type(text, 'ohne Netz');
+    server.unreachable = true;
+    await user.click(screen.getByRole('link', { name: /Zurück zu den Hefteinträgen/ }));
+    await waitFor(() => expect(window.location.pathname).toBe(notesPath(subject.id)));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    server.unreachable = false;
+    expect(server.notes[0]?.markdown).toBe('');
+
+    act(() => navigate({ name: 'note', subjectId: subject.id, noteId: note.id }));
+    const again = (await screen.findByRole('textbox', {
+      name: 'Text (Markdown)',
+    })) as HTMLTextAreaElement;
+    expect(again.value).toBe('ohne Netz');
+    expect(screen.getByText('Nicht gespeichert')).toBeTruthy();
+    await waitFor(() => expect(server.notes[0]?.markdown).toBe('ohne Netz'), { timeout: 4000 });
+
+    // Nach dem Senden ist der Stand verbraucht: ein drittes Öffnen zeigt den Server-Stand.
+    act(() => navigate({ name: 'subject', subjectId: subject.id, groupId: null, tab: 'notes' }));
+    await screen.findByRole('link', { name: /Eintrag/ });
+    act(() => navigate({ name: 'note', subjectId: subject.id, noteId: note.id }));
+    const third = (await screen.findByRole('textbox', {
+      name: 'Text (Markdown)',
+    })) as HTMLTextAreaElement;
+    expect(third.value).toBe('ohne Netz');
+    expect(screen.getByText('Gespeichert')).toBeTruthy();
   });
 
   it('löscht nach Bestätigung und kehrt zur Liste zurück', async () => {

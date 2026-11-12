@@ -532,6 +532,8 @@ export const de = {
       toolsHide: 'Stichwörter und Einfügen schließen',
       fromChat: 'Aus dem Chat',
       invalidTitle: 'Der Titel braucht 1 bis 120 Zeichen.',
+      savedTitleMissing: 'Text gespeichert. Titel fehlt.',
+      savedTitleTooLong: 'Text gespeichert. Titel zu lang.',
       tooLong: 'Der Text ist zu lang (höchstens 100.000 Zeichen).',
     },
     insertItems: {
