@@ -18,6 +18,7 @@ import type {
   Provider,
   ProviderPreset,
   ScanModel,
+  ScanPeriodTime,
   ScanProposal,
   ScanResult,
   Selection,
@@ -210,6 +211,11 @@ export class FakeServer {
   scanError: string | null = null;
   /** Das zuletzt hochgeladene Formular, für Prüfungen im Test. */
   lastScanForm: FormData | null = null;
+  /** Stundentafel der Erkennung: Nummern von Unterrichtsstunden und ihre Uhrzeiten. */
+  scanPeriods: ScanPeriodTime[] = [
+    { period: 1, startTime: '08:00', endTime: '08:45' },
+    { period: 2, startTime: '08:50', endTime: '09:35' },
+  ];
   weekAnchor: WeekAnchor | null = null;
   exams: Exam[] = [];
   notes: Note[] = [];
@@ -590,6 +596,22 @@ export class FakeServer {
   ): Response | undefined {
     if (method === 'GET' && path === '/api/timetable-scan/models') {
       return json(200, { models: this.scanModels });
+    }
+    if (method === 'GET' && path === '/api/timetable-scan/periods') {
+      return json(200, { periods: this.scanPeriods });
+    }
+    if (method === 'PUT' && path === '/api/timetable-scan/periods') {
+      const rows = Array.isArray(data.periods) ? (data.periods as ScanPeriodTime[]) : [];
+      const clean = rows.filter(
+        (row) =>
+          typeof row?.period === 'number' &&
+          typeof row?.startTime === 'string' &&
+          typeof row?.endTime === 'string' &&
+          row.endTime > row.startTime,
+      );
+      if (clean.length !== rows.length) return json(400, { error: 'invalid_input' });
+      this.scanPeriods = clean;
+      return json(200, { periods: this.scanPeriods });
     }
     if (method === 'POST' && path === '/api/timetable-scan') {
       this.lastScanForm = body instanceof FormData ? body : null;

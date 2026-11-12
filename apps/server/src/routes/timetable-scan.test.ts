@@ -161,11 +161,53 @@ describe('Stundenplan-Erkennung aus einem Bild', () => {
 
   it.each([
     ['GET', '/api/timetable-scan/models'],
+    ['GET', '/api/timetable-scan/periods'],
+    ['PUT', '/api/timetable-scan/periods'],
     ['POST', '/api/timetable-scan'],
     ['POST', '/api/timetable-scan/import'],
   ])('verlangt für %s %s eine Anmeldung', async (method, path) => {
     const reply = await harness.call(method, path, { body: {} });
     expect(reply.status).toBe(401);
+  });
+
+  it('liefert die Voreinstellung der Stundentafel und speichert eine eigene', async () => {
+    const initial = await session.call('GET', '/api/timetable-scan/periods');
+    expect(initial.status).toBe(200);
+    const defaults = initial.body.periods as { period: number; startTime: string }[];
+    expect(defaults.length).toBeGreaterThan(0);
+    expect(defaults[0]?.period).toBe(1);
+
+    const saved = await session.call('PUT', '/api/timetable-scan/periods', {
+      periods: [
+        { period: 1, startTime: '07:30', endTime: '08:15' },
+        { period: 2, startTime: '08:20', endTime: '09:05' },
+      ],
+    });
+    expect(saved.status).toBe(200);
+    expect(saved.body.periods).toEqual([
+      { period: 1, startTime: '07:30', endTime: '08:15' },
+      { period: 2, startTime: '08:20', endTime: '09:05' },
+    ]);
+    const reread = await session.call('GET', '/api/timetable-scan/periods');
+    expect(reread.body.periods).toEqual(saved.body.periods);
+  });
+
+  it.each([
+    ['Ende vor Beginn', [{ period: 1, startTime: '08:15', endTime: '07:30' }]],
+    [
+      'doppelte Nummer',
+      [
+        { period: 1, startTime: '07:30', endTime: '08:15' },
+        { period: 1, startTime: '08:20', endTime: '09:05' },
+      ],
+    ],
+    ['Nummer zu groß', [{ period: 17, startTime: '07:30', endTime: '08:15' }]],
+    ['unbekanntes Feld', [{ period: 1, startTime: '07:30', endTime: '08:15', extra: 'x' }]],
+  ])('lehnt eine Stundentafel ab: %s', async (_grund, periods) => {
+    const reply = await session.call('PUT', '/api/timetable-scan/periods', { periods });
+    expect(reply.status).toBe(400);
+    const reread = await session.call('GET', '/api/timetable-scan/periods');
+    expect((reread.body.periods as unknown[]).length).toBeGreaterThan(0);
   });
 
   it('listet nur Modelle mit Bildverstehen, deren Anbieter Bilder senden darf', async () => {
@@ -223,6 +265,63 @@ describe('Stundenplan-Erkennung aus einem Bild', () => {
     // Erkennen allein verändert weder Stundenplan noch Fächer.
     const timetable = await session.call('GET', '/api/timetable');
     expect((timetable.body.entries as unknown[]).length).toBe(0);
+  });
+
+  it('ordnet Nummern von Unterrichtsstunden den Zeiten der Stundentafel zu', async () => {
+    await session.call('PUT', '/api/timetable-scan/periods', {
+      periods: [
+        { period: 3, startTime: '09:55', endTime: '10:40' },
+        { period: 4, startTime: '10:45', endTime: '11:30' },
+      ],
+    });
+    upstream = () =>
+      answerOf(
+        JSON.stringify({
+          entries: [
+            {
+              weekday: 3,
+              startTime: null,
+              endTime: null,
+              period: 3,
+              subject: 'Beispielfach A',
+              room: 'Raum 1',
+              note: null,
+              week: 'all',
+            },
+            {
+              weekday: 3,
+              startTime: null,
+              endTime: null,
+              period: 4,
+              subject: 'Beispielfach B',
+              room: null,
+              note: null,
+              week: 'all',
+            },
+            {
+              weekday: 4,
+              startTime: null,
+              endTime: null,
+              period: 9,
+              subject: 'Beispielfach C',
+              room: null,
+              note: null,
+              week: 'all',
+            },
+          ],
+        }),
+      );
+    const reply = await scan();
+    expect(reply.status).toBe(200);
+    const body = reply.body as {
+      proposals: { period: number | null; startTime: string; endTime: string }[];
+      skipped: number;
+    };
+    expect(body.proposals).toMatchObject([
+      { period: 3, startTime: '09:55', endTime: '10:40' },
+      { period: 4, startTime: '10:45', endTime: '11:30' },
+    ]);
+    expect(body.skipped).toBe(1);
   });
 
   it('blockt Anbieter ohne Bilder-Freigabe und Modelle ohne Bildverstehen', async () => {

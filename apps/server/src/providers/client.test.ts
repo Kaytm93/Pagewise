@@ -676,6 +676,27 @@ describe('ProviderClient.streamChat', () => {
     ).rejects.toMatchObject({ code: 'timeout' });
   });
 
+  it('erlaubt pro Anfrage ein größeres Leerlauf-Zeitlimit', async () => {
+    // Eine vollständige Antwort (`stream: false`) kann lange dauern, ohne ein Zeichen zu senden;
+    // die Bilderkennung setzt dafür ihr eigenes, größeres Zeitlimit (siehe timetable-scan/service.ts).
+    const { fetch } = fakeFetch(() => {
+      const body = new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          await new Promise((resolve) => setTimeout(resolve, 60));
+          controller.enqueue(encoder.encode(chunk({ content: 'spät' })));
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        },
+      });
+      return new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } });
+    });
+    const client = new ProviderClient({ fetch, idleTimeoutMs: 30 });
+    const events = await drain(
+      client.streamChat(target, request, undefined, { idleTimeoutMs: 5_000 }),
+    );
+    expect(events.filter((event) => event.type === 'delta')).toHaveLength(1);
+  });
+
   it('begrenzt die Länge der Antwort', async () => {
     const piece = 'x'.repeat(50_000);
     const { fetch } = fakeFetch(() =>

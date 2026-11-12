@@ -1,6 +1,12 @@
 import { type ChangeEvent, useEffect, useId, useRef, useState } from 'react';
 import { ApiError, isAbort } from '../api/client';
-import type { ScanModel, ScanProposal, ScanProposalView, WeekKind } from '../api/types';
+import type {
+  ScanImportEntry,
+  ScanModel,
+  ScanPeriodTime,
+  ScanProposalView,
+  WeekKind,
+} from '../api/types';
 import { format, messages as m } from '../i18n';
 import { commonErrorMessage } from '../screens/auth-errors';
 import { useSession } from '../session/SessionProvider';
@@ -8,6 +14,7 @@ import { Button } from '../ui/Button';
 import { CheckField, SelectField } from '../ui/Field';
 import { FieldError } from '../ui/FieldError';
 import { Modal, ModalFooter } from '../ui/modal';
+import { disclosure } from '../ui/styles';
 import { useWorkspace } from '../workspace/WorkspaceProvider';
 import { usePlanner } from './PlannerProvider';
 import { MAX_CLIENT_IMAGE_BYTES, MAX_SCAN_IMAGE_BYTES, prepareImage } from './scan-image';
@@ -80,6 +87,8 @@ export function TimetableScanDialog({ onClose }: { onClose: () => void }) {
   const [skipped, setSkipped] = useState(0);
   const [createSubjects, setCreateSubjects] = useState(true);
   const [replaceExisting, setReplaceExisting] = useState(false);
+  const [periods, setPeriods] = useState<ScanPeriodTime[] | null>(null);
+  const [periodsState, setPeriodsState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
   const controller = useRef<AbortController | null>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` löst das erneute Laden aus
@@ -178,13 +187,41 @@ export function TimetableScanDialog({ onClose }: { onClose: () => void }) {
     );
   }
 
+  /** Stundentafel laden, sobald der Aufklapper zum ersten Mal geöffnet wird. */
+  async function loadPeriods() {
+    try {
+      setPeriods(await api.timetableScanPeriods());
+    } catch {
+      setPeriodsState('failed');
+    }
+  }
+
+  function updatePeriod(index: number, patch: Partial<ScanPeriodTime>) {
+    setPeriods((current) =>
+      current === null
+        ? current
+        : current.map((row, at) => (at === index ? { ...row, ...patch } : row)),
+    );
+  }
+
+  async function savePeriods() {
+    if (!periods) return;
+    setPeriodsState('saving');
+    try {
+      setPeriods((await api.setTimetableScanPeriods(periods)).periods);
+      setPeriodsState('saved');
+    } catch {
+      setPeriodsState('failed');
+    }
+  }
+
   async function takeOver() {
     if (included.length === 0) return;
     if (included.some((entry) => entry.endTime <= entry.startTime)) {
       setError(t.errors.times);
       return;
     }
-    const entries: ScanProposal[] = included.map((entry) => ({
+    const entries: ScanImportEntry[] = included.map((entry) => ({
       weekday: entry.weekday,
       startTime: entry.startTime,
       endTime: entry.endTime,
@@ -273,6 +310,65 @@ export function TimetableScanDialog({ onClose }: { onClose: () => void }) {
             <p className="mt-1.5 text-sm text-ink-muted">{t.imageHint}</p>
             {fileError && <FieldError>{fileError}</FieldError>}
           </div>
+          <details
+            onToggle={(event) => {
+              const open = (event.target as HTMLDetailsElement).open;
+              if (open && periods === null && periodsState !== 'failed') void loadPeriods();
+            }}
+          >
+            <summary className={disclosure}>{t.periodsTitle}</summary>
+            <div className="mt-2 space-y-2">
+              <p className="text-sm text-ink-secondary">{t.periodsHint}</p>
+              {periods === null ? (
+                <p role="status" className="text-sm text-ink-muted">
+                  {periodsState === 'failed' ? t.periodsFailed : t.periodsLoading}
+                </p>
+              ) : (
+                <>
+                  <ul className="space-y-1">
+                    {periods.map((row, index) => (
+                      <li key={row.period} className="flex items-center gap-2">
+                        <span className="w-8 shrink-0 text-sm text-ink-muted">{row.period}.</span>
+                        <input
+                          type="time"
+                          aria-label={`${t.from} ${row.period}`}
+                          value={row.startTime}
+                          disabled={periodsState === 'saving'}
+                          onChange={(event) =>
+                            updatePeriod(index, { startTime: event.target.value })
+                          }
+                          className={`${cell} w-28`}
+                        />
+                        <input
+                          type="time"
+                          aria-label={`${t.to} ${row.period}`}
+                          value={row.endTime}
+                          disabled={periodsState === 'saving'}
+                          onChange={(event) => updatePeriod(index, { endTime: event.target.value })}
+                          className={`${cell} w-28`}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="secondary"
+                      onClick={() => void savePeriods()}
+                      disabled={periodsState === 'saving'}
+                    >
+                      {periodsState === 'saving' ? t.periodsSaving : t.periodsSave}
+                    </Button>
+                    {periodsState === 'saved' && (
+                      <p role="status" className="text-sm text-ink-secondary">
+                        {t.periodsSaved}
+                      </p>
+                    )}
+                    {periodsState === 'failed' && <FieldError>{t.periodsFailed}</FieldError>}
+                  </div>
+                </>
+              )}
+            </div>
+          </details>
           {previewUrl && (
             <img
               src={previewUrl}
@@ -301,6 +397,11 @@ export function TimetableScanDialog({ onClose }: { onClose: () => void }) {
             <>
               <p className="font-medium">{format(t.previewTitle, { count: proposals.length })}</p>
               <p className="text-sm text-ink-secondary">{t.previewHint}</p>
+              {proposals.some((entry) => entry.period !== null) && (
+                <p role="status" className="text-sm text-ink-secondary">
+                  {t.periodsMapped}
+                </p>
+              )}
               {newSubjects.length > 0 && (
                 <p role="status" className="text-sm text-ink-secondary">
                   {format(t.newSubjects, { names: newSubjects.join(', ') })}
@@ -389,6 +490,9 @@ export function TimetableScanDialog({ onClose }: { onClose: () => void }) {
                         </div>
                         <p className="text-meta text-ink-muted">
                           {t.subjectState[entry.subjectState]}
+                          {entry.period !== null
+                            ? ` · ${format(t.periodLabel, { period: entry.period })}`
+                            : ''}
                         </p>
                       </div>
                     </div>

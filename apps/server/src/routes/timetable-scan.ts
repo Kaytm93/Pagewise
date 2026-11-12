@@ -12,8 +12,14 @@ import {
   SCAN_BODY_LIMIT,
   type ScanImage,
 } from '../timetable-scan/image';
-import { MAX_SCAN_ENTRIES, type ScanProposal } from '../timetable-scan/parse';
-import type { ImportResult, ScanResult, TimetableScanService } from '../timetable-scan/service';
+import { MAX_PERIOD_NUMBER, MAX_SCAN_ENTRIES } from '../timetable-scan/parse';
+import type { PeriodTime, PeriodTimes } from '../timetable-scan/periods';
+import type {
+  ImportResult,
+  ScanImportEntry,
+  ScanResult,
+  TimetableScanService,
+} from '../timetable-scan/service';
 
 // biome-ignore lint/suspicious/noControlCharactersInRegex: Steuerzeichen werden hier bewusst abgelehnt.
 const NO_CONTROL = /^[^\u0000-\u001f\u007f]*$/;
@@ -42,6 +48,18 @@ const ImportBody = z.strictObject({
   createSubjects: z.boolean().default(true),
   replaceExisting: z.boolean().default(false),
 });
+
+const PeriodRow = z
+  .strictObject({
+    period: z.number().int().min(1).max(MAX_PERIOD_NUMBER),
+    startTime: z.string().regex(TIME_PATTERN),
+    endTime: z.string().regex(TIME_PATTERN),
+  })
+  .refine((row) => row.endTime > row.startTime);
+
+const PeriodsBody = z
+  .strictObject({ periods: z.array(PeriodRow).max(MAX_PERIOD_NUMBER) })
+  .refine((body) => new Set(body.periods.map((row) => row.period)).size === body.periods.length);
 
 type Form = Record<string, string | File | Array<string | File>>;
 
@@ -127,12 +145,27 @@ function importFailure(c: Context, result: Extract<ImportResult, { ok: false }>)
  * Stundenplan aus einem Bild (D-107): Modelle auflisten, Bild erkennen lassen und die geprüften
  * Vorschläge übernehmen. Erkennen und Übernehmen sind getrennt: die Vorschau ändert keine Daten.
  */
-export function timetableScanRoutes(service: TimetableScanService): Hono<AppEnv> {
+export function timetableScanRoutes(
+  service: TimetableScanService,
+  periodTimes: PeriodTimes,
+): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   app.use('/timetable-scan', limitBody(SCAN_BODY_LIMIT));
   app.use('/timetable-scan/*', limitBody(SCAN_BODY_LIMIT));
+  app.use('/timetable-scan/periods', limitBody(4096));
 
   app.get('/timetable-scan/models', async (c) => c.json({ models: await service.models() }));
+
+  /** Die Stundentafel: Nummern von Unterrichtsstunden und ihre Uhrzeiten. */
+  app.get('/timetable-scan/periods', (c) => c.json({ periods: periodTimes.list() }));
+
+  app.put('/timetable-scan/periods', async (c) => {
+    const body = await readJson(c, PeriodsBody);
+    if (!body.ok) return body.response;
+    const rows: PeriodTime[] = [...body.data.periods].sort((a, b) => a.period - b.period);
+    periodTimes.replace(rows);
+    return c.json({ periods: rows });
+  });
 
   app.post('/timetable-scan', async (c) => {
     const form = await readScanForm(c);
@@ -150,7 +183,7 @@ export function timetableScanRoutes(service: TimetableScanService): Hono<AppEnv>
     const body = await readJson(c, ImportBody);
     if (!body.ok) return body.response;
     const result = service.importScan({
-      entries: body.data.entries as ScanProposal[],
+      entries: body.data.entries as ScanImportEntry[],
       createSubjects: body.data.createSubjects,
       replaceExisting: body.data.replaceExisting,
     });

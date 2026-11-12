@@ -27,6 +27,7 @@ const PROPOSAL: ScanProposalView = {
   weekday: 1,
   startTime: '08:00',
   endTime: '08:45',
+  period: null,
   subject: 'Beispielfach A',
   subjectId: null,
   subjectState: 'new',
@@ -184,5 +185,52 @@ describe('Stundenplan aus Bild erkennen', () => {
     });
     expect(await within(dialog).findByText(t.errors.fileType)).toBeTruthy();
     expect(server.calls('POST', '/api/timetable-scan')).toHaveLength(0);
+  });
+
+  it('lädt und speichert die Stundentafel', async () => {
+    const server = new FakeServer('unlocked');
+    server.scanModels = [MODEL];
+    const { user, dialog } = await openDialog(server);
+    await user.click(within(dialog).getByText(t.periodsTitle));
+    const start = (await within(dialog).findByLabelText(`${t.from} 1`)) as HTMLInputElement;
+    expect(start.value).toBe('08:00');
+    fireEvent.change(start, { target: { value: '07:30' } });
+    await user.click(within(dialog).getByRole('button', { name: t.periodsSave }));
+    expect(await within(dialog).findByText(t.periodsSaved)).toBeTruthy();
+    expect(server.calls('PUT', '/api/timetable-scan/periods')[0]?.body).toEqual({
+      periods: [
+        { period: 1, startTime: '07:30', endTime: '08:45' },
+        { period: 2, startTime: '08:50', endTime: '09:35' },
+      ],
+    });
+  });
+
+  it('zeigt zugeordnete Stunden-Nummern und übernimmt ihre konkreten Zeiten', async () => {
+    const server = new FakeServer('unlocked');
+    server.scanModels = [MODEL];
+    server.scanResult = { proposals: [{ ...PROPOSAL, period: 3 }], newSubjects: [], skipped: 0 };
+    const { user, dialog } = await openDialog(server);
+    await upload(user, dialog);
+    await clickScan(user, dialog);
+    expect(await within(dialog).findByText(t.periodsMapped)).toBeTruthy();
+    expect(within(dialog).getByText(/Std\. 3/)).toBeTruthy();
+
+    await user.click(within(dialog).getByRole('button', { name: format(t.import, { count: 1 }) }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(server.calls('POST', '/api/timetable-scan/import')[0]?.body).toEqual({
+      entries: [
+        {
+          weekday: 1,
+          startTime: '08:00',
+          endTime: '08:45',
+          subject: 'Beispielfach A',
+          room: 'Raum 1',
+          note: null,
+          week: 'all',
+        },
+      ],
+      createSubjects: true,
+      replaceExisting: false,
+    });
   });
 });

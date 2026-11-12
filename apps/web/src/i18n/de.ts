@@ -248,6 +248,16 @@ export const de = {
       weekAll: 'Jede',
       weekA: 'A',
       weekB: 'B',
+      periodsTitle: 'Stundentafel',
+      periodsHint:
+        'Zeigt dein Plan nur Nummern der Unterrichtsstunden, ordnet Pagewise die Uhrzeiten aus dieser Tafel zu. Passt eine Zeit nicht, ändere sie hier oder in der Vorschau.',
+      periodsLoading: 'Stundentafel wird geladen …',
+      periodsSave: 'Stundentafel speichern',
+      periodsSaving: 'Wird gespeichert …',
+      periodsSaved: 'Stundentafel gespeichert.',
+      periodsFailed: 'Die Stundentafel konnte nicht geladen oder gespeichert werden.',
+      periodsMapped: 'Einige Zeiten stammen aus der Stundentafel. Prüfe sie, bevor du übernimmst.',
+      periodLabel: 'Std. {period}',
       createSubjects: 'Erkannte Fächer automatisch anlegen',
       createSubjectsHint:
         'Neue Fächer bekommen eine Farbe und, wenn es eine Vorlage gibt, den passenden Standard-Prompt.',

@@ -115,7 +115,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     app.route('/api', assetRoutes(services.assets));
     app.route('/api', artifactRoutes(services.artifacts));
     app.route('/api', plannerRoutes(db));
-    app.route('/api', timetableScanRoutes(services.timetableScan));
+    app.route('/api', timetableScanRoutes(services.timetableScan, services.timetableScanPeriods));
     app.route('/api', noteRoutes(db, 'Hefteintrag'));
     app.route('/api', toolSettingsRoutes(services.toolSettings));
     app.route(

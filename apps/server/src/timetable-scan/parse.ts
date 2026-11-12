@@ -9,6 +9,8 @@ import { foldName } from '../domain/subject-templates';
 
 /** So viele Stunden darf eine einzige Erkennung höchstens liefern. */
 export const MAX_SCAN_ENTRIES = 200;
+/** Höchste Nummer einer Unterrichtsstunde, die aus einem Bild akzeptiert wird. */
+export const MAX_PERIOD_NUMBER = 16;
 const MAX_REPLY_CHARACTERS = 60_000;
 const MAX_SUBJECT_CHARACTERS = 80;
 const MAX_ROOM_CHARACTERS = 40;
@@ -16,8 +18,12 @@ const MAX_NOTE_CHARACTERS = 200;
 
 export interface ScanProposal {
   weekday: number;
-  startTime: string;
-  endTime: string;
+  /** Uhrzeit aus dem Bild; `null`, wenn das Bild nur die Nummer der Unterrichtsstunde zeigt. */
+  startTime: string | null;
+  /** Uhrzeit aus dem Bild; `null`, wenn das Bild nur die Nummer der Unterrichtsstunde zeigt. */
+  endTime: string | null;
+  /** Nummer der Unterrichtsstunde aus dem Bild, sonst `null`. Ordnet die Stundentafel zu. */
+  period: number | null;
   /** Erkannter Fachname, `null` wenn im Bild nichts lesbar war. */
   subject: string | null;
   room: string | null;
@@ -34,10 +40,11 @@ export interface ParsedScan {
 /** Anweisung an das Vision-Modell. Neutrale Vorgabe, keine Namen, keine echten Daten. */
 export const SCAN_SYSTEM_PROMPT = [
   'Du liest einen Stundenplan aus einem Bild und antwortest ausschließlich mit einem JSON-Objekt.',
-  'Form: {"entries":[{"weekday":1,"startTime":"08:00","endTime":"08:45","subject":"Beispielfach","room":"Raum 1","note":null,"week":"all"}]}.',
+  'Form: {"entries":[{"weekday":1,"startTime":"08:00","endTime":"08:45","period":null,"subject":"Beispielfach","room":"Raum 1","note":null,"week":"all"}]}.',
   'Regeln:',
   '- weekday ist eine Zahl: 1 = Montag, 2 = Dienstag, 3 = Mittwoch, 4 = Donnerstag, 5 = Freitag, 6 = Samstag, 7 = Sonntag.',
   '- startTime und endTime sind Uhrzeiten im 24-Stunden-Format "HH:MM". Das Ende liegt nach dem Beginn.',
+  '- Steht im Plan nur die Nummer einer Unterrichtsstunde und keine Uhrzeit, setze period auf diese Nummer und startTime und endTime auf null. Gibt es Uhrzeiten, ist period null.',
   '- subject ist der vollständige Fachname. Kürzel ausschreiben (zum Beispiel "Ma" als "Mathematik"). Wenn nichts lesbar ist: null.',
   '- room und note nur übernehmen, wenn sie im Bild stehen; sonst null. Keine Personen, Lehrkräfte oder Schulnamen als Fach.',
   '- week ist "a" oder "b", nur wenn A-/B-Wochen im Bild eindeutig markiert sind; sonst "all".',
@@ -72,6 +79,19 @@ function clock(value: unknown): string | null {
   const minute = match[2] ?? '';
   const result = `${String(hour).padStart(2, '0')}:${minute}`;
   return TIME_PATTERN.test(result) ? result : null;
+}
+
+/** Eine ganze Zahl zwischen 1 und {@link MAX_PERIOD_NUMBER}, sonst `null`. */
+function periodNumber(value: unknown): number | null {
+  if (
+    typeof value !== 'number' ||
+    !Number.isInteger(value) ||
+    value < 1 ||
+    value > MAX_PERIOD_NUMBER
+  ) {
+    return null;
+  }
+  return value;
 }
 
 const DAY_ALIASES: Readonly<Record<string, number>> = {
@@ -160,7 +180,11 @@ export function parseScanReply(reply: string): ParsedScan {
     const day = weekday(raw.weekday);
     const start = clock(raw.startTime);
     const end = clock(raw.endTime);
-    if (day === null || start === null || end === null || end <= start) {
+    const period = periodNumber(raw.period);
+    const timed = start !== null && end !== null && end > start;
+    // Mit Uhrzeiten zählen nur die Zeiten; ohne sie darf die Stunde ihre Nummer tragen, die die
+    // Stundentafel später zu Uhrzeiten ordnet. Halbe Angaben (nur Beginn oder nur Ende) gelten nicht.
+    if (day === null || (!timed && !(period !== null && start === null && end === null))) {
       skipped += 1;
       continue;
     }
@@ -168,7 +192,8 @@ export function parseScanReply(reply: string): ParsedScan {
     const room = text(raw.room, MAX_ROOM_CHARACTERS);
     const note = text(raw.note, MAX_NOTE_CHARACTERS);
     const kind = week(raw.week);
-    const key = `${day}|${start}|${end}|${kind}|${subject === null ? '' : foldName(subject)}`;
+    const timeKey = timed ? `${start}|${end}` : `nummer-${period}`;
+    const key = `${day}|${timeKey}|${kind}|${subject === null ? '' : foldName(subject)}`;
     if (seen.has(key)) {
       skipped += 1;
       continue;
@@ -176,8 +201,9 @@ export function parseScanReply(reply: string): ParsedScan {
     seen.add(key);
     entries.push({
       weekday: day,
-      startTime: start,
-      endTime: end,
+      startTime: timed ? start : null,
+      endTime: timed ? end : null,
+      period: timed ? null : period,
       subject,
       room,
       note,

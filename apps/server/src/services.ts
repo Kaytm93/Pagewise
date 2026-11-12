@@ -35,6 +35,7 @@ import { type DataPaths, ensureDataLayout } from './storage/data-paths';
 import { DataEraser } from './storage/eraser';
 import { FileSecretStore, type SecretStore } from './storage/secret-store';
 import { LocalStorage, type Storage } from './storage/storage';
+import { PeriodTimes } from './timetable-scan/periods';
 import { TimetableScanService } from './timetable-scan/service';
 import { createToolRegistry, type ToolRegistry } from './tools';
 import { ToolSettings } from './tools/settings';
@@ -82,6 +83,8 @@ export interface Services {
   chats: ChatService;
   /** Stundenplan aus einem Bild erkennen (D-107): Vision-Modelle, Vorschau, Übernahme. */
   timetableScan: TimetableScanService;
+  /** Stundentafel des Bild-Scans: Nummern von Unterrichtsstunden und ihre Uhrzeiten. */
+  timetableScanPeriods: PeriodTimes;
   eraser: DataEraser;
   close(): void;
 }
@@ -218,7 +221,13 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     workspaces,
   });
   const cleanup = new AgentCleanup(database.db, chats, assets, workspaces);
-  const timetableScan = new TimetableScanService(database.db, providers, catalog);
+  const timetableScanPeriods = new PeriodTimes(database.db);
+  const timetableScan = new TimetableScanService(
+    database.db,
+    providers,
+    catalog,
+    timetableScanPeriods,
+  );
   // Das eingebaute Fach „Standard“ (fachunabhängiger Chat) gehört immer dazu.
   ensureDefaultSubject(database.db);
   return {
@@ -248,6 +257,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     preview,
     chats,
     timetableScan,
+    timetableScanPeriods,
     eraser: new DataEraser({ database, paths, secrets, chats }),
     close: () => database.close(),
   };

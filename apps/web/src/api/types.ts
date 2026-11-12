@@ -415,11 +415,20 @@ export interface ScanProposal {
   weekday: number;
   startTime: string;
   endTime: string;
+  /** Nummer der Unterrichtsstunde, wenn die Zeiten aus der Stundentafel zugeordnet wurden. */
+  period: number | null;
   /** Erkannter Fachname, `null` wenn nichts lesbar war. */
   subject: string | null;
   room: string | null;
   note: string | null;
   week: WeekKind;
+}
+
+/** Eine Zeile der Stundentafel: Nummer der Unterrichtsstunde und ihre Uhrzeiten. */
+export interface ScanPeriodTime {
+  period: number;
+  startTime: string;
+  endTime: string;
 }
 
 export interface ScanProposalView extends ScanProposal {
@@ -436,8 +445,19 @@ export interface ScanResult {
   skipped: number;
 }
 
+/** Eine Stunde für die Übernahme: konkrete Uhrzeiten, keine Nummer mehr. */
+export interface ScanImportEntry {
+  weekday: number;
+  startTime: string;
+  endTime: string;
+  subject: string | null;
+  room: string | null;
+  note: string | null;
+  week: WeekKind;
+}
+
 export interface ScanImportInput {
-  entries: ScanProposal[];
+  entries: ScanImportEntry[];
   createSubjects: boolean;
   replaceExisting: boolean;
 }

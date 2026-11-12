@@ -35,6 +35,7 @@ import type {
   ScanImportInput,
   ScanImportResult,
   ScanModel,
+  ScanPeriodTime,
   ScanResult,
   Selection,
   SessionInfo,
@@ -236,6 +237,16 @@ export function createApi(client: ApiClient) {
     /** Geprüfte Vorschläge übernehmen; erst hier entstehen Stunden und neue Fächer. */
     importTimetableScan: (input: ScanImportInput) =>
       client.request<ScanImportResult>('POST', '/api/timetable-scan/import', input),
+    /** Stundentafel: Nummern von Unterrichtsstunden und ihre Uhrzeiten. */
+    async timetableScanPeriods(): Promise<ScanPeriodTime[]> {
+      return (
+        await client.request<{ periods: ScanPeriodTime[] }>('GET', '/api/timetable-scan/periods')
+      ).periods;
+    },
+    setTimetableScanPeriods: (periods: ScanPeriodTime[]) =>
+      client.request<{ periods: ScanPeriodTime[] }>('PUT', '/api/timetable-scan/periods', {
+        periods,
+      }),
     /** Legt fest, welche Wochenart die Woche mit diesem Datum hat, oder hebt es mit `null` auf. */
     async setWeekAnchor(
       anchor: { date: string; week: 'a' | 'b' } | null,

@@ -1,5 +1,5 @@
 import type { Db } from '../db/client';
-import { TIME_PATTERN } from '../domain/dates';
+import { TIME_PATTERN, type WeekKind } from '../domain/dates';
 import {
   DEFAULT_SUBJECT_NAME,
   findCatalogEntryByName,
@@ -25,6 +25,7 @@ import {
   SCAN_USER_PROMPT,
   type ScanProposal,
 } from './parse';
+import type { PeriodTimes } from './periods';
 
 export interface ScanModelView {
   providerId: string;
@@ -35,10 +36,24 @@ export interface ScanModelView {
   free: boolean;
 }
 
-export interface ScanProposalView extends ScanProposal {
+export interface ScanProposalView extends Omit<ScanProposal, 'startTime' | 'endTime'> {
+  /** Konkrete Uhrzeiten: ohne Uhrzeiten im Bild hat die Stundentafel sie zugeordnet. */
+  startTime: string;
+  endTime: string;
   /** Fach, das es schon gibt; `null` bei neuen oder nicht erkannten Fächern. */
   subjectId: string | null;
   subjectState: 'existing' | 'new' | 'none';
+}
+
+/** Eine übernommene Stunde: konkrete Uhrzeiten, keine Nummer mehr. */
+export interface ScanImportEntry {
+  weekday: number;
+  startTime: string;
+  endTime: string;
+  subject: string | null;
+  room: string | null;
+  note: string | null;
+  week: WeekKind;
 }
 
 export interface ScanSuccess {
@@ -60,7 +75,7 @@ export type ScanResult =
   | { ok: false; error: ScanFailureCode; code?: ProviderErrorCode };
 
 export interface ScanImportInput {
-  entries: ScanProposal[];
+  entries: ScanImportEntry[];
   createSubjects: boolean;
   replaceExisting: boolean;
 }
@@ -87,6 +102,14 @@ interface SubjectMatch {
 const MAX_REPLY_CHARACTERS = 120_000;
 
 /**
+ * Schwere Bildverstehen-Modelle denken lange, bevor sie antworten, und der Scan liest die Antwort
+ * als Ganzes (`stream: false`): bis dahin kommt kein einziges Zeichen. Der Leerlauf-Wächter des
+ * Clients (2 Minuten) würde solche Anfragen regelmäßig abwürgen; die Erkennung trägt deshalb eine
+ * eigene, größere Geduld (5 Minuten).
+ */
+const SCAN_IDLE_TIMEOUT_MS = 300_000;
+
+/**
  * Erkennt Stundenpläne aus einem Bild (D-107). Nur Modelle, die laut Konfiguration Bilder verstehen
  * **und** deren Anbieter Bilder senden darf, werden benutzt. Das Bild bleibt im Speicher, wird nicht
  * gespeichert und nicht protokolliert; Antworttexte des Modells verlassen diese Datei nicht.
@@ -96,6 +119,7 @@ export class TimetableScanService {
     private readonly db: Db,
     private readonly providers: ProviderService,
     private readonly catalog: SubjectCatalog,
+    private readonly periodTimes: PeriodTimes,
   ) {}
 
   /** Modelle, die für die Bilderkennung zur Wahl stehen. */
@@ -147,7 +171,9 @@ export class TimetableScanService {
     };
   }
 
-  private proposals(entries: ScanProposal[]): ScanSuccess {
+  private proposals(
+    entries: readonly (ScanProposal & { startTime: string; endTime: string })[],
+  ): ScanSuccess {
     const cache = new Map<string, SubjectMatch>();
     const forName = (name: string): SubjectMatch => {
       const key = foldName(name);
@@ -215,6 +241,7 @@ export class TimetableScanService {
         resolved.target,
         request,
         input.signal,
+        { idleTimeoutMs: SCAN_IDLE_TIMEOUT_MS },
       )) {
         if (event.type !== 'delta') continue;
         reply += event.text;
@@ -228,8 +255,30 @@ export class TimetableScanService {
     }
 
     const parsed = parseScanReply(reply);
-    const result = this.proposals(parsed.entries.slice(0, MAX_SCAN_ENTRIES));
-    result.skipped = parsed.skipped + Math.max(0, parsed.entries.length - MAX_SCAN_ENTRIES);
+    // Zeigt das Bild nur Nummern von Unterrichtsstunden, ordnet die Stundentafel die Uhrzeiten zu;
+    // Nummern, die die Tafel nicht kennt, werden verworfen und gezählt.
+    const table = new Map(this.periodTimes.list().map((row) => [row.period, row]));
+    const mapped: (ScanProposal & { startTime: string; endTime: string })[] = [];
+    let unmapped = 0;
+    for (const entry of parsed.entries) {
+      if (entry.startTime !== null && entry.endTime !== null) {
+        mapped.push({
+          ...entry,
+          startTime: entry.startTime,
+          endTime: entry.endTime,
+          period: null,
+        });
+        continue;
+      }
+      const row = entry.period === null ? undefined : table.get(entry.period);
+      if (row) {
+        mapped.push({ ...entry, startTime: row.startTime, endTime: row.endTime });
+      } else {
+        unmapped += 1;
+      }
+    }
+    const result = this.proposals(mapped.slice(0, MAX_SCAN_ENTRIES));
+    result.skipped = parsed.skipped + unmapped;
     return { ok: true, value: result };
   }
 

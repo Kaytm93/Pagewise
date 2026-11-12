@@ -6,6 +6,7 @@ const lesson = {
   weekday: 1,
   startTime: '08:00',
   endTime: '08:45',
+  period: null,
   subject: 'Beispielfach A',
   room: 'Raum 1',
   note: null,
@@ -20,6 +21,7 @@ describe('Antwort des Vision-Modells', () => {
         weekday: 1,
         startTime: '08:00',
         endTime: '08:45',
+        period: null,
         subject: 'Beispielfach A',
         room: 'Raum 1',
         note: null,
@@ -38,12 +40,45 @@ describe('Antwort des Vision-Modells', () => {
         weekday: 3,
         startTime: '08:05',
         endTime: '08:50',
+        period: null,
         subject: 'Beispielfach B',
         room: null,
         note: null,
         week: 'a',
       },
     ]);
+  });
+
+  it('behält Stunden-Nummern, wenn das Bild keine Uhrzeiten zeigt', () => {
+    const ohneZeiten = {
+      weekday: 2,
+      startTime: null,
+      endTime: null,
+      period: 3,
+      subject: 'Beispielfach C',
+      room: 'Raum 2',
+      note: null,
+      week: 'all',
+    };
+    const parsed = parseScanReply(
+      reply([
+        ohneZeiten,
+        { ...ohneZeiten },
+        { ...ohneZeiten, period: 0 },
+        { ...ohneZeiten, period: 17 },
+        { ...ohneZeiten, period: '3' },
+        { ...ohneZeiten, period: 3.5 },
+        { ...ohneZeiten, startTime: '08:00' },
+        { ...ohneZeiten, endTime: '09:35' },
+      ]),
+    );
+    expect(parsed.entries).toEqual([ohneZeiten]);
+    expect(parsed.skipped).toBe(7);
+  });
+
+  it('gilt Uhrzeiten über die Nummer: eine Zeitangabe macht period null', () => {
+    const parsed = parseScanReply(reply([{ ...lesson, period: 5 }]));
+    expect(parsed.entries).toEqual([lesson]);
   });
 
   it('verwirft unbrauchbare und doppelte Angaben, ohne die gültigen zu verlieren', () => {

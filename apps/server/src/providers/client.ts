@@ -337,12 +337,15 @@ export class ProviderClient {
     target: Target,
     request: ChatRequest,
     signal?: AbortSignal,
+    /** Ergänzungen für diesen einen Aufruf; ohne Angabe gelten die Werte des Clients. */
+    options?: { idleTimeoutMs?: number },
   ): AsyncGenerator<ChatEvent> {
     const watchdog = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const idleTimeoutMs = options?.idleTimeoutMs ?? this.idleTimeoutMs;
     const arm = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => watchdog.abort(), this.idleTimeoutMs);
+      timer = setTimeout(() => watchdog.abort(), idleTimeoutMs);
     };
 
     const body: Record<string, unknown> = {
