@@ -532,6 +532,51 @@ describe('Editor', () => {
     expect(window.location.pathname).toBe(notesPath(subject.id));
   });
 
+  it('speichert beim Verlassen den Text auch bei leerem Titel, der alte Titel bleibt (F-001, D-119)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { title: 'Alter Titel', markdown: 'Start' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    await user.clear(await screen.findByRole('textbox', { name: 'Titel' }));
+    await user.type(screen.getByRole('textbox', { name: 'Text (Markdown)' }), ' mehr');
+    await user.click(screen.getByRole('link', { name: /Zurück zu den Hefteinträgen/ }));
+    await waitFor(() => expect(server.notes[0]?.markdown).toBe('Start mehr'));
+    expect(server.notes[0]?.title).toBe('Alter Titel');
+    const patch = server.calls('PATCH', `/api/notes/${note.id}`);
+    expect(patch).toHaveLength(1);
+    expect(patch[0]?.body).toEqual({ markdown: 'Start mehr', pinned: false, tags: [] });
+  });
+
+  it('speichert bei leerem Titel nach der Pause genau einmal ohne Titel und sagt es (D-119)', async () => {
+    const { server, subject } = setup();
+    const note = server.addNote(subject.id, { title: 'Alter Titel', markdown: '' });
+    open(server, notePath(subject.id, note.id));
+    const user = userEvent.setup();
+    const title = await screen.findByRole('textbox', { name: 'Titel' });
+    await user.clear(title);
+    await user.type(screen.getByRole('textbox', { name: 'Text (Markdown)' }), 'wichtig');
+    await waitFor(() => expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(1), {
+      timeout: 4000,
+    });
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)[0]?.body).toEqual({
+      markdown: 'wichtig',
+      pinned: false,
+      tags: [],
+    });
+    expect(
+      await screen.findByText('Text gespeichert, der Titel nicht: Er braucht 1 bis 120 Zeichen.'),
+    ).toBeTruthy();
+    expect(title.getAttribute('aria-invalid')).toBe('true');
+    expect(server.notes[0]?.title).toBe('Alter Titel');
+    // Schleifenwächter: der unveränderte, ungültige Titel löst kein weiteres Speichern aus.
+    await new Promise((resolve) => setTimeout(resolve, 1600));
+    expect(server.calls('PATCH', `/api/notes/${note.id}`)).toHaveLength(1);
+    // Ein gültiger Titel wird danach mitgeschickt.
+    await user.type(title, 'Neuer Titel');
+    await waitFor(() => expect(server.notes[0]?.title).toBe('Neuer Titel'), { timeout: 4000 });
+    expect(await screen.findByText('Gespeichert')).toBeTruthy();
+  });
+
   it('löscht nach Bestätigung und kehrt zur Liste zurück', async () => {
     const { server, subject } = setup();
     const note = server.addNote(subject.id, { title: 'Zu löschen' });

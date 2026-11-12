@@ -1,7 +1,7 @@
 import { ArrowLeft, ChevronDown, Pin, PinOff, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
-import type { Note } from '../../api/types';
+import type { Note, NotePatch } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { navigate, pageKey } from '../../router';
 import { useSession } from '../../session/SessionProvider';
@@ -35,6 +35,34 @@ const parseTags = (value: string): string[] => {
   }
   return tags.slice(0, 10);
 };
+
+/** Der Stand der vier Felder, so wie die Person ihn eingegeben hat. */
+interface Draft {
+  title: string;
+  markdown: string;
+  pinned: boolean;
+  tagsText: string;
+}
+
+const titleValid = (title: string) => title !== '' && [...title].length <= 120;
+
+/**
+ * Teilangaben für `PATCH /api/notes/:id` (D-119): Text, Anheftung und Stichwörter gehen immer mit, der
+ * Titel nur, wenn er gültig ist (1 bis 120 Zeichen); ein ungültiger Titel lässt den gespeicherten stehen.
+ * Ist der Titel ungültig und sonst nichts anders als gespeichert, gibt es nichts zu senden (`null`),
+ * sonst liefe nach jedem Speichern gleich das nächste.
+ */
+function buildPatch(draft: Draft, stored: Note): NotePatch | null {
+  const title = draft.title.trim();
+  const tags = parseTags(draft.tagsText);
+  const rest = { markdown: draft.markdown, pinned: draft.pinned, tags };
+  if (titleValid(title)) return { title, ...rest };
+  const restChanged =
+    rest.markdown !== stored.markdown ||
+    rest.pinned !== stored.pinned ||
+    tags.join('\u0000') !== stored.tags.join('\u0000');
+  return restChanged ? rest : null;
+}
 
 /**
  * Hefteintrag bearbeiten: Markdown links, Vorschau rechts (auf schmalen Bildschirmen als Umschalter), Einfügen
@@ -80,8 +108,11 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
   const titleField = useRef<HTMLTextAreaElement>(null);
 
   // Der neueste Stand für das Speichern, unabhängig vom Rendern (auch beim Verlassen der Seite).
-  const latest = useRef({ title, markdown, pinned, tagsText });
+  const latest = useRef<Draft>({ title, markdown, pinned, tagsText });
   latest.current = { title, markdown, pinned, tagsText };
+  // Der zuletzt vom Server bestätigte Stand, für den Abgleich außerhalb des Renderns.
+  const stored = useRef<Note | null>(null);
+  stored.current = note;
   const dirty = useRef(false);
   const inFlight = useRef(false);
   const again = useRef(false);
@@ -124,8 +155,10 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
       again.current = true;
       return;
     }
-    const { title: t, markdown: text, pinned: pin, tagsText: tagList } = latest.current;
-    if (t.trim() === '' || [...t.trim()].length > 120) {
+    // Ungültiger Titel: Text, Anheftung und Stichwörter gehen trotzdem raus, der Titel nicht (D-119). Hat
+    // sich nur der Titel geändert, bleibt es beim Hinweis, und der Stand gilt weiter als ungespeichert.
+    const patch = stored.current ? buildPatch(latest.current, stored.current) : null;
+    if (!patch) {
       if (alive.current) setSaving('failed');
       return;
     }
@@ -133,12 +166,7 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
     dirty.current = false;
     if (alive.current) setSaving('saving');
     try {
-      const updated = await api.updateNote(noteId, {
-        title: t.trim(),
-        markdown: text,
-        pinned: pin,
-        tags: parseTags(tagList),
-      });
+      const updated = await api.updateNote(noteId, patch);
       if (alive.current) {
         setNote(updated);
         setSaving(dirty.current ? 'dirty' : 'saved');
@@ -171,20 +199,12 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
     return () => clearTimeout(timer);
   }, [title, markdown, pinned, tagsText]);
 
-  // Beim Verlassen der Seite: was noch nicht gespeichert ist, abschicken (soweit der Titel gültig ist).
+  // Beim Verlassen der Seite: was noch nicht gespeichert ist, abschicken; bei ungültigem Titel ohne ihn (D-119).
   useEffect(
     () => () => {
-      const { title: t, markdown: text, pinned: pin, tagsText: tagList } = latest.current;
-      if (dirty.current && t.trim() !== '') {
-        void api
-          .updateNote(noteId, {
-            title: t.trim(),
-            markdown: text,
-            pinned: pin,
-            tags: parseTags(tagList),
-          })
-          .catch(() => undefined);
-      }
+      if (!dirty.current || !stored.current) return;
+      const patch = buildPatch(latest.current, stored.current);
+      if (patch) void api.updateNote(noteId, patch).catch(() => undefined);
     },
     [api, noteId],
   );
@@ -256,7 +276,7 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
     window.sessionStorage.setItem(`pagewise.rueck.${ziel}`, 'notes');
     window.sessionStorage.setItem(`pagewise.ul-focus.${ziel}`, '1');
   };
-  const titleInvalid = title.trim() === '' || [...title.trim()].length > 120;
+  const titleInvalid = !titleValid(title.trim());
   const e = m.notes.editor;
 
   function insert(key: TemplateKey) {
@@ -304,7 +324,9 @@ export default function NotePage({ subjectId, noteId }: { subjectId: string; not
           ? titleInvalid
             ? e.invalidTitle
             : e.saveFailed
-          : e.saved;
+          : titleInvalid
+            ? e.savedTitleInvalid // Text ist gesichert, der alte Titel steht noch (D-119)
+            : e.saved;
 
   return (
     <Sheet width="wide">
