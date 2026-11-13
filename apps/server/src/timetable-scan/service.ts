@@ -424,8 +424,7 @@ export class TimetableScanService {
     const mapping = new Map(
       this.abbreviations.list().map((entry) => [abbreviationKey(entry.code), entry]),
     );
-    const seen = new Set<string>();
-    let learned = 0;
+    const seen = new Map<string, string>();
     for (const entry of entries) {
       if (!entry.code || entry.subject === null) continue;
       const key = abbreviationKey(entry.code);
@@ -433,13 +432,15 @@ export class TimetableScanService {
       const resolved = resolver.resolve(entry.code)?.name;
       if (resolved !== undefined && foldName(resolved) === foldName(entry.subject)) continue;
       if (foldName(entry.code) === foldName(entry.subject)) continue;
-      seen.add(key);
+      seen.set(key, entry.subject);
       // Ein schon gespeichertes Kürzel bekommt das in der Vorschau korrigierte Fach.
       mapping.set(key, { code: key, subject: entry.subject });
-      learned += 1;
     }
-    if (learned === 0) return 0;
-    this.abbreviations.replace([...mapping.values()]);
-    return learned;
+    if (seen.size === 0) return 0;
+    // Gezählt wird nur, was wirklich gespeichert wurde (die Liste hat eine Obergrenze).
+    const saved = this.abbreviations.replace([...mapping.values()]);
+    return saved.filter(
+      (entry) => foldName(seen.get(abbreviationKey(entry.code)) ?? '') === foldName(entry.subject),
+    ).length;
   }
 }

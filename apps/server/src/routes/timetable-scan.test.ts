@@ -523,6 +523,23 @@ describe('Stundenplan-Erkennung aus einem Bild', () => {
     expect(updated.body.abbreviations).toEqual([{ code: 'bsp', subject: 'Beispielfach G' }]);
   });
 
+  it('zählt keine gelernten Kürzel, wenn die Liste voll ist', async () => {
+    const full = Array.from({ length: 100 }, (_, index) => ({
+      code: `bsp${String.fromCharCode(97 + (index % 26))}${String.fromCharCode(97 + Math.floor(index / 26))}`,
+      subject: 'Beispielfach H',
+    }));
+    const saved = await session.call('PUT', '/api/timetable-scan/abbreviations', {
+      abbreviations: full,
+    });
+    expect(saved.body.abbreviations).toHaveLength(100);
+    const reply = await importEntries({
+      entries: [{ ...LESSON, code: 'neu', subject: 'Beispielfach I' }],
+      createSubjects: false,
+      replaceExisting: false,
+    });
+    expect(reply.body.abbreviationsLearned).toBe(0);
+  });
+
   it('verknüpft vorhandene Fächer ohne Groß-/Kleinschreibung und kann auf neue verzichten', async () => {
     const existing = await session.call('POST', '/api/subjects', { name: 'Beispielfach A' });
     const without = await importEntries({
