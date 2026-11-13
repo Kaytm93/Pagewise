@@ -89,6 +89,7 @@ export function TimetableScanDialog({ onClose }: { onClose: () => void }) {
   const [createSubjects, setCreateSubjects] = useState(true);
   const [replaceExisting, setReplaceExisting] = useState(false);
   const [retimed, setRetimed] = useState(false);
+  const [outside, setOutside] = useState(0);
   const controller = useRef<AbortController | null>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` löst das erneute Laden aus
@@ -173,6 +174,7 @@ export function TimetableScanDialog({ onClose }: { onClose: () => void }) {
       setSkipped(reply.skipped);
       setReplaceExisting(false);
       setRetimed(false);
+      setOutside(0);
       setPhase('preview');
     } catch (caught) {
       if (!isAbort(caught)) setError(errorMessage(caught));
@@ -191,7 +193,15 @@ export function TimetableScanDialog({ onClose }: { onClose: () => void }) {
   /** Neue Stundentafel: Stunden mit Nummer bekommen in der Vorschau sofort die neuen Zeiten. */
   function applyPeriods(periods: ScanPeriodTime[]) {
     if (!proposals.some((entry) => entry.period !== null)) return;
+    const known = new Set(periods.map((row) => row.period));
     setProposals((current) => retime(current, periods));
+    setOutside(
+      proposals.filter(
+        (entry) =>
+          entry.period !== null &&
+          !(known.has(entry.period) && known.has(entry.periodEnd ?? entry.period)),
+      ).length,
+    );
     setRetimed(true);
   }
 
@@ -327,6 +337,11 @@ export function TimetableScanDialog({ onClose }: { onClose: () => void }) {
                   <p role="status" className="text-sm text-ink-secondary">
                     {retimed ? t.scheduleRetimed : t.periodsMapped}
                   </p>
+                  {outside > 0 && (
+                    <p role="alert" className="text-sm text-danger">
+                      {format(t.scheduleOutside, { count: outside })}
+                    </p>
+                  )}
                   <ScheduleEditor onSaved={applyPeriods} />
                 </>
               )}

@@ -270,6 +270,8 @@ export const de = {
       scheduleInvalid:
         'So geht die Stundentafel nicht auf. Prüfe Beginn, Längen und Pausen (jede Pause nur einmal, nicht nach der letzten Stunde).',
       scheduleRetimed: 'Die Zeiten in der Vorschau wurden an die neue Stundentafel angepasst.',
+      scheduleOutside:
+        '{count} Stunden liegen hinter der letzten Stunde der Tafel und behalten ihre alten Zeiten. Bitte prüfen.',
       periodsLoading: 'Stundentafel wird geladen …',
       periodsSave: 'Stundentafel speichern',
       periodsSaving: 'Wird gespeichert …',

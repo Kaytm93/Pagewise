@@ -281,6 +281,18 @@ describe('Stundenplan aus Bild erkennen', () => {
     expect((within(dialog).getByLabelText(`${t.from} 1`) as HTMLInputElement).value).toBe('07:45');
     expect((within(dialog).getByLabelText(`${t.to} 1`) as HTMLInputElement).value).toBe('09:20');
 
+    expect(within(dialog).queryByText(format(t.scheduleOutside, { count: 1 }))).toBeNull();
+
+    // Kürzere Tafel: die Doppelstunde reicht über die letzte Stunde hinaus.
+    fireEvent.change(within(dialog).getByLabelText(t.scheduleCount), { target: { value: '1' } });
+    await user.click(within(dialog).getByRole('button', { name: t.periodsSave }));
+    expect(await within(dialog).findByText(format(t.scheduleOutside, { count: 1 }))).toBeTruthy();
+    fireEvent.change(within(dialog).getByLabelText(t.scheduleCount), { target: { value: '2' } });
+    await user.click(within(dialog).getByRole('button', { name: t.periodsSave }));
+    await waitFor(() =>
+      expect(within(dialog).queryByText(format(t.scheduleOutside, { count: 1 }))).toBeNull(),
+    );
+
     await user.click(within(dialog).getByRole('button', { name: format(t.import, { count: 1 }) }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(server.calls('POST', '/api/timetable-scan/import')[0]?.body).toMatchObject({
