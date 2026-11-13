@@ -17,6 +17,7 @@ import { SessionService } from './auth/sessions';
 import { ChatService, type ChatServiceOptions } from './chats/service';
 import { CodeExecutor } from './code/executor';
 import { type DatabaseHandle, migrateDatabase, openDatabase } from './db/client';
+import { dedupeChatNotesOnce } from './domain/notes-dedupe';
 import { loadSubjectCatalog, type SubjectCatalog } from './domain/subject-templates';
 import { ensureDefaultSubject } from './domain/subjects';
 import { type ResourcePaths, resolveResources } from './paths';
@@ -141,6 +142,9 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     database.close();
     throw error;
   }
+  // Einmalig nach dem Update auf D-121: wortgleiche doppelte Hefteinträge aus dem Chat entfernen, vorher
+  // sichern; scheitert die Sicherung, bleibt alles, der Start geht weiter (wirft nie).
+  dedupeChatNotesOnce(database, { backupDir: paths.backups });
   const sessions = new SessionService(database.db);
   sessions.purgeExpired();
   const auth = new AuthService({
