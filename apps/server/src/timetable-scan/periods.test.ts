@@ -6,6 +6,7 @@ import {
   periodsFromSchedule,
   scheduleFromPeriods,
 } from './periods';
+import { mergeDoubleLessons } from './service';
 
 const RULE: PeriodSchedule = {
   start: '07:45',
@@ -38,6 +39,14 @@ describe('Stundentafel als Regel', () => {
     expect(rule && periodsFromSchedule(rule)).toEqual(rows);
   });
 
+  it('rechnet bei einer alten Liste ab Stunde 3 den Beginn zurück', () => {
+    const rows = periodsFromSchedule(RULE).slice(2);
+    const rule = scheduleFromPeriods(rows);
+    const derived = periodsFromSchedule(rule);
+    expect(derived.find((row) => row.period === 3)?.startTime).toBe(rows[0]?.startTime);
+    expect(derived.find((row) => row.period === 4)).toEqual(rows[1]);
+  });
+
   it('prüft Regeln', () => {
     expect(isValidSchedule(DEFAULT_SCHEDULE)).toBe(true);
     expect(isValidSchedule(RULE)).toBe(true);
@@ -53,5 +62,32 @@ describe('Stundentafel als Regel', () => {
     ).toBe(false);
     expect(isValidSchedule({ ...RULE, start: '23:30' })).toBe(false);
     expect(isValidSchedule({ ...RULE, start: '7:45' })).toBe(false);
+  });
+});
+
+describe('Doppelstunden', () => {
+  const table = new Map(periodsFromSchedule(RULE).map((row) => [row.period, row]));
+  const lesson = (period: number, note: string | null) => ({
+    weekday: 1,
+    startTime: table.get(period)?.startTime ?? '',
+    endTime: table.get(period)?.endTime ?? '',
+    period,
+    periodEnd: null,
+    code: null,
+    subject: 'Beispielfach',
+    room: 'Raum 1',
+    note,
+    week: 'all' as const,
+  });
+
+  it('fasst gleiche aufeinanderfolgende Stunden zusammen, auch in falscher Reihenfolge', () => {
+    const merged = mergeDoubleLessons([lesson(2, null), lesson(1, null)], table);
+    expect(merged).toEqual([{ ...lesson(1, null), endTime: '09:15', periodEnd: 2 }]);
+  });
+
+  it('lässt Stunden mit verschiedenen Bemerkungen getrennt, damit keine verloren geht', () => {
+    const merged = mergeDoubleLessons([lesson(1, 'Notiz A'), lesson(2, 'Notiz B')], table);
+    expect(merged).toHaveLength(2);
+    expect(merged.map((entry) => entry.note)).toEqual(['Notiz A', 'Notiz B']);
   });
 });

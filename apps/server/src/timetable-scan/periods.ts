@@ -125,12 +125,18 @@ export function scheduleFromPeriods(rows: readonly PeriodTime[]): PeriodSchedule
       0,
     ),
   );
+  const lesson = Math.min(
+    SCHEDULE_LIMITS.lessonMinutes.max,
+    Math.max(SCHEDULE_LIMITS.lessonMinutes.min, lessonMinutes),
+  );
+  // Fehlen die ersten Stunden, rechnet die Regel vom Beginn der ersten vorhandenen zurück.
+  const start = Math.max(
+    0,
+    toMinutes(first.startTime) - (first.period - 1) * (lesson + gapMinutes),
+  );
   return {
-    start: first.startTime,
-    lessonMinutes: Math.min(
-      SCHEDULE_LIMITS.lessonMinutes.max,
-      Math.max(SCHEDULE_LIMITS.lessonMinutes.min, lessonMinutes),
-    ),
+    start: toClock(start),
+    lessonMinutes: lesson,
     gapMinutes,
     count: Math.min(MAX_PERIOD_NUMBER, sorted[sorted.length - 1]?.period ?? first.period),
     breaks: gaps

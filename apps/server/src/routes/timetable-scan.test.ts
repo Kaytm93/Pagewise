@@ -511,6 +511,16 @@ describe('Stundenplan-Erkennung aus einem Bild', () => {
     expect(reply.body.abbreviationsLearned).toBe(1);
     const list = await session.call('GET', '/api/timetable-scan/abbreviations');
     expect(list.body.abbreviations).toEqual([{ code: 'bsp', subject: 'Beispielfach E' }]);
+
+    // Eine zweite Korrektur ersetzt das gespeicherte Kürzel.
+    const again = await importEntries({
+      entries: [{ ...LESSON, code: '2bsp1_2', subject: 'Beispielfach G' }],
+      createSubjects: false,
+      replaceExisting: false,
+    });
+    expect(again.body.abbreviationsLearned).toBe(1);
+    const updated = await session.call('GET', '/api/timetable-scan/abbreviations');
+    expect(updated.body.abbreviations).toEqual([{ code: 'bsp', subject: 'Beispielfach G' }]);
   });
 
   it('verknüpft vorhandene Fächer ohne Groß-/Kleinschreibung und kann auf neue verzichten', async () => {

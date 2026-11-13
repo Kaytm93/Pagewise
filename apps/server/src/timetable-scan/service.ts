@@ -128,7 +128,8 @@ export function mergeDoubleLessons(
         other.week === entry.week &&
         other.subject !== null &&
         foldName(other.subject) === foldName(entry.subject ?? '') &&
-        foldName(other.room ?? '') === foldName(entry.room ?? ''),
+        foldName(other.room ?? '') === foldName(entry.room ?? '') &&
+        foldName(other.note ?? '') === foldName(entry.note ?? ''),
     );
     const second = partner >= 0 ? sorted[partner] : undefined;
     const end = second?.period == null ? undefined : table.get(second.period);
@@ -420,21 +421,25 @@ export class TimetableScanService {
     entries: readonly ScanImportEntry[],
     resolver: CourseResolver,
   ): number {
-    const known = this.abbreviations.list();
-    const keys = new Set(known.map((entry) => abbreviationKey(entry.code)));
-    const learned: CourseAbbreviation[] = [];
+    const mapping = new Map(
+      this.abbreviations.list().map((entry) => [abbreviationKey(entry.code), entry]),
+    );
+    const seen = new Set<string>();
+    let learned = 0;
     for (const entry of entries) {
       if (!entry.code || entry.subject === null) continue;
       const key = abbreviationKey(entry.code);
-      if (key === '' || keys.has(key)) continue;
+      if (key === '' || seen.has(key)) continue;
       const resolved = resolver.resolve(entry.code)?.name;
       if (resolved !== undefined && foldName(resolved) === foldName(entry.subject)) continue;
       if (foldName(entry.code) === foldName(entry.subject)) continue;
-      keys.add(key);
-      learned.push({ code: key, subject: entry.subject });
+      seen.add(key);
+      // Ein schon gespeichertes Kürzel bekommt das in der Vorschau korrigierte Fach.
+      mapping.set(key, { code: key, subject: entry.subject });
+      learned += 1;
     }
-    if (learned.length === 0) return 0;
-    const before = known.length;
-    return this.abbreviations.replace([...known, ...learned]).length - before;
+    if (learned === 0) return 0;
+    this.abbreviations.replace([...mapping.values()]);
+    return learned;
   }
 }
