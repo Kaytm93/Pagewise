@@ -219,6 +219,8 @@ export class FakeServer {
   weekAnchor: WeekAnchor | null = null;
   exams: Exam[] = [];
   notes: Note[] = [];
+  /** Herkunft eines Hefteintrags aus einer Antwort: Eintrag → Nachricht (wie `source_message_id`, D-121). */
+  noteSources = new Map<string, string>();
   toolsEnabled = true;
   filesEnabled = true;
   codeEnabled = false;
@@ -782,6 +784,7 @@ export class FakeServer {
       assets: [],
       artifacts: [],
       codeRuns: [],
+      noteId: null,
       reasoning: null,
       tokensPerSecond: null,
       costUsd: null,
@@ -791,6 +794,21 @@ export class FakeServer {
     list.push(message);
     this.chatMessages.set(chatId, list);
     return message;
+  }
+
+  /** Der Hefteintrag zu einer Antwort (zuletzt geänderter), wie ihn der Server zu jeder Nachricht liefert. */
+  private noteOfMessage(messageId: string): Note | undefined {
+    return this.notes
+      .filter((note) => this.noteSources.get(note.id) === messageId)
+      .sort((a, b) => b.updatedAt - a.updatedAt)[0];
+  }
+
+  /** Nachrichten eines Chats mit dem Stand des Servers zu `noteId` (D-121). */
+  private messagesOf(chatId: string): ChatMessage[] {
+    return (this.chatMessages.get(chatId) ?? []).map((message) => ({
+      ...message,
+      noteId: message.noteId ?? this.noteOfMessage(message.id)?.id ?? null,
+    }));
   }
 
   /** Die laufende Antwort eines Chats, damit der Test sie steuern kann. */
@@ -905,7 +923,7 @@ export class FakeServer {
     const action = match[2];
 
     if (!action && method === 'GET') {
-      return json(200, { ...this.view(chat), messages: this.chatMessages.get(chat.id) ?? [] });
+      return json(200, { ...this.view(chat), messages: this.messagesOf(chat.id) });
     }
     if (!action && method === 'PATCH') {
       if (typeof data.title === 'string') chat.title = data.title.trim();
@@ -1137,6 +1155,9 @@ export class FakeServer {
       if (message.role !== 'assistant' || !savable || message.content.trim() === '') {
         return json(409, { error: 'not_savable' });
       }
+      // Wie der Server (D-121): Aus derselben Antwort entsteht nie ein zweiter Eintrag, der vorhandene kommt mit 200.
+      const existing = this.noteOfMessage(message.id);
+      if (existing) return json(200, this.withExcerpt(existing));
       const heading = message.content.split('\n').find((line) => /^\s{0,3}#{1,3}\s+\S/.test(line));
       const title =
         (heading ?? message.content)
@@ -1150,6 +1171,7 @@ export class FakeServer {
         markdown: message.content,
         sourceChatId: chat.id,
       });
+      this.noteSources.set(note.id, message.id);
       return json(201, this.withExcerpt(note));
     }
     return undefined;

@@ -831,6 +831,52 @@ describe('Antwort aus dem Chat als Hefteintrag', () => {
     expect(await screen.findByRole('textbox', { name: 'Titel' })).toBeTruthy();
   });
 
+  it('zeigt „Hefteintrag öffnen“ gleich beim Laden, wenn der Server den Eintrag kennt (F-020, D-121)', async () => {
+    const { server, subject } = setup();
+    const chat = server.addChat(subject.id, { title: 'Frage' });
+    server.addMessage(chat.id, 'user', 'Erkläre n');
+    const saved = server.addNote(subject.id, { title: 'Stoffmenge', markdown: 'n = m / M' });
+    const answer = server.addMessage(chat.id, 'assistant', '# Stoffmenge\n\nn = m / M', {
+      model: 'modell-a',
+      noteId: saved.id,
+    });
+    open(server, `/subjects/${subject.id}/chats/${chat.id}`);
+    const user = userEvent.setup();
+    const link = await screen.findByRole('link', { name: 'Hefteintrag öffnen' });
+    expect(screen.queryByRole('button', { name: 'Als Hefteintrag speichern' })).toBeNull();
+    await user.click(link);
+    await waitFor(() => expect(window.location.pathname).toBe(notePath(subject.id, saved.id)));
+    const title = await screen.findByRole<HTMLInputElement>('textbox', { name: 'Titel' });
+    expect(title.value).toBe('Stoffmenge');
+    // Nichts wurde neu gespeichert.
+    expect(server.calls('POST', `/api/chats/${chat.id}/messages/${answer.id}/note`)).toHaveLength(
+      0,
+    );
+  });
+
+  it('nach Neuladen bleibt „Hefteintrag öffnen“; nach dem Löschen des Eintrags kommt der Knopf zurück (D-121)', async () => {
+    const { server, subject } = setup();
+    const chat = server.addChat(subject.id, { title: 'Frage' });
+    server.addMessage(chat.id, 'user', 'Frage');
+    server.addMessage(chat.id, 'assistant', 'Antwort', { model: 'modell-a' });
+    const user = userEvent.setup();
+    const first = open(server, `/subjects/${subject.id}/chats/${chat.id}`);
+    await user.click(await screen.findByRole('button', { name: 'Als Hefteintrag speichern' }));
+    expect(await screen.findByRole('link', { name: 'Hefteintrag öffnen' })).toBeTruthy();
+    first.unmount();
+    // „Neu laden“: ein frischer Baum gegen denselben Server.
+    const second = open(server, `/subjects/${subject.id}/chats/${chat.id}`);
+    expect(await screen.findByRole('link', { name: 'Hefteintrag öffnen' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Als Hefteintrag speichern' })).toBeNull();
+    second.unmount();
+    // Der Eintrag wird gelöscht (etwa im Editor oder auf einem anderen Gerät).
+    expect(server.notes).toHaveLength(1);
+    server.notes = [];
+    open(server, `/subjects/${subject.id}/chats/${chat.id}`);
+    expect(await screen.findByRole('button', { name: 'Als Hefteintrag speichern' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Hefteintrag öffnen' })).toBeNull();
+  });
+
   it('zeigt einen Fehler, wenn das Speichern scheitert, und lässt es erneut zu', async () => {
     const { server, subject } = setup();
     const chat = server.addChat(subject.id, { title: 'Frage' });
