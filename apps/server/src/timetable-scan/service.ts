@@ -1,11 +1,6 @@
 import type { Db } from '../db/client';
 import { TIME_PATTERN, type WeekKind } from '../domain/dates';
-import {
-  DEFAULT_SUBJECT_NAME,
-  findCatalogEntryByName,
-  foldName,
-  type SubjectCatalog,
-} from '../domain/subject-templates';
+import { DEFAULT_SUBJECT_NAME, foldName, type SubjectCatalog } from '../domain/subject-templates';
 import { createSubject, listSubjects } from '../domain/subjects';
 import {
   importTimetableEntries,
@@ -17,13 +12,15 @@ import {
 import type { ChatRequest } from '../providers/client';
 import { ProviderError, type ProviderErrorCode } from '../providers/errors';
 import type { ProviderService } from '../providers/service';
+import { abbreviationKey, type ScanAbbreviations } from './abbreviations';
+import { CourseResolver } from './codes';
 import { imageDataUrl, type ScanImage } from './image';
 import {
   MAX_SCAN_ENTRIES,
   parseScanReply,
-  SCAN_SYSTEM_PROMPT,
   SCAN_USER_PROMPT,
   type ScanProposal,
+  scanSystemPrompt,
 } from './parse';
 import type { PeriodTimes } from './periods';
 
@@ -40,6 +37,8 @@ export interface ScanProposalView extends Omit<ScanProposal, 'startTime' | 'endT
   /** Konkrete Uhrzeiten: ohne Uhrzeiten im Bild hat die Stundentafel sie zugeordnet. */
   startTime: string;
   endTime: string;
+  /** Letzte Stunde einer zusammengefassten Doppelstunde, sonst `null`. */
+  periodEnd: number | null;
   /** Fach, das es schon gibt; `null` bei neuen oder nicht erkannten Fächern. */
   subjectId: string | null;
   subjectState: 'existing' | 'new' | 'none';
@@ -50,6 +49,8 @@ export interface ScanImportEntry {
   weekday: number;
   startTime: string;
   endTime: string;
+  /** Kursbezeichnung aus dem Bild; mit geändertem Fach merkt sich Pagewise das Kürzel. */
+  code?: string | null;
   subject: string | null;
   room: string | null;
   note: string | null;
@@ -83,11 +84,64 @@ export interface ScanImportInput {
 export interface ScanImportResult {
   created: number;
   subjectsCreated: number;
+  /** Neu gemerkte eigene Kürzel (Kurscode mit in der Vorschau geändertem Fach). */
+  abbreviationsLearned: number;
 }
 
 export type ImportResult =
   | { ok: true; value: ScanImportResult }
   | { ok: false; error: PlannerFailure['error'] };
+
+type TimedProposal = ScanProposal & {
+  startTime: string;
+  endTime: string;
+  periodEnd: number | null;
+};
+
+/**
+ * Fasst zwei aufeinanderfolgende Stunden mit gleichem Fach, Raum und gleicher Woche am selben Tag
+ * zu einer Doppelstunde (2 × 45 Minuten) zusammen. Nur Stunden mit Nummer, deren Zeiten aus der
+ * Stundentafel kommen; höchstens zwei Stunden je Block.
+ */
+export function mergeDoubleLessons(
+  entries: readonly TimedProposal[],
+  table: ReadonlyMap<number, { endTime: string }>,
+): TimedProposal[] {
+  const sorted = [...entries].sort(
+    (a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime),
+  );
+  const result: TimedProposal[] = [];
+  const used = new Set<number>();
+  sorted.forEach((entry, index) => {
+    if (used.has(index)) return;
+    used.add(index);
+    if (entry.period === null || entry.subject === null) {
+      result.push(entry);
+      return;
+    }
+    const partner = sorted.findIndex(
+      (other, at) =>
+        !used.has(at) &&
+        at !== index &&
+        other.period === (entry.period ?? 0) + 1 &&
+        other.weekday === entry.weekday &&
+        other.week === entry.week &&
+        other.subject !== null &&
+        foldName(other.subject) === foldName(entry.subject ?? '') &&
+        foldName(other.room ?? '') === foldName(entry.room ?? '') &&
+        foldName(other.note ?? '') === foldName(entry.note ?? ''),
+    );
+    const second = partner >= 0 ? sorted[partner] : undefined;
+    const end = second?.period == null ? undefined : table.get(second.period);
+    if (!second || !end) {
+      result.push(entry);
+      return;
+    }
+    used.add(partner);
+    result.push({ ...entry, endTime: end.endTime, periodEnd: second.period });
+  });
+  return result;
+}
 
 interface SubjectMatch {
   /** Name, der für ein neues Fach benutzt wird (Katalognamen statt Kürzel). */
@@ -120,7 +174,12 @@ export class TimetableScanService {
     private readonly providers: ProviderService,
     private readonly catalog: SubjectCatalog,
     private readonly periodTimes: PeriodTimes,
+    private readonly abbreviations: ScanAbbreviations,
   ) {}
+
+  private resolver(): CourseResolver {
+    return new CourseResolver(this.catalog, this.abbreviations.list());
+  }
 
   /** Modelle, die für die Bilderkennung zur Wahl stehen. */
   async models(): Promise<ScanModelView[]> {
@@ -142,9 +201,10 @@ export class TimetableScanService {
     return options;
   }
 
-  private matchSubject(name: string): SubjectMatch {
-    const template = findCatalogEntryByName(this.catalog, name);
-    const canonical = template?.name ?? name;
+  private matchSubject(name: string, resolver: CourseResolver): SubjectMatch {
+    const resolved = resolver.resolve(name);
+    const template = resolved?.template ?? resolver.templateFor(name);
+    const canonical = resolved?.name ?? name;
     const subjects = listSubjects(this.db);
     const found =
       subjects.find((subject) => foldName(subject.name) === foldName(canonical)) ??
@@ -171,15 +231,13 @@ export class TimetableScanService {
     };
   }
 
-  private proposals(
-    entries: readonly (ScanProposal & { startTime: string; endTime: string })[],
-  ): ScanSuccess {
+  private proposals(entries: readonly TimedProposal[], resolver: CourseResolver): ScanSuccess {
     const cache = new Map<string, SubjectMatch>();
     const forName = (name: string): SubjectMatch => {
       const key = foldName(name);
       let match = cache.get(key);
       if (!match) {
-        match = this.matchSubject(name);
+        match = this.matchSubject(name, resolver);
         cache.set(key, match);
       }
       return match;
@@ -226,7 +284,7 @@ export class TimetableScanService {
         // Eine vollständige Antwort: Vision-Modelle müssen dafür nicht streamen können.
         stream: false,
         messages: [
-          { role: 'system', content: SCAN_SYSTEM_PROMPT },
+          { role: 'system', content: scanSystemPrompt(this.abbreviations.list()) },
           {
             role: 'user',
             content: [
@@ -257,27 +315,44 @@ export class TimetableScanService {
     const parsed = parseScanReply(reply);
     // Zeigt das Bild nur Nummern von Unterrichtsstunden, ordnet die Stundentafel die Uhrzeiten zu;
     // Nummern, die die Tafel nicht kennt, werden verworfen und gezählt.
+    const schedule = this.periodTimes.schedule();
     const table = new Map(this.periodTimes.list().map((row) => [row.period, row]));
-    const mapped: (ScanProposal & { startTime: string; endTime: string })[] = [];
+    const resolver = this.resolver();
+    const mapped: TimedProposal[] = [];
     let unmapped = 0;
     for (const entry of parsed.entries) {
+      // Der Kurscode schlägt den Vorschlag des Modells: „2inf2_2“ ist Informatik, egal was es meint.
+      const subject =
+        resolver.resolve(entry.code)?.name ??
+        resolver.resolve(entry.subject)?.name ??
+        entry.subject ??
+        entry.code;
       if (entry.startTime !== null && entry.endTime !== null) {
         mapped.push({
           ...entry,
+          subject,
           startTime: entry.startTime,
           endTime: entry.endTime,
           period: null,
+          periodEnd: null,
         });
         continue;
       }
       const row = entry.period === null ? undefined : table.get(entry.period);
       if (row) {
-        mapped.push({ ...entry, startTime: row.startTime, endTime: row.endTime });
+        mapped.push({
+          ...entry,
+          subject,
+          startTime: row.startTime,
+          endTime: row.endTime,
+          periodEnd: null,
+        });
       } else {
         unmapped += 1;
       }
     }
-    const result = this.proposals(mapped.slice(0, MAX_SCAN_ENTRIES));
+    const lessons = schedule.mergeDoubles ? mergeDoubleLessons(mapped, table) : mapped;
+    const result = this.proposals(lessons.slice(0, MAX_SCAN_ENTRIES), resolver);
     result.skipped = parsed.skipped + unmapped;
     return { ok: true, value: result };
   }
@@ -302,11 +377,12 @@ export class TimetableScanService {
     if (projected > MAX_TIMETABLE_ENTRIES) return { ok: false, error: 'too_many' };
 
     const cache = new Map<string, string | null>();
+    const resolver = this.resolver();
     let subjectsCreated = 0;
     const idFor = (name: string): string | null => {
       const key = foldName(name);
       if (cache.has(key)) return cache.get(key) ?? null;
-      const match = this.matchSubject(name);
+      const match = this.matchSubject(name, resolver);
       let id = match.id;
       if (id === null && input.createSubjects && match.state === 'new') {
         const created = createSubject(this.db, match.canonical, {
@@ -333,6 +409,38 @@ export class TimetableScanService {
     }));
     const result = importTimetableEntries(this.db, timetable, { replace: input.replaceExisting });
     if (!result.ok) return result;
-    return { ok: true, value: { created: result.value, subjectsCreated } };
+    const abbreviationsLearned = this.learnAbbreviations(input.entries, resolver);
+    return { ok: true, value: { created: result.value, subjectsCreated, abbreviationsLearned } };
+  }
+
+  /**
+   * Merkt sich Kurscodes, deren Fach in der Vorschau anders lautet, als Pagewise sie deuten würde
+   * („smw“ → „Sport“). So stimmt der nächste Import ohne Nacharbeit.
+   */
+  private learnAbbreviations(
+    entries: readonly ScanImportEntry[],
+    resolver: CourseResolver,
+  ): number {
+    const mapping = new Map(
+      this.abbreviations.list().map((entry) => [abbreviationKey(entry.code), entry]),
+    );
+    const seen = new Map<string, string>();
+    for (const entry of entries) {
+      if (!entry.code || entry.subject === null) continue;
+      const key = abbreviationKey(entry.code);
+      if (key === '' || seen.has(key)) continue;
+      const resolved = resolver.resolve(entry.code)?.name;
+      if (resolved !== undefined && foldName(resolved) === foldName(entry.subject)) continue;
+      if (foldName(entry.code) === foldName(entry.subject)) continue;
+      seen.set(key, entry.subject);
+      // Ein schon gespeichertes Kürzel bekommt das in der Vorschau korrigierte Fach.
+      mapping.set(key, { code: key, subject: entry.subject });
+    }
+    if (seen.size === 0) return 0;
+    // Gezählt wird nur, was wirklich gespeichert wurde (die Liste hat eine Obergrenze).
+    const saved = this.abbreviations.replace([...mapping.values()]);
+    return saved.filter(
+      (entry) => foldName(seen.get(abbreviationKey(entry.code)) ?? '') === foldName(entry.subject),
+    ).length;
   }
 }

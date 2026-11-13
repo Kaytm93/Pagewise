@@ -32,10 +32,12 @@ import type {
   ProviderInput,
   ProviderPatch,
   ProviderPreset,
+  ScanAbbreviation,
   ScanImportInput,
   ScanImportResult,
   ScanModel,
-  ScanPeriodTime,
+  ScanPeriodSchedule,
+  ScanPeriods,
   ScanResult,
   Selection,
   SessionInfo,
@@ -237,16 +239,30 @@ export function createApi(client: ApiClient) {
     /** Geprüfte Vorschläge übernehmen; erst hier entstehen Stunden und neue Fächer. */
     importTimetableScan: (input: ScanImportInput) =>
       client.request<ScanImportResult>('POST', '/api/timetable-scan/import', input),
-    /** Stundentafel: Nummern von Unterrichtsstunden und ihre Uhrzeiten. */
-    async timetableScanPeriods(): Promise<ScanPeriodTime[]> {
+    /** Stundentafel: Regel (Beginn, Länge, Pausen) und die daraus berechneten Uhrzeiten. */
+    timetableScanPeriods: () => client.request<ScanPeriods>('GET', '/api/timetable-scan/periods'),
+    setTimetableScanPeriods: (schedule: ScanPeriodSchedule) =>
+      client.request<ScanPeriods>('PUT', '/api/timetable-scan/periods', { schedule }),
+    /** Eigene Kürzel für Kurscodes; sie gehen den eingebauten Kürzeln vor. */
+    async timetableScanAbbreviations(): Promise<ScanAbbreviation[]> {
       return (
-        await client.request<{ periods: ScanPeriodTime[] }>('GET', '/api/timetable-scan/periods')
-      ).periods;
+        await client.request<{ abbreviations: ScanAbbreviation[] }>(
+          'GET',
+          '/api/timetable-scan/abbreviations',
+        )
+      ).abbreviations;
     },
-    setTimetableScanPeriods: (periods: ScanPeriodTime[]) =>
-      client.request<{ periods: ScanPeriodTime[] }>('PUT', '/api/timetable-scan/periods', {
-        periods,
-      }),
+    async setTimetableScanAbbreviations(
+      abbreviations: ScanAbbreviation[],
+    ): Promise<ScanAbbreviation[]> {
+      return (
+        await client.request<{ abbreviations: ScanAbbreviation[] }>(
+          'PUT',
+          '/api/timetable-scan/abbreviations',
+          { abbreviations },
+        )
+      ).abbreviations;
+    },
     /** Legt fest, welche Wochenart die Woche mit diesem Datum hat, oder hebt es mit `null` auf. */
     async setWeekAnchor(
       anchor: { date: string; week: 'a' | 'b' } | null,

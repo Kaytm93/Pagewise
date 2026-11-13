@@ -1,4 +1,6 @@
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { APP_ROOT } from '../paths';
 import { createHarness, type Harness, type Session } from '../test-harness';
 
 // Fake-Schlüssel werden zur Laufzeit zusammengesetzt, damit der Secret-Scan den Quelltext nicht trifft.
@@ -119,7 +121,10 @@ describe('Stundenplan-Erkennung aus einem Bild', () => {
       });
       return upstream();
     }) as typeof fetch;
-    harness = createHarness({ fetch: fakeFetch });
+    harness = createHarness({
+      fetch: fakeFetch,
+      catalogFile: join(APP_ROOT, 'config', 'subject-catalog.json'),
+    });
     session = await harness.signIn();
     const created = await session.call('POST', '/api/providers', {
       name: 'Beispiel-Anbieter',
@@ -163,6 +168,8 @@ describe('Stundenplan-Erkennung aus einem Bild', () => {
     ['GET', '/api/timetable-scan/models'],
     ['GET', '/api/timetable-scan/periods'],
     ['PUT', '/api/timetable-scan/periods'],
+    ['GET', '/api/timetable-scan/abbreviations'],
+    ['PUT', '/api/timetable-scan/abbreviations'],
     ['POST', '/api/timetable-scan'],
     ['POST', '/api/timetable-scan/import'],
   ])('verlangt für %s %s eine Anmeldung', async (method, path) => {
@@ -170,44 +177,82 @@ describe('Stundenplan-Erkennung aus einem Bild', () => {
     expect(reply.status).toBe(401);
   });
 
-  it('liefert die Voreinstellung der Stundentafel und speichert eine eigene', async () => {
+  const SCHEDULE = {
+    start: '07:30',
+    lessonMinutes: 45,
+    gapMinutes: 5,
+    count: 3,
+    breaks: [{ after: 2, minutes: 20 }],
+    mergeDoubles: false,
+  };
+
+  it('liefert die Voreinstellung der Stundentafel und berechnet alle Zeiten aus der Regel', async () => {
     const initial = await session.call('GET', '/api/timetable-scan/periods');
     expect(initial.status).toBe(200);
+    expect(initial.body.schedule).toMatchObject({ start: '08:00', lessonMinutes: 45 });
     const defaults = initial.body.periods as { period: number; startTime: string }[];
-    expect(defaults.length).toBeGreaterThan(0);
-    expect(defaults[0]?.period).toBe(1);
+    expect(defaults[0]).toEqual({ period: 1, startTime: '08:00', endTime: '08:45' });
 
-    const saved = await session.call('PUT', '/api/timetable-scan/periods', {
-      periods: [
-        { period: 1, startTime: '07:30', endTime: '08:15' },
-        { period: 2, startTime: '08:20', endTime: '09:05' },
-      ],
-    });
+    const saved = await session.call('PUT', '/api/timetable-scan/periods', { schedule: SCHEDULE });
     expect(saved.status).toBe(200);
+    expect(saved.body.schedule).toEqual(SCHEDULE);
     expect(saved.body.periods).toEqual([
       { period: 1, startTime: '07:30', endTime: '08:15' },
       { period: 2, startTime: '08:20', endTime: '09:05' },
+      { period: 3, startTime: '09:25', endTime: '10:10' },
     ]);
     const reread = await session.call('GET', '/api/timetable-scan/periods');
-    expect(reread.body.periods).toEqual(saved.body.periods);
+    expect(reread.body).toEqual(saved.body);
   });
 
   it.each([
-    ['Ende vor Beginn', [{ period: 1, startTime: '08:15', endTime: '07:30' }]],
+    ['Beginn ungültig', { ...SCHEDULE, start: '25:00' }],
+    ['Stunde zu kurz', { ...SCHEDULE, lessonMinutes: 0 }],
+    ['Pause nach der letzten Stunde', { ...SCHEDULE, breaks: [{ after: 3, minutes: 10 }] }],
     [
-      'doppelte Nummer',
-      [
-        { period: 1, startTime: '07:30', endTime: '08:15' },
-        { period: 1, startTime: '08:20', endTime: '09:05' },
-      ],
+      'doppelte Pause',
+      {
+        ...SCHEDULE,
+        breaks: [
+          { after: 1, minutes: 10 },
+          { after: 1, minutes: 15 },
+        ],
+      },
     ],
-    ['Nummer zu groß', [{ period: 17, startTime: '07:30', endTime: '08:15' }]],
-    ['unbekanntes Feld', [{ period: 1, startTime: '07:30', endTime: '08:15', extra: 'x' }]],
-  ])('lehnt eine Stundentafel ab: %s', async (_grund, periods) => {
-    const reply = await session.call('PUT', '/api/timetable-scan/periods', { periods });
+    ['zu viele Stunden', { ...SCHEDULE, count: 17 }],
+    ['über Mitternacht', { ...SCHEDULE, start: '23:00' }],
+    ['unbekanntes Feld', { ...SCHEDULE, extra: 'x' }],
+  ])('lehnt eine Stundentafel ab: %s', async (_grund, schedule) => {
+    const reply = await session.call('PUT', '/api/timetable-scan/periods', { schedule });
     expect(reply.status).toBe(400);
     const reread = await session.call('GET', '/api/timetable-scan/periods');
-    expect((reread.body.periods as unknown[]).length).toBeGreaterThan(0);
+    expect(reread.body.schedule).toMatchObject({ start: '08:00' });
+  });
+
+  it('lehnt die alte Form mit einzelnen Zeiten ab', async () => {
+    const reply = await session.call('PUT', '/api/timetable-scan/periods', {
+      periods: [{ period: 1, startTime: '07:30', endTime: '08:15' }],
+    });
+    expect(reply.status).toBe(400);
+  });
+
+  it('speichert eigene Kürzel und prüft sie', async () => {
+    const empty = await session.call('GET', '/api/timetable-scan/abbreviations');
+    expect(empty.body.abbreviations).toEqual([]);
+    const saved = await session.call('PUT', '/api/timetable-scan/abbreviations', {
+      abbreviations: [
+        { code: ' bsp ', subject: 'Beispielfach A' },
+        { code: 'BSP', subject: 'Beispielfach B' },
+      ],
+    });
+    expect(saved.status).toBe(200);
+    expect(saved.body.abbreviations).toEqual([{ code: 'bsp', subject: 'Beispielfach A' }]);
+    const bad = await session.call('PUT', '/api/timetable-scan/abbreviations', {
+      abbreviations: [{ code: 'x\u0007', subject: 'Beispielfach' }],
+    });
+    expect(bad.status).toBe(400);
+    const reread = await session.call('GET', '/api/timetable-scan/abbreviations');
+    expect(reread.body.abbreviations).toEqual(saved.body.abbreviations);
   });
 
   it('listet nur Modelle mit Bildverstehen, deren Anbieter Bilder senden darf', async () => {
@@ -267,47 +312,28 @@ describe('Stundenplan-Erkennung aus einem Bild', () => {
     expect((timetable.body.entries as unknown[]).length).toBe(0);
   });
 
+  const numbered = (weekday: number, period: number, patch: Record<string, unknown> = {}) => ({
+    weekday,
+    startTime: null,
+    endTime: null,
+    period,
+    code: null,
+    subject: 'Beispielfach A',
+    room: null,
+    note: null,
+    week: 'all',
+    ...patch,
+  });
+
   it('ordnet Nummern von Unterrichtsstunden den Zeiten der Stundentafel zu', async () => {
-    await session.call('PUT', '/api/timetable-scan/periods', {
-      periods: [
-        { period: 3, startTime: '09:55', endTime: '10:40' },
-        { period: 4, startTime: '10:45', endTime: '11:30' },
-      ],
-    });
+    await session.call('PUT', '/api/timetable-scan/periods', { schedule: SCHEDULE });
     upstream = () =>
       answerOf(
         JSON.stringify({
           entries: [
-            {
-              weekday: 3,
-              startTime: null,
-              endTime: null,
-              period: 3,
-              subject: 'Beispielfach A',
-              room: 'Raum 1',
-              note: null,
-              week: 'all',
-            },
-            {
-              weekday: 3,
-              startTime: null,
-              endTime: null,
-              period: 4,
-              subject: 'Beispielfach B',
-              room: null,
-              note: null,
-              week: 'all',
-            },
-            {
-              weekday: 4,
-              startTime: null,
-              endTime: null,
-              period: 9,
-              subject: 'Beispielfach C',
-              room: null,
-              note: null,
-              week: 'all',
-            },
+            numbered(3, 1, { room: 'Raum 1' }),
+            numbered(3, 3, { subject: 'Beispielfach B' }),
+            numbered(4, 9, { subject: 'Beispielfach C' }),
           ],
         }),
       );
@@ -318,10 +344,92 @@ describe('Stundenplan-Erkennung aus einem Bild', () => {
       skipped: number;
     };
     expect(body.proposals).toMatchObject([
-      { period: 3, startTime: '09:55', endTime: '10:40' },
-      { period: 4, startTime: '10:45', endTime: '11:30' },
+      { period: 1, startTime: '07:30', endTime: '08:15' },
+      { period: 3, startTime: '09:25', endTime: '10:10' },
     ]);
     expect(body.skipped).toBe(1);
+  });
+
+  it('deutet Kurscodes als Fach und fasst Doppelstunden zusammen', async () => {
+    await session.call('PUT', '/api/timetable-scan/periods', {
+      schedule: { ...SCHEDULE, count: 4, mergeDoubles: true },
+    });
+    await session.call('PUT', '/api/timetable-scan/abbreviations', {
+      abbreviations: [{ code: 'bsp', subject: 'Beispielfach D' }],
+    });
+    upstream = () =>
+      answerOf(
+        JSON.stringify({
+          entries: [
+            numbered(1, 2, { code: '2inf2_2', subject: 'Inf' }),
+            numbered(1, 1, { code: '2inf2_2', subject: '2inf2_2' }),
+            numbered(1, 3, { code: 'W_Inf', subject: 'W_Inf' }),
+            numbered(1, 4, { code: 'mvk', subject: null }),
+            numbered(2, 1, { code: 'ev', subject: 'ev' }),
+            numbered(2, 3, { code: '2bsp1', subject: 'Unbekannt' }),
+          ],
+        }),
+      );
+    const reply = await scan();
+    expect(reply.status).toBe(200);
+    const body = reply.body as {
+      proposals: {
+        weekday: number;
+        subject: string;
+        startTime: string;
+        endTime: string;
+        periodEnd: number | null;
+      }[];
+    };
+    expect(
+      body.proposals.map(({ weekday, subject, startTime, endTime, periodEnd }) => ({
+        weekday,
+        subject,
+        startTime,
+        endTime,
+        periodEnd,
+      })),
+    ).toEqual([
+      {
+        weekday: 1,
+        subject: 'Informatik',
+        startTime: '07:30',
+        endTime: '09:05',
+        periodEnd: 2,
+      },
+      {
+        weekday: 1,
+        subject: 'W-Seminar Informatik',
+        startTime: '09:25',
+        endTime: '10:10',
+        periodEnd: null,
+      },
+      {
+        weekday: 1,
+        subject: 'Vertiefungskurs Mathematik',
+        startTime: '10:15',
+        endTime: '11:00',
+        periodEnd: null,
+      },
+      {
+        weekday: 2,
+        subject: 'Evangelische Religion',
+        startTime: '07:30',
+        endTime: '08:15',
+        periodEnd: null,
+      },
+      {
+        weekday: 2,
+        subject: 'Beispielfach D',
+        startTime: '09:25',
+        endTime: '10:10',
+        periodEnd: null,
+      },
+    ]);
+    // Die eigenen Kürzel reisen im Prompt mit, leere Zellen gelten als Freistunden.
+    const system = String(calls[0]?.messages[0]?.content);
+    expect(system).toContain('bsp = Beispielfach D');
+    expect(system).toContain('Freistunden');
   });
 
   it('blockt Anbieter ohne Bilder-Freigabe und Modelle ohne Bildverstehen', async () => {
@@ -374,7 +482,7 @@ describe('Stundenplan-Erkennung aus einem Bild', () => {
   it('übernimmt die Vorschläge und legt erkannte Fächer neu an', async () => {
     const created = await importEntries(oneEntry({ subject: 'Beispielfach B' }));
     expect(created.status).toBe(201);
-    expect(created.body).toEqual({ created: 1, subjectsCreated: 1 });
+    expect(created.body).toEqual({ created: 1, subjectsCreated: 1, abbreviationsLearned: 0 });
 
     const timetable = await session.call('GET', '/api/timetable');
     const entries = timetable.body.entries as { subjectId: string; startTime: string }[];
@@ -389,13 +497,56 @@ describe('Stundenplan-Erkennung aus einem Bild', () => {
     );
   });
 
+  it('merkt sich Kurscodes, deren Fach in der Vorschau geändert wurde', async () => {
+    const reply = await importEntries({
+      entries: [
+        { ...LESSON, code: '2bsp1_2', subject: 'Beispielfach E' },
+        { ...LESSON, weekday: 2, code: '2inf2_2', subject: 'Informatik' },
+        { ...LESSON, weekday: 3, code: 'Beispielfach F', subject: 'Beispielfach F' },
+      ],
+      createSubjects: false,
+      replaceExisting: false,
+    });
+    expect(reply.status).toBe(201);
+    expect(reply.body.abbreviationsLearned).toBe(1);
+    const list = await session.call('GET', '/api/timetable-scan/abbreviations');
+    expect(list.body.abbreviations).toEqual([{ code: 'bsp', subject: 'Beispielfach E' }]);
+
+    // Eine zweite Korrektur ersetzt das gespeicherte Kürzel.
+    const again = await importEntries({
+      entries: [{ ...LESSON, code: '2bsp1_2', subject: 'Beispielfach G' }],
+      createSubjects: false,
+      replaceExisting: false,
+    });
+    expect(again.body.abbreviationsLearned).toBe(1);
+    const updated = await session.call('GET', '/api/timetable-scan/abbreviations');
+    expect(updated.body.abbreviations).toEqual([{ code: 'bsp', subject: 'Beispielfach G' }]);
+  });
+
+  it('zählt keine gelernten Kürzel, wenn die Liste voll ist', async () => {
+    const full = Array.from({ length: 100 }, (_, index) => ({
+      code: `bsp${String.fromCharCode(97 + (index % 26))}${String.fromCharCode(97 + Math.floor(index / 26))}`,
+      subject: 'Beispielfach H',
+    }));
+    const saved = await session.call('PUT', '/api/timetable-scan/abbreviations', {
+      abbreviations: full,
+    });
+    expect(saved.body.abbreviations).toHaveLength(100);
+    const reply = await importEntries({
+      entries: [{ ...LESSON, code: 'neu', subject: 'Beispielfach I' }],
+      createSubjects: false,
+      replaceExisting: false,
+    });
+    expect(reply.body.abbreviationsLearned).toBe(0);
+  });
+
   it('verknüpft vorhandene Fächer ohne Groß-/Kleinschreibung und kann auf neue verzichten', async () => {
     const existing = await session.call('POST', '/api/subjects', { name: 'Beispielfach A' });
     const without = await importEntries({
       ...oneEntry({ subject: 'BEISPIELFACH B' }),
       createSubjects: false,
     });
-    expect(without.body).toEqual({ created: 1, subjectsCreated: 0 });
+    expect(without.body).toEqual({ created: 1, subjectsCreated: 0, abbreviationsLearned: 0 });
     const timetable = await session.call('GET', '/api/timetable');
     expect((timetable.body.entries as { subjectId: string | null }[])[0]?.subjectId).toBeNull();
 

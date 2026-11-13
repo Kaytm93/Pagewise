@@ -36,53 +36,61 @@
       "name": "Deutsch",
       "category": "sprachen",
       "icon": "book",
-      "aliases": ["Muttersprache"]
+      "aliases": ["Muttersprache"],
+      "abbreviations": ["D", "Deu", "Dt"]
     },
     {
       "key": "englisch",
       "name": "Englisch",
       "category": "sprachen",
       "icon": "languages",
-      "aliases": ["English"]
+      "aliases": ["English"],
+      "abbreviations": ["E", "En", "Eng"]
     },
     {
       "key": "franzoesisch",
       "name": "Französisch",
       "category": "sprachen",
       "icon": "languages",
-      "aliases": ["Franz"]
+      "aliases": ["Franz"],
+      "abbreviations": ["F", "Fr", "Frz"]
     },
     {
       "key": "latein",
       "name": "Latein",
       "category": "sprachen",
       "icon": "languages",
-      "aliases": ["Latinum"]
+      "aliases": ["Latinum"],
+      "abbreviations": ["L", "Lat"]
     },
     {
       "key": "griechisch",
       "name": "Griechisch",
       "category": "sprachen",
       "icon": "languages",
-      "aliases": ["Altgriechisch", "Neugriechisch"]
+      "aliases": ["Altgriechisch", "Neugriechisch"],
+      "abbreviations": ["Gr", "Grie"]
     },
     {
       "key": "spanisch",
       "name": "Spanisch",
       "category": "sprachen",
-      "icon": "languages"
+      "icon": "languages",
+      "abbreviations": ["Spa", "Span"]
     },
     {
       "key": "italienisch",
       "name": "Italienisch",
       "category": "sprachen",
-      "icon": "languages"
+      "icon": "languages",
+      "abbreviations": ["It", "Ita"]
     },
     {
       "key": "russisch",
       "name": "Russisch",
       "category": "sprachen",
-      "icon": "languages"
+      "icon": "languages",
+      "abbreviations": ["Ru", "Rus"]
     },
     {
       "key": "tuerkisch",
@@ -152,46 +160,53 @@
       "name": "Mathematik",
       "category": "mint",
       "icon": "calculator",
-      "aliases": ["Mathe"]
+      "aliases": ["Mathe"],
+      "abbreviations": ["M", "Ma", "Mat"]
     },
     {
       "key": "physik",
       "name": "Physik",
       "category": "mint",
-      "icon": "atom"
+      "icon": "atom",
+      "abbreviations": ["Ph", "Phy"]
     },
     {
       "key": "chemie",
       "name": "Chemie",
       "category": "mint",
-      "icon": "flask"
+      "icon": "flask",
+      "abbreviations": ["C", "Ch", "Che"]
     },
     {
       "key": "biologie",
       "name": "Biologie",
       "category": "mint",
       "icon": "microscope",
-      "aliases": ["Bio"]
+      "aliases": ["Bio"],
+      "abbreviations": ["B", "Bi"]
     },
     {
       "key": "naturwissenschaften",
       "name": "Naturwissenschaften",
       "category": "mint",
       "icon": "flask",
-      "aliases": ["NaWi", "NwT", "Natur und Technik"]
+      "aliases": ["NaWi", "NwT", "Natur und Technik"],
+      "abbreviations": ["Nw"]
     },
     {
       "key": "informatik",
       "name": "Informatik",
       "category": "mint",
       "icon": "code",
-      "aliases": ["Info"]
+      "aliases": ["Info"],
+      "abbreviations": ["Inf", "If"]
     },
     {
       "key": "astronomie",
       "name": "Astronomie",
       "category": "mint",
-      "icon": "atom"
+      "icon": "atom",
+      "abbreviations": ["Ast"]
     },
     {
       "key": "technik",
@@ -204,95 +219,115 @@
       "key": "geschichte",
       "name": "Geschichte",
       "category": "gesellschaft",
-      "icon": "landmark"
+      "icon": "landmark",
+      "abbreviations": ["G", "Ge", "Gs", "Gesch"]
     },
     {
       "key": "geographie",
       "name": "Geographie",
       "category": "gesellschaft",
       "icon": "globe",
-      "aliases": ["Erdkunde", "Geografie"]
+      "aliases": ["Erdkunde", "Geografie"],
+      "abbreviations": ["Geo", "Ek", "Gg"]
     },
     {
       "key": "politik",
       "name": "Politik",
       "category": "gesellschaft",
       "icon": "scale",
-      "aliases": ["Sozialkunde", "Gemeinschaftskunde", "PoWi", "Politik und Wirtschaft"]
+      "aliases": [
+        "Sozialkunde",
+        "Gemeinschaftskunde",
+        "PoWi",
+        "Politik und Wirtschaft",
+        "Politik und Gesellschaft"
+      ],
+      "abbreviations": ["Pug", "Sk", "Pol", "Po"]
     },
     {
       "key": "wirtschaft",
       "name": "Wirtschaft",
       "category": "gesellschaft",
       "icon": "landmark",
-      "aliases": ["WiSo", "Wirtschaftslehre"]
+      "aliases": ["WiSo", "Wirtschaftslehre"],
+      "abbreviations": ["Wi", "Wirt"]
     },
     {
       "key": "recht",
       "name": "Recht",
       "category": "gesellschaft",
       "icon": "scale",
-      "aliases": ["Wirtschaft und Recht"]
+      "aliases": ["Wirtschaft und Recht"],
+      "abbreviations": ["Wr"]
     },
     {
       "key": "sozialwissenschaften",
       "name": "Sozialwissenschaften",
       "category": "gesellschaft",
       "icon": "globe",
-      "aliases": ["Gesellschaftslehre"]
+      "aliases": ["Gesellschaftslehre"],
+      "abbreviations": ["Sowi"]
     },
     {
       "key": "paedagogik",
       "name": "Pädagogik",
       "category": "gesellschaft",
-      "icon": "book"
+      "icon": "book",
+      "abbreviations": ["Päd", "Pä"]
     },
     {
       "key": "psychologie",
       "name": "Psychologie",
       "category": "gesellschaft",
-      "icon": "book"
+      "icon": "book",
+      "abbreviations": ["Psy"]
     },
     {
       "key": "philosophie",
       "name": "Philosophie",
       "category": "gesellschaft",
-      "icon": "book"
+      "icon": "book",
+      "abbreviations": ["Phil"]
     },
     {
       "key": "ethik",
       "name": "Ethik",
       "category": "gesellschaft",
       "icon": "scale",
-      "aliases": ["Werte und Normen", "LER"]
+      "aliases": ["Werte und Normen", "LER"],
+      "abbreviations": ["Eth", "Et"]
     },
     {
       "key": "religion",
       "name": "Religion",
       "category": "gesellschaft",
       "icon": "book",
-      "aliases": ["Religionslehre"]
+      "aliases": ["Religionslehre"],
+      "abbreviations": ["Rel", "Reli"]
     },
     {
       "key": "religion-evangelisch",
       "name": "Evangelische Religion",
       "category": "gesellschaft",
       "icon": "book",
-      "aliases": ["Ev. Reli"]
+      "aliases": ["Ev. Reli"],
+      "abbreviations": ["Ev", "Evr", "Er", "Rev"]
     },
     {
       "key": "religion-katholisch",
       "name": "Katholische Religion",
       "category": "gesellschaft",
       "icon": "book",
-      "aliases": ["Kath. Reli"]
+      "aliases": ["Kath. Reli"],
+      "abbreviations": ["K", "Kr", "Kath", "Rk"]
     },
     {
       "key": "religion-islamisch",
       "name": "Islamischer Religionsunterricht",
       "category": "gesellschaft",
       "icon": "book",
-      "aliases": ["Islam"]
+      "aliases": ["Islam"],
+      "abbreviations": ["Isl"]
     },
     {
       "key": "religion-juedisch",
@@ -311,20 +346,23 @@
       "name": "Sachunterricht",
       "category": "gesellschaft",
       "icon": "leaf",
-      "aliases": ["Heimat- und Sachunterricht", "HSU"]
+      "aliases": ["Heimat- und Sachunterricht", "HSU"],
+      "abbreviations": ["Su"]
     },
     {
       "key": "kunst",
       "name": "Kunst",
       "category": "kunst",
       "icon": "palette",
-      "aliases": ["Bildende Kunst"]
+      "aliases": ["Bildende Kunst"],
+      "abbreviations": ["Ku", "Kun"]
     },
     {
       "key": "musik",
       "name": "Musik",
       "category": "kunst",
-      "icon": "music"
+      "icon": "music",
+      "abbreviations": ["Mu", "Mus"]
     },
     {
       "key": "darstellendes-spiel",
@@ -359,7 +397,8 @@
       "name": "Sport",
       "category": "sport",
       "icon": "sport",
-      "aliases": ["Leibesübungen"]
+      "aliases": ["Leibesübungen"],
+      "abbreviations": ["Sp", "Spo", "Sm", "Sw"]
     },
     {
       "key": "sporttheorie",
@@ -399,7 +438,8 @@
       "name": "Seminar",
       "category": "sonstiges",
       "icon": "pen",
-      "aliases": ["P-Seminar", "W-Seminar"]
+      "aliases": ["P-Seminar", "W-Seminar"],
+      "abbreviations": ["Sem"]
     },
     {
       "key": "projektkurs",
