@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { titleFrom } from '../chats/history';
 import type { Db } from '../db/client';
 import { chats, messages, notes, subjectGroups, subjects } from '../db/schema';
@@ -258,6 +258,29 @@ function existingNoteOfMessage(db: Db, chatId: string, messageId: string): NoteV
     .orderBy(desc(notes.updatedAt), desc(notes.createdAt))
     .get();
   return row ? viewOf(row) : null;
+}
+
+/**
+ * Zu welchen Antworten eines Chats es schon einen Hefteintrag gibt: Nachricht → ID des Eintrags (bei mehreren
+ * der zuletzt geänderte, wie in {@link noteFromMessage}). Für die Anzeige „Hefteintrag öffnen“ (D-121).
+ */
+export function noteIdsForMessages(
+  db: Db,
+  chatId: string,
+  messageIds: string[],
+): Map<string, string> {
+  const result = new Map<string, string>();
+  if (messageIds.length === 0) return result;
+  const rows = db
+    .select({ id: notes.id, messageId: notes.sourceMessageId })
+    .from(notes)
+    .where(and(eq(notes.sourceChatId, chatId), inArray(notes.sourceMessageId, messageIds)))
+    .orderBy(desc(notes.updatedAt), desc(notes.createdAt))
+    .all();
+  for (const row of rows) {
+    if (row.messageId !== null && !result.has(row.messageId)) result.set(row.messageId, row.id);
+  }
+  return result;
 }
 
 /** Ergebnis von {@link noteFromMessage}: `created` sagt, ob der Eintrag neu entstand oder schon da war. */
