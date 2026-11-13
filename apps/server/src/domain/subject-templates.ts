@@ -9,6 +9,7 @@ export const DEFAULT_SUBJECT_NAME = 'Standard';
 export const MAX_TEMPLATES = 200;
 const MAX_CATEGORIES = 20;
 const MAX_ALIASES = 8;
+const MAX_ABBREVIATIONS = 8;
 
 /** Schlüssel von Vorlagen und Kategorien: klein, ASCII, mit Bindestrich. Verknüpft auch die Standard-Prompts. */
 export const KEY_PATTERN = /^[a-z0-9][a-z0-9-]{0,39}$/;
@@ -29,6 +30,11 @@ export interface CatalogEntry {
   icon: string | null;
   /** Suchbegriffe (z. B. „Erdkunde“ für Geographie). */
   aliases: string[];
+  /**
+   * Übliche Fachkürzel aus Stundenplänen (z. B. „M“ für Mathematik). Die Stundenplan-Erkennung
+   * ordnet Kurscodes darüber zu; ein Kürzel gehört höchstens zu einer Vorlage.
+   */
+  abbreviations: string[];
 }
 
 export interface SubjectCatalog {
@@ -39,6 +45,8 @@ export interface SubjectCatalog {
 const EMPTY: SubjectCatalog = { categories: [], subjects: [] };
 
 const keyField = z.string().regex(KEY_PATTERN);
+/** Fachkürzel: kurz, nur Buchstaben (auch Umlaute). */
+const ABBREVIATION_PATTERN = /^\p{L}{1,6}$/u;
 
 const fileV1 = z.object({
   version: z.literal(1),
@@ -56,6 +64,10 @@ const fileV2 = z.object({
         category: keyField,
         icon: iconField.optional(),
         aliases: z.array(nameField).max(MAX_ALIASES).optional(),
+        abbreviations: z
+          .array(z.string().regex(ABBREVIATION_PATTERN))
+          .max(MAX_ABBREVIATIONS)
+          .optional(),
       }),
     )
     .max(MAX_TEMPLATES),
@@ -113,6 +125,7 @@ export function loadSubjectCatalog(file: string): SubjectCatalog {
     }
     const known = new Set(categories.map((category) => category.id));
     const subjects: CatalogEntry[] = [];
+    const seenAbbreviations = new Set<string>();
     for (const entry of v2.data.subjects) {
       if (RESERVED_KEYS.has(entry.key) || !known.has(entry.category)) continue;
       if (foldName(entry.name) === foldName(DEFAULT_SUBJECT_NAME)) continue;
@@ -123,6 +136,12 @@ export function loadSubjectCatalog(file: string): SubjectCatalog {
         category: entry.category,
         icon: entry.icon ?? null,
         aliases: (entry.aliases ?? []).filter((alias) => foldName(alias) !== foldName(entry.name)),
+        abbreviations: (entry.abbreviations ?? []).filter((abbreviation) => {
+          const folded = foldName(abbreviation);
+          if (seenAbbreviations.has(folded)) return false;
+          seenAbbreviations.add(folded);
+          return true;
+        }),
       });
     }
     return { categories, subjects };
@@ -134,7 +153,14 @@ export function loadSubjectCatalog(file: string): SubjectCatalog {
     for (const { name } of v1.data.subjects) {
       if (foldName(name) === foldName(DEFAULT_SUBJECT_NAME)) continue;
       if (fresh(name, null)) {
-        subjects.push({ key: null, name, category: null, icon: null, aliases: [] });
+        subjects.push({
+          key: null,
+          name,
+          category: null,
+          icon: null,
+          aliases: [],
+          abbreviations: [],
+        });
       }
     }
     return { categories: [], subjects };
@@ -151,5 +177,16 @@ export function findCatalogEntryByName(
   return (
     catalog.subjects.find((entry) => foldName(entry.name) === folded) ??
     catalog.subjects.find((entry) => entry.aliases.some((alias) => foldName(alias) === folded))
+  );
+}
+
+/** Sucht die Vorlage zu einem Fachkürzel aus einem Stundenplan (z. B. „Ph“ für Physik). */
+export function findCatalogEntryByAbbreviation(
+  catalog: SubjectCatalog,
+  abbreviation: string,
+): CatalogEntry | undefined {
+  const folded = foldName(abbreviation);
+  return catalog.subjects.find((entry) =>
+    entry.abbreviations.some((candidate) => foldName(candidate) === folded),
   );
 }

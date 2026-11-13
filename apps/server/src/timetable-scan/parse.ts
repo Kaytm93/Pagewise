@@ -13,6 +13,7 @@ export const MAX_SCAN_ENTRIES = 200;
 export const MAX_PERIOD_NUMBER = 16;
 const MAX_REPLY_CHARACTERS = 60_000;
 const MAX_SUBJECT_CHARACTERS = 80;
+const MAX_CODE_CHARACTERS = 40;
 const MAX_ROOM_CHARACTERS = 40;
 const MAX_NOTE_CHARACTERS = 200;
 
@@ -24,6 +25,8 @@ export interface ScanProposal {
   endTime: string | null;
   /** Nummer der Unterrichtsstunde aus dem Bild, sonst `null`. Ordnet die Stundentafel zu. */
   period: number | null;
+  /** Kursbezeichnung so, wie sie im Bild steht (z. B. „2bsp1_2“), sonst `null`. */
+  code: string | null;
   /** Erkannter Fachname, `null` wenn im Bild nichts lesbar war. */
   subject: string | null;
   room: string | null;
@@ -40,18 +43,48 @@ export interface ParsedScan {
 /** Anweisung an das Vision-Modell. Neutrale Vorgabe, keine Namen, keine echten Daten. */
 export const SCAN_SYSTEM_PROMPT = [
   'Du liest einen Stundenplan aus einem Bild und antwortest ausschließlich mit einem JSON-Objekt.',
-  'Form: {"entries":[{"weekday":1,"startTime":"08:00","endTime":"08:45","period":null,"subject":"Beispielfach","room":"Raum 1","note":null,"week":"all"}]}.',
+  'Form: {"entries":[{"weekday":1,"startTime":"08:00","endTime":"08:45","period":null,"code":"1bsp1_1","subject":"Beispielfach","room":"Raum 1","note":null,"week":"all"}]}.',
   'Regeln:',
   '- weekday ist eine Zahl: 1 = Montag, 2 = Dienstag, 3 = Mittwoch, 4 = Donnerstag, 5 = Freitag, 6 = Samstag, 7 = Sonntag.',
   '- startTime und endTime sind Uhrzeiten im 24-Stunden-Format "HH:MM". Das Ende liegt nach dem Beginn.',
   '- Steht im Plan nur die Nummer einer Unterrichtsstunde und keine Uhrzeit, setze period auf diese Nummer und startTime und endTime auf null. Gibt es Uhrzeiten, ist period null.',
-  '- subject ist der vollständige Fachname. Kürzel ausschreiben (zum Beispiel "Ma" als "Mathematik"). Wenn nichts lesbar ist: null.',
+  '- Zähle die Nummern so, wie sie in der ersten Spalte stehen. Zeilen ohne Einträge (zum Beispiel eine Mittagspause) gehören zu keiner Stunde.',
+  '- Jede Unterrichtsstunde ist ein eigener Eintrag, auch bei Doppelstunden (zwei Einträge mit Nummer 1 und 2).',
+  '- Leere Zellen sind Freistunden: nicht aufführen.',
+  '- code ist die Kursbezeichnung genau so, wie sie in der Zelle steht (zum Beispiel "2ma1_2" oder "1W_BSP_1"), ohne Lehrkraft und Raum. Gibt es keine, null.',
+  '- subject ist der ausgeschriebene Fachname, ohne Jahrgang, Kursnummer oder Kursart. Kursbezeichnungen bestehen oft aus einer Ziffer für Jahrgang oder Halbjahr, dem Fachkürzel und einer Kursnummer: "2ma1_2" ist Mathematik, "1e3_1" ist Englisch, "2inf2_2" ist Informatik.',
+  '- Übliche Kürzel: d = Deutsch, e = Englisch, f = Französisch, l = Latein, m = Mathematik, ph = Physik, c = Chemie, b = Biologie, inf = Informatik, g = Geschichte, geo = Geographie, ev = Evangelische Religion, k = Katholische Religion, eth = Ethik, mu = Musik, ku = Kunst, sp = Sport.',
+  '- Zusätze bleiben Teil des Fachs: "W_" oder "W-" vor dem Fach heißt "W-Seminar <Fach>", "P_" heißt "P-Seminar <Fach>", "vk" vor oder nach dem Fachkürzel heißt "Vertiefungskurs <Fach>". Leistungs- oder Grundkurs (lk, gk) weglassen.',
+  '- Ist ein Kürzel nicht sicher zu deuten, schreibe es unverändert in subject. Nichts raten.',
+  '- Kurze Buchstabenfolgen neben dem Kurs (oft zwei Buchstaben, zum Beispiel "Ab") sind meist Kürzel von Lehrkräften: nicht in subject, room oder note übernehmen.',
   '- room und note nur übernehmen, wenn sie im Bild stehen; sonst null. Keine Personen, Lehrkräfte oder Schulnamen als Fach.',
   '- week ist "a" oder "b", nur wenn A-/B-Wochen im Bild eindeutig markiert sind; sonst "all".',
   '- Nur Stunden aufführen, die im Bild tatsächlich stehen. Nichts erfinden oder ergänzen.',
   '- Ist kein Stundenplan zu erkennen, antworte mit {"entries":[]}.',
   '- Keine Erklärung, kein Markdown, kein Text außerhalb des JSON-Objekts.',
 ].join('\n');
+
+/** Höchstens so viele eigene Kürzel reisen im Prompt mit. */
+const MAX_PROMPT_ABBREVIATIONS = 100;
+
+/**
+ * Anweisung mit den eigenen Kürzeln des Nutzers. Die Kürzel sind schon geprüft (kurz, ohne
+ * Steuerzeichen); Anführungszeichen werden trotzdem entfernt, damit sie das Format nicht stören.
+ */
+export function scanSystemPrompt(
+  abbreviations: readonly { code: string; subject: string }[],
+): string {
+  if (abbreviations.length === 0) return SCAN_SYSTEM_PROMPT;
+  const strip = (value: string) => value.replace(/["\\]/g, '').trim();
+  const lines = abbreviations
+    .slice(0, MAX_PROMPT_ABBREVIATIONS)
+    .map((entry) => `- ${strip(entry.code)} = ${strip(entry.subject)}`);
+  return [
+    SCAN_SYSTEM_PROMPT,
+    'Eigene Kürzel des Nutzers (gehen den üblichen Kürzeln vor, auch mit Jahrgang und Kursnummer):',
+    ...lines,
+  ].join('\n');
+}
 
 export const SCAN_USER_PROMPT =
   'Lies alle Stunden aus diesem Bild und gib nur das beschriebene JSON-Objekt zurück.';
@@ -188,12 +221,13 @@ export function parseScanReply(reply: string): ParsedScan {
       skipped += 1;
       continue;
     }
+    const code = text(raw.code, MAX_CODE_CHARACTERS);
     const subject = text(raw.subject, MAX_SUBJECT_CHARACTERS);
     const room = text(raw.room, MAX_ROOM_CHARACTERS);
     const note = text(raw.note, MAX_NOTE_CHARACTERS);
     const kind = week(raw.week);
     const timeKey = timed ? `${start}|${end}` : `nummer-${period}`;
-    const key = `${day}|${timeKey}|${kind}|${subject === null ? '' : foldName(subject)}`;
+    const key = `${day}|${timeKey}|${kind}|${foldName(subject ?? code ?? '')}`;
     if (seen.has(key)) {
       skipped += 1;
       continue;
@@ -204,6 +238,7 @@ export function parseScanReply(reply: string): ParsedScan {
       startTime: timed ? start : null,
       endTime: timed ? end : null,
       period: timed ? null : period,
+      code,
       subject,
       room,
       note,

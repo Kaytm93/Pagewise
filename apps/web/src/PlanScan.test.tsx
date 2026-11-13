@@ -28,6 +28,8 @@ const PROPOSAL: ScanProposalView = {
   startTime: '08:00',
   endTime: '08:45',
   period: null,
+  periodEnd: null,
+  code: null,
   subject: 'Beispielfach A',
   subjectId: null,
   subjectState: 'new',
@@ -142,6 +144,7 @@ describe('Stundenplan aus Bild erkennen', () => {
           weekday: 1,
           startTime: '08:00',
           endTime: '08:45',
+          code: null,
           subject: 'Beispielfach B',
           room: 'Raum 1',
           note: null,
@@ -187,21 +190,101 @@ describe('Stundenplan aus Bild erkennen', () => {
     expect(server.calls('POST', '/api/timetable-scan')).toHaveLength(0);
   });
 
-  it('lädt und speichert die Stundentafel', async () => {
+  it('berechnet die Stundentafel aus Beginn, Länge und Pausen und speichert die Regel', async () => {
     const server = new FakeServer('unlocked');
     server.scanModels = [MODEL];
     const { user, dialog } = await openDialog(server);
     await user.click(within(dialog).getByText(t.periodsTitle));
-    const start = (await within(dialog).findByLabelText(`${t.from} 1`)) as HTMLInputElement;
+    const start = (await within(dialog).findByLabelText(t.scheduleStart)) as HTMLInputElement;
     expect(start.value).toBe('08:00');
+    expect(
+      within(dialog).getByText(format(t.periodRow, { period: 2, from: '08:50', to: '09:35' })),
+    ).toBeTruthy();
+
     fireEvent.change(start, { target: { value: '07:30' } });
+    fireEvent.change(within(dialog).getByLabelText(t.scheduleCount), { target: { value: '3' } });
+    await user.click(within(dialog).getByRole('button', { name: t.breakAdd }));
+    fireEvent.change(within(dialog).getByLabelText(`${t.breakAfter} 1`), {
+      target: { value: '2' },
+    });
+    fireEvent.change(within(dialog).getByLabelText(`${t.breakMinutes} 1`), {
+      target: { value: '15' },
+    });
+    expect(
+      within(dialog).getByText(format(t.periodRow, { period: 3, from: '09:20', to: '10:05' })),
+    ).toBeTruthy();
+
+    // Eine Pause nach der letzten Stunde geht nicht auf.
+    fireEvent.change(within(dialog).getByLabelText(`${t.breakAfter} 1`), {
+      target: { value: '3' },
+    });
+    expect(within(dialog).getByText(t.scheduleInvalid)).toBeTruthy();
+    expect(
+      (within(dialog).getByRole('button', { name: t.periodsSave }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    fireEvent.change(within(dialog).getByLabelText(`${t.breakAfter} 1`), {
+      target: { value: '2' },
+    });
+
     await user.click(within(dialog).getByRole('button', { name: t.periodsSave }));
     expect(await within(dialog).findByText(t.periodsSaved)).toBeTruthy();
     expect(server.calls('PUT', '/api/timetable-scan/periods')[0]?.body).toEqual({
-      periods: [
-        { period: 1, startTime: '07:30', endTime: '08:45' },
-        { period: 2, startTime: '08:50', endTime: '09:35' },
-      ],
+      schedule: {
+        start: '07:30',
+        lessonMinutes: 45,
+        gapMinutes: 5,
+        count: 3,
+        breaks: [{ after: 2, minutes: 15 }],
+        mergeDoubles: true,
+      },
+    });
+  });
+
+  it('speichert eigene Kürzel', async () => {
+    const server = new FakeServer('unlocked');
+    server.scanModels = [MODEL];
+    const { user, dialog } = await openDialog(server);
+    await user.click(within(dialog).getByText(t.abbreviationsTitle));
+    expect(await within(dialog).findByText(t.abbreviationsEmpty)).toBeTruthy();
+    await user.click(within(dialog).getByRole('button', { name: t.abbreviationAdd }));
+    await user.type(within(dialog).getByLabelText(`${t.abbreviationCode} 1`), 'bsp');
+    await user.type(within(dialog).getByLabelText(`${t.abbreviationSubject} 1`), 'Beispielfach');
+    await user.click(within(dialog).getByRole('button', { name: t.abbreviationAdd }));
+    await user.click(within(dialog).getByRole('button', { name: t.abbreviationsSave }));
+    expect(await within(dialog).findByText(t.abbreviationsSaved)).toBeTruthy();
+    expect(server.calls('PUT', '/api/timetable-scan/abbreviations')[0]?.body).toEqual({
+      abbreviations: [{ code: 'bsp', subject: 'Beispielfach' }],
+    });
+  });
+
+  it('zeigt Doppelstunden und Kurscodes und passt Zeiten an eine neue Stundentafel an', async () => {
+    const server = new FakeServer('unlocked');
+    server.scanModels = [MODEL];
+    server.scanResult = {
+      proposals: [{ ...PROPOSAL, period: 1, periodEnd: 2, endTime: '09:35', code: '2bsp1_2' }],
+      newSubjects: [],
+      skipped: 0,
+    };
+    const { user, dialog } = await openDialog(server);
+    await upload(user, dialog);
+    await clickScan(user, dialog);
+    expect(await within(dialog).findByText(/Std\. 1–2 \(Doppelstunde\)/)).toBeTruthy();
+    expect(within(dialog).getByText(/Kurs 2bsp1_2/)).toBeTruthy();
+    expect(within(dialog).getByText(t.emptyCells)).toBeTruthy();
+
+    await user.click(within(dialog).getByText(t.periodsTitle));
+    fireEvent.change(await within(dialog).findByLabelText(t.scheduleStart), {
+      target: { value: '07:45' },
+    });
+    await user.click(within(dialog).getByRole('button', { name: t.periodsSave }));
+    expect(await within(dialog).findByText(t.scheduleRetimed)).toBeTruthy();
+    expect((within(dialog).getByLabelText(`${t.from} 1`) as HTMLInputElement).value).toBe('07:45');
+    expect((within(dialog).getByLabelText(`${t.to} 1`) as HTMLInputElement).value).toBe('09:20');
+
+    await user.click(within(dialog).getByRole('button', { name: format(t.import, { count: 1 }) }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(server.calls('POST', '/api/timetable-scan/import')[0]?.body).toMatchObject({
+      entries: [{ startTime: '07:45', endTime: '09:20', code: '2bsp1_2' }],
     });
   });
 
@@ -223,6 +306,7 @@ describe('Stundenplan aus Bild erkennen', () => {
           weekday: 1,
           startTime: '08:00',
           endTime: '08:45',
+          code: null,
           subject: 'Beispielfach A',
           room: 'Raum 1',
           note: null,

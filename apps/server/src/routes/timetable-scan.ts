@@ -7,13 +7,24 @@ import { limitBody, readJson } from '../http/json';
 import type { AppEnv } from '../http/types';
 import { modelIdField } from '../providers/models';
 import {
+  MAX_ABBREVIATION_CODE,
+  MAX_ABBREVIATION_SUBJECT,
+  MAX_ABBREVIATIONS,
+  type ScanAbbreviations,
+} from '../timetable-scan/abbreviations';
+import {
   MAX_SCAN_IMAGE_BYTES,
   readScanImage,
   SCAN_BODY_LIMIT,
   type ScanImage,
 } from '../timetable-scan/image';
 import { MAX_PERIOD_NUMBER, MAX_SCAN_ENTRIES } from '../timetable-scan/parse';
-import type { PeriodTime, PeriodTimes } from '../timetable-scan/periods';
+import {
+  isValidSchedule,
+  type PeriodSchedule,
+  type PeriodTimes,
+  SCHEDULE_LIMITS,
+} from '../timetable-scan/periods';
 import type {
   ImportResult,
   ScanImportEntry,
@@ -37,6 +48,7 @@ const ScanEntry = z.strictObject({
   weekday: z.number().int().min(1).max(7),
   startTime: z.string().regex(TIME_PATTERN),
   endTime: z.string().regex(TIME_PATTERN),
+  code: optionalText(40),
   subject: optionalText(80),
   room: optionalText(40),
   note: optionalText(200),
@@ -49,17 +61,39 @@ const ImportBody = z.strictObject({
   replaceExisting: z.boolean().default(false),
 });
 
-const PeriodRow = z
-  .strictObject({
-    period: z.number().int().min(1).max(MAX_PERIOD_NUMBER),
-    startTime: z.string().regex(TIME_PATTERN),
-    endTime: z.string().regex(TIME_PATTERN),
-  })
-  .refine((row) => row.endTime > row.startTime);
+const minutes = (limits: { min: number; max: number }) =>
+  z.number().int().min(limits.min).max(limits.max);
 
-const PeriodsBody = z
-  .strictObject({ periods: z.array(PeriodRow).max(MAX_PERIOD_NUMBER) })
-  .refine((body) => new Set(body.periods.map((row) => row.period)).size === body.periods.length);
+const ScheduleBody = z.strictObject({
+  schedule: z
+    .strictObject({
+      start: z.string().regex(TIME_PATTERN),
+      lessonMinutes: minutes(SCHEDULE_LIMITS.lessonMinutes),
+      gapMinutes: minutes(SCHEDULE_LIMITS.gapMinutes),
+      count: z.number().int().min(1).max(MAX_PERIOD_NUMBER),
+      breaks: z
+        .array(
+          z.strictObject({
+            after: z.number().int().min(1).max(MAX_PERIOD_NUMBER),
+            minutes: minutes(SCHEDULE_LIMITS.breakMinutes),
+          }),
+        )
+        .max(MAX_PERIOD_NUMBER),
+      mergeDoubles: z.boolean().default(true),
+    })
+    .refine((schedule) => isValidSchedule(schedule as PeriodSchedule)),
+});
+
+const AbbreviationsBody = z.strictObject({
+  abbreviations: z
+    .array(
+      z.strictObject({
+        code: z.string().trim().min(1).max(MAX_ABBREVIATION_CODE).regex(NO_CONTROL),
+        subject: z.string().trim().min(1).max(MAX_ABBREVIATION_SUBJECT).regex(NO_CONTROL),
+      }),
+    )
+    .max(MAX_ABBREVIATIONS),
+});
 
 type Form = Record<string, string | File | Array<string | File>>;
 
@@ -148,23 +182,35 @@ function importFailure(c: Context, result: Extract<ImportResult, { ok: false }>)
 export function timetableScanRoutes(
   service: TimetableScanService,
   periodTimes: PeriodTimes,
+  abbreviations: ScanAbbreviations,
 ): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   app.use('/timetable-scan', limitBody(SCAN_BODY_LIMIT));
   app.use('/timetable-scan/*', limitBody(SCAN_BODY_LIMIT));
   app.use('/timetable-scan/periods', limitBody(4096));
+  app.use('/timetable-scan/abbreviations', limitBody(32_768));
 
   app.get('/timetable-scan/models', async (c) => c.json({ models: await service.models() }));
 
-  /** Die Stundentafel: Nummern von Unterrichtsstunden und ihre Uhrzeiten. */
-  app.get('/timetable-scan/periods', (c) => c.json({ periods: periodTimes.list() }));
+  /** Die Stundentafel: Regel (Beginn, Länge, Pausen) und die daraus berechneten Uhrzeiten. */
+  app.get('/timetable-scan/periods', (c) =>
+    c.json({ schedule: periodTimes.schedule(), periods: periodTimes.list() }),
+  );
 
   app.put('/timetable-scan/periods', async (c) => {
-    const body = await readJson(c, PeriodsBody);
+    const body = await readJson(c, ScheduleBody);
     if (!body.ok) return body.response;
-    const rows: PeriodTime[] = [...body.data.periods].sort((a, b) => a.period - b.period);
-    periodTimes.replace(rows);
-    return c.json({ periods: rows });
+    periodTimes.replace(body.data.schedule);
+    return c.json({ schedule: periodTimes.schedule(), periods: periodTimes.list() });
+  });
+
+  /** Eigene Kürzel für Kurscodes („voc = Chor“), gehen dem Katalog vor. */
+  app.get('/timetable-scan/abbreviations', (c) => c.json({ abbreviations: abbreviations.list() }));
+
+  app.put('/timetable-scan/abbreviations', async (c) => {
+    const body = await readJson(c, AbbreviationsBody);
+    if (!body.ok) return body.response;
+    return c.json({ abbreviations: abbreviations.replace(body.data.abbreviations) });
   });
 
   app.post('/timetable-scan', async (c) => {
