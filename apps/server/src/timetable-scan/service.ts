@@ -13,7 +13,7 @@ import type { ChatRequest } from '../providers/client';
 import { ProviderError, type ProviderErrorCode } from '../providers/errors';
 import type { ProviderService } from '../providers/service';
 import { abbreviationKey, type ScanAbbreviations } from './abbreviations';
-import { type CourseAbbreviation, CourseResolver } from './codes';
+import { CourseResolver } from './codes';
 import { imageDataUrl, type ScanImage } from './image';
 import {
   MAX_SCAN_ENTRIES,
