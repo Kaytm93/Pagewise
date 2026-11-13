@@ -249,18 +249,33 @@ export function titleOfAnswer(content: string, fallback: string): string {
   return title !== '' ? title : fallback;
 }
 
+/** Der Hefteintrag zu einer Antwort: der zuletzt geänderte, falls es (noch aus alten Fassungen) mehrere gibt. */
+function existingNoteOfMessage(db: Db, chatId: string, messageId: string): NoteView | null {
+  const row = db
+    .select()
+    .from(notes)
+    .where(and(eq(notes.sourceChatId, chatId), eq(notes.sourceMessageId, messageId)))
+    .orderBy(desc(notes.updatedAt), desc(notes.createdAt))
+    .get();
+  return row ? viewOf(row) : null;
+}
+
+/** Ergebnis von {@link noteFromMessage}: `created` sagt, ob der Eintrag neu entstand oder schon da war. */
+export type NoteFromMessageResult = { ok: true; value: NoteView; created: boolean } | NoteFailure;
+
 /**
  * Macht aus einer fertigen Antwort des Modells einen Hefteintrag. Der Server liest den Text selbst aus der
  * Nachricht (nie vom Browser), die Antwort muss von `assistant` stammen und Text haben; angehaltene oder
  * unterbrochene Antworten sind erlaubt (ihr Text gilt), solche im Gange oder mit Fehler nicht. Fach und
- * Untergruppe übernimmt der Eintrag vom Chat.
+ * Untergruppe übernimmt der Eintrag vom Chat. Aus derselben Antwort entsteht nie ein zweiter Eintrag
+ * (D-121): Gibt es schon einen, kommt der zurück (`created: false`), erst nach seinem Löschen ein neuer.
  */
 export function noteFromMessage(
   db: Db,
   chatId: string,
   messageId: string,
   fallbackTitle: string,
-): NoteResult<NoteView> {
+): NoteFromMessageResult {
   const chat = db.select().from(chats).where(eq(chats.id, chatId)).get();
   if (!chat) return { ok: false, error: 'not_found' };
   const message = db
@@ -273,8 +288,12 @@ export function noteFromMessage(
   if (message.role !== 'assistant' || !savable || message.content.trim() === '') {
     return { ok: false, error: 'not_savable' };
   }
+  // Datenbank und Suche sind synchron (better-sqlite3): zwischen Suchen und Anlegen liegt kein `await`,
+  // zwei Anfragen in einem Serverprozess können sich nicht überholen.
+  const existing = existingNoteOfMessage(db, chatId, messageId);
+  if (existing) return { ok: true, value: existing, created: false };
   const markdown = message.content.slice(0, MARKDOWN_MAX_CHARACTERS);
-  return createNote(
+  const created = createNote(
     db,
     {
       subjectId: chat.subjectId,
@@ -286,4 +305,5 @@ export function noteFromMessage(
     },
     { chatId, messageId },
   );
+  return created.ok ? { ...created, created: true } : created;
 }
