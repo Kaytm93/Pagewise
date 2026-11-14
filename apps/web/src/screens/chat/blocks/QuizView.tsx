@@ -7,13 +7,20 @@ import { BlockError } from './BlockView';
 
 /**
  * Quiz im Chat: Antworten wählen, „Prüfen“ wertet alles lokal aus. Kein Netz, nichts wird gespeichert: Die Wahl
- * lebt nur in dieser Ansicht. Ändert sich der Block noch (während des Schreibens), beginnt das Quiz neu.
+ * lebt nur in dieser Ansicht. Ändert sich der Block noch (während des Schreibens), beginnt das Quiz neu. Der
+ * unfertige Block erscheint nie als Quelltext, nur als Platzhalter: Er enthält die Lösung (D-123).
  */
 export default function QuizView({ source, final }: { source: string; final: boolean }) {
   const parsed = useMemo(() => parseQuizSpec(source), [source]);
   if (!parsed.ok) {
     return (
-      <BlockError label={m.blocks.quiz} code={parsed.error.code} source={source} final={final} />
+      <BlockError
+        label={m.blocks.quiz}
+        code={parsed.error.code}
+        source={source}
+        final={final}
+        writing={m.blocks.quizView.writing}
+      />
     );
   }
   return <Quiz key={source} spec={parsed.value} />;

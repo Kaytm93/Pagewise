@@ -1,6 +1,7 @@
 import { RenderError } from '@pagewise/render';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { format, messages as m } from '../../../i18n';
+import { disclosure } from '../../../ui/styles';
 import { renderBlock, type SvgBlockKind } from './render';
 
 type State =
@@ -18,18 +19,38 @@ export function errorText(code: string): string {
  * Fehlerzustand eines Blocks: eine verständliche Meldung und der Quelltext zum Nachlesen und Kopieren. Solange
  * die Antwort noch geschrieben wird (`final` ist falsch), ist ein Fehler meist nur ein unfertiger Block: dann
  * steht der Text ruhig als Code da, ohne Meldung.
+ *
+ * Mit `writing` (das Quiz, D-123) läuft der Quelltext nicht sichtbar ein, weil er die Lösung enthält: Beim
+ * Schreiben steht nur dieser Platzhalter, bei einem fertigen fehlerhaften Block liegt der Quelltext
+ * eingeklappt hinter „Quelltext anzeigen“.
  */
 export function BlockError({
   label,
   code,
   source,
   final,
+  writing,
 }: {
   label: string;
   code: string;
   source: string;
   final: boolean;
+  writing?: string;
 }) {
+  if (writing !== undefined && !final) {
+    return (
+      <figure className="pg-figure my-4 rounded-box bg-paper p-4">
+        <p role="status" className="text-sm text-ink-secondary">
+          {writing}
+        </p>
+      </figure>
+    );
+  }
+  const sourceView = (
+    <pre className="overflow-x-auto rounded-box bg-paper p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap text-ink">
+      {source}
+    </pre>
+  );
   return (
     <figure className="pg-figure my-4" data-block-error={final ? code : undefined}>
       {final && (
@@ -37,9 +58,14 @@ export function BlockError({
           {format(m.blocks.errorTitle, { kind: label })} {errorText(code)}
         </p>
       )}
-      <pre className="overflow-x-auto rounded-box bg-paper p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap text-ink">
-        {source}
-      </pre>
+      {writing === undefined ? (
+        sourceView
+      ) : (
+        <details className="text-sm text-ink-muted">
+          <summary className={disclosure}>{m.blocks.showSource}</summary>
+          {sourceView}
+        </details>
+      )}
     </figure>
   );
 }
