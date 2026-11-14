@@ -69,7 +69,9 @@ const UUID_AT = /(?=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 /**
  * Welche der Kandidaten in einem Text vorkommen (anderer Hefteintrag, Chat-Nachricht): dann zeigt etwas auf den
- * Eintrag. Ergebnis gleich wie `text LIKE '%id%'` je Kandidat (D-122), aber alle Texte werden **einmal** gelesen
+ * Eintrag. Ergebnis gleich wie `text LIKE '%id%'` je Kandidat (D-122; einzige bekannte Abweichung: enthält ein Text ein
+ * NUL-Byte, findet diese Suche dahinter noch Verweise, die SQLite-`LIKE` übersieht, dann bleibt eher ein Eintrag
+ * mehr stehen, nie weniger), aber alle Texte werden **einmal** gelesen
  * (zeilenweise), nicht je Kandidat neu. Für UUID-Kandidaten: Jedes Vorkommen einer UUID ist ein UUID-förmiges
  * Stück aus 36 ASCII-Zeichen; `UUID_AT` findet alle solchen Stücke, verglichen wird kleingeschrieben (`LIKE`
  * unterscheidet bei ASCII nicht zwischen Groß und Klein). Kandidaten ohne UUID-Form (nur in Handdaten möglich)
