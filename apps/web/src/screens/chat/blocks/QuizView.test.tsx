@@ -73,9 +73,30 @@ describe('Quiz im Chat', () => {
     expect(container.querySelector('pre')?.textContent).toContain('"questions":[]');
   });
 
-  it('zeigt während des Schreibens keine Fehlermeldung', async () => {
+  // D-123: Beim Schreiben steht ein Platzhalter statt des Quelltexts (vorher ein `pre` mit dem JSON).
+  it('zeigt während des Schreibens keine Fehlermeldung, nur einen Platzhalter', async () => {
     const { container } = show('```quiz\n{"questions":', false);
-    await waitFor(() => expect(container.querySelector('pre')).not.toBeNull());
+    await waitFor(() => expect(screen.getByText('Quiz wird erstellt …')).toBeTruthy());
     expect(container.querySelector('[data-block-error]')).toBeNull();
+    expect(container.querySelector('pre')).toBeNull();
+  });
+
+  it('verrät die Lösung nicht, während die KI schreibt (D-123)', async () => {
+    const { container } = show(
+      '```quiz\n{"questions":[{"question":"A?","options":["x","y"],"answer":1',
+      false,
+    );
+    await waitFor(() => expect(screen.getByText('Quiz wird erstellt …')).toBeTruthy());
+    expect(container.textContent).not.toContain('answer');
+    expect(container.textContent).not.toContain('"x"');
+  });
+
+  it('klappt den Quelltext eines fertigen fehlerhaften Quiz ein (D-123)', async () => {
+    const { container } = show('```quiz\n{"questions":[{"question":"A?","answer":1}]}\n```');
+    await waitFor(() => expect(container.querySelector('[data-block-error]')).not.toBeNull());
+    const details = container.querySelector('details');
+    expect(details?.open).toBe(false);
+    expect(details?.querySelector('summary')?.textContent).toBe('Quelltext anzeigen');
+    expect(details?.querySelector('pre')?.textContent).toContain('"answer":1');
   });
 });

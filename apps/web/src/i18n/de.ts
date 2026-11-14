@@ -452,6 +452,7 @@ export const de = {
     slides: 'Präsentation',
     sheet: 'Tabelle',
     errorTitle: '{kind} konnte nicht gezeichnet werden.',
+    showSource: 'Quelltext anzeigen',
     errors: {
       empty: 'Der Block ist leer.',
       too_large: 'Der Block ist zu groß.',
@@ -497,6 +498,7 @@ export const de = {
       rightAnswer: 'Richtige Antwort: {answer}',
       unanswered: 'Nicht beantwortet.',
       explanation: 'Erklärung: {text}',
+      writing: 'Quiz wird erstellt …',
     },
     documentView: {
       download: 'Als PDF herunterladen',
