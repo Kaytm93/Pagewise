@@ -422,6 +422,10 @@ export interface ScanProposal {
   endTime: string;
   /** Nummer der Unterrichtsstunde, wenn die Zeiten aus der Stundentafel zugeordnet wurden. */
   period: number | null;
+  /** Letzte Stunde einer zusammengefassten Doppelstunde, sonst `null`. */
+  periodEnd: number | null;
+  /** Kursbezeichnung aus dem Bild (z. B. „2bsp1_2“), sonst `null`. */
+  code: string | null;
   /** Erkannter Fachname, `null` wenn nichts lesbar war. */
   subject: string | null;
   room: string | null;
@@ -434,6 +438,34 @@ export interface ScanPeriodTime {
   period: number;
   startTime: string;
   endTime: string;
+}
+
+/** Lange Pause nach einer Stunde; ersetzt dort die normale Pause. */
+export interface ScanBreak {
+  after: number;
+  minutes: number;
+}
+
+/** Regel der Stundentafel: daraus berechnet Pagewise die Zeiten aller Stunden der Woche. */
+export interface ScanPeriodSchedule {
+  start: string;
+  lessonMinutes: number;
+  gapMinutes: number;
+  count: number;
+  breaks: ScanBreak[];
+  /** Gleiches Fach in zwei Stunden hintereinander wird eine Doppelstunde. */
+  mergeDoubles: boolean;
+}
+
+export interface ScanPeriods {
+  schedule: ScanPeriodSchedule;
+  periods: ScanPeriodTime[];
+}
+
+/** Eigenes Kürzel für Kurscodes, z. B. „bsp = Beispielfach“. */
+export interface ScanAbbreviation {
+  code: string;
+  subject: string;
 }
 
 export interface ScanProposalView extends ScanProposal {
@@ -455,6 +487,8 @@ export interface ScanImportEntry {
   weekday: number;
   startTime: string;
   endTime: string;
+  /** Kursbezeichnung; mit geändertem Fach merkt sich Pagewise das Kürzel. */
+  code: string | null;
   subject: string | null;
   room: string | null;
   note: string | null;
@@ -470,6 +504,7 @@ export interface ScanImportInput {
 export interface ScanImportResult {
   created: number;
   subjectsCreated: number;
+  abbreviationsLearned: number;
 }
 
 /** Ein Testeintrag (Schulaufgabe, Test, Ex, Referat …). `date` ist `YYYY-MM-DD`. */

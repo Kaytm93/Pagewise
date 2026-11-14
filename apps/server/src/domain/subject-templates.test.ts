@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { APP_ROOT } from '../paths';
 import {
+  findCatalogEntryByAbbreviation,
   findCatalogEntryByName,
   foldName,
   loadSubjectCatalog,
@@ -40,8 +41,12 @@ describe('Fächer-Katalog', () => {
   it('liest Schlüssel, Name, Kategorie, Icon und Suchbegriffe (Version 2)', () => {
     const file = write(
       v2([
-        entry('beispielfach-a', 'Beispielfach A', { icon: 'book', aliases: ['Fach A', 'A-Fach'] }),
-        entry('beispielfach-b', 'Beispielfach B'),
+        entry('beispielfach-a', 'Beispielfach A', {
+          icon: 'book',
+          aliases: ['Fach A', 'A-Fach'],
+          abbreviations: ['Bfa'],
+        }),
+        entry('beispielfach-b', 'Beispielfach B', { abbreviations: ['bfa', 'Bfb'] }),
       ]),
     );
     expect(loadSubjectCatalog(file)).toEqual({
@@ -53,6 +58,7 @@ describe('Fächer-Katalog', () => {
           category: 'beispiele',
           icon: 'book',
           aliases: ['Fach A', 'A-Fach'],
+          abbreviations: ['Bfa'],
         },
         {
           key: 'beispielfach-b',
@@ -60,6 +66,7 @@ describe('Fächer-Katalog', () => {
           category: 'beispiele',
           icon: null,
           aliases: [],
+          abbreviations: ['Bfb'],
         },
       ],
     });
@@ -76,8 +83,22 @@ describe('Fächer-Katalog', () => {
     expect(loadSubjectCatalog(file)).toEqual({
       categories: [],
       subjects: [
-        { key: null, name: 'Beispielfach A', category: null, icon: null, aliases: [] },
-        { key: null, name: 'Beispielfach B', category: null, icon: null, aliases: [] },
+        {
+          key: null,
+          name: 'Beispielfach A',
+          category: null,
+          icon: null,
+          aliases: [],
+          abbreviations: [],
+        },
+        {
+          key: null,
+          name: 'Beispielfach B',
+          category: null,
+          icon: null,
+          aliases: [],
+          abbreviations: [],
+        },
       ],
     });
   });
@@ -162,6 +183,22 @@ describe('Fächer-Katalog', () => {
     expect(findCatalogEntryByName(catalog, 'Chemie')).toBeUndefined();
   });
 
+  it('findet Vorlagen über Fachkürzel aus Stundenplänen', () => {
+    const catalog = loadSubjectCatalog(
+      write(v2([entry('beispiel-a', 'Beispielfach A', { abbreviations: ['Bf'] })])),
+    );
+    expect(findCatalogEntryByAbbreviation(catalog, 'bf')?.key).toBe('beispiel-a');
+    expect(findCatalogEntryByAbbreviation(catalog, 'B')).toBeUndefined();
+  });
+
+  it('lehnt Fachkürzel mit Ziffern oder Zeichen ab', () => {
+    expect(
+      loadSubjectCatalog(
+        write(v2([entry('beispiel-a', 'Beispielfach A', { abbreviations: ['B_1'] })])),
+      ).subjects,
+    ).toEqual([]);
+  });
+
   it('faltet Namen für Vergleich und Suche', () => {
     expect(foldName('Französisch')).toBe('franzoesisch');
     expect(foldName('  Straße  ')).toBe('strasse');
@@ -194,6 +231,13 @@ describe('mitgelieferter Katalog (config/subject-catalog.json)', () => {
     expect(findCatalogEntryByName(catalog, name)?.key).toBe(key);
   });
 
+  it('kennt übliche Fachkürzel aus Stundenplänen', () => {
+    expect(findCatalogEntryByAbbreviation(catalog, 'inf')?.key).toBe('informatik');
+    expect(findCatalogEntryByAbbreviation(catalog, 'ev')?.key).toBe('religion-evangelisch');
+    expect(findCatalogEntryByAbbreviation(catalog, 'M')?.key).toBe('mathematik');
+    expect(findCatalogEntryByAbbreviation(catalog, 'c')?.key).toBe('chemie');
+  });
+
   it('findet regionale Fachnamen über Suchbegriffe', () => {
     expect(findCatalogEntryByName(catalog, 'Erdkunde')?.key).toBe('geographie');
     expect(findCatalogEntryByName(catalog, 'Sozialkunde')?.key).toBe('politik');
@@ -201,7 +245,7 @@ describe('mitgelieferter Katalog (config/subject-catalog.json)', () => {
   });
 
   it('enthält nur Fachnamen: keine Personen, Schulen, Orte, Stunden oder Prompts', () => {
-    const allowedKeys = new Set(['key', 'name', 'category', 'icon', 'aliases']);
+    const allowedKeys = new Set(['key', 'name', 'category', 'icon', 'aliases', 'abbreviations']);
     for (const entry of raw.subjects as Record<string, unknown>[]) {
       expect(Object.keys(entry).every((k) => allowedKeys.has(k))).toBe(true);
     }
