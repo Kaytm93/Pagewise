@@ -558,7 +558,7 @@ describe('Hefteinträge', () => {
       const saved = await save(chatId, messageId);
       expect(saved.status).toBe(200);
       expect(saved.body.id).toBe(expected);
-      const chat = (await session.call('GET', `/api/chats/${chatId}`)).body as unknown as {
+      const chat = (await session.call('GET', `/api/chats/${chatId}`)).body as {
         messages: { noteId: string | null }[];
       };
       expect(chat.messages[0]?.noteId).toBe(expected);

@@ -267,7 +267,8 @@ describe('Prüfwert statt Antwortnummer (D-123)', () => {
   it('lässt ungültige, offene und fremde Blöcke Zeichen für Zeichen stehen', () => {
     const broken = '```quiz\n{"questions":[{"question":"A?","options":["x","y"],"answer":5}]}\n```';
     expect(hideQuizAnswers(broken)).toBe(broken);
-    const open = `Text\n\n\`\`\`quiz\n${two}`;
+    // Offen und unfertig (abgebrochene Antwort): bleibt
+    const open = `Text\n\n\`\`\`quiz\n${two.slice(0, -20)}`;
     expect(hideQuizAnswers(open)).toBe(open);
     const notQuiz = `\`\`\`json\n${two}\n\`\`\`\n\n\`\`\`graph\n{"answer":1}\n\`\`\``;
     expect(hideQuizAnswers(notQuiz)).toBe(notQuiz);
@@ -276,6 +277,34 @@ describe('Prüfwert statt Antwortnummer (D-123)', () => {
     expect(hideQuizAnswers(example)).toBe(example);
     const plain = 'Kein Block, nur "answer": 2 im Text über ein Quiz.';
     expect(hideQuizAnswers(plain)).toBe(plain);
+  });
+
+  it('nimmt einen gültigen, nicht geschlossenen Quiz-Block am Textende mit (so zeichnet ihn der Chat)', () => {
+    for (const end of ['', '\n', '\n\n  \n']) {
+      const markdown = `Text\n\n\`\`\`quiz\n${two}${end}`;
+      const hidden = hideQuizAnswers(markdown);
+      expect(hidden).not.toContain('"answer"');
+      expect(hidden.startsWith('Text\n\n```quiz\n')).toBe(true);
+      expect(hidden.endsWith(`}${end}`)).toBe(true);
+      expect(answersOf(firstQuiz(hidden).trim())).toEqual([1, 0]);
+      expect(hideQuizAnswers(hidden)).toBe(hidden);
+    }
+    // Ein offener Zaun anderer Sprache bleibt, auch mit Quiz-JSON darin
+    const other = `\`\`\`json\n${two}`;
+    expect(hideQuizAnswers(other)).toBe(other);
+  });
+
+  // Bekannte Grenzen (D-123): Der Chat zeichnet mit react-markdown, `hideQuizAnswers` erkennt Zäune wie
+  // `extractBlocks`. Diese Quizze laufen im Chat, behalten in Hefteintrag und Kopie aber `answer`.
+  it.each([
+    ['Quiz in einem Zitat oder Hinweiskasten', `> [!aufgabe]\n> \`\`\`quiz\n> ${two}\n> \`\`\``],
+    [
+      'Quiz nach einem Quiz im Listenpunkt (der eingerückte Schlusszaun öffnet einen Block)',
+      `- \`\`\`quiz\n  ${two}\n  \`\`\`\n\n${fence(two)}`,
+    ],
+    ['Info-Text mit Zusatz (quiz-x)', `\`\`\`quiz-x\n${two}\n\`\`\``],
+  ])('bekannte Grenze, Text bleibt unverändert: %s', (_name, markdown) => {
+    expect(hideQuizAnswers(markdown)).toBe(markdown);
   });
 
   it('schreibt jeden Quiz-Block eines Texts um und lässt alles dazwischen stehen', () => {

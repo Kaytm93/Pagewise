@@ -207,8 +207,8 @@ function hideInSource(source: string): string | null {
 
 /**
  * Verbirgt die Lösungen aller ` ```quiz `-Blöcke eines Markdown-Texts (D-123): In jedem gültigen Block wird
- * `answer` zum Prüfwert `key`. Alles andere bleibt Zeichen für Zeichen, auch ungültige oder nicht geschlossene
- * Quiz-Blöcke und Quiz-Text in anderen Codeblöcken (etwa in einem ` ````markdown `-Block als Beispiel). Die
+ * `answer` zum Prüfwert `key`, auch in einem nicht geschlossenen Block am Textende. Alles andere bleibt Zeichen
+ * für Zeichen, auch ungültige Quiz-Blöcke und Quiz-Text in anderen Codeblöcken (etwa in einem ` ````markdown `-Block als Beispiel). Die
  * Zäune erkennt dieselbe Regel wie `extractBlocks`. Für den Hefteintrag aus dem Chat und für „Kopieren“.
  */
 export function hideQuizAnswers(markdown: string): string {
@@ -236,12 +236,16 @@ export function hideQuizAnswers(markdown: string): string {
       }
       body.push(current);
     }
+    // Ein offener Zaun reicht bis zum Textende, so zeichnet ihn auch der Chat (CommonMark): Endet eine Antwort
+    // nach dem JSON ohne Schlusszaun, läuft das Quiz trotzdem. Leerzeilen am Ende bleiben, wie sie sind.
+    let tail = body.length;
+    if (end === null) while (tail > 0 && (body[tail - 1] as string).trim() === '') tail -= 1;
     const hidden =
-      end !== null && (open[3] as string).toLowerCase() === 'quiz'
-        ? hideInSource(body.join('\n'))
+      (open[3] as string).toLowerCase() === 'quiz'
+        ? hideInSource(body.slice(0, tail).join('\n'))
         : null;
     if (hidden === null) out.push(...body);
-    else out.push(...hidden.split('\n').map((part) => indent + part));
+    else out.push(...hidden.split('\n').map((part) => indent + part), ...body.slice(tail));
     if (end !== null) out.push(end);
   }
   return out.join('\n');

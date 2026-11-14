@@ -498,7 +498,7 @@ export const de = {
       rightAnswer: 'Richtige Antwort: {answer}',
       unanswered: 'Nicht beantwortet.',
       explanation: 'Erklärung: {text}',
-      writing: 'Quiz wird geschrieben …',
+      writing: 'Quiz wird erstellt …',
     },
     documentView: {
       download: 'Als PDF herunterladen',

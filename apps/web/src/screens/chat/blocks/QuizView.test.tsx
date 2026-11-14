@@ -76,7 +76,7 @@ describe('Quiz im Chat', () => {
   // D-123: Beim Schreiben steht ein Platzhalter statt des Quelltexts (vorher ein `pre` mit dem JSON).
   it('zeigt während des Schreibens keine Fehlermeldung, nur einen Platzhalter', async () => {
     const { container } = show('```quiz\n{"questions":', false);
-    await waitFor(() => expect(screen.getByText('Quiz wird geschrieben …')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Quiz wird erstellt …')).toBeTruthy());
     expect(container.querySelector('[data-block-error]')).toBeNull();
     expect(container.querySelector('pre')).toBeNull();
   });
@@ -86,7 +86,7 @@ describe('Quiz im Chat', () => {
       '```quiz\n{"questions":[{"question":"A?","options":["x","y"],"answer":1',
       false,
     );
-    await waitFor(() => expect(screen.getByText('Quiz wird geschrieben …')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Quiz wird erstellt …')).toBeTruthy());
     expect(container.textContent).not.toContain('answer');
     expect(container.textContent).not.toContain('"x"');
   });
