@@ -1,3 +1,4 @@
+import { hideQuizAnswers } from '@pagewise/render/quiz';
 import { and, count, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { titleFrom } from '../chats/history';
 import type { Db } from '../db/client';
@@ -292,6 +293,10 @@ export type NoteFromMessageResult = { ok: true; value: NoteView; created: boolea
  * unterbrochene Antworten sind erlaubt (ihr Text gilt), solche im Gange oder mit Fehler nicht. Fach und
  * Untergruppe übernimmt der Eintrag vom Chat. Aus derselben Antwort entsteht nie ein zweiter Eintrag
  * (D-122): Gibt es schon einen, kommt der zurück (`created: false`), erst nach seinem Löschen ein neuer.
+ *
+ * Beim Anlegen werden die Lösungen der Quizze verborgen (D-123): `answer` wird zum Prüfwert `key`, damit der
+ * Quelltext im Editor sie nicht verrät. Die Nachricht im Chat behält ihren Text (die KI sieht ihn im Verlauf),
+ * ein schon vorhandener Eintrag bleibt, wie er ist.
  */
 export function noteFromMessage(
   db: Db,
@@ -315,7 +320,10 @@ export function noteFromMessage(
   // zwei Anfragen in einem Serverprozess können sich nicht überholen.
   const existing = existingNoteOfMessage(db, chatId, messageId);
   if (existing) return { ok: true, value: existing, created: false };
-  const markdown = message.content.slice(0, MARKDOWN_MAX_CHARACTERS);
+  const text = message.content.slice(0, MARKDOWN_MAX_CHARACTERS);
+  // Der Prüfwert ist länger als die Nummer: Käme der Text damit über die Grenze, bleibt er, wie er ist.
+  const hidden = hideQuizAnswers(text);
+  const markdown = hidden.length <= MARKDOWN_MAX_CHARACTERS ? hidden : text;
   const created = createNote(
     db,
     {

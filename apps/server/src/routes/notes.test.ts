@@ -1,3 +1,4 @@
+import { parseQuizSpec } from '@pagewise/render/quiz';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { messages, notes } from '../db/schema';
 import { createHarness, type Harness, type Session } from '../test-harness';
@@ -374,6 +375,65 @@ describe('Hefteinträge', () => {
       });
     });
 
+    describe('verbirgt die Lösungen der Quizze (D-123)', () => {
+      const quiz = (answer: number, question = 'Welche Formel hat Wasser?') =>
+        JSON.stringify({
+          questions: [{ question, options: ['CO2', 'H2O', 'NH3'], answer }],
+        });
+      const answers = (source: string) => {
+        const read = parseQuizSpec(source);
+        return read.ok ? read.value.questions.map((item) => item.answer) : read.error.code;
+      };
+      const quizBlocks = (markdown: string) =>
+        [...markdown.matchAll(/^```quiz\n([\s\S]*?)\n```$/gm)].map((match) => match[1] as string);
+
+      it('schreibt beim Anlegen "answer" zu "key" um, die Lösungen bleiben dieselben', async () => {
+        const chatId = await chatWith();
+        const content = `# Übung\n\n\`\`\`quiz\n${quiz(1)}\n\`\`\`\n\nUnd noch eins:\n\n\`\`\`quiz\n${quiz(2, 'Welche Formel hat Ammoniak?')}\n\`\`\``;
+        const messageId = addMessage(chatId, { seq: 1, content });
+        const reply = await save(chatId, messageId);
+        expect(reply.status).toBe(201);
+        const markdown = (reply.body as unknown as Note).markdown ?? '';
+        expect(markdown).not.toContain('"answer"');
+        expect(markdown).toContain('"key"');
+        expect(markdown.startsWith('# Übung\n\n```quiz\n')).toBe(true);
+        expect(markdown).toContain('\n\nUnd noch eins:\n\n');
+        expect(quizBlocks(markdown).map(answers)).toEqual([[1], [2]]);
+        // Gespeichert ist der umgeschriebene Text, die Nachricht im Chat behält ihren
+        const stored = (
+          await session.call('GET', `/api/notes/${(reply.body as unknown as Note).id}`)
+        ).body as unknown as Note;
+        expect(stored.markdown).toBe(markdown);
+        const chat = (await session.call('GET', `/api/chats/${chatId}`)).body as unknown as {
+          messages: { id: string; content: string }[];
+        };
+        expect(chat.messages.find((item) => item.id === messageId)?.content).toBe(content);
+      });
+
+      it('lässt anderes JSON, Beispiele in Codeblöcken und fehlerhafte Quizze unverändert', async () => {
+        const chatId = await chatWith();
+        const content = [
+          '```json\n{"answer": 1}\n```',
+          `\`\`\`\`markdown\n\`\`\`quiz\n${quiz(1)}\n\`\`\`\n\`\`\`\``,
+          '```quiz\n{"questions":[{"question":"A?","options":["x","y"],"answer":7}]}\n```',
+          'Im Text steht "answer": 2.',
+        ].join('\n\n');
+        const reply = await save(chatId, addMessage(chatId, { seq: 1, content }));
+        expect((reply.body as unknown as Note).markdown).toBe(content);
+      });
+
+      it('schreibt einen schon vorhandenen Eintrag nicht nachträglich um (D-122)', async () => {
+        const chatId = await chatWith();
+        const messageId = addMessage(chatId, { seq: 1, content: `\`\`\`quiz\n${quiz(0)}\n\`\`\`` });
+        const first = (await save(chatId, messageId)).body as unknown as Note;
+        const old = `\`\`\`quiz\n${quiz(0)}\n\`\`\``;
+        await session.call('PATCH', `/api/notes/${first.id}`, { markdown: old });
+        const again = await save(chatId, messageId);
+        expect(again.status).toBe(200);
+        expect((again.body as unknown as Note).markdown).toBe(old);
+      });
+    });
+
     it('nimmt ohne Überschrift die erste Zeile als Titel und entfernt Markdown-Zeichen', async () => {
       const chatId = await chatWith();
       const messageId = addMessage(chatId, {
@@ -498,7 +558,7 @@ describe('Hefteinträge', () => {
       const saved = await save(chatId, messageId);
       expect(saved.status).toBe(200);
       expect(saved.body.id).toBe(expected);
-      const chat = (await session.call('GET', `/api/chats/${chatId}`)).body as {
+      const chat = (await session.call('GET', `/api/chats/${chatId}`)).body as unknown as {
         messages: { noteId: string | null }[];
       };
       expect(chat.messages[0]?.noteId).toBe(expected);

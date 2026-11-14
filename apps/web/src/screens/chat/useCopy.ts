@@ -9,7 +9,10 @@ export type CopyState = 'idle' | 'copied' | 'failed';
  * Verschluckens. Der Aufrufer zeigt den Zustand in einer eigenen, kleinen aria-live-Region
  * (eine je Kopieren-Kontext, nie am ganzen Container) und meldet so auch Screenreadern.
  */
-export function useCopy(): { copyState: CopyState; copy: (text: string) => Promise<void> } {
+export function useCopy(): {
+  copyState: CopyState;
+  copy: (text: string | Promise<string>) => Promise<void>;
+} {
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -20,9 +23,13 @@ export function useCopy(): { copyState: CopyState; copy: (text: string) => Promi
     [],
   );
 
-  const copy = useCallback(async (text: string) => {
+  const copy = useCallback(async (text: string | Promise<string>) => {
     try {
-      await navigator.clipboard.writeText(text);
+      // Ein fertiger Text geht sofort (im selben Klick, das braucht Safari); ein noch entstehender danach.
+      // Scheitert er (etwa beim Nachladen), heißt es „nicht möglich“, nie wird ersatzweise etwas anderes kopiert.
+      await (typeof text === 'string'
+        ? navigator.clipboard.writeText(text)
+        : text.then((ready) => navigator.clipboard.writeText(ready)));
     } catch {
       setCopyState('failed');
       return;

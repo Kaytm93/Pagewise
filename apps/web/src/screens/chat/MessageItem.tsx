@@ -11,6 +11,7 @@ import { AgentActivity } from './AgentActivity';
 import { AssetList } from './AssetList';
 import { ArtifactList } from './artifacts/ArtifactCard';
 import { CodeRunList } from './code/CodeRuns';
+import { copyText, hasQuiz, preloadQuizHiding } from './copyText';
 import { Markdown } from './Markdown';
 import { metricsLine } from './metrics';
 import { Reasoning } from './Reasoning';
@@ -97,6 +98,12 @@ export const MessageItem = memo(function MessageItem({
     lastServerNoteId.current = serverNoteId;
     setNoteState(serverNoteId ? { status: 'saved', id: serverNoteId } : { status: 'idle' });
   }, [serverNoteId]);
+
+  // Mit Quiz kopiert „Kopieren“ den Prüfwert statt der Lösung (D-123); die Umschreibung liegt dann schon bereit.
+  const withQuiz = message.role === 'assistant' && !live && hasQuiz(message.content);
+  useEffect(() => {
+    if (withQuiz) preloadQuizHiding();
+  }, [withQuiz]);
 
   async function saveAsNote() {
     if (!saveNote) return;
@@ -215,7 +222,7 @@ export const MessageItem = memo(function MessageItem({
             <>
               <button
                 type="button"
-                onClick={() => void copy(message.content)}
+                onClick={() => void copy(copyText(message.content))}
                 aria-label={m.chat.copy}
                 className="mo-tap inline-flex size-11 items-center justify-center rounded-control hover:bg-paper hover:text-ink"
               >
