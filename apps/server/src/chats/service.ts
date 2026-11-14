@@ -16,6 +16,7 @@ import {
   subjectGroups,
   subjects,
 } from '../db/schema';
+import { noteIdsForMessages } from '../domain/notes';
 import { buildSystemPrompt } from '../domain/prompts';
 import { getSubject, type SubjectView } from '../domain/subjects';
 import { PreviewError, type PreviewService } from '../preview/render';
@@ -151,6 +152,7 @@ function toMessage(
   assets: AssetView[] = [],
   artifacts: ArtifactView[] = [],
   codeRuns: CodeRunView[] = [],
+  noteId: string | null = null,
 ): MessageView {
   return {
     id: row.id,
@@ -166,6 +168,7 @@ function toMessage(
     assets,
     artifacts,
     codeRuns,
+    noteId,
     reasoning: row.reasoning || null,
     tokensPerSecond: speedOf(row.completionTokens, row.generationMs),
     costUsd: row.costUsd,
@@ -300,6 +303,8 @@ export class ChatService {
     const files = this.assets?.forMessages(ids) ?? new Map();
     const made = this.artifacts?.forMessages(ids) ?? new Map();
     const ran = this.code?.forMessages(ids) ?? new Map();
+    // Welche Antworten schon einen Hefteintrag haben (D-122): nur hier, nicht in Strom-Ereignissen.
+    const noted = noteIdsForMessages(this.db, id, ids);
     return {
       ok: true,
       value: {
@@ -310,6 +315,7 @@ export class ChatService {
             files.get(message.id) ?? [],
             made.get(message.id) ?? [],
             ran.get(message.id) ?? [],
+            noted.get(message.id) ?? null,
           ),
         ),
       },
@@ -1209,6 +1215,7 @@ export class ChatService {
       assets: agent?.assets ?? [],
       artifacts: [],
       codeRuns: [],
+      noteId: null,
       reasoning: generation.reasoning || null,
       tokensPerSecond: speedOf(usage?.completionTokens ?? null, usage?.generationMs ?? null),
       costUsd: usage?.costUsd ?? null,

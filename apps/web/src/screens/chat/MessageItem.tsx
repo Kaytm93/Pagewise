@@ -1,5 +1,5 @@
 import { Check, Copy, NotebookPen, RotateCcw } from 'lucide-react';
-import { memo, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { ChatMessage, EngineKind } from '../../api/types';
 import { format, messages as m } from '../../i18n';
 import { Button } from '../../ui/Button';
@@ -80,12 +80,23 @@ export const MessageItem = memo(function MessageItem({
 }: Props) {
   const { copyState, copy } = useCopy();
   const atelier = useDesign() === 'atelier';
+  // Ob die Antwort schon ein Hefteintrag ist, weiß der Server (`message.noteId`, D-122): So heißt es nach
+  // Neuladen und auf jedem Gerät „Hefteintrag öffnen“. Der Zustand nach dem Klick kommt aus der Komponente.
+  const serverNoteId = message.noteId ?? null;
   const [noteState, setNoteState] = useState<
     | { status: 'idle' }
     | { status: 'saving' }
     | { status: 'saved'; id: string }
     | { status: 'failed' }
-  >({ status: 'idle' });
+  >(serverNoteId ? { status: 'saved', id: serverNoteId } : { status: 'idle' });
+  const lastServerNoteId = useRef(serverNoteId);
+  useEffect(() => {
+    // Nur echte Wechsel des Server-Stands zählen (neu geladener Chat), nicht das `null` einer Nachricht,
+    // die gerade erst in der Komponente gespeichert wurde.
+    if (lastServerNoteId.current === serverNoteId) return;
+    lastServerNoteId.current = serverNoteId;
+    setNoteState(serverNoteId ? { status: 'saved', id: serverNoteId } : { status: 'idle' });
+  }, [serverNoteId]);
 
   async function saveAsNote() {
     if (!saveNote) return;

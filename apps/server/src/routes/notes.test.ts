@@ -427,6 +427,103 @@ describe('Hefteinträge', () => {
       expect(after.markdown).toBe('Antwort');
     });
 
+    it('legt aus derselben Antwort nur einen Eintrag an: zweites Speichern gibt den vorhandenen zurück (F-020, D-122)', async () => {
+      const chatId = await chatWith();
+      const messageId = addMessage(chatId, { seq: 1, content: '# Stoffmenge\n\nn = m / M' });
+      const first = await save(chatId, messageId);
+      const second = await save(chatId, messageId);
+      expect(first.status).toBe(201);
+      expect(second.status).toBe(200);
+      expect(second.body.id).toBe(first.body.id);
+      expect(second.body).toMatchObject({ title: 'Stoffmenge', sourceChatId: chatId });
+      expect(await list(`subjectId=${subjectId}`)).toHaveLength(1);
+    });
+
+    it('gibt bei mehreren alten Einträgen zur selben Antwort den zuletzt geänderten zurück (D-122)', async () => {
+      const chatId = await chatWith();
+      const messageId = addMessage(chatId, { seq: 1 });
+      const older = (await save(chatId, messageId)).body as unknown as Note;
+      // Ein zweiter Eintrag zur selben Antwort, wie ihn alte Fassungen angelegt haben (direkt in der Tabelle),
+      // früher angelegt, aber später bearbeitet als der erste.
+      const minuteAgo = new Date(Date.now() - 60_000);
+      const newer = harness.services.database.db
+        .insert(notes)
+        .values({
+          subjectId,
+          title: 'Kopie',
+          markdown: 'Antwort',
+          sourceChatId: chatId,
+          sourceMessageId: messageId,
+          createdAt: minuteAgo,
+          updatedAt: minuteAgo,
+        })
+        .returning()
+        .get();
+      harness.services.database.sqlite
+        .prepare('update notes set updated_at = ? where id = ?')
+        .run(minuteAgo.getTime(), older.id);
+      expect(
+        (await session.call('PATCH', `/api/notes/${newer.id}`, { title: 'Bearbeitet' })).status,
+      ).toBe(200);
+      const reply = await save(chatId, messageId);
+      expect(reply.status).toBe(200);
+      expect(reply.body.id).toBe(newer.id);
+      expect(reply.body.id).not.toBe(older.id);
+    });
+
+    it('wählt bei gleichen Zeitstempeln stabil denselben Eintrag für Speichern und Chat-Anzeige (D-122)', async () => {
+      const chatId = await chatWith();
+      const messageId = addMessage(chatId, { seq: 1 });
+      const same = new Date('2026-11-12T10:00:00.000Z');
+      // Feste IDs in steigender Reihenfolge angelegt: ohne `id` als letzten Schlüssel käme der zuerst
+      // gelesene (kleinste) heraus, mit ihm der größte – an beiden Stellen derselbe.
+      const inserted = ['a', 'b', 'c'].map(
+        (suffix) =>
+          harness.services.database.db
+            .insert(notes)
+            .values({
+              id: `00000000-0000-4000-8000-00000000000${suffix}`,
+              subjectId,
+              title: 'Antwort',
+              markdown: 'Antwort',
+              sourceChatId: chatId,
+              sourceMessageId: messageId,
+              createdAt: same,
+              updatedAt: same,
+            })
+            .returning()
+            .get().id,
+      );
+      const expected = [...inserted].sort().at(-1);
+      const saved = await save(chatId, messageId);
+      expect(saved.status).toBe(200);
+      expect(saved.body.id).toBe(expected);
+      const chat = (await session.call('GET', `/api/chats/${chatId}`)).body as {
+        messages: { noteId: string | null }[];
+      };
+      expect(chat.messages[0]?.noteId).toBe(expected);
+    });
+
+    it('legt nach dem Löschen des Eintrags wieder einen neuen an (D-122)', async () => {
+      const chatId = await chatWith();
+      const messageId = addMessage(chatId, { seq: 1 });
+      const first = (await save(chatId, messageId)).body as unknown as Note;
+      expect((await session.call('DELETE', `/api/notes/${first.id}`)).status).toBe(204);
+      const again = await save(chatId, messageId);
+      expect(again.status).toBe(201);
+      expect(again.body.id).not.toBe(first.id);
+      expect(await list(`subjectId=${subjectId}`)).toHaveLength(1);
+    });
+
+    it('eine andere Antwort desselben Chats bekommt einen eigenen Eintrag (D-122)', async () => {
+      const chatId = await chatWith();
+      const first = await save(chatId, addMessage(chatId, { seq: 1 }));
+      const second = await save(chatId, addMessage(chatId, { seq: 2 }));
+      expect([first.status, second.status]).toEqual([201, 201]);
+      expect(second.body.id).not.toBe(first.body.id);
+      expect(await list(`subjectId=${subjectId}`)).toHaveLength(2);
+    });
+
     it('der Server liest den Text selbst: ein Text im Anfragekörper ändert nichts', async () => {
       const chatId = await chatWith();
       const messageId = addMessage(chatId, { seq: 1, content: 'Echter Text' });

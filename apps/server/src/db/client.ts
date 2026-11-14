@@ -80,20 +80,34 @@ function lastAppliedMigration(sqlite: Sqlite.Database): number | null {
   return row.latest ?? null;
 }
 
-function backupBeforeMigration(sqlite: Sqlite.Database, backupDir: string, now: Date): string {
+/**
+ * Schreibt eine Sicherung der offenen Datenbank nach `backupDir` (`<prefix><Zeitstempel>.db`, Rechte 600)
+ * und behält je Präfix die letzten {@link BACKUPS_TO_KEEP}. Wirft, wenn die Kopie nicht entsteht
+ * (`VACUUM INTO` ist auch im WAL-Betrieb konsistent und lässt keine halbe Zieldatei zurück).
+ */
+export function backupDatabase(
+  sqlite: Sqlite.Database,
+  backupDir: string,
+  prefix: string,
+  now: Date,
+): string {
   const stamp = now.toISOString().replace(/[:.]/g, '-');
-  const target = join(backupDir, `${BACKUP_PREFIX}${stamp}.db`);
+  const target = join(backupDir, `${prefix}${stamp}.db`);
   // VACUUM INTO schreibt eine konsistente Kopie, auch im WAL-Betrieb.
   sqlite.prepare('VACUUM INTO ?').run(target);
   chmodSync(target, 0o600);
 
   const old = readdirSync(backupDir)
-    .filter((name) => name.startsWith(BACKUP_PREFIX) && name.endsWith('.db'))
+    .filter((name) => name.startsWith(prefix) && name.endsWith('.db'))
     .sort();
   for (const name of old.slice(0, Math.max(0, old.length - BACKUPS_TO_KEEP))) {
     rmSync(join(backupDir, name), { force: true });
   }
   return target;
+}
+
+function backupBeforeMigration(sqlite: Sqlite.Database, backupDir: string, now: Date): string {
+  return backupDatabase(sqlite, backupDir, BACKUP_PREFIX, now);
 }
 
 /**

@@ -434,6 +434,28 @@ describe('Chats', () => {
       expect(row).toMatchObject({ promptTokens: 11, completionTokens: 3, reasoning: 'hmm' });
     });
 
+    it('kennt den Hefteintrag zu einer Antwort: `noteId` im Chat, `null` ohne Eintrag (F-020, D-122)', async () => {
+      const chat = await newChat();
+      await send(chat, 'Frage');
+      const before = (await session.call('GET', `/api/chats/${chat}`)).body as {
+        messages: { id: string; role: string; noteId: string | null }[];
+      };
+      expect(before.messages.map((entry) => entry.noteId)).toEqual([null, null]);
+      const answer = before.messages[1];
+      const note = await session.call('POST', `/api/chats/${chat}/messages/${answer?.id}/note`);
+      expect(note.status).toBe(201);
+      const after = (await session.call('GET', `/api/chats/${chat}`)).body as {
+        messages: { id: string; role: string; noteId: string | null }[];
+      };
+      expect(after.messages.map((entry) => entry.noteId)).toEqual([null, note.body.id]);
+      // Nach dem Löschen des Eintrags ist die Antwort wieder „nicht gespeichert“.
+      expect((await session.call('DELETE', `/api/notes/${note.body.id}`)).status).toBe(204);
+      const gone = (await session.call('GET', `/api/chats/${chat}`)).body as {
+        messages: { noteId: string | null }[];
+      };
+      expect(gone.messages.map((entry) => entry.noteId)).toEqual([null, null]);
+    });
+
     it('speichert die vom Anbieter gemeldeten Kosten mit der Antwort', async () => {
       const costed =
         `data: ${JSON.stringify({ choices: [{ delta: { content: 'Hallo' }, finish_reason: null }] })}\n\n` +

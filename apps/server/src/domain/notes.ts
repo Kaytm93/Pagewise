@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { titleFrom } from '../chats/history';
 import type { Db } from '../db/client';
 import { chats, messages, notes, subjectGroups, subjects } from '../db/schema';
@@ -249,18 +249,56 @@ export function titleOfAnswer(content: string, fallback: string): string {
   return title !== '' ? title : fallback;
 }
 
+/** Der Hefteintrag zu einer Antwort: der zuletzt geänderte, falls es (noch aus alten Fassungen) mehrere gibt. */
+function existingNoteOfMessage(db: Db, chatId: string, messageId: string): NoteView | null {
+  const row = db
+    .select()
+    .from(notes)
+    .where(and(eq(notes.sourceChatId, chatId), eq(notes.sourceMessageId, messageId)))
+    .orderBy(desc(notes.updatedAt), desc(notes.createdAt), desc(notes.id))
+    .get();
+  return row ? viewOf(row) : null;
+}
+
+/**
+ * Zu welchen Antworten eines Chats es schon einen Hefteintrag gibt: Nachricht → ID des Eintrags (bei mehreren
+ * der zuletzt geänderte, wie in {@link noteFromMessage}). Für die Anzeige „Hefteintrag öffnen“ (D-122).
+ */
+export function noteIdsForMessages(
+  db: Db,
+  chatId: string,
+  messageIds: string[],
+): Map<string, string> {
+  const result = new Map<string, string>();
+  if (messageIds.length === 0) return result;
+  const rows = db
+    .select({ id: notes.id, messageId: notes.sourceMessageId })
+    .from(notes)
+    .where(and(eq(notes.sourceChatId, chatId), inArray(notes.sourceMessageId, messageIds)))
+    .orderBy(desc(notes.updatedAt), desc(notes.createdAt), desc(notes.id))
+    .all();
+  for (const row of rows) {
+    if (row.messageId !== null && !result.has(row.messageId)) result.set(row.messageId, row.id);
+  }
+  return result;
+}
+
+/** Ergebnis von {@link noteFromMessage}: `created` sagt, ob der Eintrag neu entstand oder schon da war. */
+export type NoteFromMessageResult = { ok: true; value: NoteView; created: boolean } | NoteFailure;
+
 /**
  * Macht aus einer fertigen Antwort des Modells einen Hefteintrag. Der Server liest den Text selbst aus der
  * Nachricht (nie vom Browser), die Antwort muss von `assistant` stammen und Text haben; angehaltene oder
  * unterbrochene Antworten sind erlaubt (ihr Text gilt), solche im Gange oder mit Fehler nicht. Fach und
- * Untergruppe übernimmt der Eintrag vom Chat.
+ * Untergruppe übernimmt der Eintrag vom Chat. Aus derselben Antwort entsteht nie ein zweiter Eintrag
+ * (D-122): Gibt es schon einen, kommt der zurück (`created: false`), erst nach seinem Löschen ein neuer.
  */
 export function noteFromMessage(
   db: Db,
   chatId: string,
   messageId: string,
   fallbackTitle: string,
-): NoteResult<NoteView> {
+): NoteFromMessageResult {
   const chat = db.select().from(chats).where(eq(chats.id, chatId)).get();
   if (!chat) return { ok: false, error: 'not_found' };
   const message = db
@@ -273,8 +311,12 @@ export function noteFromMessage(
   if (message.role !== 'assistant' || !savable || message.content.trim() === '') {
     return { ok: false, error: 'not_savable' };
   }
+  // Datenbank und Suche sind synchron (better-sqlite3): zwischen Suchen und Anlegen liegt kein `await`,
+  // zwei Anfragen in einem Serverprozess können sich nicht überholen.
+  const existing = existingNoteOfMessage(db, chatId, messageId);
+  if (existing) return { ok: true, value: existing, created: false };
   const markdown = message.content.slice(0, MARKDOWN_MAX_CHARACTERS);
-  return createNote(
+  const created = createNote(
     db,
     {
       subjectId: chat.subjectId,
@@ -286,4 +328,5 @@ export function noteFromMessage(
     },
     { chatId, messageId },
   );
+  return created.ok ? { ...created, created: true } : created;
 }
