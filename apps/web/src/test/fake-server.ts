@@ -219,7 +219,7 @@ export class FakeServer {
   weekAnchor: WeekAnchor | null = null;
   exams: Exam[] = [];
   notes: Note[] = [];
-  /** Herkunft eines Hefteintrags aus einer Antwort: Eintrag → Nachricht (wie `source_message_id`, D-121). */
+  /** Herkunft eines Hefteintrags aus einer Antwort: Eintrag → Nachricht (wie `source_message_id`, D-122). */
   noteSources = new Map<string, string>();
   toolsEnabled = true;
   filesEnabled = true;
@@ -803,7 +803,7 @@ export class FakeServer {
       .sort((a, b) => b.updatedAt - a.updatedAt)[0];
   }
 
-  /** Nachrichten eines Chats mit dem Stand des Servers zu `noteId` (D-121). */
+  /** Nachrichten eines Chats mit dem Stand des Servers zu `noteId` (D-122). */
   private messagesOf(chatId: string): ChatMessage[] {
     return (this.chatMessages.get(chatId) ?? []).map((message) => ({
       ...message,
@@ -1155,7 +1155,7 @@ export class FakeServer {
       if (message.role !== 'assistant' || !savable || message.content.trim() === '') {
         return json(409, { error: 'not_savable' });
       }
-      // Wie der Server (D-121): Aus derselben Antwort entsteht nie ein zweiter Eintrag, der vorhandene kommt mit 200.
+      // Wie der Server (D-122): Aus derselben Antwort entsteht nie ein zweiter Eintrag, der vorhandene kommt mit 200.
       const existing = this.noteOfMessage(message.id);
       if (existing) return json(200, this.withExcerpt(existing));
       const heading = message.content.split('\n').find((line) => /^\s{0,3}#{1,3}\s+\S/.test(line));

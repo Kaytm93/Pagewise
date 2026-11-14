@@ -319,7 +319,7 @@ export interface ChatMessage {
   /** Code, den das Modell in dieser Antwort ausgeführt hat (D-079). Das Skript holt `api.codeRun(id)`. */
   codeRuns: ChatCodeRun[];
   /**
-   * Hefteintrag, der aus dieser Antwort entstand (D-121), sonst `null`. Optional, weil Strom-Ereignisse und
+   * Hefteintrag, der aus dieser Antwort entstand (D-122), sonst `null`. Optional, weil Strom-Ereignisse und
    * ältere Testdaten das Feld nicht tragen; dann gilt „kein Eintrag“.
    */
   noteId?: string | null;

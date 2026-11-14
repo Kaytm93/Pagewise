@@ -80,7 +80,7 @@ export const MessageItem = memo(function MessageItem({
 }: Props) {
   const { copyState, copy } = useCopy();
   const atelier = useDesign() === 'atelier';
-  // Ob die Antwort schon ein Hefteintrag ist, weiß der Server (`message.noteId`, D-121): So heißt es nach
+  // Ob die Antwort schon ein Hefteintrag ist, weiß der Server (`message.noteId`, D-122): So heißt es nach
   // Neuladen und auf jedem Gerät „Hefteintrag öffnen“. Der Zustand nach dem Klick kommt aus der Komponente.
   const serverNoteId = message.noteId ?? null;
   const [noteState, setNoteState] = useState<

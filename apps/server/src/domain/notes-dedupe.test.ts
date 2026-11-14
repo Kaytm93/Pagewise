@@ -15,10 +15,10 @@ import {
 } from './notes-dedupe';
 
 /**
- * Die einmalige Bereinigung doppelter Hefteinträge aus dem Chat (D-121) an einer eigenen, temporären
+ * Die einmalige Bereinigung doppelter Hefteinträge aus dem Chat (D-122) an einer eigenen, temporären
  * Datenbank. Alle Daten sind erfunden; nichts berührt ein Datenverzeichnis außerhalb von `tmpdir()`.
  */
-describe('Einmalige Bereinigung doppelter Hefteinträge aus dem Chat (D-121)', () => {
+describe('Einmalige Bereinigung doppelter Hefteinträge aus dem Chat (D-122)', () => {
   let base: string;
   let backupDir: string;
   let handle: DatabaseHandle;

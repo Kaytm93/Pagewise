@@ -427,7 +427,7 @@ describe('Hefteinträge', () => {
       expect(after.markdown).toBe('Antwort');
     });
 
-    it('legt aus derselben Antwort nur einen Eintrag an: zweites Speichern gibt den vorhandenen zurück (F-020, D-121)', async () => {
+    it('legt aus derselben Antwort nur einen Eintrag an: zweites Speichern gibt den vorhandenen zurück (F-020, D-122)', async () => {
       const chatId = await chatWith();
       const messageId = addMessage(chatId, { seq: 1, content: '# Stoffmenge\n\nn = m / M' });
       const first = await save(chatId, messageId);
@@ -439,7 +439,7 @@ describe('Hefteinträge', () => {
       expect(await list(`subjectId=${subjectId}`)).toHaveLength(1);
     });
 
-    it('gibt bei mehreren alten Einträgen zur selben Antwort den zuletzt geänderten zurück (D-121)', async () => {
+    it('gibt bei mehreren alten Einträgen zur selben Antwort den zuletzt geänderten zurück (D-122)', async () => {
       const chatId = await chatWith();
       const messageId = addMessage(chatId, { seq: 1 });
       const older = (await save(chatId, messageId)).body as unknown as Note;
@@ -471,7 +471,7 @@ describe('Hefteinträge', () => {
       expect(reply.body.id).not.toBe(older.id);
     });
 
-    it('wählt bei gleichen Zeitstempeln stabil denselben Eintrag für Speichern und Chat-Anzeige (D-121)', async () => {
+    it('wählt bei gleichen Zeitstempeln stabil denselben Eintrag für Speichern und Chat-Anzeige (D-122)', async () => {
       const chatId = await chatWith();
       const messageId = addMessage(chatId, { seq: 1 });
       const same = new Date('2026-11-12T10:00:00.000Z');
@@ -504,7 +504,7 @@ describe('Hefteinträge', () => {
       expect(chat.messages[0]?.noteId).toBe(expected);
     });
 
-    it('legt nach dem Löschen des Eintrags wieder einen neuen an (D-121)', async () => {
+    it('legt nach dem Löschen des Eintrags wieder einen neuen an (D-122)', async () => {
       const chatId = await chatWith();
       const messageId = addMessage(chatId, { seq: 1 });
       const first = (await save(chatId, messageId)).body as unknown as Note;
@@ -515,7 +515,7 @@ describe('Hefteinträge', () => {
       expect(await list(`subjectId=${subjectId}`)).toHaveLength(1);
     });
 
-    it('eine andere Antwort desselben Chats bekommt einen eigenen Eintrag (D-121)', async () => {
+    it('eine andere Antwort desselben Chats bekommt einen eigenen Eintrag (D-122)', async () => {
       const chatId = await chatWith();
       const first = await save(chatId, addMessage(chatId, { seq: 1 }));
       const second = await save(chatId, addMessage(chatId, { seq: 2 }));

@@ -831,7 +831,7 @@ describe('Antwort aus dem Chat als Hefteintrag', () => {
     expect(await screen.findByRole('textbox', { name: 'Titel' })).toBeTruthy();
   });
 
-  it('zeigt „Hefteintrag öffnen“ gleich beim Laden, wenn der Server den Eintrag kennt (F-020, D-121)', async () => {
+  it('zeigt „Hefteintrag öffnen“ gleich beim Laden, wenn der Server den Eintrag kennt (F-020, D-122)', async () => {
     const { server, subject } = setup();
     const chat = server.addChat(subject.id, { title: 'Frage' });
     server.addMessage(chat.id, 'user', 'Erkläre n');
@@ -854,7 +854,7 @@ describe('Antwort aus dem Chat als Hefteintrag', () => {
     );
   });
 
-  it('nach Neuladen bleibt „Hefteintrag öffnen“; nach dem Löschen des Eintrags kommt der Knopf zurück (D-121)', async () => {
+  it('nach Neuladen bleibt „Hefteintrag öffnen“; nach dem Löschen des Eintrags kommt der Knopf zurück (D-122)', async () => {
     const { server, subject } = setup();
     const chat = server.addChat(subject.id, { title: 'Frage' });
     server.addMessage(chat.id, 'user', 'Frage');

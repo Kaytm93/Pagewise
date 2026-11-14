@@ -434,7 +434,7 @@ describe('Chats', () => {
       expect(row).toMatchObject({ promptTokens: 11, completionTokens: 3, reasoning: 'hmm' });
     });
 
-    it('kennt den Hefteintrag zu einer Antwort: `noteId` im Chat, `null` ohne Eintrag (F-020, D-121)', async () => {
+    it('kennt den Hefteintrag zu einer Antwort: `noteId` im Chat, `null` ohne Eintrag (F-020, D-122)', async () => {
       const chat = await newChat();
       await send(chat, 'Frage');
       const before = (await session.call('GET', `/api/chats/${chat}`)).body as {

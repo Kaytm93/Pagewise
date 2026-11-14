@@ -46,7 +46,7 @@ export interface MessageView {
   artifacts: ArtifactView[];
   /** Code, den das Modell in dieser Antwort ausgeführt hat (D-079), ohne Skript. */
   codeRuns: CodeRunView[];
-  /** Hefteintrag, der aus dieser Antwort entstand (D-121), sonst `null`; in Strom-Ereignissen immer `null`. */
+  /** Hefteintrag, der aus dieser Antwort entstand (D-122), sonst `null`; in Strom-Ereignissen immer `null`. */
   noteId: string | null;
   /** Denkprozess des Modells, nur wenn der Anbieter ihn liefert; sonst `null`. */
   reasoning: string | null;

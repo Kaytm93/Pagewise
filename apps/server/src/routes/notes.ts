@@ -148,7 +148,7 @@ export function noteRoutes(db: Db, fallbackTitle: string): Hono<AppEnv> {
     const chatId = idParam(c, 'chatId');
     const messageId = idParam(c, 'messageId');
     if (!chatId || !messageId) return c.json({ error: 'not_found' }, 404);
-    // Ein schon vorhandener Eintrag zu dieser Antwort kommt mit 200 zurück, ein neuer mit 201 (D-121).
+    // Ein schon vorhandener Eintrag zu dieser Antwort kommt mit 200 zurück, ein neuer mit 201 (D-122).
     const result = noteFromMessage(db, chatId, messageId, fallbackTitle);
     return result.ok ? c.json(result.value, result.created ? 201 : 200) : failure(c, result);
   });

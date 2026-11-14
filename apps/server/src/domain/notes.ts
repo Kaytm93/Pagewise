@@ -262,7 +262,7 @@ function existingNoteOfMessage(db: Db, chatId: string, messageId: string): NoteV
 
 /**
  * Zu welchen Antworten eines Chats es schon einen Hefteintrag gibt: Nachricht → ID des Eintrags (bei mehreren
- * der zuletzt geänderte, wie in {@link noteFromMessage}). Für die Anzeige „Hefteintrag öffnen“ (D-121).
+ * der zuletzt geänderte, wie in {@link noteFromMessage}). Für die Anzeige „Hefteintrag öffnen“ (D-122).
  */
 export function noteIdsForMessages(
   db: Db,
@@ -291,7 +291,7 @@ export type NoteFromMessageResult = { ok: true; value: NoteView; created: boolea
  * Nachricht (nie vom Browser), die Antwort muss von `assistant` stammen und Text haben; angehaltene oder
  * unterbrochene Antworten sind erlaubt (ihr Text gilt), solche im Gange oder mit Fehler nicht. Fach und
  * Untergruppe übernimmt der Eintrag vom Chat. Aus derselben Antwort entsteht nie ein zweiter Eintrag
- * (D-121): Gibt es schon einen, kommt der zurück (`created: false`), erst nach seinem Löschen ein neuer.
+ * (D-122): Gibt es schon einen, kommt der zurück (`created: false`), erst nach seinem Löschen ein neuer.
  */
 export function noteFromMessage(
   db: Db,

@@ -142,7 +142,7 @@ export function createServices(dataDir: string, options: ServicesOptions = {}): 
     database.close();
     throw error;
   }
-  // Einmalig nach dem Update auf D-121: wortgleiche doppelte Hefteinträge aus dem Chat entfernen, vorher
+  // Einmalig nach dem Update auf D-122: wortgleiche doppelte Hefteinträge aus dem Chat entfernen, vorher
   // sichern; scheitert die Sicherung, bleibt alles, der Start geht weiter (wirft nie).
   dedupeChatNotesOnce(database, { backupDir: paths.backups });
   const sessions = new SessionService(database.db);

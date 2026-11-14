@@ -303,7 +303,7 @@ export class ChatService {
     const files = this.assets?.forMessages(ids) ?? new Map();
     const made = this.artifacts?.forMessages(ids) ?? new Map();
     const ran = this.code?.forMessages(ids) ?? new Map();
-    // Welche Antworten schon einen Hefteintrag haben (D-121): nur hier, nicht in Strom-Ereignissen.
+    // Welche Antworten schon einen Hefteintrag haben (D-122): nur hier, nicht in Strom-Ereignissen.
     const noted = noteIdsForMessages(this.db, id, ids);
     return {
       ok: true,
