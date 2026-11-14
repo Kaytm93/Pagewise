@@ -255,7 +255,7 @@ function existingNoteOfMessage(db: Db, chatId: string, messageId: string): NoteV
     .select()
     .from(notes)
     .where(and(eq(notes.sourceChatId, chatId), eq(notes.sourceMessageId, messageId)))
-    .orderBy(desc(notes.updatedAt), desc(notes.createdAt))
+    .orderBy(desc(notes.updatedAt), desc(notes.createdAt), desc(notes.id))
     .get();
   return row ? viewOf(row) : null;
 }
@@ -275,7 +275,7 @@ export function noteIdsForMessages(
     .select({ id: notes.id, messageId: notes.sourceMessageId })
     .from(notes)
     .where(and(eq(notes.sourceChatId, chatId), inArray(notes.sourceMessageId, messageIds)))
-    .orderBy(desc(notes.updatedAt), desc(notes.createdAt))
+    .orderBy(desc(notes.updatedAt), desc(notes.createdAt), desc(notes.id))
     .all();
   for (const row of rows) {
     if (row.messageId !== null && !result.has(row.messageId)) result.set(row.messageId, row.id);

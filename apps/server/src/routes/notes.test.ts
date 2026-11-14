@@ -471,6 +471,39 @@ describe('Hefteinträge', () => {
       expect(reply.body.id).not.toBe(older.id);
     });
 
+    it('wählt bei gleichen Zeitstempeln stabil denselben Eintrag für Speichern und Chat-Anzeige (D-121)', async () => {
+      const chatId = await chatWith();
+      const messageId = addMessage(chatId, { seq: 1 });
+      const same = new Date('2026-11-12T10:00:00.000Z');
+      // Feste IDs in steigender Reihenfolge angelegt: ohne `id` als letzten Schlüssel käme der zuerst
+      // gelesene (kleinste) heraus, mit ihm der größte – an beiden Stellen derselbe.
+      const inserted = ['a', 'b', 'c'].map(
+        (suffix) =>
+          harness.services.database.db
+            .insert(notes)
+            .values({
+              id: `00000000-0000-4000-8000-00000000000${suffix}`,
+              subjectId,
+              title: 'Antwort',
+              markdown: 'Antwort',
+              sourceChatId: chatId,
+              sourceMessageId: messageId,
+              createdAt: same,
+              updatedAt: same,
+            })
+            .returning()
+            .get().id,
+      );
+      const expected = [...inserted].sort().at(-1);
+      const saved = await save(chatId, messageId);
+      expect(saved.status).toBe(200);
+      expect(saved.body.id).toBe(expected);
+      const chat = (await session.call('GET', `/api/chats/${chatId}`)).body as {
+        messages: { noteId: string | null }[];
+      };
+      expect(chat.messages[0]?.noteId).toBe(expected);
+    });
+
     it('legt nach dem Löschen des Eintrags wieder einen neuen an (D-121)', async () => {
       const chatId = await chatWith();
       const messageId = addMessage(chatId, { seq: 1 });

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Sqlite from 'better-sqlite3';
@@ -11,6 +11,7 @@ import {
   DEDUPE_MARKER_KEY,
   dedupeChatNotesOnce,
   duplicatesToRemove,
+  verifyBackup,
 } from './notes-dedupe';
 
 /**
@@ -196,7 +197,7 @@ describe('Einmalige Bereinigung doppelter Hefteinträge aus dem Chat (D-121)', (
         markdown: `Siehe /subjects/${subjectId}/notes/${linked.id}`,
       })
       .run();
-    expect(duplicatesToRemove(handle.db)).toHaveLength(2);
+    expect(duplicatesToRemove(handle)).toHaveLength(2);
     const result = dedupeChatNotesOnce(handle, { backupDir, now, log });
     expect(result).toMatchObject({ status: 'done', removed: 2 });
     expect(ids()).toContain(linked.id);
@@ -238,6 +239,84 @@ describe('Einmalige Bereinigung doppelter Hefteinträge aus dem Chat (D-121)', (
       status: 'done',
       removed: 1,
     });
+  });
+
+  it('findet Verweise in einem Durchlauf wie LIKE: Groß und Klein, mehrere je Text, Hex-Ziffern direkt davor', () => {
+    const answer = (seq: number) =>
+      handle.db
+        .insert(messages)
+        .values({ chatId, seq, role: 'assistant', content: `Antwort ${seq}`, status: 'complete' })
+        .returning()
+        .get().id;
+    const pair = (minutes: number, sourceMessageId: string) => [
+      fromChat({ createdAt: at(minutes), sourceMessageId }),
+      fromChat({ createdAt: at(minutes + 1), sourceMessageId }),
+    ];
+    const [a1, a2] = pair(0, answer(2));
+    const [b1, b2] = pair(2, answer(3));
+    const [c1, c2] = pair(4, answer(4));
+    const [d1, d2] = pair(6, answer(5));
+    // Ein Chat-Text nennt a2 in Großbuchstaben und b2 gleich danach; ein Hefteintrag nennt c2 so, dass davor
+    // Hex-Ziffern in UUID-Gliederung stehen (ein nicht überlappender Suchlauf verschluckte den Anfang von c2).
+    handle.db
+      .insert(messages)
+      .values({
+        chatId,
+        seq: 6,
+        role: 'user',
+        content: `Siehe ${a2?.id.toUpperCase()},${b2?.id}`,
+        status: 'complete',
+      })
+      .run();
+    fromChat({
+      createdAt: at(20),
+      sourceChatId: null,
+      markdown: `Verweis 11111111-2222-3333-4444-5555${c2?.id}`,
+    });
+    expect(duplicatesToRemove(handle).sort()).toEqual([a1?.id, b1?.id, c1?.id, d2?.id].sort());
+    expect(d1).toBeDefined();
+  });
+
+  it('kennt auch IDs ohne UUID-Form (Teilstring, wie LIKE)', () => {
+    const plainOld = fromChat({ createdAt: at(0), id: 'alt-1' });
+    const plainNew = fromChat({ createdAt: at(1), id: 'neu-2' });
+    handle.db
+      .insert(messages)
+      .values({ chatId, seq: 2, role: 'user', content: 'Link auf NEU-2 hier', status: 'complete' })
+      .run();
+    expect(duplicatesToRemove(handle)).toEqual([plainOld.id]);
+    expect(plainNew.id).toBe('neu-2');
+  });
+
+  it('prüft die Sicherung: quick_check, Zahl der Einträge; sonst nichts löschen', () => {
+    fromChat({ createdAt: at(0) });
+    fromChat({ createdAt: at(1) });
+    // verifyBackup selbst: unlesbare Datei, falsche Zeilenzahl, gute Datei.
+    const garbage = join(base, 'kaputt.db');
+    writeFileSync(garbage, 'kein SQLite');
+    expect(verifyBackup(garbage, 2)).toBeTruthy();
+    expect(verifyBackup(join(base, 'fehlt.db'), 2)).toBeTruthy();
+    handle.sqlite.prepare('VACUUM INTO ?').run(join(base, 'gut.db'));
+    expect(verifyBackup(join(base, 'gut.db'), 3)).toContain('2 statt 3');
+    expect(verifyBackup(join(base, 'gut.db'), 2)).toBeNull();
+    // Scheitert die Prüfung, bleibt alles stehen; danach klappt es mit der echten Prüfung.
+    const before = ids();
+    const verify = (file: string, expected: number) => `Probe ${expected} ${file.length > 0}`;
+    expect(dedupeChatNotesOnce(handle, { backupDir, now, log, verify })).toEqual({
+      status: 'backup_failed',
+    });
+    expect(ids()).toEqual(before);
+    expect(marker()).toBeUndefined();
+    expect(logged.join('\n')).toContain('nicht in Ordnung');
+    expect(logged.join('\n')).not.toContain(base);
+    expect(dedupeChatNotesOnce(handle, { backupDir: join(base, 'anderer'), now, log })).toEqual({
+      status: 'backup_failed',
+    });
+    expect(logged.at(-1)).not.toContain(base);
+    mkdirSync(join(base, 'anderer'));
+    expect(
+      dedupeChatNotesOnce(handle, { backupDir: join(base, 'anderer'), now, log }),
+    ).toMatchObject({ status: 'done', removed: 1 });
   });
 
   it('läuft nur einmal: der zweite Start ändert nichts, auch wenn neue Doppel liegen', () => {
